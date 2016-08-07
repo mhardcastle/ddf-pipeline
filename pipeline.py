@@ -88,6 +88,8 @@ if __name__=='__main__':
     ddf_image('image_ampphase1m',o['mslist'],'image_ampphase1.restored.fits.mask.fits','GA','killms_ap1','AP','',2,'image_ampphase1.DicoModel',o['robust'])
     make_mask('image_ampphase1m.restored.fits',10)
 
+    # Now move to the full dataset, if it exists
+
     if o['full_mslist'] is None:
         warn('No full MS list supplied, stopping here')
     else:
