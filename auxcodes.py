@@ -3,7 +3,7 @@ from scipy.optimize import leastsq
 import scipy
 import pyfits
 import os,sys
-from logging import run_log
+from pipeline_logging import run_log
 
 class bcolors:
    HEADER = '\033[95m'

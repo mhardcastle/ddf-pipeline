@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Routine is to use killms/ddf to selfcalibrate the data using 30 directions.
 import os,sys
 import os.path
@@ -46,7 +48,7 @@ def make_model(maskname,imagename):
         warn('File '+fname+' already exists, skipping MakeModel step')
     else:
         runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['facets'])
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MakeModel-'+outsols+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MakeModel-'+maskname+'.log',quiet=o['quiet'])
 
 
 if __name__=='__main__':
@@ -60,7 +62,7 @@ if __name__=='__main__':
         os.mkdir(o['logging'])
 
     # Clear the shared memory
-    run('CleanSHM.py',dryrun=o)
+    run('CleanSHM.py',dryrun=o['dryrun'])
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],'','MSMF','','',50E-3,3,'',o['robust'])
