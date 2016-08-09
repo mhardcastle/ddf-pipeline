@@ -30,7 +30,7 @@ def make_mask(imagename,thresh):
         runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
         run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MM-'+imagename+'.log',quiet=o['quiet'])
 
-def killms_data(imagename,mslist,outsols,skymodel):
+def killms_data(imagename,mslist,outsols,clusterfile):
     mslistname=open(mslist,'r').readlines()[0].rstrip()
     checkname=mslistname+'/killMS.'+outsols+'.sols.npz'
     if o['restart'] and os.path.isfile(checkname):
@@ -38,7 +38,10 @@ def killms_data(imagename,mslist,outsols,skymodel):
     else:
         if imagename != '':
             runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,imagename,o['NCPU_killms'],outsols)
+            if clusterfile != '':
+                runcommand+=' --NodesFile '+clusterfile
         else:
+            # in current code, not used
             runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --SkyModel %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,skymodel,o['NCPU_killms'],outsols)
         run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/KillMS-'+outsols+'.log',quiet=o['quiet'])
 
@@ -73,7 +76,7 @@ if __name__=='__main__':
 
     # Calibrate off the model
     make_model('image_dirin_GAm.restored.fits.mask.fits','image_dirin_GAm')
-    killms_data('',o['mslist'],'killms_p1','image_dirin_GAm.npy')
+    killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],'image_dirin_GAm.restored.fits.mask.fits','GA','killms_p1','P','',3,'',o['robust'])
