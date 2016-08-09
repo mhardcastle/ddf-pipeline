@@ -68,7 +68,7 @@ if __name__=='__main__':
     ddf_image('image_dirin_MSMF',o['mslist'],'','MSMF','','',50E-3,3,'',o['robust'])
     make_mask('image_dirin_MSMF.restored.fits',25)
     #imagenoise = find_imagenoise('image_dirin_MSMF.restored.fits',1E-3)
-    ddf_image('image_dirin_GAm',o['mslist'],'image_dirin_MSMF.restored.fits.mask.fits','GA','','','',3,'',o['robust'])
+    ddf_image('image_dirin_GAm',o['mslist'],'image_dirin_MSMF.restored.fits.mask.fits','GA','','','',4,'',o['robust'])
     make_mask('image_dirin_GAm.restored.fits',25)
 
     # Calibrate off the model
