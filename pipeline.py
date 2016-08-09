@@ -31,7 +31,8 @@ def make_mask(imagename,thresh):
         run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MM-'+imagename+'.log',quiet=o['quiet'])
 
 def killms_data(imagename,mslist,outsols,clusterfile):
-    mslistname=open(mslist,'r').readlines()[-1].rstrip()
+    with open(mslist,'r') as f:
+        mslistname = [l for l in (line.strip() for line in f) if l][-1]  # last non-empty line
     checkname=mslistname+'/killMS.'+outsols+'.sols.npz'
     if o['restart'] and os.path.isfile(checkname):
         warn('Solutions file '+checkname+' already exists, not running killMS step')
