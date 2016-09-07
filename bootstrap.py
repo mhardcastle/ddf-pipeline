@@ -11,6 +11,9 @@ from auxcodes import run,find_imagenoise,warn,die
 from options import options
 from astropy.io import fits
 import pyrap.tables as pt
+import numpy as np
+from lofar import bdsm
+from make_fitting_product import make_catalogue
 
 def ddf_image_low(imagename,msname,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
     fname=imagename+'.restored.fits'
@@ -37,12 +40,12 @@ def make_mask(imagename,thresh):
         run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MM-'+imagename+'.log',quiet=o['quiet'])
 
 def restore(basename,beam):
-    fname=imagename+'.restoredNew.fits'
+    fname=basename+'.restoredNew.fits'
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping Restore step')
     else:
         runcommand = "Restore.py --BaseImageName=%s --ResidualImage=%s --BeamPix=%f" % (basename, basename+'.residual.fits', beam)
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/Restore-'+imagename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/Restore-'+basename+'.log',quiet=o['quiet'])
 
 if __name__=='__main__':
 
@@ -55,13 +58,13 @@ if __name__=='__main__':
     if not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
+    low_robust=-0.25
+
     # Clear the shared memory
     #run('CleanSHM.py',dryrun=o['dryrun'])
 
     # We use the individual ms in mslist.
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    print 'MS list is', mslist
-    low_robust=-0.25
 
     # Get the frequencies -- need to take this from the MSs
 
@@ -73,6 +76,9 @@ if __name__=='__main__':
     # sort to work in frequency order
 
     freqs,mslist = (list(x) for x in zip(*sorted(zip(freqs, mslist), key=lambda pair: pair[0])))
+
+    for f,m in zip(freqs,mslist):
+        print m,f
 
     # First we need to do a MSMF clean to make an initial mask; then
     # we can use this for each of the bands. We use the
@@ -95,7 +101,7 @@ if __name__=='__main__':
     else:
         hdus=[]
         for i in range(len(mslist)):
-            image='image_low_%i_GAm.restoredNew.fits' % i
+            image='image_low_%i_GAm.restoredNew.corr.fits' % i
             hdus.append(fits.open(image))
 
         chan,stokes,y,x=hdus[0][0].data.shape
@@ -105,7 +111,6 @@ if __name__=='__main__':
         for i,h in enumerate(hdus):
             newdata[i,0,:,:]=h[0].data
 
-        fsorted=freqs[sorted]
         hdus[0][0].data=newdata
         hdus[0][0].header['NAXIS4']=len(hdus)
         hdus[0][0].header['CTYPE4']='FREQ'
@@ -116,4 +121,40 @@ if __name__=='__main__':
             hdus[0].writeto('cube.fits',clobber=True)
         for h in hdus: h.close()
 
+    if os.path.isfile('cube.pybdsm.srl'):
+        warn('Source list exists, skipping source extraction')
+    else:
+        warn('Running PyBDSM, please wait...')
+        img=bdsm.process_image('cube.fits',thresh_pix=5,rms_map=True,atrous_do=True,atrous_jmax=2,group_by_isl=True,rms_box=(80,20), adaptive_rms_box=True, adaptive_thresh=80, rms_box_bright=(35,7),mean_map='zero',spectralindex_do=True,specind_maxchan=1,debug=True,kappa_clip=3,flagchan_rms=False,flagchan_snr=False,incl_chan=True,spline_rank=1)
+        # Write out in ASCII to work round bug in pybdsm
+        img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
+        img.export_image(img_type='rms',img_format='fits')
 
+    # generate the fitting product
+    if os.path.isfile('crossmatch-1.fits'):
+        warn('Crossmatch table exists, skipping crossmatch')
+    else:
+ 
+        t = pt.table(mslist[0]+ '/FIELD', readonly=True, ack=False)
+        direction = t[0]['PHASE_DIR']
+        ra, dec = direction[0]
+
+        if (ra<0):
+            ra+=2*np.pi
+        ra*=180.0/np.pi
+        dec*=180.0/np.pi
+
+        # currently VLSS and WENSS are hard-wired in: this should change...
+
+        cats=[['/stri-data/mjh/bootstrap/VLSS.fits','VLSS',40.0],
+              ['/stri-data/mjh/bootstrap/wenss.fits','WENSS',10.0]]
+        make_catalogue('cube.pybdsm.srl',ra,dec,2.5,cats)
+    
+    freqlist=open('frequencies.txt','w')
+    freqlist.write('74e6 VLSS_flux VLSS_e_flux False\n')
+    for i,f in enumerate(freqs):
+        freqlist.write('%f Total_flux_ch%i E_Total_flux_ch%i True\n' % (f,i+1,i+1))
+    freqlist.write('326e6 WENSS_flux WENSS_e_flux False\n')
+    freqlist.close()
+
+    
