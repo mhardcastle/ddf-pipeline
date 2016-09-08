@@ -15,7 +15,7 @@ def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,ma
         if cleanmask != '':
             runcommand += ' --CleanMaskImage=%s'%cleanmask
         if applysols != '':
-            runcommand += ' --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
+            runcommand += ' --GlobalNorm=MeanAbs--DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
         if dicomodel != '':
             runcommand += ' --InitDicoModel=%s'%dicomodel
         if threshold != '':
