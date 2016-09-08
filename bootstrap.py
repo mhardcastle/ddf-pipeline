@@ -9,11 +9,14 @@ import os,sys
 import os.path
 from auxcodes import run,find_imagenoise,warn,die
 from options import options
-from astropy.io import fits
 import pyrap.tables as pt
 import numpy as np
 from lofar import bdsm
+from make_cube import make_cube
 from make_fitting_product import make_catalogue
+import fitting_factors
+import find_outliers
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 def ddf_image_low(imagename,msname,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
     fname=imagename+'.restored.fits'
@@ -99,28 +102,8 @@ if __name__=='__main__':
     if os.path.isfile('cube.fits'):
         warn('Cube file exists, skipping cube assembly')
     else:
-        hdus=[]
-        for i in range(len(mslist)):
-            image='image_low_%i_GAm.restoredNew.corr.fits' % i
-            hdus.append(fits.open(image))
-
-        chan,stokes,y,x=hdus[0][0].data.shape
-        print chan,stokes,y,x
-        newdata=np.zeros((len(hdus),stokes,y,x),dtype=np.float32)
-        print newdata.shape
-        for i,h in enumerate(hdus):
-            newdata[i,0,:,:]=h[0].data
-
-        hdus[0][0].data=newdata
-        hdus[0][0].header['NAXIS4']=len(hdus)
-        hdus[0][0].header['CTYPE4']='FREQ'
-        hdus[0][0].header['CRVAL4']=freqs[0]
-        hdus[0][0].header['CDELT4']=freqs[1]-freqs[0] # need not be correct
-        hdus[0][0].header['CUNIT4']='Hz'
-        if not o['dryrun']:
-            hdus[0].writeto('cube.fits',clobber=True)
-        for h in hdus: h.close()
-
+        warn('Making the cube')
+        make_cube('cube.fits',['image_low_%i_GAm.restoredNew.corr.fits' % i for i in range(len(mslist))],freqs)
     if os.path.isfile('cube.pybdsm.srl'):
         warn('Source list exists, skipping source extraction')
     else:
@@ -157,4 +140,51 @@ if __name__=='__main__':
     freqlist.write('326e6 WENSS_flux WENSS_e_flux False\n')
     freqlist.close()
 
+    # Now call the fitting code
+
+    if os.path.isfile('crossmatch-results-1.npy'):
+        warn('Results 1 exists, skipping first fit')
+    else:
+        if o['use_mpi']:
+            run('mpiexec -np 24 /home/mjh/git/ddf-pipeline/fitting_factors.py 1',dryrun=o['dryrun'],log=o['logging']+'/fitting-factors-1.log',quiet=o['quiet'])
+        else:
+            fitting_factors.run_all(1)
+
+    if os.path.isfile('crossmatch-2.fits'):
+        warn('Second crossmatch exists, skipping outlier rejection')
+    else:
+        find_outliers.run_all(1)
     
+    if os.path.isfile('crossmatch-results-2.npy'):
+        warn('Results 1 exists, skipping second fit')
+    else:
+        if o['use_mpi']:
+            run('mpiexec -np 24 /home/mjh/git/ddf-pipeline/fitting_factors.py 2',dryrun=o['dryrun'],log=o['logging']+'/fitting-factors-1.log',quiet=o['quiet'])
+        else:
+            fitting_factors.run_all(2)
+
+    # Now apply corrections
+
+    if o['full_mslist'] is None:
+        die('Need big mslist to apply corrections')
+    if not(o['dryrun']):
+        warn('Applying corrections to MS list')
+        scale=np.load('crossmatch-results-2.npy')[:,0]
+        # InterpolatedUS gives us linear interpolation between points
+        # and extrapolation outside it
+        spl = InterpolatedUnivariateSpline(freqs, scale, k=1)
+        bigmslist=[s.strip() for s in open(o['full_mslist']).readlines()]
+        for ms in bigmslist:
+            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+            frq=t[0]['REF_FREQUENCY']
+            factor=spl(frq)
+            print frq,factor
+            t=pt.table(ms,readonly=False)
+            desc=t.getcoldesc('CORRECTED_DATA')
+            desc['name']='SCALED_DATA'
+            t.addcols(desc)
+            d=t.getcol('CORRECTED_DATA')
+            d*=factor
+            t.putcol('SCALED_DATA',d)
+            t.close()
+
