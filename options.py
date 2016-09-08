@@ -33,7 +33,7 @@ def options(filename):
                     ( 'control', 'logging', str, 'logs' ),
                     ( 'control', 'dryrun', bool, False ),
                     ( 'control', 'restart', bool, True ),
-                    ( 'bootstrap', 'use_mpi', bool, True) )
+                    ( 'bootstrap', 'use_mpi', bool, False) )
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
