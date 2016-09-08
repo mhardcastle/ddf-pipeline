@@ -25,7 +25,7 @@ def fitall(scale,frequencies,fluxes,errors):
         norms.append(popt[0])
     return np.array((norms,alphas,chiv))
 
-def find_outliers(run):
+def run_all(run):
 
     global smask
     frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
@@ -52,4 +52,4 @@ def find_outliers(run):
     return True
 
 if __name__=='__main__':
-    find_outliers(int(sys.argv[1]))
+    run_all(int(sys.argv[1]))

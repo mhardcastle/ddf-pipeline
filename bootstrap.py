@@ -8,7 +8,6 @@
 import os,sys
 import os.path
 from auxcodes import run,find_imagenoise,warn,die
-from options import options
 import pyrap.tables as pt
 import numpy as np
 from lofar import bdsm
@@ -50,11 +49,8 @@ def restore(basename,beam):
         runcommand = "Restore.py --BaseImageName=%s --ResidualImage=%s --BeamPix=%f" % (basename, basename+'.residual.fits', beam)
         run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/Restore-'+basename+'.log',quiet=o['quiet'])
 
-if __name__=='__main__':
+def run_bootstrap(o):
 
-    # Main loop
-
-    o=options(sys.argv[1])
     if o['mslist'] is None:
         die('MS list must be specified')
 
@@ -146,7 +142,7 @@ if __name__=='__main__':
         warn('Results 1 exists, skipping first fit')
     else:
         if o['use_mpi']:
-            run('mpiexec -np 24 /home/mjh/git/ddf-pipeline/fitting_factors.py 1',dryrun=o['dryrun'],log=o['logging']+'/fitting-factors-1.log',quiet=o['quiet'])
+            run('mpiexec -np 24 fitting_factors.py 1',dryrun=o['dryrun'],log=None,quiet=o['quiet'])
         else:
             fitting_factors.run_all(1)
 
@@ -159,7 +155,7 @@ if __name__=='__main__':
         warn('Results 1 exists, skipping second fit')
     else:
         if o['use_mpi']:
-            run('mpiexec -np 24 /home/mjh/git/ddf-pipeline/fitting_factors.py 2',dryrun=o['dryrun'],log=o['logging']+'/fitting-factors-1.log',quiet=o['quiet'])
+            run('mpiexec -np 24 fitting_factors.py 2',dryrun=o['dryrun'],log=None,quiet=o['quiet'])
         else:
             fitting_factors.run_all(2)
 
@@ -175,16 +171,29 @@ if __name__=='__main__':
         spl = InterpolatedUnivariateSpline(freqs, scale, k=1)
         bigmslist=[s.strip() for s in open(o['full_mslist']).readlines()]
         for ms in bigmslist:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            frq=t[0]['REF_FREQUENCY']
-            factor=spl(frq)
-            print frq,factor
-            t=pt.table(ms,readonly=False)
-            desc=t.getcoldesc('CORRECTED_DATA')
-            desc['name']='SCALED_DATA'
-            t.addcols(desc)
-            d=t.getcol('CORRECTED_DATA')
-            d*=factor
-            t.putcol('SCALED_DATA',d)
+            t = pt.table(ms)
+            try:
+                dummy=getcoldesc('SCALED_DATA')
+            except RuntimeError:
+                dummy=None
             t.close()
+            if dummy is not None:
+                warn('Table '+ms+' has already been corrected, skipping')
+            else:
+                t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+                frq=t[0]['REF_FREQUENCY']
+                factor=spl(frq)
+                print frq,factor
+                t=pt.table(ms,readonly=False)
+                desc=t.getcoldesc('CORRECTED_DATA')
+                desc['name']='SCALED_DATA'
+                t.addcols(desc)
+                d=t.getcol('CORRECTED_DATA')
+                d*=factor
+                t.putcol('SCALED_DATA',d)
+                t.close()
 
+if __name__=='__main__':
+    from options import options
+    o=options(sys.argv[1])
+    run_bootstrap(o)

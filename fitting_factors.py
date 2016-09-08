@@ -23,6 +23,9 @@ def check_mpi():
             if rank==0:
                 print 'Using MPI with',size,'threads'
             have_mpi=True
+        else:
+            print 'MPI is present but inactive'
+            have_mpi=False
     except:
         print 'MPI not present or not working'
     return have_mpi,rank
@@ -96,8 +99,9 @@ def run_all(run):
     global frequencies
     global smask
 
-    have_mpi,rank=check_mpi()
     frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
+
+    have_mpi,rank=check_mpi()
 
     if rank==0:
         print 'About to fit to',len(data),'data points'
@@ -115,6 +119,7 @@ def run_all(run):
                for i in range(nwalkers)]
 
     if have_mpi:
+        threads=None
         from emcee.utils import MPIPool
         pool = MPIPool()
         if not pool.is_master():
@@ -122,8 +127,9 @@ def run_all(run):
             sys.exit(0)
     else:
         pool=None
+        threads=16
     # run MCMC
-
+    print 'run the sampler, pool is',pool
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost,
                                     args=(frequencies,fluxes,errors), pool=pool)
     sampler.run_mcmc(scale, 1000)

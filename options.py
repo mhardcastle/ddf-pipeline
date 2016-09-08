@@ -33,6 +33,7 @@ def options(filename):
                     ( 'control', 'logging', str, 'logs' ),
                     ( 'control', 'dryrun', bool, False ),
                     ( 'control', 'restart', bool, True ),
+                    ( 'control', 'bootstrap', bool, False ),
                     ( 'bootstrap', 'use_mpi', bool, False) )
 
     odict = {}

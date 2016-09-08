@@ -11,7 +11,7 @@ def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,ma
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
     else:
-        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName CORRECTED_DATA --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell 1.5 --NFacets=11 "%(imagename,mslist,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'])
+        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell 1.5 --NFacets=11 "%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'])
         if cleanmask != '':
             runcommand += ' --CleanMaskImage=%s'%cleanmask
         if applysols != '':
@@ -58,6 +58,8 @@ def make_model(maskname,imagename):
 if __name__=='__main__':
     # Main loop
 
+    colname='CORRECTED_DATA'
+
     o=options(sys.argv[1])
     if o['mslist'] is None:
         die('MS list must be specified')
@@ -78,6 +80,12 @@ if __name__=='__main__':
     # Calibrate off the model
     make_model('image_dirin_GAm.restored.fits.mask.fits','image_dirin_GAm')
     killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
+
+    # now if bootstrapping has been done then change the column name
+
+    if o['bootstrap']:
+        # we would do the bootstrap itself here
+        colname='SCALED_DATA'
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],'image_dirin_GAm.restored.fits.mask.fits','GA','killms_p1','P','',3,'',o['robust'])
