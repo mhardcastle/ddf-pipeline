@@ -6,6 +6,12 @@ import os.path
 from auxcodes import run,find_imagenoise,warn,die
 from options import options
 
+def logfilename(s):
+    if o['logging'] is not None:
+        return o['logging']+'/'+s 
+    else:
+        return None
+
 def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
     fname=imagename+'.restored.fits'
     if o['restart'] and os.path.isfile(fname):
@@ -20,7 +26,7 @@ def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,ma
             runcommand += ' --InitDicoModel=%s'%dicomodel
         if threshold != '':
             runcommand += ' --FluxThreshold=%s'%threshold
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/DDF-'+imagename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-'+imagename+'.log'),quiet=o['quiet'])
 
 def make_mask(imagename,thresh):
     fname=imagename+'.mask.fits'
@@ -28,7 +34,7 @@ def make_mask(imagename,thresh):
         warn('File '+fname+' already exists, skipping MakeMask step')
     else:
         runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MM-'+imagename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
 def killms_data(imagename,mslist,outsols,clusterfile):
     with open(mslist,'r') as f:
@@ -44,7 +50,7 @@ def killms_data(imagename,mslist,outsols,clusterfile):
         else:
             # in current code, not used
             runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --SkyModel %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,skymodel,o['NCPU_killms'],outsols)
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/KillMS-'+outsols+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+outsols+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename):
     fname=imagename+'.npy'
@@ -52,7 +58,7 @@ def make_model(maskname,imagename):
         warn('File '+fname+' already exists, skipping MakeModel step')
     else:
         runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['facets'])
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MakeModel-'+maskname+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
 
 
 if __name__=='__main__':
@@ -64,7 +70,7 @@ if __name__=='__main__':
     if o['mslist'] is None:
         die('MS list must be specified')
 
-    if not os.path.isdir(o['logging']):
+    if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
     # Clear the shared memory
@@ -84,7 +90,7 @@ if __name__=='__main__':
     # now if bootstrapping has been done then change the column name
 
     if o['bootstrap']:
-        # we would do the bootstrap itself here
+        run('bootstrap.py '+sys.argv[1],dryrun=o['dryrun'],log=None)
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again

@@ -30,11 +30,13 @@ def options(filename):
                     ( 'masking', 'ampphase', int, 10 ),
                     ( 'masking', 'full', int, 5 ),
                     ( 'control', 'quiet', bool, False ),
-                    ( 'control', 'logging', str, 'logs' ),
+                    ( 'control', 'logging', str, None ),
                     ( 'control', 'dryrun', bool, False ),
                     ( 'control', 'restart', bool, True ),
                     ( 'control', 'bootstrap', bool, False ),
-                    ( 'bootstrap', 'use_mpi', bool, False) )
+                    ( 'bootstrap', 'use_mpi', bool, False) ,
+                    ( 'bootstrap', 'bscell', float, 4.5) ,
+                    ( 'bootstrap', 'bsimsize', int, 6000) )
 
     odict = {}
     config=ConfigParser.SafeConfigParser()

@@ -17,12 +17,18 @@ import fitting_factors
 import find_outliers
 from scipy.interpolate import InterpolatedUnivariateSpline
 
+def logfilename(s):
+    if o['logging'] is not None:
+        return o['logging']+'/'+s 
+    else:
+        return None
+
 def ddf_image_low(imagename,msname,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
     fname=imagename+'.restored.fits'
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
     else:
-        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=1 --ColName CORRECTED_DATA --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell 5 --UVRangeKm=[0.1,25.0] "%(imagename,msname,o['NCPU_DDF'],majorcycles,cleanmode,robust,6000)
+        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=1 --ColName CORRECTED_DATA --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell %f --UVRangeKm=[0.1,25.0] "%(imagename,msname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['bsimsize'],o['bscell'])
         if cleanmask != '':
             runcommand += ' --CleanMaskImage=%s'%cleanmask
         if applysols != '':
@@ -31,7 +37,7 @@ def ddf_image_low(imagename,msname,cleanmask,cleanmode,ddsols,applysols,threshol
             runcommand += ' --InitDicoModel=%s'%dicomodel
         if threshold != '':
             runcommand += ' --FluxThreshold=%s'%threshold
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/DDF-low-'+imagename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-low-'+imagename+'.log'),quiet=o['quiet'])
 
 def make_mask(imagename,thresh):
     fname=imagename+'.mask.fits'
@@ -39,7 +45,7 @@ def make_mask(imagename,thresh):
         warn('File '+fname+' already exists, skipping MakeMask step')
     else:
         runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/MM-'+imagename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
 def restore(basename,beam):
     fname=basename+'.restoredNew.fits'
@@ -47,14 +53,16 @@ def restore(basename,beam):
         warn('File '+fname+' already exists, skipping Restore step')
     else:
         runcommand = "Restore.py --BaseImageName=%s --ResidualImage=%s --BeamPix=%f" % (basename, basename+'.residual.fits', beam)
-        run(runcommand,dryrun=o['dryrun'],log=o['logging']+'/Restore-'+basename+'.log',quiet=o['quiet'])
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('Restore-'+basename+'.log'),quiet=o['quiet'])
 
-def run_bootstrap(o):
-
+def run_bootstrap(oa):
+    global o
+    o=oa
+    
     if o['mslist'] is None:
         die('MS list must be specified')
 
-    if not os.path.isdir(o['logging']):
+    if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
     low_robust=-0.25
@@ -173,7 +181,7 @@ def run_bootstrap(o):
         for ms in bigmslist:
             t = pt.table(ms)
             try:
-                dummy=getcoldesc('SCALED_DATA')
+                dummy=t.getcoldesc('SCALED_DATA')
             except RuntimeError:
                 dummy=None
             t.close()
