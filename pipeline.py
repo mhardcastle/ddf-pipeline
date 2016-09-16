@@ -44,7 +44,7 @@ def killms_data(imagename,mslist,outsols,clusterfile):
         warn('Solutions file '+checkname+' already exists, not running killMS step')
     else:
         if imagename != '':
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,imagename,o['NCPU_killms'],outsols)
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=0.9 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,imagename,o['NCPU_killms'],outsols)
             if clusterfile != '':
                 runcommand+=' --NodesFile '+clusterfile
         else:
