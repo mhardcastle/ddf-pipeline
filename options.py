@@ -22,6 +22,7 @@ def options(filename):
                     ( 'data', 'mslist', str, None ),
                     ( 'data', 'full_mslist', str, None ),
                     ( 'solutions', 'facets', int, 30 ),
+                    ( 'solutions', 'LambdaKF', float, 0.5 ),
                     ( 'image', 'imsize', int, 20000 ),
                     ( 'image', 'robust', float, -0.15 ),
                     ( 'image', 'final_robust', float, -0.5 ),
