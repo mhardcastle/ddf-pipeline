@@ -26,7 +26,7 @@ def fitall(scale,frequencies,fluxes,errors):
         chi=chi2(frequencies,sf,ef,*popt)
         plt.errorbar(frequencies,sf,yerr=ef,linestyle='none',color=cnames[i])
         plt.plot(frequencies,pl(frequencies,*popt),color=cnames[i])
-        print i,chi,popt[1]
+#        print i,chi,popt[1]
         alpha.append(popt[1])
     return alpha
 
@@ -38,6 +38,7 @@ def run_all(run):
     print 'About to plot',len(data),'data points'
 
     scale=np.load('crossmatch-results-'+str(run)+'.npy')[:,0]
+    print 'Scaling factors applied are',scale
     plt.xscale('log')
     plt.yscale('log')
     a=fitall(scale,frequencies,fluxes,errors)

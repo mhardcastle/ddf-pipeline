@@ -31,7 +31,7 @@ def options(filename):
                     ( 'masking', 'ampphase', int, 10 ),
                     ( 'masking', 'full', int, 5 ),
                     ( 'control', 'quiet', bool, False ),
-                    ( 'control', 'logging', str, None ),
+                    ( 'control', 'logging', str, 'logs' ),
                     ( 'control', 'dryrun', bool, False ),
                     ( 'control', 'restart', bool, True ),
                     ( 'control', 'bootstrap', bool, False ),
