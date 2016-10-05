@@ -44,12 +44,12 @@ def killms_data(imagename,mslist,outsols,clusterfile):
         warn('Solutions file '+checkname+' already exists, not running killMS step')
     else:
         if imagename != '':
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,imagename,o['LambdaKF'],o['NCPU_killms'],outsols)
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(mslist,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'])
             if clusterfile != '':
                 runcommand+=' --NodesFile '+clusterfile
         else:
             # in current code, not used
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --SkyModel %s --dt 1 --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols 1 --InCol CORRECTED_DATA"%(mslist,skymodel,o['NCPU_killms'],outsols)
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --SkyModel %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(mslist,skymodel, o['dt'] ,o['NCPU_killms'],outsols, o['NChanSols'])
         run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+outsols+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename):
@@ -57,7 +57,7 @@ def make_model(maskname,imagename):
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeModel step')
     else:
-        runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['facets'])
+        runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['ndir'])
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
 
 
