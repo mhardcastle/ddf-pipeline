@@ -78,10 +78,10 @@ if __name__=='__main__':
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],'','MSMF','','',50E-3,3,'',o['robust'])
-    make_mask('image_dirin_MSMF.restored.fits',o['ga'])
+    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'])
     #imagenoise = find_imagenoise('image_dirin_MSMF.restored.fits',1E-3)
-    ddf_image('image_dirin_GAm',o['mslist'],'image_dirin_MSMF.restored.fits.mask.fits','GA','','','',4,'',o['robust'])
-    make_mask('image_dirin_GAm.restored.fits',o['ga'])
+    ddf_image('image_dirin_GAm',o['mslist'],'image_dirin_MSMF.app.restored.fits.mask.fits','GA','','','',4,'',o['robust'])
+    make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
 
     # Calibrate off the model
     make_model('image_dirin_GAm.restored.fits.mask.fits','image_dirin_GAm')
@@ -94,19 +94,19 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
-    ddf_image('image_phase1',o['mslist'],'image_dirin_GAm.restored.fits.mask.fits','GA','killms_p1','P','',3,'',o['robust'])
-    make_mask('image_phase1.restored.fits',o['phase'])
+    ddf_image('image_phase1',o['mslist'],'image_dirin_GAm.app.restored.fits.mask.fits','GA','killms_p1','P','',3,'',o['robust'])
+    make_mask('image_phase1.app.restored.fits',o['phase'])
     ddf_image('image_phase1m',o['mslist'],'image_phase1.restored.fits.mask.fits','GA','killms_p1','P','',2,'image_phase1.DicoModel',o['robust'])
-    make_mask('image_phase1m.restored.fits',o['phase'])
+    make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
     killms_data('image_phase1m',o['mslist'],'killms_ap1','')
 
     # Apply phase and amplitude solutions and image again
-    ddf_image('image_ampphase1',o['mslist'],'image_phase1m.restored.fits.mask.fits','GA','killms_ap1','AP','',3,'',o['robust'])
-    make_mask('image_ampphase1.restored.fits',o['ampphase'])
-    ddf_image('image_ampphase1m',o['mslist'],'image_ampphase1.restored.fits.mask.fits','GA','killms_ap1','AP','',2,'image_ampphase1.DicoModel',o['robust'])
-    make_mask('image_ampphase1m.restored.fits',o['ampphase'])
+    ddf_image('image_ampphase1',o['mslist'],'image_phase1m.app.restored.fits.mask.fits','GA','killms_ap1','AP','',3,'',o['robust'])
+    make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
+    ddf_image('image_ampphase1m',o['mslist'],'image_ampphase1.app.restored.fits.mask.fits','GA','killms_ap1','AP','',2,'image_ampphase1.DicoModel',o['robust'])
+    make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
 
     # Now move to the full dataset, if it exists
 
@@ -115,8 +115,8 @@ if __name__=='__main__':
     else:
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','')
-        ddf_image('image_full_ampphase1',o['full_mslist'],'image_ampphase1m.restored.fits.mask.fits','GA','killms_f_ap1','AP','',3,'',o['final_robust'])
-        make_mask('image_full_ampphase1.restored.fits',o['full'])
-        ddf_image('image_full_ampphase1m',o['full_mslist'],'image_full_ampphase1.restored.fits.mask.fits','GA','killms_f_ap1','AP','',3,'image_full_ampphase1.DicoModel',o['final_robust'])
+        ddf_image('image_full_ampphase1',o['full_mslist'],'image_ampphase1m.app.restored.fits.mask.fits','GA','killms_f_ap1','AP','',3,'',o['final_robust'])
+        make_mask('image_full_ampphase1.app.restored.fits',o['full'])
+        ddf_image('image_full_ampphase1m',o['full_mslist'],'image_full_ampphase1.app.restored.fits.mask.fits','GA','killms_f_ap1','AP','',3,'image_full_ampphase1.DicoModel',o['final_robust'])
 
         
