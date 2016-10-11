@@ -23,7 +23,7 @@ def options(filename):
                     ( 'data', 'full_mslist', str, None ),
                     ( 'solutions', 'ndir', int, 30 ),
                     ( 'solutions', 'NChanSols', int, 1 ),
-                    ( 'solutions', 'dt', int, 1 ),
+                    ( 'solutions', 'dt', float, 1. ),
                     ( 'solutions', 'LambdaKF', float, 0.5 ),
                     ( 'image', 'imsize', int, 20000 ),
                     ( 'image', 'robust', float, -0.15 ),
