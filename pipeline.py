@@ -13,7 +13,7 @@ def logfilename(s):
         return None
 
 def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
-    fname=imagename+'.app.restored.fits'
+    fname=imagename+'.restored.fits'
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
     else:
