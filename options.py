@@ -46,7 +46,7 @@ def options(filename):
     odict = {}
     config=ConfigParser.SafeConfigParser()
     config.read(filename)
-    cased={int: config.getint, float: config.getfloat, bool: config.getfloat, str: config.get}
+    cased={int: config.getint, float: config.getfloat, bool: config.getbool, str: config.get}
     for (section, name, otype, default) in option_list:
         try:
             result=cased[otype](section,name)
