@@ -26,8 +26,10 @@ def options(filename):
                     ( 'solutions', 'dt', float, 1. ),
                     ( 'solutions', 'LambdaKF', float, 0.5 ),
                     ( 'image', 'imsize', int, 20000 ),
+                    ( 'image', 'cellsize', float, 1.5 ),
                     ( 'image', 'robust', float, -0.15 ),
                     ( 'image', 'final_robust', float, -0.5 ),
+                    ( 'image', 'psf_arcsec', float, None ),     # Force restore with this value if set, otherwise use default
                     ( 'masking', 'ga', int, 25 ),
                     ( 'masking', 'phase', int, 20 ),
                     ( 'masking', 'ampphase', int, 10 ),
@@ -44,17 +46,10 @@ def options(filename):
     odict = {}
     config=ConfigParser.SafeConfigParser()
     config.read(filename)
+    cased={int: config.getint, float: config.getfloat, bool: config.getfloat, str: config.get}
     for (section, name, otype, default) in option_list:
-        if otype==int:
-            cget=config.getint
-        elif otype==float:
-            cget=config.getfloat
-        elif otype==bool:
-            cget=config.getboolean
-        else:
-            cget=config.get
         try:
-            result=cget(section,name)
+            result=cased[otype](section,name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             result=default
         odict[name]=result
