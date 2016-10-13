@@ -14,26 +14,28 @@ def logfilename(s):
 
 def ddf_image(imagename,mslist,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
     fname=imagename+'.restored.fits'
+    runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell 1.5 --NFacets=11 "%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'])
+    if cleanmask != '':
+        runcommand += ' --CleanMaskImage=%s'%cleanmask
+    if applysols != '':
+        runcommand += ' --GlobalNorm=MeanAbs --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
+    if dicomodel != '':
+        runcommand += ' --InitDicoModel=%s'%dicomodel
+    if threshold != '':
+        runcommand += ' --FluxThreshold=%s'%threshold
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
+        print 'would have run',runcommand
     else:
-        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell 1.5 --NFacets=11 "%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'])
-        if cleanmask != '':
-            runcommand += ' --CleanMaskImage=%s'%cleanmask
-        if applysols != '':
-            runcommand += ' --GlobalNorm=MeanAbs--DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
-        if dicomodel != '':
-            runcommand += ' --InitDicoModel=%s'%dicomodel
-        if threshold != '':
-            runcommand += ' --FluxThreshold=%s'%threshold
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-'+imagename+'.log'),quiet=o['quiet'])
+         run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-'+imagename+'.log'),quiet=o['quiet'])
 
 def make_mask(imagename,thresh):
     fname=imagename+'.mask.fits'
+    runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeMask step')
+        print 'Would have run',runcommand
     else:
-        runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
 def killms_data(imagename,mslist,outsols,clusterfile):
