@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-# Routine is to use killms/ddf to selfcalibrate the data using 30 directions.
+# Routine is to use killms/ddf to self-calibrate the data
 import os,sys
 import os.path
 from auxcodes import run,find_imagenoise,warn,die
 from options import options
-from shutil import copyfile
+from shutil import copyfile,rmtree
 
 def logfilename(s):
     if o['logging'] is not None:
@@ -21,8 +21,11 @@ DDF2 changes to ddf_image:
 4) Force resolution to something sensible.
 """
 
-
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,dicomodel=None,robust=0,reuse_cache=False,verbose=False,saveimages='oNe'):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,robust=0,reuse_cache=False,verbose=False,saveimages=None):
+    # saveimages lists _additional_ images to save
+    if saveimages is None:
+        saveimages=''
+    saveimages+='onNeds'
     fname=imagename+'.app.restored.fits'
     runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --FFTMachine LAPACK --Cell %f --NFacets=11 --NEnlargeData 0"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'],saveimages,o['cellsize'])
     if cleanmode == 'GA':
@@ -31,12 +34,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --CleanMaskImage=%s'%cleanmask
     if applysols is not None:
         runcommand += ' --GlobalNorm=MeanAbs --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
-    if dicomodel is not None:
-        runcommand += ' --InitDicoModel=%s'%dicomodel
+    if previous_image is not None:
+        runcommand += ' --InitDicoModel=%s.DicoModel' % previous_image
     if threshold is not None:
         runcommand += ' --FluxThreshold=%f'%threshold
     if reuse_cache:
-        runcommand += ' --ResetPSF=-1'
+        runcommand += ' --ResetPSF=-1 --ResetDirty=-1'
 
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
@@ -45,12 +48,20 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     else:
          run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-'+imagename+'.log'),quiet=o['quiet'])
 
+    if previous_image is not None and reuse_cache:
+        # this means that the Norm and dirty images won't be written. They're the same as for the previous image, so just make links:
+        os.symlink(previous_image+'.dirty.fits',imagename+'.dirty.fits')
+        os.symlink(previous_image+'.Norm.fits',imagename+'.Norm.fits')
+
+
     if o['psf_arcsec'] is not None:
         fname2=imagename+'.restoredNew.fits'
         if os.path.isfile(fname2):
             warn('File'+fname2+' already exists, skipping Restore step')
         else:
-            runcommand = 'Restore.py --BaseImageName=%s --ResidualImage=%s.residual%02i.fits --BeamPix=%f --NCPU=%i  --SmoothMode=1' % ( imagename, imagename, majorcycles-1, o['psf_arcsec']/o['cellsize'], o['NCPU_DDF'] )
+            runcommand = 'Restore.py --BaseImageName=%s --ResidualImage=%s.residual%02i.fits --BeamPix=%f --NCPU=%i' % ( imagename, imagename, majorcycles-1, o['psf_arcsec']/o['cellsize'], o['NCPU_DDF'] )
+            if 'H' in saveimages:
+                runcommand+=' --SmoothMode=1'
             run(runcommand, dryrun=o['dryrun'],log=logfilename('Restore-'+imagename+'.log'),quiet=o['quiet'])
             if not(o['dryrun']):
                 os.rename(fname,imagename+'.app.restored.old.fits')
@@ -104,7 +115,7 @@ if __name__=='__main__':
         os.mkdir(o['logging'])
 
     # Clear the shared memory
-    run('CleanSHM.py',dryrun=o['dryrun'])
+    run('CleanSHM.py',dryrun=o['dryrun'])    
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'])
@@ -115,6 +126,10 @@ if __name__=='__main__':
 
     # Calibrate off the model
     make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm')
+    
+    # Cache must be removed because the facets have changed
+    rmtree(o['mslist']+'.ddfcache')
+    
     killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
 
     # now if bootstrapping has been done then change the column name
@@ -126,7 +141,7 @@ if __name__=='__main__':
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'])
     make_mask('image_phase1.app.restored.fits',o['phase'])
-    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,dicomodel='image_phase1.DicoModel',robust=o['robust'],reuse_cache=True)
+    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,previous_image='image_phase1',robust=o['robust'],reuse_cache=True)
     make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
@@ -135,7 +150,7 @@ if __name__=='__main__':
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'])
     make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
-    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,dicomodel='image_ampphase1.DicoModel',robust=o['robust'],reuse_cache=True)
+    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',robust=o['robust'],reuse_cache=True)
     make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
 
     # Now move to the full dataset, if it exists
@@ -147,4 +162,4 @@ if __name__=='__main__':
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['final_robust'])
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,dicomodel='image_full_ampphase1.DicoModel',robust=o['final_robust'],reuse_cache=True,saveimages='oNeH')
+        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',robust=o['final_robust'],reuse_cache=True,saveimages='H')
