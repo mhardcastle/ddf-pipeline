@@ -39,7 +39,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if threshold is not None:
         runcommand += ' --FluxThreshold=%f'%threshold
     if reuse_cache:
-        runcommand += ' --ResetPSF=-1 --ResetDirty=-1'
+        # possible that crashes could destroy the cache, so need to check
+        if os.path.exists(mslist+'.ddfcache/Dirty'):
+            runcommand += ' --ResetDirty=-1'
+        if os.path.exists(mslist+'.ddfcache/PSF'):
+            runcommand += ' --ResetPSF=-1'
 
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
