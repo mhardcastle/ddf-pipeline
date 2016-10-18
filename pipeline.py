@@ -21,12 +21,17 @@ DDF2 changes to ddf_image:
 4) Force resolution to something sensible.
 """
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,robust=0,reuse_cache=False,verbose=False,saveimages=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,robust=0,beamsize=None,reuse_cache=False,verbose=False,saveimages=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
     saveimages+='onNeds'
+
+    if beamsize is None:
+        beamsize=o['psf_arcsec']
+
     fname=imagename+'.app.restored.fits'
+
     runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --FFTMachine LAPACK --Cell %f --NFacets=11 --NEnlargeData 0"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'],saveimages,o['cellsize'])
     if cleanmode == 'GA':
         runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
@@ -54,9 +59,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
 
     if previous_image is not None and reuse_cache:
         # this means that the Norm and dirty images won't be written. They're the same as for the previous image, so just make links:
-        os.symlink(previous_image+'.dirty.fits',imagename+'.dirty.fits')
-        os.symlink(previous_image+'.Norm.fits',imagename+'.Norm.fits')
-
+        try:
+            os.symlink(previous_image+'.dirty.fits',imagename+'.dirty.fits')
+            os.symlink(previous_image+'.Norm.fits',imagename+'.Norm.fits')
+        except OSError:
+            # if the symlink failed the files were there already, so pass
+            pass
 
     if o['psf_arcsec'] is not None:
         fname2=imagename+'.restoredNew.fits'
@@ -166,4 +174,4 @@ if __name__=='__main__':
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['final_robust'])
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',robust=o['final_robust'],reuse_cache=True,saveimages='H')
+        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_cache=True,saveimages='H')
