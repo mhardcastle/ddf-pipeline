@@ -30,6 +30,7 @@ def options(filename):
                     ( 'image', 'robust', float, -0.15 ),
                     ( 'image', 'final_robust', float, -0.5 ),
                     ( 'image', 'psf_arcsec', float, None ),     # Force restore with this value if set, otherwise use default
+                    ( 'image', 'final_psf_arcsec', float, None ),
                     ( 'masking', 'ga', int, 25 ),
                     ( 'masking', 'phase', int, 20 ),
                     ( 'masking', 'ampphase', int, 10 ),
