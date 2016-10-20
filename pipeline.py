@@ -32,7 +32,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
 
     fname=imagename+'.app.restored.fits'
 
-    runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=1.2 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --RestoringBeam %f"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'],saveimages,o['cellsize'],beamsize)
+    runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'],saveimages,o['cellsize'],beamsize)
     if cleanmode == 'GA':
         runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
     if cleanmask is not None:
@@ -96,12 +96,21 @@ def killms_data(imagename,mslist,outsols,clusterfile):
         run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+outsols+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename):
+    # returns True if the step was run, False if skipped
     fname=imagename+'.npy'
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeModel step')
+        return False
     else:
         runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['ndir'])
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
+        return True
+
+def clearcache(mslist):
+    try:
+        rmtree(mslist+'.ddfcache')
+    except OSError:
+        pass
 
 if __name__=='__main__':
     # Main loop
@@ -117,11 +126,11 @@ if __name__=='__main__':
 
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
-    # Clear the cache, we don't know where it's been
-    try:
-        rmtree(o['mslist']+'.ddfcache')
-    except OSError:
-        pass
+    if o['clearcache']:
+        # Clear the cache, we don't know where it's been
+        clearcache(o['mslist'])
+        if o['full_mslist'] is not None:
+            clearcache(o['full_mslist'])
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'])
@@ -131,7 +140,9 @@ if __name__=='__main__':
     make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
 
     # Calibrate off the model
-    make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm')
+    if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
+        # if this step runs, clear the cache to remove facet info
+        clearcache(o['mslist'])
     
     killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
 

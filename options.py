@@ -39,6 +39,7 @@ def options(filename):
                     ( 'control', 'logging', str, 'logs' ),
                     ( 'control', 'dryrun', bool, False ),
                     ( 'control', 'restart', bool, True ),
+                    ( 'control', 'clearcache', bool, True ),
                     ( 'control', 'bootstrap', bool, False ),
                     ( 'bootstrap', 'use_mpi', bool, False) ,
                     ( 'bootstrap', 'bscell', float, 4.5) ,
