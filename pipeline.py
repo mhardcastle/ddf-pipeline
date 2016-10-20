@@ -21,7 +21,7 @@ DDF2 changes to ddf_image:
 4) Force resolution to something sensible.
 """
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -136,7 +136,7 @@ if __name__=='__main__':
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'])
     make_mask('image_dirin_MSMF.app.restored.fits',o['ga'])
     #imagenoise = find_imagenoise('image_dirin_MSMF.restored.fits',1E-3)
-    ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],reuse_psf=True,reuse_dirty=True)
+    ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True)
     make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
 
     # Calibrate off the model
@@ -155,7 +155,7 @@ if __name__=='__main__':
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'])
     make_mask('image_phase1.app.restored.fits',o['phase'])
-    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,previous_image='image_phase1',robust=o['robust'],reuse_psf=True)
+    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True)
     make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
@@ -164,7 +164,7 @@ if __name__=='__main__':
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'])
     make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
-    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',robust=o['robust'],reuse_psf=True)
+    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True)
     make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
 
     # Now move to the full dataset, if it exists
@@ -176,4 +176,4 @@ if __name__=='__main__':
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['final_robust'])
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H')
+        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H')

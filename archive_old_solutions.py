@@ -1,6 +1,8 @@
+#!/usr/bin/python
 # Tidy up solutions from a previous run
 
 from options import options
+from auxcodes import die
 import os
 import sys
 
@@ -10,6 +12,9 @@ def rename(src,dest):
     else:
         print 'renaming',src,'as',dest
         os.rename(src,dest)
+
+if len(sys.argv)<2:
+    die('This script takes one argument, the name of the config file')
 
 o=options(sys.argv[1])
 if o['mslist'] is None:
