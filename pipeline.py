@@ -80,20 +80,18 @@ def make_mask(imagename,thresh,verbose=False):
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
 def killms_data(imagename,mslist,outsols,clusterfile):
-    with open(mslist,'r') as f:
-        mslistname = [l for l in (line.strip() for line in f) if l][-1]  # last non-empty line
-    checkname=mslistname+'/killMS.'+outsols+'.sols.npz'
-    if o['restart'] and os.path.isfile(checkname):
-        warn('Solutions file '+checkname+' already exists, not running killMS step')
-    else:
-        if imagename != '':
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(mslist,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'])
+    # run killms individually on each MS -- allows restart if it failed in the middle
+    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    for f in filenames:
+        checkname=f+'/killMS.'+outsols+'.sols.npz'
+        if o['restart'] and os.path.isfile(checkname):
+            warn('Solutions file '+checkname+' already exists, not running killMS step')
+        else:
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(f,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'])
             if clusterfile != '':
                 runcommand+=' --NodesFile '+clusterfile
-        else:
-            # in current code, not used
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --SkyModel %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(mslist,skymodel, o['dt'] ,o['NCPU_killms'],outsols, o['NChanSols'])
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+outsols+'.log'),quiet=o['quiet'])
+            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+outsols+'.log'),quiet=o['quiet'])
+
 
 def make_model(maskname,imagename):
     # returns True if the step was run, False if skipped
