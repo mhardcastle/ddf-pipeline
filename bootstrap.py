@@ -1,9 +1,7 @@
 #!/usr/bin/python
 
 # Code to bootstrap the flux density scale using killMS/DDF
-# Currently stand-alone, to incorporate into the pipeline later
-
-# DOES NOT WORK properly until we get beam correction
+# Should run standalone or as part of the pipeline
 
 import os,sys
 import os.path
@@ -16,44 +14,13 @@ from make_fitting_product import make_catalogue
 import fitting_factors
 import find_outliers
 from scipy.interpolate import InterpolatedUnivariateSpline
+from pipeline import ddf_image, make_mask
 
 def logfilename(s):
     if o['logging'] is not None:
         return o['logging']+'/'+s 
     else:
         return None
-
-def ddf_image_low(imagename,msname,cleanmask,cleanmode,ddsols,applysols,threshold,majorcycles,dicomodel,robust):
-    fname=imagename+'.restored.fits'
-    if o['restart'] and os.path.isfile(fname):
-        warn('File '+fname+' already exists, skipping DDF step')
-    else:
-        runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=1 --ColName CORRECTED_DATA --NCPU=%i --Mode=Clean --CycleFactor=1.5 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Cell %f --UVRangeKm=[0.1,25.0] "%(imagename,msname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['bsimsize'],o['bscell'])
-        if cleanmask != '':
-            runcommand += ' --CleanMaskImage=%s'%cleanmask
-        if applysols != '':
-            runcommand += ' --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
-        if dicomodel != '':
-            runcommand += ' --InitDicoModel=%s'%dicomodel
-        if threshold != '':
-            runcommand += ' --FluxThreshold=%s'%threshold
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('DDF-low-'+imagename+'.log'),quiet=o['quiet'])
-
-def make_mask(imagename,thresh):
-    fname=imagename+'.mask.fits'
-    if o['restart'] and os.path.isfile(fname):
-        warn('File '+fname+' already exists, skipping MakeMask step')
-    else:
-        runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
-
-def restore(basename,beam):
-    fname=basename+'.restoredNew.fits'
-    if o['restart'] and os.path.isfile(fname):
-        warn('File '+fname+' already exists, skipping Restore step')
-    else:
-        runcommand = "Restore.py --BaseImageName=%s --ResidualImage=%s --BeamPix=%f" % (basename, basename+'.residual.fits', beam)
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('Restore-'+basename+'.log'),quiet=o['quiet'])
 
 def run_bootstrap(oa):
     global o
@@ -66,9 +33,10 @@ def run_bootstrap(oa):
         os.mkdir(o['logging'])
 
     low_robust=-0.25
+    low_uvrange=[0.1,25.0]
 
     # Clear the shared memory
-    #run('CleanSHM.py',dryrun=o['dryrun'])
+    run('CleanSHM.py',dryrun=o['dryrun'])
 
     # We use the individual ms in mslist.
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
@@ -91,23 +59,22 @@ def run_bootstrap(oa):
     # we can use this for each of the bands. We use the
     # lowest-frequency dataset.
 
-    ddf_image_low('image_low_initial_MSMF',mslist[0],'','MSMF','killms_p1','P',5e-3,3,'',low_robust)
-    make_mask('image_low_initial_MSMF.restored.fits',20)
+    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20)
+    make_mask('image_low_initial_MSMF.app.restored.fits',20)
 
     # now loop over the MSs to make the images
     for i,ms in enumerate(mslist):
         imroot='image_low_%i_GA' % i
-        ddf_image_low(imroot,ms,'image_low_initial_MSMF.restored.fits.mask.fits','GA','killms_p1','P','',3,'',low_robust)
-        make_mask(imroot+'.restored.fits',15)
-        ddf_image_low(imroot+'m',ms,imroot+'.restored.fits.mask.fits','GA','killms_p1','P','',2,imroot+'.DicoModel',low_robust)
-        restore(imroot+'m',7.0)
+        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20)
+        make_mask(imroot+'.app.restored.fits',15)
+        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='GA',ddsols='killms_p1',applysols='P',majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H')
 
     #make the cube
     if os.path.isfile('cube.fits'):
         warn('Cube file exists, skipping cube assembly')
     else:
         warn('Making the cube')
-        make_cube('cube.fits',['image_low_%i_GAm.restoredNew.corr.fits' % i for i in range(len(mslist))],freqs)
+        make_cube('cube.fits',['image_low_%i_GAm.int.restored.fits' % i for i in range(len(mslist))],freqs)
     if os.path.isfile('cube.pybdsm.srl'):
         warn('Source list exists, skipping source extraction')
     else:
