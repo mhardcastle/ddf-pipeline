@@ -21,7 +21,7 @@ DDF2 changes to ddf_image:
 4) Force resolution to something sensible.
 """
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -29,10 +29,14 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
 
     if beamsize is None:
         beamsize=o['psf_arcsec']
+    if imsize is None:
+        imsize=o['imsize']
+    if cellsize is None:
+        cellsize=o['cellsize']
 
     fname=imagename+'.app.restored.fits'
 
-    runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,o['imsize'],saveimages,o['cellsize'],beamsize)
+    runcommand = "DDF.py --ImageName=%s --MSName=%s --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,colname,o['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
     if cleanmode == 'GA':
         runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
     if cleanmask is not None:
@@ -43,6 +47,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --InitDicoModel=%s.DicoModel' % previous_image
     if threshold is not None:
         runcommand += ' --FluxThreshold=%f'%threshold
+    if uvrange is not None:
+        runcommand += ' --UVRangeKM=[%f,%f]' % (uvrange[0],uvrange[1])
     if reuse_dirty:
         # possible that crashes could destroy the cache, so need to check
         if os.path.exists(mslist+'.ddfcache/Dirty'):
@@ -153,7 +159,7 @@ if __name__=='__main__':
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'])
     make_mask('image_phase1.app.restored.fits',o['phase'])
-    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True)
+    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True)
     make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
