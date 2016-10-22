@@ -21,7 +21,7 @@ DDF2 changes to ddf_image:
 4) Force resolution to something sensible.
 """
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA'):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -85,7 +85,7 @@ def make_mask(imagename,thresh,verbose=False):
     else:
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
-def killms_data(imagename,mslist,outsols,clusterfile):
+def killms_data(imagename,mslist,outsols,clusterfile,colname='CORRECTED_DATA'):
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
@@ -93,7 +93,7 @@ def killms_data(imagename,mslist,outsols,clusterfile):
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running killMS step')
         else:
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol CORRECTED_DATA"%(f,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'])
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol %s"%(f,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],colname)
             if clusterfile != '':
                 runcommand+=' --NodesFile '+clusterfile
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+outsols+'.log'),quiet=o['quiet'])
@@ -157,18 +157,18 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
-    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'])
+    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'],colname=colname)
     make_mask('image_phase1.app.restored.fits',o['phase'])
-    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True)
+    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname)
     make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
-    killms_data('image_phase1m',o['mslist'],'killms_ap1','')
+    killms_data('image_phase1m',o['mslist'],'killms_ap1','',colname=colname)
 
     # Apply phase and amplitude solutions and image again
-    ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'])
+    ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'],colname=colname)
     make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
-    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True)
+    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True,colname=colname)
     make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
 
     # Now move to the full dataset, if it exists
@@ -177,7 +177,7 @@ if __name__=='__main__':
         warn('No full MS list supplied, stopping here')
     else:
         # single AP cal of full dataset and final image. Is this enough?
-        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','')
-        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['final_robust'])
+        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','',colname=colname)
+        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['final_robust'],colname=colname)
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H')
+        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname)
