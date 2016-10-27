@@ -43,7 +43,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --CleanMaskImage=%s'%cleanmask
     if applysols is not None:
         runcommand += ' --GlobalNorm=MeanAbs --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
-    if previous_image is not None and use_dicomodel is True:
+    if previous_image is not None and use_dicomodel:
         runcommand += ' --InitDicoModel=%s.DicoModel' % previous_image
     if threshold is not None:
         runcommand += ' --FluxThreshold=%f'%threshold
