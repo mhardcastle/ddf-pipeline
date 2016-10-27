@@ -127,7 +127,7 @@ def run_all(run):
             sys.exit(0)
     else:
         pool=None
-
+        threads=16
     # run MCMC
     print 'run the sampler, pool is',pool
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost,
@@ -136,6 +136,14 @@ def run_all(run):
 
     if pool:
         pool.close()
+
+    # plot the sampler chain
+    for i in range(ndim):
+        plt.subplot(ndim,1,i+1)
+        plt.plot(sampler.chain[:,:,i].transpose())
+        plt.ylabel(str(i))
+    plt.xlabel('Samples')
+    plt.savefig('walkers-'+str(run)+'.pdf')
 
     samples=sampler.chain[:, 400:, :].reshape((-1, ndim))
     samplest=samples.transpose()
@@ -148,14 +156,6 @@ def run_all(run):
 
     output=np.vstack((means,errors)).T
     np.save('crossmatch-results-'+str(run)+'.npy',output)
-
-    # plot the sampler chain
-    for i in range(ndim):
-        plt.subplot(ndim,1,i+1)
-        plt.plot(sampler.chain[:,:,i].transpose())
-        plt.ylabel(str(i))
-    plt.xlabel('Samples')
-    plt.savefig('walkers-'+str(run)+'.pdf')
 
     # make triangle plot
     fig = corner.corner(samples)
