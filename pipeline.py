@@ -3,9 +3,10 @@
 # Routine is to use killms/ddf to self-calibrate the data
 import os,sys
 import os.path
-from auxcodes import run,find_imagenoise,warn,die
+from auxcodes import report,run,find_imagenoise,warn,die
 from options import options
 from shutil import copyfile,rmtree
+import pyrap.tables as pt
 
 def logfilename(s):
     if o['logging'] is not None:
@@ -20,6 +21,22 @@ DDF2 changes to ddf_image:
 3) re-use cache second time round
 4) Force resolution to something sensible.
 """
+
+def check_imaging_weight(mslist_name):
+
+    report('Checking for IMAGING_WEIGHT in input MSS')
+    mslist=[s.strip() for s in open(mslist_name).readlines()]
+    for ms in mslist:
+        t = pt.table(ms)
+        try:
+            dummy=t.getcoldesc('IMAGING_WEIGHT')
+        except RuntimeError:
+            dummy=None
+        t.close()
+        if dummy is not None:
+            warn('Table '+ms+' already has imaging weights')
+        else:
+            run('MSTools.py --Operation=CasaCols '+ms)
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1):
     # saveimages lists _additional_ images to save
@@ -135,6 +152,9 @@ if __name__=='__main__':
         clearcache(o['mslist'])
         if o['full_mslist'] is not None:
             clearcache(o['full_mslist'])
+
+    # Check imaging weights -- needed before DDF
+    check_imaging_weight(o['mslist'])
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'])
