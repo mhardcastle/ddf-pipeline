@@ -37,7 +37,6 @@ def check_imaging_weight(mslist_name):
             warn('Table '+ms+' already has imaging weights')
         else:
             pt.addImagingColumns(ms)
-            
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1):
     # saveimages lists _additional_ images to save
@@ -166,10 +165,10 @@ if __name__=='__main__':
     make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
 
     # Calibrate off the model
-    #if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
+    if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
         # if this step runs, clear the cache to remove facet info
-    
-    clearcache(o['mslist'])
+        clearcache(o['mslist'])
+
     killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
 
     # now if bootstrapping has been done then change the column name
@@ -179,7 +178,6 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
-    clearcache(o['mslist'])
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'],colname=colname)
     make_mask('image_phase1.app.restored.fits',o['phase'])
     ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
@@ -188,7 +186,6 @@ if __name__=='__main__':
     # Calibrate off the model
     killms_data('image_phase1m',o['mslist'],'killms_ap1','',colname=colname)
 
-    clearcache(o['mslist'])
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'],colname=colname)
     make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
@@ -202,7 +199,6 @@ if __name__=='__main__':
     else:
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','',colname=colname)
-        clearcache(o['full_mslist'])
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname)
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
