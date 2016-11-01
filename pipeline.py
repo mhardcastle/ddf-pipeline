@@ -102,7 +102,7 @@ def make_mask(imagename,thresh,verbose=False):
     else:
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MM-'+imagename+'.log'),quiet=o['quiet'])
 
-def killms_data(imagename,mslist,outsols,clusterfile,colname='CORRECTED_DATA'):
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA'):
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
@@ -111,7 +111,7 @@ def killms_data(imagename,mslist,outsols,clusterfile,colname='CORRECTED_DATA'):
             warn('Solutions file '+checkname+' already exists, not running killMS step')
         else:
             runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF 6 --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol %s"%(f,imagename,o['dt'], o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],colname)
-            if clusterfile != '':
+            if clusterfile is not None:
                 runcommand+=' --NodesFile '+clusterfile
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+outsols+'.log'),quiet=o['quiet'])
 
@@ -133,6 +133,13 @@ def clearcache(mslist):
         rmtree(mslist+'.ddfcache')
     except OSError:
         pass
+    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    for f in filenames:
+        try:
+            rmtree(f+'.ddfcache')
+        except OSError:
+            pass
+
 
 if __name__=='__main__':
     # Main loop
@@ -169,7 +176,7 @@ if __name__=='__main__':
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
-    killms_data('image_dirin_GAm',o['mslist'],'killms_p1','image_dirin_GAm.npy.ClusterCat.npy')
+    killms_data('image_dirin_GAm',o['mslist'],'killms_p1',clusterfile='image_dirin_GAm.npy.ClusterCat.npy')
 
     # now if bootstrapping has been done then change the column name
 
@@ -184,7 +191,7 @@ if __name__=='__main__':
     make_mask('image_phase1m.app.restored.fits',o['phase'])
 
     # Calibrate off the model
-    killms_data('image_phase1m',o['mslist'],'killms_ap1','',colname=colname)
+    killms_data('image_phase1m',o['mslist'],'killms_ap1',colname=colname)
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['robust'],colname=colname)
@@ -198,7 +205,7 @@ if __name__=='__main__':
         warn('No full MS list supplied, stopping here')
     else:
         # single AP cal of full dataset and final image. Is this enough?
-        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1','',colname=colname)
+        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_GAm.NodesCat.npy')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname)
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
