@@ -41,6 +41,7 @@ def options(filename):
                     ( 'control', 'restart', bool, True ),
                     ( 'control', 'clearcache', bool, True ),
                     ( 'control', 'bootstrap', bool, False ),
+                    ( 'control', 'stagedir', str, None ),
                     ( 'bootstrap', 'use_mpi', bool, False) ,
                     ( 'bootstrap', 'bscell', float, 4.5) ,
                     ( 'bootstrap', 'bsimsize', int, 6000) )
@@ -55,7 +56,8 @@ def options(filename):
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             result=default
         odict[name]=result
-
+    if odict['logging']=='None':
+        odict['logging']=None
     return odict
 
 if __name__=='__main__':
