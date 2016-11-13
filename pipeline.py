@@ -16,14 +16,6 @@ def logfilename(s,options=None):
     else:
         return None
 
-"""
-DDF2 changes to ddf_image:
-1) new parameters for DDF2
-2) changes to filenames of output files
-3) re-use cache second time round
-4) Force resolution to something sensible.
-"""
-
 def check_imaging_weight(mslist_name):
 
     report('Checking for IMAGING_WEIGHT in input MSS')
@@ -80,7 +72,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if threshold is not None:
         runcommand += ' --FluxThreshold=%f'%threshold
     if uvrange is not None:
-        runcommand += ' --UVRangeKM=[%f,%f]' % (uvrange[0],uvrange[1])
+        runcommand += ' --UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
     if reuse_dirty:
         # possible that crashes could destroy the cache, so need to check
         if os.path.exists(mslist+'.ddfcache/Dirty'):
@@ -237,3 +229,12 @@ if __name__=='__main__':
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m')
         make_mask('image_full_ampphase1.app.restored.fits',o['full'])
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
+
+        if o['low_psf_arcsec'] is not None:
+            # low-res reimage requested
+            # allegedly we can use a high-res mask?
+            uvrange=[0.1,2.5*206.0/o['low_psf_arcsec']]
+            make_mask('image_full_ampphase1m.app.restored.fits',o['full'])
+            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_full_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'])
+            make_mask('image_full_low.app.restored.fits',o['full'])
+            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,reuse_psf=True,saveimages='H')
