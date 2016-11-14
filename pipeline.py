@@ -32,7 +32,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -55,9 +55,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         except OSError:
             pass
 
-    runcommand = "DDF.py --ImageName=%s --MSName=%s --PeakFactor %f --NFreqBands=2 --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
+    runcommand = "DDF.py --ImageName=%s --MSName=%s --PeakFactor %f --NFreqBands=%i --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
     if cleanmode == 'GA':
-        runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
+        if singlefreq:
+            runcommand += ' --GASolvePars [S] --BICFactor 0'
+        else:
+            runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
     if cleanmask is not None:
         runcommand += ' --CleanMaskImage=%s'%cleanmask
     if applysols is not None:
@@ -232,9 +235,15 @@ if __name__=='__main__':
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
-            # allegedly we can use a high-res mask?
             uvrange=[0.1,2.5*206.0/o['low_psf_arcsec']]
+
+            # make an MSMF from one dataset as an initial mask. Use
+            # the same name as bootstrap does, so if that's run, we
+            # have the mask already
+            mslist=[s.strip() for s in open(o['mslist']).readlines()]
+            ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'],singlefreq=True)
+            make_mask('image_low_initial_MSMF.app.restored.fits',20)
             make_mask('image_full_ampphase1m.app.restored.fits',o['full'])
-            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_full_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'])
+            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'])
             make_mask('image_full_low.app.restored.fits',o['full'])
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,reuse_psf=True,saveimages='H')
