@@ -236,14 +236,17 @@ if __name__=='__main__':
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
             uvrange=[0.1,2.5*206.0/o['low_psf_arcsec']]
-
+            if o['low_imsize'] is not None:
+                low_imsize=o['low_imsize'] # allow over-ride
+            else:
+                low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # make an MSMF from one dataset as an initial mask. Use
             # the same name as bootstrap does, so if that's run, we
-            # have the mask already
+            # have the mask already (but need to make sure these match!)
             mslist=[s.strip() for s in open(o['mslist']).readlines()]
-            ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'],singlefreq=True)
+            ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],singlefreq=True)
             make_mask('image_low_initial_MSMF.app.restored.fits',20)
             make_mask('image_full_ampphase1m.app.restored.fits',o['full'])
-            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'])
+            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'])
             make_mask('image_full_low.app.restored.fits',o['full'])
-            ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=o['low_imsize'],cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,reuse_psf=True,saveimages='H')
+            ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,reuse_psf=True,saveimages='H')

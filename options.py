@@ -34,7 +34,7 @@ def options(filename):
                     ( 'image', 'low_psf_arcsec', float, None ),
                     ( 'image', 'low_robust', float, -0.20 ),
                     ( 'image', 'low_cell', float, 4.5 ),
-                    ( 'image', 'low_imsize', int, 6000 ),
+                    ( 'image', 'low_imsize', int, None ),
                     ( 'masking', 'ga', int, 25 ),
                     ( 'masking', 'phase', int, 20 ),
                     ( 'masking', 'ampphase', int, 10 ),
@@ -48,7 +48,7 @@ def options(filename):
                     ( 'control', 'stagedir', str, None ),
                     ( 'bootstrap', 'use_mpi', bool, False) ,
                     ( 'bootstrap', 'bscell', float, 4.5) ,
-                    ( 'bootstrap', 'bsimsize', int, 6000) )
+                    ( 'bootstrap', 'bsimsize', int, 6000 ) )
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
