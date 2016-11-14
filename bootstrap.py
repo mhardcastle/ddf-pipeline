@@ -59,15 +59,15 @@ def run_bootstrap(oa):
     # we can use this for each of the bands. We use the
     # lowest-frequency dataset.
 
-    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20)
-    make_mask('image_low_initial_MSMF.app.restored.fits',20)
+    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
+    make_mask('image_low_initial_MSMF.app.restored.fits',20,options=o)
 
     # now loop over the MSs to make the images
     for i,ms in enumerate(mslist):
         imroot='image_low_%i_GA' % i
-        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20)
-        make_mask(imroot+'.app.restored.fits',15)
-        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='GA',ddsols='killms_p1',applysols='P',majorcyles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H')
+        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
+        make_mask(imroot+'.app.restored.fits',15,options=o)
+        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='GA',ddsols='killms_p1',applysols='P',robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H',imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
 
     #make the cube
     if os.path.isfile('cube.fits'):
