@@ -21,6 +21,7 @@ def options(filename):
                     ( 'machine', 'NCPU_killms', int, getcpus() ),
                     ( 'data', 'mslist', str, None ),
                     ( 'data', 'full_mslist', str, None ),
+                    ( 'data', 'colname', str, 'CORRECTED_DATA' ),
                     ( 'solutions', 'ndir', int, 30 ),
                     ( 'solutions', 'NChanSols', int, 1 ),
                     ( 'solutions', 'dt', float, 1. ),
