@@ -207,9 +207,6 @@ if __name__=='__main__':
     if o['bootstrap']:
         run('bootstrap.py '+sys.argv[1],dryrun=o['dryrun'],log=None)
         colname='SCALED_DATA'
-    else:
-        # at this point killms has run so use corrected_data:
-        colname='CORRECTED_DATA'
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_GAm')
