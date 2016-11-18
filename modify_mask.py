@@ -14,7 +14,7 @@ def modify_mask(infile,outfile,table,radius,fluxlim):
     """
 
     t=Table.read(table)
-    t=t[t['Total_flux']>fluxlim]
+    t=t[t['Peak_flux']>fluxlim]
     hdu=fits.open(infile)
     w=WCS(hdu[0].header)
     map=hdu[0].data
