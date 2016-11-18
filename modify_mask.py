@@ -21,11 +21,9 @@ def modify_mask(infile,outfile,table,radius,fluxlim):
     mask=np.zeros_like(map,dtype=int)
     _,_,ymax,xmax=map.shape
     x,y,_,_=w.wcs_world2pix(t['RA'],t['DEC'],0,0,0)
-    print len(x)
     filter=(x>=0) & (x<xmax) & (y>=0) & (y<ymax)
     x=x[filter]
     y=y[filter]
-    print len(x)
     for xv,yv in zip(x,y):
         cxmin=xv-radius-1
         if cxmin<0: cxmin=0

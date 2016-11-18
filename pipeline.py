@@ -7,6 +7,7 @@ from auxcodes import report,run,find_imagenoise,warn,die
 from options import options
 from shutil import copyfile,rmtree
 import pyrap.tables as pt
+from modify_mask import modify_mask
 
 def logfilename(s,options=None):
     if options is None:
@@ -32,7 +33,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=True):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -40,12 +41,14 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if options is None:
         options=o # attempt to get global if it exists
 
+    if do_decorr is None:
+        do_decorr=options['do_decorr']
     if beamsize is None:
-        beamsize=o['psf_arcsec']
+        beamsize=options['psf_arcsec']
     if imsize is None:
-        imsize=o['imsize']
+        imsize=options['imsize']
     if cellsize is None:
-        cellsize=o['cellsize']
+        cellsize=options['cellsize']
 
     fname=imagename+'.app.restored.fits'
     if os.path.isfile(imagename+'.restored.fits'):
@@ -104,7 +107,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             # if the symlink failed the files were there already, so pass
             pass
 
-def make_mask(imagename,thresh,verbose=False,options=None):
+def make_mask(imagename,thresh,verbose=False,use_tgss=False,options=None):
     if options is None:
         options=o # attempt to get global
     fname=imagename+'.mask.fits'
@@ -115,6 +118,10 @@ def make_mask(imagename,thresh,verbose=False,options=None):
             print 'Would have run',runcommand
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
+    if use_tgss and options['tgss'] is not None:
+        report('Merging the mask with TGSS catalogue')
+        # TGSS path is provided, this means we want to add the positions of bright TGSS sources to the mask
+        modify_mask(fname,fname,options['tgss'],options['tgss_radius'],options['tgss_flux'])
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',stagedir=None):
     # run killms individually on each MS -- allows restart if it failed in the middle
@@ -192,9 +199,9 @@ if __name__=='__main__':
 
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'],colname=colname)
-    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'])
+    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
     ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname)
-    make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
+    make_mask('image_dirin_GAm.app.restored.fits',o['ga'],use_tgss=True)
 
     # Calibrate off the model
     if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
