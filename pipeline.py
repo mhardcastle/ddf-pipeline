@@ -217,18 +217,18 @@ if __name__=='__main__':
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_GAm')
-    make_mask('image_phase1.app.restored.fits',o['phase'])
+    make_mask('image_phase1.app.restored.fits',o['phase'],use_tgss=True)
     ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
-    make_mask('image_phase1m.app.restored.fits',o['phase'])
+    make_mask('image_phase1m.app.restored.fits',o['phase'],use_tgss=True)
 
     # Calibrate off the model
     killms_data('image_phase1m',o['mslist'],'killms_ap1',colname=colname)
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1m')
-    make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
+    make_mask('image_ampphase1.app.restored.fits',o['ampphase'],use_tgss=True)
     ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True,colname=colname,peakfactor=0.01)
-    make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
+    make_mask('image_ampphase1m.app.restored.fits',o['ampphase'],use_tgss=True)
 
     # Now move to the full dataset, if it exists
 
@@ -238,7 +238,7 @@ if __name__=='__main__':
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_GAm.NodesCat.npy',stagedir=o['stagedir'])
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m')
-        make_mask('image_full_ampphase1.app.restored.fits',o['full'])
+        make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True)
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
 
         if o['low_psf_arcsec'] is not None:

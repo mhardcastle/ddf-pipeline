@@ -42,7 +42,7 @@ def options(filename):
                     ( 'masking', 'ampphase', int, 10 ),
                     ( 'masking', 'full', int, 5 ),
                     ( 'masking', 'tgss', str, None ),
-                    ( 'masking', 'tgss_radius', float, 5.0 ), # radius in pix
+                    ( 'masking', 'tgss_radius', float, 8.0 ), # radius in pix
                     ( 'masking', 'tgss_flux', float, 500 ), # peak flux in mJy
                     ( 'control', 'quiet', bool, False ),
                     ( 'control', 'logging', str, 'logs' ),
