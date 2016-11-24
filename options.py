@@ -21,6 +21,7 @@ def options(filename):
                     ( 'machine', 'NCPU_killms', int, getcpus() ),
                     ( 'data', 'mslist', str, None ),
                     ( 'data', 'full_mslist', str, None ),
+                    ( 'data', 'colname', str, 'CORRECTED_DATA' ),
                     ( 'solutions', 'ndir', int, 30 ),
                     ( 'solutions', 'NChanSols', int, 1 ),
                     ( 'solutions', 'dt', float, 1. ),
@@ -35,10 +36,14 @@ def options(filename):
                     ( 'image', 'low_robust', float, -0.20 ),
                     ( 'image', 'low_cell', float, 4.5 ),
                     ( 'image', 'low_imsize', int, None ),
+                    ( 'image', 'do_decorr', bool, False ),
                     ( 'masking', 'ga', int, 25 ),
                     ( 'masking', 'phase', int, 20 ),
                     ( 'masking', 'ampphase', int, 10 ),
                     ( 'masking', 'full', int, 5 ),
+                    ( 'masking', 'tgss', str, None ),
+                    ( 'masking', 'tgss_radius', float, 8.0 ), # radius in pix
+                    ( 'masking', 'tgss_flux', float, 500 ), # peak flux in mJy
                     ( 'control', 'quiet', bool, False ),
                     ( 'control', 'logging', str, 'logs' ),
                     ( 'control', 'dryrun', bool, False ),

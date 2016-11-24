@@ -7,6 +7,7 @@ from auxcodes import report,run,find_imagenoise,warn,die
 from options import options
 from shutil import copyfile,rmtree
 import pyrap.tables as pt
+from modify_mask import modify_mask
 
 def logfilename(s,options=None):
     if options is None:
@@ -32,7 +33,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -40,12 +41,14 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if options is None:
         options=o # attempt to get global if it exists
 
+    if do_decorr is None:
+        do_decorr=options['do_decorr']
     if beamsize is None:
-        beamsize=o['psf_arcsec']
+        beamsize=options['psf_arcsec']
     if imsize is None:
-        imsize=o['imsize']
+        imsize=options['imsize']
     if cellsize is None:
-        cellsize=o['cellsize']
+        cellsize=options['cellsize']
 
     fname=imagename+'.app.restored.fits'
     if os.path.isfile(imagename+'.restored.fits'):
@@ -56,6 +59,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             pass
 
     runcommand = "DDF.py --ImageName=%s --MSName=%s --PeakFactor %f --NFreqBands=%i --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
+    if do_decorr:
+        runcommand += ' --DecorrMode=FT'
     if cleanmode == 'GA':
         if singlefreq:
             runcommand += ' --GASolvePars [S] --BICFactor 0'
@@ -102,7 +107,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             # if the symlink failed the files were there already, so pass
             pass
 
-def make_mask(imagename,thresh,verbose=False,options=None):
+def make_mask(imagename,thresh,verbose=False,use_tgss=False,options=None):
     if options is None:
         options=o # attempt to get global
     fname=imagename+'.mask.fits'
@@ -113,6 +118,10 @@ def make_mask(imagename,thresh,verbose=False,options=None):
             print 'Would have run',runcommand
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
+        if use_tgss and options['tgss'] is not None:
+            report('Merging the mask with TGSS catalogue')
+            # TGSS path is provided, this means we want to add the positions of bright TGSS sources to the mask
+            modify_mask(fname,fname,options['tgss'],options['tgss_radius'],options['tgss_flux'])
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',stagedir=None):
     # run killms individually on each MS -- allows restart if it failed in the middle
@@ -167,14 +176,15 @@ def clearcache(mslist):
 if __name__=='__main__':
     # Main loop
 
-    colname='CORRECTED_DATA'
-
     o=options(sys.argv[1])
     if o['mslist'] is None:
         die('MS list must be specified')
 
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
+
+    # Set column name for first steps
+    colname=o['colname']
 
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
@@ -188,39 +198,37 @@ if __name__=='__main__':
     check_imaging_weight(o['mslist'])
 
     # Image full bandwidth to create a model
-    ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'])
-    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'])
-    #imagenoise = find_imagenoise('image_dirin_MSMF.restored.fits',1E-3)
-    ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05)
-    make_mask('image_dirin_GAm.app.restored.fits',o['ga'])
+    ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'],colname=colname)
+    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
+    ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname)
+    make_mask('image_dirin_GAm.app.restored.fits',o['ga'],use_tgss=True)
 
     # Calibrate off the model
     if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
-    killms_data('image_dirin_GAm',o['mslist'],'killms_p1',clusterfile='image_dirin_GAm.npy.ClusterCat.npy')
+    killms_data('image_dirin_GAm',o['mslist'],'killms_p1',clusterfile='image_dirin_GAm.npy.ClusterCat.npy',colname=colname)
 
     # now if bootstrapping has been done then change the column name
-
     if o['bootstrap']:
         run('bootstrap.py '+sys.argv[1],dryrun=o['dryrun'],log=None)
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_GAm.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_GAm')
-    make_mask('image_phase1.app.restored.fits',o['phase'])
+    make_mask('image_phase1.app.restored.fits',o['phase'],use_tgss=True)
     ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
-    make_mask('image_phase1m.app.restored.fits',o['phase'])
+    make_mask('image_phase1m.app.restored.fits',o['phase'],use_tgss=True)
 
     # Calibrate off the model
     killms_data('image_phase1m',o['mslist'],'killms_ap1',colname=colname)
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1m')
-    make_mask('image_ampphase1.app.restored.fits',o['ampphase'])
+    make_mask('image_ampphase1.app.restored.fits',o['ampphase'],use_tgss=True)
     ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True,colname=colname,peakfactor=0.01)
-    make_mask('image_ampphase1m.app.restored.fits',o['ampphase'])
+    make_mask('image_ampphase1m.app.restored.fits',o['ampphase'],use_tgss=True)
 
     # Now move to the full dataset, if it exists
 
@@ -230,7 +238,7 @@ if __name__=='__main__':
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_GAm.NodesCat.npy',stagedir=o['stagedir'])
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m')
-        make_mask('image_full_ampphase1.app.restored.fits',o['full'])
+        make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True)
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
 
         if o['low_psf_arcsec'] is not None:
