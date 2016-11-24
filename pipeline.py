@@ -68,9 +68,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             runcommand += ' --SSDSolvePars [S,Alpha] --BICFactor 0'
     if cleanmask is not None:
         runcommand += ' --CleanMaskImage=%s'%cleanmask
-    if donorm:
-        runcommand += '--GlobalNorm=MeanAbs'
     if applysols is not None:
+        if donorm:
+            runcommand += ' --GlobalNorm=MeanAbs'
         runcommand += ' --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
     if use_dicomodel:
         if dicomodel_base is not None:
