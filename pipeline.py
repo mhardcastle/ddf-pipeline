@@ -230,7 +230,7 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
-    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_SSDm.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_SSDm',peakfactor=0.01)
+    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_SSDm.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_SSDm',peakfactor=0.01)
     make_mask('image_phase1.app.restored.fits',o['phase'],use_tgss=True)
     ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
     make_mask('image_phase1m.app.restored.fits',o['phase'],use_tgss=True)

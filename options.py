@@ -36,7 +36,7 @@ def options(filename):
                     ( 'image', 'low_robust', float, -0.20 ),
                     ( 'image', 'low_cell', float, 4.5 ),
                     ( 'image', 'low_imsize', int, None ),
-                    ( 'image', 'do_decorr', bool, False ),
+                    ( 'image', 'do_decorr', bool, True ),
                     ( 'masking', 'ga', int, 25 ),
                     ( 'masking', 'phase', int, 20 ),
                     ( 'masking', 'ampphase', int, 10 ),
