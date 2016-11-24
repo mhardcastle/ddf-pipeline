@@ -63,9 +63,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --DecorrMode=FT'
     if cleanmode == 'GA':
         if singlefreq:
-            runcommand += ' --GASolvePars [S] --BICFactor 0'
+            runcommand += ' --SSDSolvePars [S] --BICFactor 0'
         else:
-            runcommand += ' --GASolvePars [S,Alpha] --BICFactor 0'
+            runcommand += ' --SSDSolvePars [S,Alpha] --BICFactor 0'
     if cleanmask is not None:
         runcommand += ' --CleanMaskImage=%s'%cleanmask
     if donorm:
@@ -215,13 +215,14 @@ if __name__=='__main__':
     make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
     ddf_image('image_dirin_GAm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='GA',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname)
     make_mask('image_dirin_GAm.app.restored.fits',o['ga'],use_tgss=True)
-
+    # now remove old, bad components from the DicoModel -- these are not in the new mask
+    mask_dicomodel('image_dirin_GAm.DicoModel','image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm_masked.DicoModel')
     # Calibrate off the model
     if make_model('image_dirin_GAm.app.restored.fits.mask.fits','image_dirin_GAm'):
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
-    killms_data('image_dirin_GAm',o['mslist'],'killms_p1',clusterfile='image_dirin_GAm.npy.ClusterCat.npy',colname=colname)
+    killms_data('image_dirin_GAm',o['mslist'],'killms_p1',clusterfile='image_dirin_GAm.npy.ClusterCat.npy',colname=colname,dicomodel='image_dirin_GAm_masked.DicoModel')
 
     # now if bootstrapping has been done then change the column name
     if o['bootstrap']:
@@ -233,7 +234,6 @@ if __name__=='__main__':
     make_mask('image_phase1.app.restored.fits',o['phase'],use_tgss=True)
     ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
     make_mask('image_phase1m.app.restored.fits',o['phase'],use_tgss=True)
-    # now remove old, bad components from the DicoModel -- these are not in the new mask
     mask_dicomodel('image_phase1m.DicoModel','image_phase1m.app.restored.fits.mask.fits','image_phase1m_masked.DicoModel')
     # Calibrate off the model
     killms_data('image_phase1m',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1m_masked.DicoModel')
