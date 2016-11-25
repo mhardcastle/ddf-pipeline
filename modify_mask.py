@@ -5,12 +5,15 @@ from astropy.table import Table
 from astropy.wcs import WCS
 import numpy as np
 
-def modify_mask(infile,outfile,table,radius,fluxlim):
-    """
-    Take a pre-existing mask file, in infile: find all entries in FITS
+def modify_mask(infile,outfile,table,radius,fluxlim,save_filtered=None):
+    """Take a pre-existing mask file, in infile: find all entries in FITS
     table table that lie in the map region, and add their positions to
     the mask with a fixed radius radius in pixels: write the mask out
     to outfile, which may be the same as infile.
+
+    save_filtered, if not None, should be a filename to save the
+    filtered table to.
+
     """
 
     t=Table.read(table)
@@ -39,6 +42,10 @@ def modify_mask(infile,outfile,table,radius,fluxlim):
 
     hdu[0].data=(map.astype(int) | mask).astype(np.float32)
     hdu.writeto(outfile,clobber=True)
+    if save_filtered is not None:
+        newt=t[filter]
+        newt.write(save_filtered,overwrite=True)
+        
 
 if __name__=='__main__':
     import sys
@@ -47,4 +54,8 @@ if __name__=='__main__':
     outfile=sys.argv[2]
     table=sys.argv[3]
     radius=int(sys.argv[4])
-    modify_mask(infile,outfile,table,radius,500)
+    try:
+        sf=sys.argv[5]
+    except:
+        sf=None
+    modify_mask(infile,outfile,table,radius,500,save_filtered=sf)
