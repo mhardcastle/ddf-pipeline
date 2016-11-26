@@ -33,7 +33,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -66,6 +66,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             runcommand += ' --SSDSolvePars [S] --BICFactor 0'
         else:
             runcommand += ' --SSDSolvePars [S,Alpha] --BICFactor 0'
+    if clusterfile is not none:
+        runcommand += ' --CatNodes=%s' % clusterfile
     if cleanmask is not None:
         runcommand += ' --CleanMaskImage=%s'%cleanmask
     if applysols is not None:
@@ -83,8 +85,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --FluxThreshold=%f'%threshold
     if uvrange is not None:
         runcommand += ' --UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
-    if reuse_dirty:
+    if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
+        if os.path.exists(mslist+'.ddfcache/LastResidual'):
+            runcommand += ' --DirtyFromLastResid=1 ResetDirty=-1'
+    if reuse_dirty:
         if os.path.exists(mslist+'.ddfcache/Dirty'):
             runcommand += ' --ResetDirty=-1'
     if reuse_psf:
@@ -213,16 +218,20 @@ if __name__=='__main__':
     # Image full bandwidth to create a model
     ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'],colname=colname)
     make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
-    ddf_image('image_dirin_SSDm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname)
-    make_mask('image_dirin_SSDm.app.restored.fits',o['ga'],use_tgss=True)
-    # now remove old, bad components from the DicoModel -- these are not in the new mask
-    mask_dicomodel('image_dirin_SSDm.DicoModel','image_dirin_SSDm.app.restored.fits.mask.fits','image_dirin_SSDm_masked.DicoModel')
-    # Calibrate off the model
-    if make_model('image_dirin_SSDm.app.restored.fits.mask.fits','image_dirin_SSDm'):
+
+    # cluster to get facets
+    if make_model('image_dirin_MSMF.app.restored.fits.mask.fits','image_dirin_MSMF'):
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
-    killms_data('image_dirin_SSDm',o['mslist'],'killms_p1',clusterfile='image_dirin_SSDm.npy.ClusterCat.npy',colname=colname,dicomodel='image_dirin_SSDm_masked.DicoModel')
+    # Now SSD clean with the new facets
+    ddf_image('image_dirin_SSDm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile='image_dirin_MSMF.npy.ClusterCat.npy')
+    make_mask('image_dirin_SSDm.app.restored.fits',o['ga'],use_tgss=True)
+
+    # now remove old, bad components from the DicoModel -- these are not in the new mask
+    mask_dicomodel('image_dirin_SSDm.DicoModel','image_dirin_SSDm.app.restored.fits.mask.fits','image_dirin_SSDm_masked.DicoModel')
+
+    killms_data('image_dirin_SSDm',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSDm_masked.DicoModel')
 
     # now if bootstrapping has been done then change the column name
     if o['bootstrap']:
@@ -230,9 +239,9 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again
-    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_SSDm.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_SSDm_masked',peakfactor=0.01)
+    ddf_image('image_phase1',o['mslist'],cleanmask='image_dirin_SSDm.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_dirin_SSDm_masked',peakfactor=0.01)
     make_mask('image_phase1.app.restored.fits',o['phase'],use_tgss=True)
-    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
+    ddf_image('image_phase1m',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,previous_image='image_phase1',robust=o['robust'],reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,colname=colname,peakfactor=0.01)
     make_mask('image_phase1m.app.restored.fits',o['phase'],use_tgss=True)
     mask_dicomodel('image_phase1m.DicoModel','image_phase1m.app.restored.fits.mask.fits','image_phase1m_masked.DicoModel')
     # Calibrate off the model
@@ -241,7 +250,7 @@ if __name__=='__main__':
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=2,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1m_masked',peakfactor=0.01)
     make_mask('image_ampphase1.app.restored.fits',o['ampphase'],use_tgss=True)
-    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True,colname=colname,peakfactor=0.01)
+    ddf_image('image_ampphase1m',o['mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=2,previous_image='image_ampphase1',use_dicomodel=True,robust=o['robust'],reuse_psf=True,dirty_from_resid=True,colname=colname,peakfactor=0.01)
     make_mask('image_ampphase1m.app.restored.fits',o['ampphase'],use_tgss=True)
     mask_dicomodel('image_ampphase1m.DicoModel','image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel')
     # Now move to the full dataset, if it exists
@@ -253,7 +262,7 @@ if __name__=='__main__':
         killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSDm.NodesCat.npy',stagedir=o['stagedir'],dicomodel='image_phase1m_masked.DicoModel')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m_masked')
         make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True)
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,saveimages='H',colname=colname,peakfactor=0.001)
+        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
