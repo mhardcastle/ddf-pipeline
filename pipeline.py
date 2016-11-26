@@ -88,7 +88,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
         if os.path.exists(mslist+'.ddfcache/LastResidual'):
-            runcommand += ' --DirtyFromLastResid=1 ResetDirty=-1'
+            runcommand += ' --DirtyFromLastResid=1 --ResetDirty=-1'
     if reuse_dirty:
         if os.path.exists(mslist+'.ddfcache/Dirty'):
             runcommand += ' --ResetDirty=-1'
