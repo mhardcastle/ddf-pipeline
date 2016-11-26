@@ -66,7 +66,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             runcommand += ' --SSDSolvePars [S] --BICFactor 0'
         else:
             runcommand += ' --SSDSolvePars [S,Alpha] --BICFactor 0'
-    if clusterfile is not none:
+    if clusterfile is not None:
         runcommand += ' --CatNodes=%s' % clusterfile
     if cleanmask is not None:
         runcommand += ' --CleanMaskImage=%s'%cleanmask
