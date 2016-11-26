@@ -259,7 +259,7 @@ if __name__=='__main__':
         warn('No full MS list supplied, stopping here')
     else:
         # single AP cal of full dataset and final image. Is this enough?
-        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSDm.NodesCat.npy',stagedir=o['stagedir'],dicomodel='image_phase1m_masked.DicoModel')
+        killms_data('image_ampphase1m',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSDm.NodesCat.npy',stagedir=o['stagedir'],dicomodel='image_ampphase1m_masked.DicoModel')
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m_masked')
         make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True)
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
