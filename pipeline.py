@@ -51,12 +51,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         cellsize=options['cellsize']
 
     fname=imagename+'.app.restored.fits'
-    if os.path.isfile(imagename+'.restored.fits'):
-        # work on the assumption that this is an old version of the app file
-        try:
-            os.symlink(imagename+'.restored.fits',fname)
-        except OSError:
-            pass
 
     runcommand = "DDF.py --ImageName=%s --MSName=%s --PeakFactor %f --NFreqBands=%i --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
     if do_decorr:
@@ -102,17 +96,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
             print 'would have run',runcommand
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
-
-    if previous_image is not None and (reuse_dirty or reuse_psf):
-        # this may mean that the Norm and dirty images won't be
-        # written. They're the same as for the previous image, so just
-        # make links:
-        try:
-            os.symlink(previous_image+'.dirty.fits',imagename+'.dirty.fits')
-            os.symlink(previous_image+'.Norm.fits',imagename+'.Norm.fits')
-        except OSError:
-            # if the symlink failed the files were there already, so pass
-            pass
 
 def make_mask(imagename,thresh,verbose=False,use_tgss=False,options=None):
     if options is None:
@@ -235,7 +218,10 @@ if __name__=='__main__':
 
     # now if bootstrapping has been done then change the column name
     if o['bootstrap']:
-        run('bootstrap.py '+sys.argv[1],dryrun=o['dryrun'],log=None)
+#        from bootstrap import run_bootstrap
+        report('Running bootstrap')
+        os.system('bootstrap.py '+sys.argv[1])
+#        run_bootstrap(o)
         colname='SCALED_DATA'
 
     # Apply phase solutions and image again

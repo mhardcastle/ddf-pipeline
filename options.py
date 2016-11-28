@@ -53,12 +53,13 @@ def options(filename):
                     ( 'control', 'stagedir', str, None ),
                     ( 'bootstrap', 'use_mpi', bool, False) ,
                     ( 'bootstrap', 'bscell', float, 4.5) ,
-                    ( 'bootstrap', 'bsimsize', int, 6000 ) )
+                    ( 'bootstrap', 'bsimsize', int, 6000 ) ,
+                    ( 'bootstrap', 'cats', list, None ) )
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
     config.read(filename)
-    cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get}
+    cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get, list: lambda x,y: eval(config.get(x,y))}
     for (section, name, otype, default) in option_list:
         try:
             result=cased[otype](section,name)
@@ -71,4 +72,4 @@ def options(filename):
 
 if __name__=='__main__':
     
-    print options('test.cfg')
+    print options('example.cfg')

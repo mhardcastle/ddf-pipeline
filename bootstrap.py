@@ -5,14 +5,10 @@
 
 import os,sys
 import os.path
-from auxcodes import run,find_imagenoise,warn,die
+from auxcodes import run,warn,die
 import pyrap.tables as pt
 import numpy as np
 from lofar import bdsm
-from make_cube import make_cube
-from make_fitting_product import make_catalogue
-import fitting_factors
-import find_outliers
 from scipy.interpolate import InterpolatedUnivariateSpline
 from pipeline import ddf_image, make_mask
 
@@ -22,9 +18,7 @@ def logfilename(s):
     else:
         return None
 
-def run_bootstrap(oa):
-    global o
-    o=oa
+def run_bootstrap(o):
     
     if o['mslist'] is None:
         die('MS list must be specified')
@@ -59,22 +53,24 @@ def run_bootstrap(oa):
     # we can use this for each of the bands. We use the
     # lowest-frequency dataset.
 
-    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
+    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
     make_mask('image_low_initial_MSMF.app.restored.fits',20,options=o)
 
     # now loop over the MSs to make the images
     for i,ms in enumerate(mslist):
-        imroot='image_low_%i_GA' % i
-        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.restored.fits.mask.fits',cleanmode='GA',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
+        imroot='image_low_%i_SSD' % i
+        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
         make_mask(imroot+'.app.restored.fits',15,options=o)
-        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='GA',ddsols='killms_p1',applysols='P',robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H',imsize=o['bsimsize'],cellsize=o['bscell'],options=o)
+        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='SSD',ddsols='killms_p1',applysols='P',robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H',imsize=o['bsimsize'],cellsize=o['bscell'],dirty_from_resid=True,options=o,colname=o['colname'])
+
+    from make_cube import make_cube
 
     #make the cube
     if os.path.isfile('cube.fits'):
         warn('Cube file exists, skipping cube assembly')
     else:
         warn('Making the cube')
-        make_cube('cube.fits',['image_low_%i_GAm.int.restored.fits' % i for i in range(len(mslist))],freqs)
+        make_cube('cube.fits',['image_low_%i_SSDm.int.restored.fits' % i for i in range(len(mslist))],freqs)
     if os.path.isfile('cube.pybdsm.srl'):
         warn('Source list exists, skipping source extraction')
     else:
@@ -83,6 +79,10 @@ def run_bootstrap(oa):
         # Write out in ASCII to work round bug in pybdsm
         img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
         img.export_image(img_type='rms',img_format='fits')
+
+    from make_fitting_product import make_catalogue
+    import fitting_factors
+    import find_outliers
 
     # generate the fitting product
     if os.path.isfile('crossmatch-1.fits'):
@@ -160,10 +160,10 @@ def run_bootstrap(oa):
                 factor=spl(frq)
                 print frq,factor
                 t=pt.table(ms,readonly=False)
-                desc=t.getcoldesc('CORRECTED_DATA')
+                desc=t.getcoldesc(o['colname'])
                 desc['name']='SCALED_DATA'
                 t.addcols(desc)
-                d=t.getcol('CORRECTED_DATA')
+                d=t.getcol(o['colname'])
                 d*=factor
                 t.putcol('SCALED_DATA',d)
                 t.close()

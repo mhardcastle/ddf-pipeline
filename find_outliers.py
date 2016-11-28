@@ -3,12 +3,12 @@
 # Determine scale factors by fitting polynomials to data
 
 from scipy.optimize import curve_fit
-from astropy.table import Table
+#from astropy.table import Table
 import numpy as np
 import sys
 from fitting_factors import pl,chi2,read_frequencies_fluxes
 
-def fitall(scale,frequencies,fluxes,errors):
+def fitall(scale,frequencies,fluxes,errors,smask):
 
     alphas=[]
     norms=[]
@@ -27,7 +27,6 @@ def fitall(scale,frequencies,fluxes,errors):
 
 def run_all(run):
 
-    global smask
     frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
 
     try:
@@ -37,7 +36,7 @@ def run_all(run):
         return False
     print scale
 
-    a=fitall(scale,frequencies,fluxes,errors)
+    a=fitall(scale,frequencies,fluxes,errors,smask)
     print 'Number of sources is',len(data)
     print 'Mean flux density is',np.mean(a[0])
     print 'Mean spectral index  is',np.mean(a[1])

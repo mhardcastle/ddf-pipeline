@@ -4,6 +4,7 @@ import scipy
 import pyfits
 import os,sys
 from pipeline_logging import run_log
+from subprocess import call
 
 class bcolors:
    HEADER = '\033[95m'
@@ -27,7 +28,8 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False):
    report('Running: '+s)
    if not dryrun:
       if log is None:
-         retval=os.system(s)
+         #print 'Log is none, using "call" to run '+s
+         retval=call(s,shell=True)
       else:
          retval=run_log(s,log,quiet)
       if not(proceed) and retval!=0:
