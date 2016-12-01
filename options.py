@@ -54,7 +54,11 @@ def options(filename):
                     ( 'bootstrap', 'use_mpi', bool, False) ,
                     ( 'bootstrap', 'bscell', float, 4.5) ,
                     ( 'bootstrap', 'bsimsize', int, 6000 ) ,
-                    ( 'bootstrap', 'cats', list, None ) )
+                    ( 'bootstrap', 'groups', list, None ), 
+                    ( 'bootstrap', 'frequencies', list, None ), 
+                    ( 'bootstrap', 'names', list, None ), 
+                    ( 'bootstrap', 'radii', list, None ), 
+                    ( 'bootstrap', 'catalogues', list, None ) )
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
