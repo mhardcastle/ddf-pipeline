@@ -220,7 +220,7 @@ if __name__=='__main__':
     if o['bootstrap']:
 #        from bootstrap import run_bootstrap
         report('Running bootstrap')
-        os.system('bootstrap.py '+sys.argv[1])
+        run('bootstrap.py '+sys.argv[1],log=None)
 #        run_bootstrap(o)
         colname='SCALED_DATA'
 

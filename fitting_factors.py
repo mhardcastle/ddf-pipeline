@@ -7,8 +7,8 @@ from scipy.optimize import curve_fit
 from astropy.table import Table
 import numpy as np
 import emcee
-import corner
-import matplotlib.pyplot as plt
+#import corner
+#import matplotlib.pyplot as plt
 import sys
 
 def check_mpi():
@@ -150,16 +150,16 @@ def run_all(run):
     np.save('crossmatch-results-'+str(run)+'.npy',output)
 
     # plot the sampler chain
-    for i in range(ndim):
-        plt.subplot(ndim,1,i+1)
-        plt.plot(sampler.chain[:,:,i].transpose())
-        plt.ylabel(str(i))
-    plt.xlabel('Samples')
-    plt.savefig('walkers-'+str(run)+'.pdf')
+#    for i in range(ndim):
+#        plt.subplot(ndim,1,i+1)
+#        plt.plot(sampler.chain[:,:,i].transpose())
+#        plt.ylabel(str(i))
+#    plt.xlabel('Samples')
+#    plt.savefig('walkers-'+str(run)+'.pdf')
 
     # make triangle plot
-    fig = corner.corner(samples)
-    plt.savefig('corner-'+str(run)+'.pdf')
+#    fig = corner.corner(samples)
+#    plt.savefig('corner-'+str(run)+'.pdf')
 
 if __name__=='__main__':
     run_all(int(sys.argv[1]))
