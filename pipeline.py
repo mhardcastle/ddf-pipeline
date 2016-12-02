@@ -4,7 +4,7 @@
 import os,sys
 import os.path
 from auxcodes import report,run,find_imagenoise,warn,die
-from options import options
+from options import options,print_options
 from shutil import copyfile,rmtree
 import pyrap.tables as pt
 from modify_mask import modify_mask
@@ -176,6 +176,10 @@ def clearcache(mslist):
 
 if __name__=='__main__':
     # Main loop
+    if len(sys.argv)<2:
+        warn('pipeline.py must be called with a parameter file.\nSee below for a complete list of possible options with their default values.')
+        print_options()
+        sys.exit(1)
 
     o=options(sys.argv[1])
     if o['mslist'] is None:

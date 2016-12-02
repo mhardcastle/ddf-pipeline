@@ -27,17 +27,19 @@ def run_bootstrap(o):
         os.mkdir(o['logging'])
 
     # check the data supplied
-    if o['frequencies'] is None or o['catalogues'] is None or o['names'] is None:
-        die('All of names, frequencies and catalogues options must be specified')
+    if o['frequencies'] is None or o['catalogues'] is None:
+        die('Frequencies and catalogues options must be specified')
 
     cl=len(o['catalogues'])
+    if o['names'] is None:
+        o['names']=[os.path.basename(x).replace('.fits','') for x in o['catalogues']]
     if o['radii'] is None:
         o['radii']=[10]*cl
     if o['groups'] is None:
-        o['groups']=[1]*cl
-    if (len(o['names'])!=cl or len(o['frequencies'])!=cl or
-        len(o['radii'])!=cl):
-        die('Names, radii and frequencies entries must be the same length as the catalogue list')
+        o['groups']=range(cl)
+    if (len(o['frequencies'])!=cl or len(o['radii'])!=cl or
+        len(o['names'])!=cl or len(o['groups'])!=cl):
+        die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
 
     low_robust=-0.25
     low_uvrange=[0.1,25.0]
