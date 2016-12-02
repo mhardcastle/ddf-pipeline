@@ -26,6 +26,21 @@ def run_bootstrap(o):
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
+    # check the data supplied
+    if o['frequencies'] is None or o['catalogues'] is None:
+        die('Frequencies and catalogues options must be specified')
+
+    cl=len(o['catalogues'])
+    if o['names'] is None:
+        o['names']=[os.path.basename(x).replace('.fits','') for x in o['catalogues']]
+    if o['radii'] is None:
+        o['radii']=[10]*cl
+    if o['groups'] is None:
+        o['groups']=range(cl)
+    if (len(o['frequencies'])!=cl or len(o['radii'])!=cl or
+        len(o['names'])!=cl or len(o['groups'])!=cl):
+        die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
+
     low_robust=-0.25
     low_uvrange=[0.1,25.0]
 
@@ -98,17 +113,14 @@ def run_bootstrap(o):
         ra*=180.0/np.pi
         dec*=180.0/np.pi
 
-        # currently VLSS and WENSS are hard-wired in: this should change...
-
-        cats=[['/stri-data/mjh/bootstrap/VLSS.fits','VLSS',40.0],
-              ['/stri-data/mjh/bootstrap/wenss.fits','WENSS',10.0]]
+        cats=zip(o['catalogues'],o['names'],o['groups'],o['radii'])
         make_catalogue('cube.pybdsm.srl',ra,dec,2.5,cats)
     
     freqlist=open('frequencies.txt','w')
-    freqlist.write('74e6 VLSS_flux VLSS_e_flux False\n')
+    for n,f in zip(o['names'],o['frequencies']):
+        freqlist.write('%f %s_flux %s_e_flux False\n' % (f,n,n))
     for i,f in enumerate(freqs):
         freqlist.write('%f Total_flux_ch%i E_Total_flux_ch%i True\n' % (f,i+1,i+1))
-    freqlist.write('326e6 WENSS_flux WENSS_e_flux False\n')
     freqlist.close()
 
     # Now call the fitting code

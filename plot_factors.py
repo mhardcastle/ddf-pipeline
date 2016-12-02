@@ -24,6 +24,7 @@ def fitall(scale,frequencies,fluxes,errors):
         ef[smask]*=scale
         popt, pcov = curve_fit(pl, frequencies, sf, sigma=ef, p0=[frequencies[0],-1],maxfev=20000)
         chi=chi2(frequencies,sf,ef,*popt)
+        sf[ef==1e6]=np.nan
         plt.errorbar(frequencies,sf,yerr=ef,linestyle='none',color=cnames[i])
         plt.plot(frequencies,pl(frequencies,*popt),color=cnames[i])
 #        print i,chi,popt[1]
