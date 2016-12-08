@@ -18,6 +18,8 @@ def modify_mask(infile,outfile,table,radius,fluxlim,save_filtered=None):
 
     t=Table.read(table)
     t=t[t['Peak_flux']>fluxlim]
+    if len(t)==0:
+        raise Exception('Flux-filtered table is zero-length. Check your table fluxes and/or positions')
     hdu=fits.open(infile)
     w=WCS(hdu[0].header)
     map=hdu[0].data
