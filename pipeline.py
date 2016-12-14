@@ -203,7 +203,7 @@ if __name__=='__main__':
     check_imaging_weight(o['mslist'])
 
     # Image full bandwidth to create a model
-    ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=50e-3,majorcycles=3,robust=o['robust'],colname=colname)
+    ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=o['msmf_threshold'],majorcycles=10,robust=o['robust'],colname=colname)
     make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
 
     # cluster to get facets
