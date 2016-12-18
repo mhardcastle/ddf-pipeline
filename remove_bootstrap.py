@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Remove bootstrap solutions from a list of mss
 
 import sys

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Tidy up solutions from a previous run
 
 from options import options
