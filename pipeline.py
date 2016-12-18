@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Routine is to use killms/ddf to self-calibrate the data
 import os,sys
@@ -111,7 +111,7 @@ def make_mask(imagename,thresh,verbose=False,use_tgss=False,options=None):
         if use_tgss and options['tgss'] is not None:
             report('Merging the mask with TGSS catalogue')
             # TGSS path is provided, this means we want to add the positions of bright TGSS sources to the mask
-            modify_mask(fname,fname,options['tgss'],options['tgss_radius'],options['tgss_flux'])
+            modify_mask(fname,fname,options['tgss'],options['tgss_radius'],options['tgss_flux'],do_extended=options['tgss_extended'],cellsize=options['cellsize'],pointsize=o['tgss_pointlike'])
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',stagedir=None,dicomodel=None):
     # run killms individually on each MS -- allows restart if it failed in the middle

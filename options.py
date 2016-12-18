@@ -40,6 +40,8 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
                 ( 'masking', 'tgss', str, None ),
                 ( 'masking', 'tgss_radius', float, 8.0 ), # radius in pix
                 ( 'masking', 'tgss_flux', float, 500 ), # peak flux in mJy
+                ( 'masking', 'tgss_extended', bool, False ),
+                ( 'masking', 'tgss_pointlike', float, 30 ), # source considered pointlike if below this in arcsec
                 ( 'control', 'quiet', bool, False ),
                 ( 'control', 'logging', str, 'logs' ),
                 ( 'control', 'dryrun', bool, False ),

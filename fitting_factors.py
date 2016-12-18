@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Determine scale factors by fitting power laws to data
 # This has to be run as a standalone code since it may use MPI

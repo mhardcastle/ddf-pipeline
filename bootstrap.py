@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Code to bootstrap the flux density scale using killMS/DDF
 # Should run standalone or as part of the pipeline
