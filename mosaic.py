@@ -135,12 +135,12 @@ mask=np.zeros_like(isum,dtype=np.bool)
 print 'now reprojecting'
 for i in range(len(hdus)):
     print 'reproject image',i
-    r, footprint = reproj(hdus[i], header, hdu_in=0)
+    r, footprint = reproj(hdus[i], header, hdu_in=0, parallel=False)
     r[np.isnan(r)]=0
     hdu = fits.PrimaryHDU(header=header,data=r)
     hdu.writeto('reproject-%i.fits' % i,clobber=True)
     print '...'
-    w, footprint = reproj(app[i], header, hdu_in=0)
+    w, footprint = reproj(app[i], header, hdu_in=0, parallel=False)
     mask|=~np.isnan(w)
     w[np.isnan(w)]=0
     hdu = fits.PrimaryHDU(header=header,data=w)
