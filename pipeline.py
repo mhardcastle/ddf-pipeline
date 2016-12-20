@@ -33,7 +33,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None,HMPsize=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -41,6 +41,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if options is None:
         options=o # attempt to get global if it exists
 
+    if HMPsize is None:
+        HMPsize=options['HMPsize']
     if do_decorr is None:
         do_decorr=options['do_decorr']
     if beamsize is None:
@@ -89,6 +91,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
     if reuse_psf:
         if os.path.exists(mslist+'.ddfcache/PSF'):
             runcommand += ' --ResetPSF=-1'
+
+    if HMPsize is not None:
+        runcommand += ' --MinSizeInitHMP=%i' % HMPsize
 
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
