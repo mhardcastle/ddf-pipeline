@@ -76,7 +76,7 @@ If you want to discard all the self-calibration for a run and start again, delet
 
 Run a Tier 1 reduction as follows:
 
-* `download py L229587` to make a directory `L229587` and download all the reduced data from SARA into it.
+* `download.py L229587` to make a directory `L229587` and download all the reduced data from SARA into it.
 * Make this your working directory
 * `unpack.py` to unpack the tar files and make a sensible directory structure
 * `make_mslists.py` to make the mslist files &mdash; this ensures that fully flagged data are excluded
