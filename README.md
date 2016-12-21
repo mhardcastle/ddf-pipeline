@@ -66,6 +66,19 @@ If use of the TGSS catalogue to generate masks for bright sources is required, t
 tgss=/stri-data/mjh/tgss/TGSSADR1_7sigma_catalog.fits
 ```
 
+Enable the use of masks for extended sources with `tgss_extended=True`.
+
 ## cleanup
 
 If you want to discard all the self-calibration for a run and start again, delete all output images you don't want and run `archive_old_solutions.py` (takes the parameter file name as an argument).
+
+## data preparation for Tier 1
+
+Run a Tier 1 reduction as follows:
+
+* `download py L229587` to make a directory `L229587` and download all the reduced data from SARA into it.
+* Make this your working directory
+* `unpack.py` to unpack the tar files and make a sensible directory structure
+* `make_mslists.py` to make the mslist files &mdash; this ensures that fully flagged data are excluded
+* Copy a suitable config file, e.g. `tier1.cfg`, amending the paths suitably.
+* Run the pipeline.

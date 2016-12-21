@@ -28,4 +28,8 @@ def download_dataset(server,root):
 
 if __name__=='__main__':
 
-    download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L229509/')
+    import sys
+    name=sys.argv[1]
+    os.mkdir(name)
+    os.chdir(name)
+    download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
