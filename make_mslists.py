@@ -18,5 +18,5 @@ for ms in g:
     if ff<0.8:
         full_mslist.append(ms)
 
-open('big_mslist.txt','w').writelines(ms+'\n' for ms in full_mslist)
+open('big-mslist.txt','w').writelines(ms+'\n' for ms in full_mslist)
 open('mslist.txt','w').writelines(ms+'\n' for ms in full_mslist[2::4])

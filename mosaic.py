@@ -6,6 +6,7 @@
 # we use the .smooth.int.restored.fits and .fluxscale.fits files
 
 from reproject import reproject_interp,reproject_exact
+from reproj_test import reproject_interp_chunk_2d
 import sys
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -53,14 +54,15 @@ parser = argparse.ArgumentParser(description='Mosaic ddf-pipeline directories')
 parser.add_argument('directories', metavar='D', nargs='+',
                     help='directory name')
 parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
-parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reproection (slow)')
+parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
+parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
 
 args = parser.parse_args()
 
 if args.exact:
     reproj=reproject_exact
 else:
-    reproj=reproject_interp
+    reproj=reproject_interp_chunk_2d
 
 threshold=float(args.beamcut)
 hdus=[]
@@ -138,13 +140,13 @@ for i in range(len(hdus)):
     r, footprint = reproj(hdus[i], header, hdu_in=0, parallel=False)
     r[np.isnan(r)]=0
     hdu = fits.PrimaryHDU(header=header,data=r)
-    hdu.writeto('reproject-%i.fits' % i,clobber=True)
+    if args.save: hdu.writeto('reproject-%i.fits' % i,clobber=True)
     print '...'
     w, footprint = reproj(app[i], header, hdu_in=0, parallel=False)
     mask|=~np.isnan(w)
     w[np.isnan(w)]=0
     hdu = fits.PrimaryHDU(header=header,data=w)
-    hdu.writeto('weight-%i.fits' % i,clobber=True)
+    if args.save: hdu.writeto('weight-%i.fits' % i,clobber=True)
     isum+=r*w
     wsum+=w
     print
