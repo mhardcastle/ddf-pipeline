@@ -82,3 +82,15 @@ Run a Tier 1 reduction as follows:
 * `make_mslists.py` to make the mslist files &mdash; this ensures that fully flagged data are excluded
 * Copy a suitable config file, e.g. `tier1.cfg`, amending the paths suitably.
 * Run the pipeline.
+
+## quality pipeline
+
+Once the pipeline has run you can use `quality_pipeline.py` to get
+some basic quality information, including positional and flux scale
+offsets. Copy `quality_pipeline.cfg` and amend suitably. By default
+this looks for the standard pipeline products in the current working
+directory. Catalogues used in the quality pipeline must conform (at
+least roughly) to the PyBDSM format. See
+http://www.extragalactic.info/bootstrap/ for examples.
+
+TGSS and FIRST catalogues must be provided here to allow the code to run.
