@@ -7,6 +7,7 @@
 
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
+from auxcodes import die
 import sys
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -51,13 +52,23 @@ def flatten(f):
     return hdu
 
 parser = argparse.ArgumentParser(description='Mosaic ddf-pipeline directories')
-parser.add_argument('directories', metavar='D', nargs='+',
+parser.add_argument('--directories', metavar='D', nargs='+',
                     help='directory name')
 parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
 parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
 parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
+parser.add_argument('--noise', dest='noise', type=float, nargs='+', help='UNSCALED Central noise level for weighting: must match numbers of maps')
+parser.add_argument('--scale', dest='scale', type=float, nargs='+', help='Scale factors by which maps should be multiplied: must match numbers of maps')
 
 args = parser.parse_args()
+
+if args.scale is not None:
+    if len(args.scale) != len(args.directories):
+        die('Scales provided must match directories')
+
+if args.noise is not None:
+    if len(args.noise) != len(args.directories):
+        die('Noises provided must match directories')
 
 if args.exact:
     reproj=reproject_exact
@@ -77,6 +88,17 @@ for d in args.directories:
 for i in range(len(app)):
     app[i].data/=hdus[i].data
     app[i].data[app[i].data<threshold]=0
+    # at this point this is the beam factor: we want 1/sigma**2.0, so divide by central noise and square
+    if args.noise is not None:
+        if args.scale is not None:
+            app[i].data/=args.noise[i]*args.scale[i]
+        else:
+            app[i].data/=args.noise[i]
+
+    app[i].data=app[i].data**2.0
+
+    if args.scale is not None:
+        hdus[i].data*=args.scale[i]
 
 ras=np.array([w.wcs.crval[0] for w in wcs])
 decs=np.array([w.wcs.crval[1] for w in wcs])

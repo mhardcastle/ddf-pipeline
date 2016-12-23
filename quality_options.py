@@ -13,8 +13,8 @@ def getcpus():
         return multiprocessing.cpu_count()
 
 option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
-                ( 'image', 'pbimage', str, None ),
-                ( 'image', 'nonpbimage', str, None ),
+                ( 'image', 'pbimage', str, 'image_full_ampphase1m.smooth.int.restored.fits' ),
+                ( 'image', 'nonpbimage', str, 'image_full_ampphase1m.app.restored.fits' ),
                 ( 'image', 'catprefix', str, 'image_full_ampphase1m' ),
                 ( 'control', 'sfind', bool, True ),
                 ( 'control', 'sfind_pixel_fraction', float, 0.6 ),
@@ -22,7 +22,10 @@ option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
                 ( 'control', 'logging', str, 'logs' ),
                 ( 'control', 'dryrun', bool, False ),
                 ( 'control', 'restart', bool, True ),
-                ( 'control', 'jstilts', str, None ),
+                ( 'comparison_cats', 'list', list, None ),
+                ( 'comparison_cats', 'filenames', list, None),
+                ( 'comparison_cats', 'radii', list, None),
+                ( 'comparison_cats', 'fluxfactor', list, None),
                 ( 'comparison_cats', 'TGSS', str, None ),
                 ( 'comparison_cats', 'TGSS_matchrad', float, 10.0 ),
                 ( 'comparison_cats', 'TGSS_match_majkey1', float, 'Maj_1' ),
@@ -34,10 +37,7 @@ option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
                 ( 'comparison_cats', 'FIRST_match_majkey1', float, 'Maj' ),
                 ( 'comparison_cats', 'FIRST_match_majkey2', float, 'MAJOR' ),
                 ( 'comparison_cats', 'FIRST_filtersize', float, 10.0 ),
-                ( 'comparison_cats', 'FIRST_fluxfactor', float, 1.0 ),
-                ( 'comparison_cats', '7C', str, None ),
-                ( 'comparison_cats', 'NVSS', str, None ),
-                ( 'comparison_cats', 'VLSS', str, None ) )
+                ( 'comparison_cats', 'FIRST_fluxfactor', float, 1.0 ) )
 
 def options(filename):
 

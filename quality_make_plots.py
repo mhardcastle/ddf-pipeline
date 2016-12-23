@@ -1,10 +1,12 @@
 import pylab
 import numpy as np
-import pyfits
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
+from crossmatch_utils import separation
 from matplotlib.ticker import NullFormatter
 import numpy.random as npr
+from astropy.table import Table
+from astropy.io import fits
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -52,18 +54,18 @@ def mad(arr):
 def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
     if options is None:
         options = o
-    scat = pyfits.open(catalog)
+    scat = Table.read(catalog)
 
-    fitsimage = pyfits.open(fitsimage)
+    fitsimage = fits.open(fitsimage)
     fieldra = fitsimage[0].header['CRVAL1']
     fielddec = fitsimage[0].header['CRVAL2']
     fitsimage.close()
-    radialseps = sepn(scat[1].data['RA_1']*deg2rad,scat[1].data['DEC_1']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg
+    radialseps = sepn(scat['RA']*deg2rad,scat['DEC']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg
 
-    pylab.plot(np.sort(scat[1].data['Total_flux_1']),np.sort(scat[1].data['Total_flux_1'])*np.median(np.array(scat[1].data['Total_flux_2']/options['%s_fluxfactor'%auxcatname])/np.array(scat[1].data['Total_flux_1'])),'r--')
-    pylab.plot(scat[1].data['Total_flux_1'],scat[1].data['Total_flux_2']/options['%s_fluxfactor'%auxcatname],'ko')
+    pylab.plot(np.sort(scat['Total_flux']),np.sort(scat['Total_flux'])*np.median(np.array(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'])/np.array(scat['Total_flux'])),'r--')
+    pylab.plot(scat['Total_flux'],scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'],'ko')
     pylab.xlabel('Integrated LOFAR flux (Jy)')
-    pylab.ylabel('Integrated TGSS flux (Jy)')
+    pylab.ylabel('Integrated '+auxcatname+' flux (Jy)')
     pylab.xlim(xmin=0.01,xmax=0.5)
     pylab.ylim(ymin=0.01,ymax=0.5)
     pylab.semilogx()
@@ -75,10 +77,10 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
     pylab.cla()
     plt.clf()
     
-    pylab.plot(np.sort(scat[1].data['Peak_flux_1']),np.sort(scat[1].data['Peak_flux_1'])*np.median(np.array(scat[1].data['Peak_flux_2']/options['%s_fluxfactor'%auxcatname])/np.array(scat[1].data['Peak_flux_1'])),'r--')
-    pylab.plot(scat[1].data['Peak_flux_1'],scat[1].data['Peak_flux_2']/options['%s_fluxfactor'%auxcatname],'ko')
+    pylab.plot(np.sort(scat['Peak_flux']),np.sort(scat['Peak_flux'])*np.median(np.array(scat[auxcatname+'_Peak_flux']/options['%s_fluxfactor'%auxcatname])/np.array(scat['Peak_flux'])),'r--')
+    pylab.plot(scat['Peak_flux'],scat[auxcatname+'_Peak_flux']/options[auxcatname+'_fluxfactor'],'ko')
     pylab.xlabel('Peak LOFAR flux (Jy)')
-    pylab.ylabel('Peak TGSS flux (Jy)')
+    pylab.ylabel('Peak '+auxcatname+' flux (Jy)')
     pylab.xlim(xmin=0.01,xmax=0.5)
     pylab.ylim(ymin=0.01,ymax=0.5)
     pylab.semilogx()
@@ -90,14 +92,14 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
     pylab.cla()
     plt.clf()
     
-    pylab.plot(radialseps,scat[1].data['Total_flux_1']/(scat[1].data['Total_flux_2']/options['%s_fluxfactor'%auxcatname]),'bo',alpha=0.4,markersize=3)
+    pylab.plot(radialseps,scat['Total_flux']/(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor']),'bo',alpha=0.4,markersize=3)
     equality = np.arange(-0.01,10,0.01)
     fractionrange = np.arange(0.99,1.01,0.002)
     for i in fractionrange:
-        pylab.plot(equality,(equality/equality)*i,'k-')
-    pylab.plot(equality,equality/equality,'k-')
+        pylab.plot(equality,1.0*i+0*equality,'k-')
+    pylab.plot(equality,1.0+0*equality,'k-')
     pylab.xlabel('Distance from pointing centre (deg)')
-    pylab.ylabel('Integrated LOFAR flux / Integrated TGSS flux')
+    pylab.ylabel('Integrated LOFAR flux / Integrated '+auxcatname+' flux')
     
     pylab.xlim(xmin=0.0,xmax=2)
     pylab.ylim(ymin=0.5,ymax=2.0)    
@@ -110,12 +112,12 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
         binvals = np.array([])
         for j in range(0,len(radialseps)):
             if distancemin < radialseps[j] < distancemax:
-                binvals = np.append(binvals,scat[1].data['Total_flux_1'][j]/(scat[1].data['Total_flux_2'][j]/options['%s_fluxfactor'%auxcatname]))
+                binvals = np.append(binvals,scat['Total_flux'][j]/(scat[auxcatname+'_Total_flux'][j]/options[auxcatname+'_fluxfactor']))
         midpoint = (distancemin+distancemax)/2.0
         if len(binvals) > 0.0:
             booterrl,booterrh = bootstrap(binvals, 100000, np.mean, 0.05)
             booterrl,booterrh = bootstrap(binvals, 100000, np.median, 0.05)
-            print booterrl,booterrh, binvals
+#            print booterrl,booterrh, binvals
             pylab.errorbar(midpoint,np.median(binvals),xerr=(distancemin-distancemax)/2.0,yerr=[[np.median(binvals)-booterrl],[booterrh-np.median(binvals)]],fmt='--o',ecolor='b',color='b',zorder=999999)
     pylab.savefig(outname.replace('.png','_total_radial.png'))
     pylab.close('all')
@@ -126,14 +128,14 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
 def plot_flux_ratios(catalog,fitsimage,outname,options=None):
     if options is None:
         options = o
-    scat = pyfits.open(catalog)
-    fluxratios = scat[1].data['Total_flux']/scat[1].data['Peak_flux']
+    scat = Table.read(catalog)
+    fluxratios = scat['Total_flux']/scat['Peak_flux']
 
-    fitsimage = pyfits.open(fitsimage)
+    fitsimage = fits.open(fitsimage)
     fieldra = fitsimage[0].header['CRVAL1']
     fielddec = fitsimage[0].header['CRVAL2']
     fitsimage.close()
-    radialseps = sepn(scat[1].data['RA_1']*deg2rad,scat[1].data['DEC_1']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg
+    radialseps = sepn(scat['RA']*deg2rad,scat['DEC']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg
 
     nullfmt = NullFormatter()         # no labels
 
@@ -201,15 +203,15 @@ def plot_flux_ratios(catalog,fitsimage,outname,options=None):
 def plot_position_offset(catalog,fitsimage,outname,auxcatname,options=None):
     if options is None:
         options = o
-    scat = pyfits.open(catalog)
+    scat = Table.read(catalog)
 
-    fitsimage = pyfits.open(fitsimage)
+    fitsimage = fits.open(fitsimage)
     fieldra = fitsimage[0].header['CRVAL1']
     fielddec = fitsimage[0].header['CRVAL2']
     fitsimage.close()
 
-    x = (scat[1].data['RA_1']-scat[1].data['RA_2'])*np.cos(fielddec*deg2rad)*deg2arcsec
-    y = (scat[1].data['DEC_1']-scat[1].data['DEC_2'])*deg2arcsec
+    x = scat[auxcatname+'_dRA']
+    y = scat[auxcatname+'_dDEC']
 
     nullfmt = NullFormatter()         # no labels
 
@@ -226,8 +228,8 @@ def plot_position_offset(catalog,fitsimage,outname,auxcatname,options=None):
     plt.figure(1, figsize=(8, 8))
 
     axScatter = plt.axes(rect_scatter)
-    plt.xlabel('$RA_{LOFAR}$ - $RA_{FIRST}$ (arcsec)')
-    plt.ylabel('$DEC_{LOFAR}$ - $DEC_{FIRST}$ (arcsec)')
+    plt.xlabel('$RA_{\\rm LOFAR} - RA_{\\rm %s}$ (arcsec)' % auxcatname)
+    plt.ylabel('$DEC_{\\rm LOFAR} - DEC_{\\rm %s}$ (arcsec)' % auxcatname)
     plt.xticks(rotation=270)
     axScatter.plot(np.zeros(40),np.arange(-20,20),'k--')
     axScatter.plot(np.arange(-20,20),np.zeros(40),'k--')

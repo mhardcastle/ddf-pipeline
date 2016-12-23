@@ -1,14 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Routine to check quality of LOFAR images
 import os,sys
 import os.path
 from quality_options import options,print_options
-import pyfits
+from astropy.io import fits
+from astropy.table import Table
 import lofar.bdsm as bdsm
-from auxcodes import report,run,find_imagenoise,warn,die
+from auxcodes import report,run,get_rms,warn,die
 import numpy as np
+from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
+
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -22,8 +25,6 @@ rad2arcmin=1.0/arcmin2rad
 rad2arcsec=1.0/arcsec2rad
 steradians2degsquared = (180.0/np.pi)**2.0
 degsquared2steradians = 1.0/steradians2degsquared
-
-
 
 def logfilename(s,options=None):
     if options is None:
@@ -47,48 +48,43 @@ def sepn(r1,d1,r2,d2):
 def filter_catalog(singlecat,matchedcat,fitsimage,outname,auxcatname,options=None):
     if options is None:
         options = o
-    matchedcat = pyfits.open(matchedcat)
-    singlecat = pyfits.open(singlecat)
-    
-    fitsimage = pyfits.open(fitsimage)
-    
-    fieldra = fitsimage[0].header['CRVAL1']
-    fielddec = fitsimage[0].header['CRVAL2']
-    fitsimage.close()
-    allsources = matchedcat[1].data['Source_id']
-    toofarsources = np.array(np.where(sepn(matchedcat[1].data['RA_1']*deg2rad,matchedcat[1].data['DEC_1']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg > 3.0)).flatten()
-    print '%s out of %s sources filtered out as over 3.0 deg from centre'%(np.size(toofarsources),len(allsources))
-    tooextendedsources_lofar = np.array(np.where(matchedcat[1].data[options['%s_match_majkey1'%auxcatname]] > 10.0)).flatten()
-    print '%s out of %s sources filtered out as over 10arcsec in LOFAR'%(np.size(tooextendedsources_lofar),len(allsources))
-    tooextendedsources_aux = np.array(np.where(matchedcat[1].data[options['%s_match_majkey2'%auxcatname]] > options['%s_filtersize'%auxcatname])).flatten()
-    print '%s out of %s sources filtered out as over %sarcsec in %s'%(np.size(tooextendedsources_aux),len(allsources),options['%s_filtersize'%auxcatname],auxcatname)
-    
-    groupsize = np.array(np.where(matchedcat[1].data['Groupsize'] > 1.0)).flatten()
-    print '%s out of %s sources filtered out as multiple crossmatches'%(np.size(tooextendedsources_aux),len(allsources))
-    
-    notsingle = np.array([])
-    for i in range(0,len(allsources)):
-        allseps = sepn(matchedcat[1].data['RA_1'][i]*deg2rad,matchedcat[1].data['DEC_1'][i]*deg2rad,singlecat[1].data['RA']*deg2rad,singlecat[1].data['DEC']*deg2rad)*rad2arcsec
-        print min(allseps)
-        numclose = np.size(np.where(allseps < 30.0))
-        if numclose > 1.0:
-            notsingle = np.append(notsingle,i)
-    print '%s out of %s sources filtered out as within 20arcsec of another source'%(len(notsingle),len(allsources))
-    sourcestoremove = np.concatenate((toofarsources,tooextendedsources_lofar,tooextendedsources_aux,notsingle,groupsize))
-    sourcestoremove = np.unique(sourcestoremove)
-    print 'In total removing %s out of %s sources'%(np.size(sourcestoremove),np.size(allsources))
-    filtereddata = np.delete(matchedcat[1].data,sourcestoremove)
-    matchedcat[1].data = filtereddata
+
     if options['restart'] and os.path.isfile(outname):
         warn('File ' + outname +' already exists, skipping source filtering step')
     else:
-        matchedcat.writeto(outname)
+
+        matchedcat = Table.read(matchedcat)
+        singlecat = Table.read(singlecat)
+
+        fitsimage = fits.open(fitsimage)
+
+        fieldra = fitsimage[0].header['CRVAL1']
+        fielddec = fitsimage[0].header['CRVAL2']
+        fitsimage.close()
+
+        print 'Originally',len(matchedcat),'sources'
+        matchedcat=filter_catalogue(matchedcat,fieldra,fielddec,3.0)
+
+        print '%i sources after filtering for 3.0 deg from centre' % len(matchedcat)
+
+        matchedcat=matchedcat[matchedcat['DC_Maj']<10.0]
+
+        print '%i sources after filtering for sources over 10arcsec in LOFAR' % len(matchedcat)
+
+        # not implemented yet!
+        #tooextendedsources_aux = np.array(np.where(matchedcat[1].data[options['%s_match_majkey2'%auxcatname]] > options['%s_filtersize'%auxcatname])).flatten()
+        #print '%s out of %s sources filtered out as over %sarcsec in %s'%(np.size(tooextendedsources_aux),len(allsources),options['%s_filtersize'%auxcatname],auxcatname)
+
+        matchedcat=select_isolated_sources(matchedcat,30.0)
+        print '%i sources after filtering for isolated sources in LOFAR' % len(matchedcat)
+
+        matchedcat.write(outname)
 
 def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
 
     if options is None:
         options = o
-    f = pyfits.open(nonpbimage)
+    f = fits.open(nonpbimage)
     imsizex = f[0].header['NAXIS1']
     imsizey = f[0].header['NAXIS2']
     f.close()
@@ -98,7 +94,7 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
     if options['restart'] and os.path.isfile(catprefix +'.cat.fits'):
         warn('File ' + catprefix +'.cat.fits already exists, skipping source finding step')
     else:
-        img = bdsm.process_image(pbimage,adaptive_rms_box='True',advanced_opts='True',detection_image=nonpbimage,thresh_isl=3,thresh_pix=5,blank_limit=1E-7,adaptive_thresh=100,rms_box_bright=[30,10],trim_box=(lowerx,upperx,lowery,uppery))
+        img = bdsm.process_image(pbimage,adaptive_rms_box=True,advanced_opts=True,detection_image=nonpbimage,thresh_isl=3,thresh_pix=5,adaptive_thresh=100,rms_box_bright=[30,10],trim_box=(lowerx,upperx,lowery,uppery),atrous_do=True,atrous_jmax=3,group_by_isl=True,mean_map='zero')
         img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
         img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
@@ -106,24 +102,18 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
         img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
 def crossmatch_image(lofarcat,auxcatname,options=None):
+
     if options is None:
         options = o
-    print auxcatname
     auxcat = options[auxcatname]
     if options['restart'] and os.path.isfile(lofarcat + '_' + auxcatname + '_match.fits'):
         warn('File ' + lofarcat + '_' + auxcatname + '_match.fits already exists, skipping source matching step')
     else:
-        tmpfile = open('tmp_cmatch.sh','w')
-        tmpfile.write('java -jar %s %s <<EOF\n'%(o['jstilts'],os.path.realpath(__file__).replace('quality_pipeline.py','stilts-position-match.py')))
-        tmpfile.write('%s\n'%lofarcat)
-        tmpfile.write('%s\n'%auxcat)
-        tmpfile.write('%s\n'%o['%s_matchrad'%auxcatname])
-        tmpfile.write('%s_%s_match.fits\n'%(lofarcat,auxcatname))
-        tmpfile.write('<<EOF')
-        tmpfile.close()
-        os.system('chmod +x tmp_cmatch.sh')
-        run('./tmp_cmatch.sh',dryrun=options['dryrun'],log=logfilename('%s_%s_match.log'%(lofarcat,auxcatname),options=options),quiet=options['quiet'])
-        os.system('rm tmp_cmatch.sh')
+        t=Table.read(lofarcat)
+        tab=Table.read(auxcat)
+        match_catalogues(t,tab,o[auxcatname+'_matchrad'],auxcatname)
+        t=t[~np.isnan(t[auxcatname+'_separation'])]
+        t.write(lofarcat+'_'+auxcatname+'_match.fits')
         
 if __name__=='__main__':
     # Main loop
@@ -137,6 +127,21 @@ if __name__=='__main__':
         die('pbimage must be specified')
     if o['nonpbimage'] is None:
         die('nonpbimage must be specified')
+
+    # fix up the new list-type options
+    for i,cat in enumerate(o['list']):
+        try:
+            o[cat]=o['filenames'][i]
+        except:
+            pass
+        try:
+            o[cat+'_matchrad']=o['radii'][i]
+        except:
+            pass
+        try:
+            o[cat+'_fluxfactor']=o['fluxfactor'][i]
+        except:
+            pass
         
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
@@ -145,22 +150,39 @@ if __name__=='__main__':
     sfind_image(o['catprefix'],o['pbimage'],o['nonpbimage'],o['sfind_pixel_fraction'])
 
     # matching with catalogs
-    crossmatch_image(o['catprefix'] + '.cat.fits','TGSS')
-    crossmatch_image(o['catprefix'] + '.cat.fits','FIRST')
+    for cat in o['list']:
+        crossmatch_image(o['catprefix'] + '.cat.fits',cat)
+        filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
 
     # Filter catalogs (only keep isolated compact sources within 3deg of pointing centre)
-    filter_catalog(o['catprefix'] + '.cat.fits','%s.cat.fits_FIRST_match.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],'FIRST',options=o)
-    filter_catalog(o['catprefix'] + '.cat.fits','%s.cat.fits_TGSS_match.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_TGSS_match_filtered.fits'%o['catprefix'],'TGSS',options=o)
 
     # Astrometric plots
+    report('Plotting position offsets')
     plot_position_offset('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_positions.png'%o['catprefix'],'FIRST',options=o)
-    
+
+    t=Table.read(o['catprefix']+'.cat.fits_FIRST_match_filtered.fits')
+    bsra=np.percentile(bootstrap(t['FIRST_dRA'],np.mean,10000),(16,84))
+    bsdec=np.percentile(bootstrap(t['FIRST_dDEC'],np.mean,10000),(16,84))
+    print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (np.mean(t['FIRST_dRA']),bsra[0],bsra[1])
+    print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (np.mean(t['FIRST_dDEC']),bsdec[0],bsdec[1])
+
+    report('Plotting flux ratios')
     # Flux ratio plots (only compact sources)
     plot_flux_ratios('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_fluxerrors.png'%o['catprefix'],options=o)
     
+    report('Plotting flux scale comparison')
     # Flux scale comparison plots
     plot_flux_errors('%s.cat.fits_TGSS_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_TGSS_match_filtered_fluxratio.png'%o['catprefix'],'TGSS',options=o)
-    
+    t=Table.read(o['catprefix']+'.cat.fits_TGSS_match_filtered.fits')
+    ratios=t['Total_flux']/(t['TGSS_Total_flux']/o['TGSS_fluxfactor'])
+    bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
+    print 'Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+    if 'NVSS' in o['list']:
+        t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
+        ratios=t['Total_flux']/t['NVSS_Total_flux']
+        bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
+        print 'Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
     # Noise estimate
-    imagenoise = find_imagenoise(o['nonpbimage'],0.2E-3)
-    print 'An estimate of the image noise is %s'%(round(imagenoise*1E3,3))
+    hdu=fits.open(o['pbimage'])
+    imagenoise = get_rms(hdu)
+    print 'An estimate of the image noise is %.3f muJy/beam' % (imagenoise*1E6)

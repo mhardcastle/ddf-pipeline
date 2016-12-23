@@ -1,10 +1,10 @@
 import numpy as np
 from scipy.optimize import leastsq
 import scipy
-import pyfits
 import os,sys
 from pipeline_logging import run_log
 from subprocess import call
+from astropy.io import fits
 
 class bcolors:
    HEADER = '\033[95m'
@@ -40,6 +40,21 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False):
    else:
       warn('Dry run, skipping this step')
 
+def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
+
+    data=hdu[0].data
+    _,_,ys,xs=data.shape
+    subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+    oldrms=1
+    for i in range(niter):
+        rms=np.std(subim)
+        if verbose: print len(subim),rms
+        if np.abs(oldrms-rms)/rms < eps:
+            return rms
+        subim=subim[np.abs(subim)<5*rms]
+        oldrms=rms
+    raise Exception('Failed to converge')
+
 def close_higher_bsmooth_number(n,B):
     """Finds the closest higher B-smooth number (good numbers for FFTs) http://en.wikipedia.org/wi$
         """
@@ -66,11 +81,11 @@ def close_higher_bsmooth_number(n,B):
 #-----------------------------------------------------------
 
 def find_imagenoise(workingimage,estnoise):
-    f = pyfits.open('%s'%workingimage)
+    f = fits.open(workingimage)
     noisearray = f[0].data.flatten()
     maxpixel = np.max(noisearray)
     noisearray = np.random.permutation(noisearray)[:10000]
-    noisepix = np.array(filter(lambda x: abs(x) > 10E-8,noisearray)) # Filter out the edge pixels which have values around 1E-10
+    #noisepix = np.array(filter(lambda x: abs(x) > 10E-8,noisearray)) # Filter out the edge pixels which have values around 1E-10
     noisepix = np.array(filter(lambda x: abs(x)<50.0*estnoise,noisepix))
     f.close()
     rms = fit_gaussian_histogram(noisepix,'n')

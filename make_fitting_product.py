@@ -4,10 +4,7 @@
 
 from astropy.table import Table
 import numpy as np
-
-def filter_catalogue(t,c_ra,c_dec,radius):
-    r=np.sqrt((np.cos(c_dec*np.pi/180.0)*(t['RA']-c_ra))**2.0+(t['DEC']-c_dec)**2.0)
-    return t[r<radius]
+from crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
 
 def make_catalogue(name,c_ra,c_dec,radius,cats):
 
@@ -22,15 +19,9 @@ def make_catalogue(name,c_ra,c_dec,radius,cats):
     print 'Filtered within',radius,'degrees:',len(t)
     t=t[t['Total_flux']>0.15]
     print 'Bright sources:',len(t)
-    t['NN_dist']=np.nan
 
     # Filter for isolated sources
-    for r in t:
-        dist=np.sqrt((np.cos(c_dec*np.pi/180.0)*(t['RA']-r['RA']))**2.0+(t['DEC']-r['DEC'])**2.0)*3600.0
-        dist.sort()
-        r['NN_dist']=dist[1]
-
-    t=t[t['NN_dist']>100]
+    t=select_isolated_sources(t,100)
     print 'Remove close neighbours:',len(t)
 
     ctab=[]
@@ -47,16 +38,18 @@ def make_catalogue(name,c_ra,c_dec,radius,cats):
         t['g_count_'+str(g)]=0
     for i,(n,sh,group,cmrad) in enumerate(cats):
         tab=ctab[i]
-        t[sh+'_flux']=np.nan
-        t[sh+'_e_flux']=np.nan
-        for r in t:
-            dist=np.sqrt((np.cos(c_dec*np.pi/180.0)*(tab['RA']-r['RA']))**2.0+(tab['DEC']-r['DEC'])**2.0)*3600.0
-            stab=tab[dist<cmrad]
-            if len(stab)==1:
-                # got a unique match
-                r[sh+'_flux']=stab[0]['Total_flux']
-                r[sh+'_e_flux']=stab[0]['E_Total_flux']
-                r['g_count_'+str(group)]+=1
+        match_catalogues(t,tab,cmrad,sh,group=group)
+#        
+#        t[sh+'_flux']=np.nan
+#        t[sh+'_e_flux']=np.nan
+#        for r in t:
+#            dist=np.sqrt((np.cos(c_dec*np.pi/180.0)*(tab['RA']-r['RA']))**2.0+(tab['DEC']-r['DEC'])**2.0)*3600.0
+#            stab=tab[dist<cmrad]
+#            if len(stab)==1:
+#                # got a unique match
+#                r[sh+'_flux']=stab[0]['Total_flux']
+#                r[sh+'_e_flux']=stab[0]['E_Total_flux']
+#                r['g_count_'+str(group)]+=1
     # Now reject sources that have no match in a given group
     for g in groups:
         t=t[t['g_count_'+str(g)]>0]
