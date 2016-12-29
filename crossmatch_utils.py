@@ -84,7 +84,7 @@ if __name__=='__main__':
     nvss.write('nvss_in.fits',overwrite=True)
     match_catalogues(t,nvss,10,'NVSS')
     t=t[~np.isnan(t['NVSS_separation'])]
-    ratios=t['Total_flux']/t['NVSS_flux']
+    ratios=t['Total_flux']/t['NVSS_Total_flux']
     print 'Median flux ratio:',np.median(ratios)
     print 'Bootstrap range:',np.percentile(bootstrap(ratios,np.median,1000),(16,84))
     t.write('matched.fits',overwrite=True)
