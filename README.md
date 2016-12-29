@@ -7,6 +7,8 @@ DDFacet and KillMS, of course: astropy; pyrap
 emcee for bootstrap, and
 mpi4py if you want to use MPI to speed up emcee (not typically necessary).
 
+reproject for the mosaicing script.
+
 The bootstrap code also expects the script directory (this directory)
 to be on the user's PATH.
 
