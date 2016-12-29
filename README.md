@@ -94,3 +94,12 @@ least roughly) to the PyBDSM format. See
 http://www.extragalactic.info/bootstrap/ for examples.
 
 TGSS and FIRST catalogues must be provided here to allow the code to run.
+
+## mosaicing
+
+Make a mosaic of adjacent observations from the pipeline with the
+`mosaic.py` script. At a minimum it needs directories specified with
+the `--directories` argument which contain standard pipeline
+output. You can also determine the noise from the image with the
+`--find_noise` option and remove global offsets with respect to FIRST
+(quality pipeline must have been run first) with the `--shift` option.

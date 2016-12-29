@@ -11,7 +11,7 @@ from auxcodes import report,run,get_rms,warn,die
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
-
+from facet_offsets import do_plot_facet_offsets
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -163,8 +163,16 @@ if __name__=='__main__':
     t=Table.read(o['catprefix']+'.cat.fits_FIRST_match_filtered.fits')
     bsra=np.percentile(bootstrap(t['FIRST_dRA'],np.mean,10000),(16,84))
     bsdec=np.percentile(bootstrap(t['FIRST_dDEC'],np.mean,10000),(16,84))
-    print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (np.mean(t['FIRST_dRA']),bsra[0],bsra[1])
-    print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (np.mean(t['FIRST_dDEC']),bsdec[0],bsdec[1])
+    mdra=np.mean(t['FIRST_dRA'])
+    mddec=np.mean(t['FIRST_dDEC'])
+    print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1])
+    print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
+
+    report('Plotting per-facet position offsets')
+    do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
+    t['FIRST_dRA']-=mdra
+    t['FIRST_dDEC']-=mddec
+    do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
 
     report('Plotting flux ratios')
     # Flux ratio plots (only compact sources)
