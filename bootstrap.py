@@ -118,7 +118,7 @@ def run_bootstrap(o):
     
     freqlist=open('frequencies.txt','w')
     for n,f in zip(o['names'],o['frequencies']):
-        freqlist.write('%f %s_flux %s_e_flux False\n' % (f,n,n))
+        freqlist.write('%f %s_Total_flux %s_E_Total_flux False\n' % (f,n,n))
     for i,f in enumerate(freqs):
         freqlist.write('%f Total_flux_ch%i E_Total_flux_ch%i True\n' % (f,i+1,i+1))
     freqlist.close()
