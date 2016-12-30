@@ -38,7 +38,7 @@ def region_to_poly(inreg):
     return clist,llist
     
 def point_inside_polygon(x,y,poly):
-
+    # code from http://www.ariel.com.au/a/python-point-int-poly.html
     n = len(poly)
     inside =False
 
