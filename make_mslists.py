@@ -11,7 +11,7 @@ def check_flagged(ms):
     tc = t.getcol('FLAG').flatten()
     return float(np.sum(tc))/len(tc)
 
-g=glob.glob('*.ms')
+g=sorted(glob.glob('*.ms'))
 full_mslist=[]
 for ms in g:
     ff=check_flagged(ms)

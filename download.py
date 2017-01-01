@@ -30,6 +30,9 @@ if __name__=='__main__':
 
     import sys
     name=sys.argv[1]
-    os.mkdir(name)
+    try:
+        os.mkdir(name)
+    except OSError:
+        pass
     os.chdir(name)
     download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
