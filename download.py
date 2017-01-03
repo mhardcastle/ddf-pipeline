@@ -6,6 +6,7 @@ import requests
 from lxml import html
 import shutil
 import os.path
+from time import sleep
 
 def download_dataset(server,root):
     page=requests.get(server+root,verify=False)
@@ -20,7 +21,14 @@ def download_dataset(server,root):
             else:
                 print 'Downloading',r.text
                 url=server+r.attrib['href']
-                response = requests.get(url, stream=True,verify=False)
+                while True:
+                    try:
+                        response = requests.get(url, stream=True,verify=False)
+                    except requests.exceptions.ConnectionError:
+                        print 'Connection error! sleeping 60 seconds before retry...'
+                        sleep(60)
+                    else:
+                        break
                 with open(r.text, 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
                 del response

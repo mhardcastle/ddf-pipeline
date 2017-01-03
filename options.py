@@ -44,6 +44,7 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
                 ( 'masking', 'tgss_extended', bool, False ),
                 ( 'masking', 'tgss_pointlike', float, 30 ), # source considered pointlike if below this in arcsec
                 ( 'control', 'quiet', bool, False ),
+                ( 'control', 'nobar', bool, False ),
                 ( 'control', 'logging', str, 'logs' ),
                 ( 'control', 'dryrun', bool, False ),
                 ( 'control', 'restart', bool, True ),
