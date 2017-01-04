@@ -141,7 +141,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --NodesFile '+clusterfile
             if dicomodel is not None:
                 runcommand+=' --DicoModel '+dicomodel
-            if options['nobar']:
+            if o['nobar']:
                 runcommand+=' --DoBar=0'
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+outsols+'.log'),quiet=o['quiet'])
             if dostage:
