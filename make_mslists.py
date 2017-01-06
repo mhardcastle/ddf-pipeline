@@ -11,16 +11,20 @@ def check_flagged(ms):
     tc = t.getcol('FLAG').flatten()
     return float(np.sum(tc))/len(tc)
 
-g=sorted(glob.glob('*.ms'))
-full_mslist=[]
-for ms in g:
-    ff=check_flagged(ms)
-    print ms,ff
-    if ff<0.8:
-        full_mslist.append(ms)
+def make_list():
+    g=sorted(glob.glob('*.ms'))
+    full_mslist=[]
+    for ms in g:
+        ff=check_flagged(ms)
+        print ms,ff
+        if ff<0.8:
+            full_mslist.append(ms)
 
-if len(full_mslist)<24:
-    warn('Warning -- only %i ms found' % len(full_mslist))
+    if len(full_mslist)<24:
+        warn('Warning -- only %i ms found' % len(full_mslist))
 
-open('big-mslist.txt','w').writelines(ms+'\n' for ms in full_mslist)
-open('mslist.txt','w').writelines(ms+'\n' for ms in full_mslist[2::4])
+    open('big-mslist.txt','w').writelines(ms+'\n' for ms in full_mslist)
+    open('mslist.txt','w').writelines(ms+'\n' for ms in full_mslist[2::4])
+
+if __name__=='__main__':
+    make_list()

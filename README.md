@@ -85,6 +85,10 @@ Run a Tier 1 reduction as follows:
 * Copy a suitable config file, e.g. `tier1.cfg`, amending the paths suitably.
 * Run the pipeline.
 
+At Herts the script `run_pipeline.py` will accomplish all of this, but
+needs modifying on a per-user, per-system basis to use the right
+directories and start the pipeline run batch job.
+
 ## quality pipeline
 
 Once the pipeline has run you can use `quality_pipeline.py` to get
