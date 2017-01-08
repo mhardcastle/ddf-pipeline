@@ -2,7 +2,6 @@
 
 from astropy.io import fits
 from astropy.table import Table
-import pyregion
 import numpy as np
 import re
 import matplotlib.pyplot as plt
