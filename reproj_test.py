@@ -63,7 +63,7 @@ def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
-            print imin,jmin
+            print '.',
             jmax = min(jmin + blocks[1], array.shape[1])
             shape_out_sub = (imax - imin, jmax - jmin)
             wcs_out_sub = wcs_out.deepcopy()
@@ -74,7 +74,7 @@ def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_
                                                             parallel=parallel)
             array[imin:imax, jmin:jmax] = array_sub
             footprint[imin:imax, jmin:jmax] = footprint_sub
-
+    print
     return array, footprint
 
 
@@ -106,7 +106,6 @@ def reproject_interp_chunk_2d_multi(input_data, output_projection, shape_out=Non
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
-            print imin,jmin
             jmax = min(jmin + blocks[1], array.shape[1])
             shape_out_sub = (imax - imin, jmax - jmin)
             wcs_out_sub = wcs_out.deepcopy()
