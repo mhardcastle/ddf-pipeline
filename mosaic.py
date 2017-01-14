@@ -27,6 +27,7 @@ parser.add_argument('--load', dest='load', action='store_true', help='Load exist
 parser.add_argument('--noise', dest='noise', type=float, nargs='+', help='UNSCALED Central noise level for weighting: must match numbers of maps')
 parser.add_argument('--scale', dest='scale', type=float, nargs='+', help='Scale factors by which maps should be multiplied: must match numbers of maps')
 parser.add_argument('--shift', dest='shift', action='store_true', help='Shift images before mosaicing')
+parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
 parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
 parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')
 
@@ -192,6 +193,7 @@ for i in range(len(hdus)):
         print 'loading...'
         hdu=fits.open(outname)
         w=hdu[0].data
+        mask|=(w>0)
     else:
         print 'reprojecting...'
         w, footprint = reproj(app[i], header, hdu_in=0, parallel=False)
@@ -203,14 +205,14 @@ for i in range(len(hdus)):
     isum+=r*w
     wsum+=w
 
+if not(args.no_write):
+    isum/=wsum
+    # mask now contains True where a non-nan region was present in either map
+    isum[~mask]=np.nan
+    for ch in ('BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER'):
+        header[ch]=hdus[0].header[ch]
+    header['ORIGIN']='ddf-pipeline-mosaic'
+    header['UNITS']='Jy/beam'
 
-# mask now contains True where a non-nan region was present in either map
-isum/=wsum
-isum[~mask]=np.nan
-for ch in ('BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER'):
-    header[ch]=hdus[0].header[ch]
-header['ORIGIN']='ddf-pipeline-mosaic'
-header['UNITS']='Jy/beam'
-
-hdu = fits.PrimaryHDU(header=header,data=isum)
-hdu.writeto('mosaic.fits',clobber=True)
+    hdu = fits.PrimaryHDU(header=header,data=isum)
+    hdu.writeto('mosaic.fits',clobber=True)

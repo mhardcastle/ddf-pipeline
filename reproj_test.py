@@ -10,6 +10,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
 from multiprocessing import Pool
+import sys
 
 def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0,
                               order='bilinear', blocks=(1000, 1000), parallel=False):
@@ -26,11 +27,11 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
     # Create output arrays
     array = np.zeros(shape_out, dtype=float)
     footprint = np.zeros(shape_out, dtype=float)
-
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
-            print imin,jmin
+            print '.',
+            sys.stdout.flush()
             jmax = min(jmin + blocks[1], array.shape[1])
             shape_out_sub = (imax - imin, jmax - jmin)
             wcs_out_sub = wcs_out.deepcopy()
@@ -42,6 +43,7 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
             array[imin:imax, jmin:jmax] = array_sub
             footprint[imin:imax, jmin:jmax] = footprint_sub
 
+    print 
     return array, footprint
 
 def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0,

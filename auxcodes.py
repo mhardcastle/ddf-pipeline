@@ -44,8 +44,12 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False):
 def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
 
     data=hdu[0].data
-    _,_,ys,xs=data.shape
-    subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+    if len(data.shape)==4:
+       _,_,ys,xs=data.shape
+       subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+    else:
+       ys,xs=data.shape
+       subim=data[ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
     oldrms=1
     for i in range(niter):
         rms=np.std(subim)
