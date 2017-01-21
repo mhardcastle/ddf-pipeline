@@ -11,7 +11,7 @@ from auxcodes import report,run,get_rms,warn,die
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
-from facet_offsets import do_plot_facet_offsets
+from facet_offsets import do_plot_facet_offsets,label_table
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -148,6 +148,12 @@ if __name__=='__main__':
         
     # pybdsm source finding
     sfind_image(o['catprefix'],o['pbimage'],o['nonpbimage'],o['sfind_pixel_fraction'])
+
+    # facet labels -- do this now for generality
+    t=Table.read(o['catprefix'] + '.cat.fits')
+    if 'Facet' not in t.columns:
+        t=label_table(t,'image_full_ampphase1m.tessel.reg')
+        t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
     # matching with catalogs
     for cat in o['list']:

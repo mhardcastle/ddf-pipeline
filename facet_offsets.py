@@ -145,15 +145,23 @@ def plot_offsets(t,poly,color):
     plt.quiver(np.mean(t['RA']),np.mean(t['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
     plt.text(np.mean(t['RA']),np.mean(t['DEC']),'1 arcsec',color='green')
 
-def do_plot_facet_offsets(t,regfile,savefig=None):
-
-    if isinstance(t,str):
-        t=Table.read(t)
+def label_table(t,regfile):
     polys,labels=region_to_poly(regfile)
     plab=assign_labels_to_poly(polys,labels)
     pli=labels_to_integers(plab)
 
     add_facet_labels(t,polys,pli)
+    return t
+
+def do_plot_facet_offsets(t,regfile,savefig=None):
+
+    polys,labels=region_to_poly(regfile)
+    plab=assign_labels_to_poly(polys,labels)
+    pli=labels_to_integers(plab)
+    if isinstance(t,str):
+        t=Table.read(t)
+    if 'Facet' not in t.columns:
+        add_facet_labels(t,polys,pli)
     plot_offsets(t,polys,'red')
     if savefig is not None:
         plt.savefig(savefig)

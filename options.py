@@ -94,5 +94,5 @@ def print_options():
 
 if __name__=='__main__':
     
-    print options('example.cfg')
-    #print_options()
+    #print options('example.cfg')
+    print_options()
