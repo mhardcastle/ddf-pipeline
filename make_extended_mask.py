@@ -17,6 +17,15 @@ def add_manual_mask(infile,ds9region,outfile):
     hdu[0].data=(map.astype(int) | manualmask).astype(np.float32)
     hdu.writeto(outfile,clobber=True)
 
+def merge_mask(in1,in2,outfile):
+    hdu1=fits.open(in1)
+    hdu2=fits.open(in2)
+
+    map1=hdu1[0].data.astype(int)
+    map2=hdu2[0].data.astype(int)
+
+    hdu1[0].data = map1 | map2
+    hdu1.writeto(outfile,clobber=True)
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
 
@@ -27,7 +36,9 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
     labels, count = nd.label(det)
 
     print 'found',count,'islands'
-    label, counts = np.unique(labels, return_counts=True)
+    #label, counts = np.unique(labels, return_counts=True)
+    label=np.unique(labels)
+    counts=np.bincount(labels.flatten())
 
     big=(counts>sizethresh)
     big_regions=label[big]
@@ -43,7 +54,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
 
     w=WCS(hdu[0].header)
     hdu[0].data=mask
-    hdu.writeto('mask-low.fits',overwrite=True)
+    hdu.writeto('mask-low.fits',clobber=True)
 
     if fullresfile is not None:
 
@@ -87,7 +98,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
                     maskf[yv,xv]=1
 
         hduf[0].data=maskf
-        hduf.writeto('mask-high.fits',overwrite=True)
+        hduf.writeto('mask-high.fits',clobber=True)
 
 if __name__=='__main__':
     make_extended_mask('image_low_initial_MSMF.app.restored.fits','image_dirin_MSMF.app.restored.fits')
