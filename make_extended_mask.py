@@ -1,8 +1,22 @@
 from astropy.io import fits
 from astropy.wcs import WCS
 from auxcodes import get_rms
+from auxcodes import flatten
 import scipy.ndimage as nd
 import numpy as np
+import pyregion
+
+def add_manual_mask(infile,ds9region,outfile):
+    hdu=fits.open(infile)
+    hduflat = flatten(hdu)
+
+    map=hdu[0].data
+    r = pyregion.open(ds9region)
+    manualmask = r.get_mask(hdu=hduflat)
+
+    hdu[0].data=(map.astype(int) | manualmask).astype(np.float32)
+    hdu.writeto(outfile,clobber=True)
+
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
 
