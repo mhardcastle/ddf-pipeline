@@ -6,9 +6,9 @@
 import os,sys
 import os.path
 from auxcodes import run,warn,die
+from lofar import bdsm
 import pyrap.tables as pt
 import numpy as np
-from lofar import bdsm
 from scipy.interpolate import InterpolatedUnivariateSpline
 from pipeline import ddf_image, make_mask
 
