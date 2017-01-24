@@ -43,6 +43,9 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
                 ( 'masking', 'tgss_flux', float, 500 ), # peak flux in mJy
                 ( 'masking', 'tgss_extended', bool, False ),
                 ( 'masking', 'tgss_pointlike', float, 30 ), # source considered pointlike if below this in arcsec
+                ( 'masking', 'region', str, None), # ds9 region to merge with mask
+                ( 'masking', 'extended_size', int, None ),
+                ( 'masking', 'extended_rms', float, 3.0 ), 
                 ( 'control', 'quiet', bool, False ),
                 ( 'control', 'nobar', bool, False ),
                 ( 'control', 'logging', str, 'logs' ),
