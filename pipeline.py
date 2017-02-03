@@ -102,7 +102,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += ' --SSDClean-MinSizeInitHMP=%i' % HMPsize
 
     if options['nobar']:
-        runcommand += ' --Debug-Boring=1'
+        runcommand += ' --Log-Boring=1'
 
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
