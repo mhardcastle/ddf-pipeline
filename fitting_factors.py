@@ -64,8 +64,8 @@ def lnprior(X):
 def lnpost(scale,x,y,yerr):
     return lnprior(scale)+lnlike(scale,frequencies,fluxes,errors)
 
-def read_frequencies_fluxes(intable):
-    lines=open('frequencies.txt').readlines()
+def read_frequencies_fluxes(intable,name=''):
+    lines=open(name+'frequencies.txt').readlines()
     frequencies=[]
     keywords=[]
     e_keywords=[]
@@ -102,7 +102,7 @@ def run_all(run, name=''):
     global frequencies
     global smask
 
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name)
 
     have_mpi,rank=check_mpi()
 
