@@ -101,4 +101,4 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
         hduf.writeto('mask-high.fits',clobber=True)
 
 if __name__=='__main__':
-    make_extended_mask('image_low_initial_MSMF.app.restored.fits','image_dirin_MSMF.app.restored.fits')
+    make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_HMP.app.restored.fits')

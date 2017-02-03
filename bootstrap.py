@@ -64,17 +64,17 @@ def run_bootstrap(o):
     for f,m in zip(freqs,mslist):
         print m,f
 
-    # First we need to do a MSMF clean to make an initial mask; then
+    # First we need to do a HMP clean to make an initial mask; then
     # we can use this for each of the bands. We use the
     # lowest-frequency dataset.
 
-    ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
-    make_mask('image_low_initial_MSMF.app.restored.fits',20,options=o)
+    ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
+    make_mask('image_low_initial_HMP.app.restored.fits',20,options=o)
 
     # now loop over the MSs to make the images
     for i,ms in enumerate(mslist):
         imroot='image_low_%i_SSD' % i
-        ddf_image(imroot,ms,cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
+        ddf_image(imroot,ms,cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
         make_mask(imroot+'.app.restored.fits',15,options=o)
         ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='SSD',ddsols='killms_p1',applysols='P',robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H',imsize=o['bsimsize'],cellsize=o['bscell'],dirty_from_resid=True,options=o,colname=o['colname'])
 

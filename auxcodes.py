@@ -28,6 +28,7 @@ def warn(s):
 def run(s,proceed=False,dryrun=False,log=None,quiet=False):
    report('Running: '+s)
    if not dryrun:
+#      retval=os.system(s)
       if log is None:
          #print 'Log is none, using "call" to run '+s
          retval=call(s,shell=True)

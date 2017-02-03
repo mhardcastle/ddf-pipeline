@@ -34,7 +34,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None,HMPsize=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,previous_image=None,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None,HMPsize=None):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -55,14 +55,18 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
 
     fname=imagename+'.app.restored.fits'
 
-    runcommand = "DDF.py --ImageName=%s --MSName=%s --PeakFactor %f --NFreqBands=%i --ColName %s --NCPU=%i --Mode=Clean --CycleFactor=0 --MaxMinorIter=1000000 --MaxMajorIter=%s --MinorCycleMode %s --BeamMode=LOFAR --LOFARBeamMode=A --SaveIms [Residual_i] --Robust %f --Npix=%i --wmax 50000 --Nw 100 --SaveImages %s --Cell %f --NFacets=11 --NEnlargeData 0 --NChanDegridPerMS 1 --RestoringBeam %f"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,cellsize,beamsize)
+    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Freq-NBand=%i --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Weight-ColName IMAGING_WEIGHT --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize)
+    
+    # runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Freq-NBand=%i --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Weight-ColName IMAGING_WEIGHT --Image-NPix=%i --CF-wmax 10000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=3 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 15 --Facets-DiamMin 0.1 --Data-Sort 1"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize)
+    
+    
     if do_decorr:
-        runcommand += ' --DecorrMode=FT'
+        runcommand += ' --RIME-DecorrMode=FT'
     if cleanmode == 'SSD':
         if singlefreq:
-            runcommand += ' --SSDSolvePars [S] --BICFactor 0'
+            runcommand += ' --SSDClean-SSDSolvePars [S] --SSDClean-BICFactor 0'
         else:
-            runcommand += ' --SSDSolvePars [S,Alpha] --BICFactor 0'
+            runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
     if clusterfile is not None:
         runcommand += ' --CatNodes=%s' % clusterfile
     if cleanmask is not None:
@@ -73,31 +77,31 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='MSMF',ddsols=None,apply
         runcommand += ' --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
     if use_dicomodel:
         if dicomodel_base is not None:
-            runcommand += ' --InitDicoModel=%s.DicoModel' % dicomodel_base
+            runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
         elif previous_image is not None:
-            runcommand += ' --InitDicoModel=%s.DicoModel' % previous_image
+            runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % previous_image
         else:
             raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
     if threshold is not None:
-        runcommand += ' --FluxThreshold=%f'%threshold
+        runcommand += ' --Deconv-FluxThreshold=%f'%threshold
     if uvrange is not None:
-        runcommand += ' --UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
+        runcommand += ' --Selection-UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
         if os.path.exists(mslist+'.ddfcache/LastResidual'):
-            runcommand += ' --DirtyFromLastResid=1 --ResetDirty=-1'
+            runcommand += ' --Cache-Dirty forceresidual --Cache-PSF force'
     if reuse_dirty:
         if os.path.exists(mslist+'.ddfcache/Dirty'):
-            runcommand += ' --ResetDirty=-1'
+            runcommand += ' --ResetDirty forcedirty'
     if reuse_psf:
         if os.path.exists(mslist+'.ddfcache/PSF'):
-            runcommand += ' --ResetPSF=-1'
+            runcommand += ' --ResetPSF force'
 
     if HMPsize is not None:
-        runcommand += ' --MinSizeInitHMP=%i' % HMPsize
+        runcommand += ' --SSDClean-MinSizeInitHMP=%i' % HMPsize
 
     if options['nobar']:
-        runcommand += ' --Boring=1'
+        runcommand += ' --Debug-Boring=1'
 
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
@@ -204,6 +208,7 @@ if __name__=='__main__':
         sys.exit(1)
 
     o=options(sys.argv[1])
+
     if o['mslist'] is None:
         die('MS list must be specified')
 
@@ -225,16 +230,16 @@ if __name__=='__main__':
     check_imaging_weight(o['mslist'])
 
     # Image full bandwidth to create a model
-    ddf_image('image_dirin_MSMF',o['mslist'],cleanmode='MSMF',threshold=o['msmf_threshold'],majorcycles=10,robust=o['robust'],colname=colname)
-    make_mask('image_dirin_MSMF.app.restored.fits',o['ga'],use_tgss=True)
+    ddf_image('image_dirin_HMP',o['mslist'],cleanmode='HMP',threshold=o['msmf_threshold'],majorcycles=10,robust=o['robust'],colname=colname)
+    make_mask('image_dirin_HMP.app.restored.fits',o['ga'],use_tgss=True)
 
     # cluster to get facets
-    if make_model('image_dirin_MSMF.app.restored.fits.mask.fits','image_dirin_MSMF'):
+    if make_model('image_dirin_HMP.app.restored.fits.mask.fits','image_dirin_HMP'):
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
     # Now SSD clean with the new facets
-    ddf_image('image_dirin_SSDm',o['mslist'],cleanmask='image_dirin_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',majorcycles=4,robust=o['robust'],previous_image='image_dirin_MSMF',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile='image_dirin_MSMF.npy.ClusterCat.npy')
+    ddf_image('image_dirin_SSDm',o['mslist'],cleanmask='image_dirin_HMP.app.restored.fits.mask.fits',cleanmode='SSD',majorcycles=4,robust=o['robust'],previous_image='image_dirin_HMP',reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile='image_dirin_HMP.npy.ClusterCat.npy')
     make_mask('image_dirin_SSDm.app.restored.fits',o['ga'],use_tgss=True)
 
     # now remove old, bad components from the DicoModel -- these are not in the new mask
@@ -249,10 +254,10 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # make the extended mask if required and possible
-    if os.path.isfile('image_low_initial_MSMF.app.restored.fits') and o['extended_size'] is not None:
+    if os.path.isfile('image_low_initial_HMP.app.restored.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
             report('Making the extended source mask')
-            make_extended_mask('image_low_initial_MSMF.app.restored.fits','image_dirin_MSMF.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
+            make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_HMP.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')
         merge_mask('image_dirin_SSDm.app.restored.fits.mask.fits','mask-high.fits','image_dirin_SSDm.app.restored.fits.mask.fits')
@@ -292,12 +297,12 @@ if __name__=='__main__':
                 low_imsize=o['low_imsize'] # allow over-ride
             else:
                 low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # make an MSMF from one dataset as an initial mask. Use
+            # make an HMP from one dataset as an initial mask. Use
             # the same name as bootstrap does, so if that's run, we
             # have the mask already (but need to make sure these match!)
             mslist=[s.strip() for s in open(o['mslist']).readlines()]
-            ddf_image('image_low_initial_MSMF',mslist[0],cleanmode='MSMF',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],singlefreq=True)
-            make_mask('image_low_initial_MSMF.app.restored.fits',20,extended_use='mask-low.fits')
-            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_MSMF.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.05)
+            ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],singlefreq=True)
+            make_mask('image_low_initial_HMP.app.restored.fits',20,extended_use='mask-low.fits')
+            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.05)
             make_mask('image_full_low.app.restored.fits',o['full'],extended_use='mask-low.fits')
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,dirty_from_resid=True,reuse_psf=True,saveimages='H')
