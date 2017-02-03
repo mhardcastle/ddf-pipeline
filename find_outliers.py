@@ -25,12 +25,12 @@ def fitall(scale,frequencies,fluxes,errors,smask):
         norms.append(popt[0])
     return np.array((norms,alphas,chiv))
 
-def run_all(run):
+def run_all(run, name=''):
 
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits')
 
     try:
-        scale=np.load('crossmatch-results-'+str(run)+'.npy')[:,0]
+        scale=np.load(name+'crossmatch-results-'+str(run)+'.npy')[:,0]
     except IOError:
         print 'Can\'t load results file'
         return False
@@ -47,8 +47,11 @@ def run_all(run):
     threshold=100
     print 'Number of sources rejected',np.sum(a[2]>threshold)
     filtered=data[a[2]<threshold]
-    filtered.write('crossmatch-'+str(run+1)+'.fits',overwrite=True)
+    filtered.write(name+'crossmatch-'+str(run+1)+'.fits',overwrite=True)
     return True
 
 if __name__=='__main__':
-    run_all(int(sys.argv[1]))
+    if len(sys.argv) == 2:
+        run_all(int(sys.argv[1]))
+    else:
+        run_all(int(sys.argv[1]),name=sys.argv[2])
