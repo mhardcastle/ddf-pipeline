@@ -27,7 +27,7 @@ def fitall(scale,frequencies,fluxes,errors,smask):
 
 def run_all(run, name=''):
 
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name=name)
 
     try:
         scale=np.load(name+'crossmatch-results-'+str(run)+'.npy')[:,0]

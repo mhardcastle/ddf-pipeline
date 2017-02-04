@@ -102,7 +102,7 @@ def run_all(run, name=''):
     global frequencies
     global smask
 
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name)
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name=name)
 
     have_mpi,rank=check_mpi()
 
