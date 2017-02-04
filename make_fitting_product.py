@@ -54,7 +54,7 @@ def make_catalogue(name,c_ra,c_dec,radius,cats):
     for g in groups:
         t=t[t['g_count_'+str(g)]>0]
         
-    nameprefix = name.replace('cube.pybdsm.srl','')
+    outnameprefix = name.replace('cube.pybdsm.srl','')
     t.write(outnameprefix+'crossmatch-1.fits',overwrite=True)
                           
 
