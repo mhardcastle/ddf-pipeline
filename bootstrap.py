@@ -95,7 +95,7 @@ def run_bootstrap(o):
         else:
             warn('Making the cube')
             make_cube('%scube.fits'%obsid,['image_%s_low_%i_SSDm.int.restored.fits' %(obsid,i) for i in range(len(omslist))],freqs)
-        if os.path.isfile('cube_%s.pybdsm.srl'%obsid):
+        if os.path.isfile('%scube.pybdsm.srl'%obsid):
             warn('Source list exists, skipping source extraction')
         else:
             warn('Running PyBDSM, please wait...')
