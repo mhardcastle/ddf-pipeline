@@ -69,13 +69,13 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         else:
             runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
     if clusterfile is not None:
-        runcommand += ' --CatNodes=%s' % clusterfile
+        runcommand += ' --Facets-CatNodes=%s' % clusterfile
     if cleanmask is not None:
-        runcommand += ' --CleanMaskImage=%s'%cleanmask
+        runcommand += ' --Deconv-CleanMaskImage=%s'%cleanmask
     if applysols is not None:
         if donorm:
-            runcommand += ' --GlobalNorm=MeanAbs'
-        runcommand += ' --DDModeGrid=%s --DDModeDeGrid=%s --DDSols=%s'%(applysols,applysols,ddsols)
+            runcommand += ' --DDESolutions-GlobalNorm=MeanAbs'
+        runcommand += ' --DDESolutions-DDModeGrid=%s --DDESolutions-DDModeDeGrid=%s --DDESolutions-DDSols=%s'%(applysols,applysols,ddsols)
     if use_dicomodel:
         if dicomodel_base is not None:
             runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
@@ -93,10 +93,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             runcommand += ' --Cache-Dirty forceresidual --Cache-PSF force'
     if reuse_dirty:
         if os.path.exists(mslist+'.ddfcache/Dirty'):
-            runcommand += ' --ResetDirty forcedirty'
+            runcommand += ' --Cache-Dirty forcedirty'
     if reuse_psf:
         if os.path.exists(mslist+'.ddfcache/PSF'):
-            runcommand += ' --ResetPSF force'
+            runcommand += ' --Cache-PSF force'
 
     if HMPsize is not None:
         runcommand += ' --SSDClean-MinSizeInitHMP=%i' % HMPsize
