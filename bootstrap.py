@@ -53,7 +53,7 @@ def run_bootstrap(o):
     obsids = [ms.split('_')[0] for ms in mslist]
     Uobsid = np.unique(np.array(obsids))
     
-    for obsid in obsids:
+    for obsid in Uobsid:
         
         warn('Running bootstrap for obsid %s' % obsid)
 
