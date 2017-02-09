@@ -74,9 +74,7 @@ def run_bootstrap(o):
     # now loop over the MSs to make the images
     for i,ms in enumerate(mslist):
         imroot='image_low_%i_SSD' % i
-        ddf_image(imroot,ms,cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
-        make_mask(imroot+'.app.restored.fits',15,options=o)
-        ddf_image(imroot+'m',ms,cleanmask=imroot+'.app.restored.fits.mask.fits',previous_image=imroot,reuse_psf=True,use_dicomodel=True,majorcycles=2,cleanmode='SSD',ddsols='killms_p1',applysols='P',robust=low_robust,uvrange=low_uvrange,beamsize=20,saveimages='H',imsize=o['bsimsize'],cellsize=o['bscell'],dirty_from_resid=True,options=o,colname=o['colname'])
+        ddf_image(imroot,ms,cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,saveimages='H')
 
     from make_cube import make_cube
 

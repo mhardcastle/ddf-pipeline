@@ -116,10 +116,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
 
-def make_external_mask(templatename,use_tgss=True,options=None,extended_use=None,clobber=False):
+def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False):
     if options is None:
         options=o # attempt to get global
-    fname='external_mask.fits'
     if o['restart'] and os.path.isfile(fname) and not clobber:
         warn('External mask already exists, not creating it')
     else:
@@ -141,10 +140,8 @@ def make_external_mask(templatename,use_tgss=True,options=None,extended_use=None
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
 
-def make_mask(imagename,thresh,verbose=False,options=None):
+def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None):
     # mask_use specifies a mask file to use
-    # assumes external_mask.fits exists!
-
     if options is None:
         options=o # attempt to get global
 
@@ -156,7 +153,8 @@ def make_mask(imagename,thresh,verbose=False,options=None):
             print 'Would have run',runcommand
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
-        merge_mask(fname,'external_mask.fits',fname)
+        if external_mask is not None:
+            merge_mask(fname,'external_mask.fits',fname)
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None):
     # run killms individually on each MS -- allows restart if it failed in the middle
@@ -240,20 +238,20 @@ if __name__=='__main__':
 
     # Image but don't clean to sort out WCS for mask
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None)
-    make_external_mask('image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=True)
+    make_external_mask('external_mask.fits','image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=True)
 
     # Deep SSD clean with this external mask and automasking
     ddf_image('image_dirin_SSD',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',majorcycles=4,robust=o['robust'],reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,automask_threshold=o['thresholds'][0])
 
     # make a mask from the final image
-    make_mask('image_dirin_SSD.app.restored.fits',o['thresholds'][0],use_tgss=True)
+    make_mask('image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask='external_mask.fits')
 
     # cluster to get facets
     if make_model('image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD'):
         # if this step runs, clear the cache to remove facet info
         clearcache(o['mslist'])
 
-    killms_data('image_dirin_SSDm',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSDm_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NiterKF'][0])
+    killms_data('image_dirin_SSDm',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NiterKF'][0])
 
     # TBD -- not fixed yet
     # bootstrap, and change the column name if it runs
@@ -271,19 +269,19 @@ if __name__=='__main__':
             make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_HMP.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')
-        make_external_mask('external_mask.fits',use_tgss=True,clobber=True,extended_use='high.fits')
+        make_external_mask('external_mask.fits',use_tgss=True,clobber=True,extended_use='mask_high.fits')
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=o['robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1])
 
-    make_mask('image_phase1.app.restored.fits',o['thresholds'][1])
+    make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask='external_mask.fits')
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel')
     # Calibrate off the model
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NiterKF'][1])
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=4,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2])
-    make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2])
+    make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask='external_mask.fits')
     mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel')
 
     # Now move to the full dataset, if it exists
@@ -294,7 +292,7 @@ if __name__=='__main__':
         check_imaging_weight(o['full_mslist'])
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=o['NiterKF'][2])
-        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=4,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3])
+        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=4,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],saveimages='H')
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
@@ -303,12 +301,10 @@ if __name__=='__main__':
                 low_imsize=o['low_imsize'] # allow over-ride
             else:
                 low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # make an HMP from one dataset as an initial mask. Use
-            # the same name as bootstrap does, so if that's run, we
-            # have the mask already (but need to make sure these match!)
-            mslist=[s.strip() for s in open(o['mslist']).readlines()]
-            ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,threshold=5e-2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],singlefreq=True)
-            make_mask('image_low_initial_HMP.app.restored.fits',20,extended_use='mask-low.fits')
-            ddf_image('image_full_low',o['full_mslist'],cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.05)
-            make_mask('image_full_low.app.restored.fits',o['full'],extended_use='mask-low.fits')
-            ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,previous_image='image_full_low',use_dicomodel=True,dirty_from_resid=True,reuse_psf=True,saveimages='H')
+            # if mask_low exists then use it
+            if os.path.isfile('mask_low.fits') and low_imsize=o['bsimsize']:
+                extmask='mask_low.fits'
+            else:
+                extmask=None
+            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,saveimages='H',automask=True,automask_threshold=5)
+
