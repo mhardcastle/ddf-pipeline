@@ -76,7 +76,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
     if automask:
-        runcommand += ' --Mask-AutoStats=[50,2,%.2f]' % automask_threshold
+        runcommand += ' --Mask-Auto=1 --Mask-AutoStats=[50,2,%.2f]' % automask_threshold
     if cleanmask is not None:
         runcommand += ' --Mask-External=%s'%cleanmask
     if applysols is not None:
@@ -123,6 +123,7 @@ def make_external_mask(templatename,use_tgss=True,options=None,extended_use=None
     if o['restart'] and os.path.isfile(fname) and not clobber:
         warn('External mask already exists, not creating it')
     else:
+        report('Make blank external mask')
         hdus=fits.open(templatename)
         hdus[0].data=np.zeros_like(hdus[0].data,dtype=np.int32)
         hdus.writeto(fname,clobber=True)
@@ -137,6 +138,7 @@ def make_external_mask(templatename,use_tgss=True,options=None,extended_use=None
             add_manual_mask(fname,options['region'],fname)
 
         if options['extended_size'] is not None and extended_use is not None:
+            report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
 
 def make_mask(imagename,thresh,verbose=False,options=None):
@@ -156,7 +158,7 @@ def make_mask(imagename,thresh,verbose=False,options=None):
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         merge_mask(fname,'external_mask.fits',fname)
 
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,stagedir=None,dicomodel=None):
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None):
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
@@ -164,7 +166,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running killMS step')
         else:
-            runcommand = "killMS.py --MSName %s%s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol %s"%(stagedir+'/' if dostage else '',f,imagename,o['dt'],niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],colname)
+            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol %s"%(f,imagename,o['dt'],niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],colname)
             if clusterfile is not None:
                 runcommand+=' --NodesFile '+clusterfile
             if dicomodel is not None:
@@ -236,7 +238,7 @@ if __name__=='__main__':
     # Check imaging weights -- needed before DDF
     check_imaging_weight(o['mslist'])
 
-    # Image but don't clean to sort out WCS
+    # Image but don't clean to sort out WCS for mask
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None)
     make_external_mask('image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=True)
 
@@ -256,6 +258,7 @@ if __name__=='__main__':
     # TBD -- not fixed yet
     # bootstrap, and change the column name if it runs
     if o['bootstrap']:
+        die("Can't run bootstrap, not working yet")
         report('Running bootstrap')
         run('bootstrap.py '+sys.argv[1],log=None)
         colname='SCALED_DATA'
@@ -276,26 +279,22 @@ if __name__=='__main__':
     make_mask('image_phase1.app.restored.fits',o['thresholds'][1])
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel')
     # Calibrate off the model
-    killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel')
-
-    stop
+    killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NiterKF'][1])
 
     # Apply phase and amplitude solutions and image again
-    ddf_image('image_ampphase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=4,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.01,automask=True,automask_threshld=o['thresholds'][2])
-    make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],use_tgss=True,extended_use='mask-high.fits')
+    ddf_image('image_ampphase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=4,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2])
+    make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2])
     mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel')
-    # Now move to the full dataset, if it exists
 
+    # Now move to the full dataset, if it exists
     if o['full_mslist'] is None:
         warn('No full MS list supplied, stopping here')
     else:
         # Check imaging weights -- needed before DDF
         check_imaging_weight(o['full_mslist'])
         # single AP cal of full dataset and final image. Is this enough?
-        killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.NodesCat.npy',stagedir=o['stagedir'],dicomodel='image_ampphase1_masked.DicoModel')
-        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m_masked')
-        make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True,extended_use='mask-high.fits')
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
+        killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=o['NiterKF'][2])
+        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=4,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3])
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
