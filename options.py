@@ -12,22 +12,28 @@ def getcpus():
         import multiprocessing
         return multiprocessing.cpu_count()
 
-option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
-                ( 'machine', 'NCPU_killms', int, getcpus() ),
-                ( 'data', 'mslist', str, None ),
-                ( 'data', 'full_mslist', str, None ),
-                ( 'data', 'colname', str, 'CORRECTED_DATA' ),
-                ( 'solutions', 'ndir', int, 30 ),
-                ( 'solutions', 'NChanSols', int, 1 ),
-                ( 'solutions', 'dt', float, 1. ),
-                ( 'solutions', 'LambdaKF', float, 0.5 ),
-                ( 'image', 'imsize', int, 20000 ),
+option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
+                  'Number of CPUS to use for DDF'),
+                ( 'machine', 'NCPU_killms', int, getcpus(),
+                  'Number of CPUS to use for KillMS' ),
+                ( 'data', 'mslist', str, None,
+                  'Initial measurement set list to use -- must be specified' ),
+                ( 'data', 'full_mslist', str, None,
+                  'Full-bandwidth measurement set to use for final step, if any' ),
+                ( 'data', 'colname', str, 'CORRECTED_DATA', 'MS column to use' ),
+                ( 'solutions', 'ndir', int, 30, 'Number of directions' ),
+                ( 'solutions', 'NChanSols', int, 1, None ),
+                ( 'solutions', 'dt', float, 1., 'Time interval for killMS' ),
+                ( 'solutions', 'LambdaKF', float, 0.5, None ),
+                ( 'solutions', 'NIterKF', list, [1, 6, 6], 'Kalman filter iterations for killMS for the three self-cal steps' ),
+                ( 'solutions', 'normalize', list, ['AbsAnt', 'AbsAnt', 'Abs'], 'How to normalize solutions for the three self-cal steps' ),
+                ( 'image', 'imsize', int, 20000, 'Image size' ),
                 ( 'image', 'msmf_threshold', float, 10e-3 ),
                 ( 'image', 'cellsize', float, 1.5 ),
                 ( 'image', 'robust', float, -0.15 ),
                 ( 'image', 'final_robust', float, -0.5 ),
-                ( 'image', 'psf_arcsec', float, None ),     # Force restore with this value if set, otherwise use default
-                ( 'image', 'final_psf_arcsec', float, None ),
+                ( 'image', 'psf_arcsec', float, None, 'Force restore with this PSF size if set, otherwise use default' ),
+                ( 'image', 'final_psf_arcsec', float, 'Final image restored with this PSF size' ),
                 ( 'image', 'low_psf_arcsec', float, None ),
                 ( 'image', 'low_robust', float, -0.20 ),
                 ( 'image', 'low_cell', float, 4.5 ),
@@ -38,12 +44,12 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
                 ( 'masking', 'phase', int, 20 ),
                 ( 'masking', 'ampphase', int, 10 ),
                 ( 'masking', 'full', int, 5 ),
-                ( 'masking', 'tgss', str, None ),
-                ( 'masking', 'tgss_radius', float, 8.0 ), # radius in pix
-                ( 'masking', 'tgss_flux', float, 500 ), # peak flux in mJy
-                ( 'masking', 'tgss_extended', bool, False ),
-                ( 'masking', 'tgss_pointlike', float, 30 ), # source considered pointlike if below this in arcsec
-                ( 'masking', 'region', str, None), # ds9 region to merge with mask
+                ( 'masking', 'tgss', str, None, 'Path to TGSS catalogue file' ),
+                ( 'masking', 'tgss_radius', float, 8.0, 'TGSS mask radius in pixels' ), 
+                ( 'masking', 'tgss_flux', float, 500, 'Use TGSS components with peak flux in catalogue units (mJy) above this value' ),
+                ( 'masking', 'tgss_extended', bool, False, 'Make extended regions for non-pointlike TGSS sources' ),
+                ( 'masking', 'tgss_pointlike', float, 30, 'TGSS source considered pointlike if below this size in arcsec' ),
+                ( 'masking', 'region', str, None, 'ds9 region to merge with mask'),
                 ( 'masking', 'extended_size', int, None ),
                 ( 'masking', 'extended_rms', float, 3.0 ), 
                 ( 'control', 'quiet', bool, False ),
@@ -72,7 +78,11 @@ def options(filename):
     config=ConfigParser.SafeConfigParser()
     config.read(filename)
     cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get, list: lambda x,y: eval(config.get(x,y))}
-    for (section, name, otype, default) in option_list:
+    for o in option_list:
+        if len(o)==4:
+            (section, name, otype, default)=o
+        else:
+            (section, name, otype, default,_)=o
         try:
             result=cased[otype](section,name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
@@ -91,9 +101,16 @@ def print_options():
     sections=set(x[0] for x in option_list)
     for s in sections:
         print '\n[%s]' % s
-        for (section, name, otype, default) in option_list:
+        for o in option_list:
+            if len(o)==4:
+                (section, name, otype, default)=o
+                doc=None
+            else:
+                (section, name, otype, default, doc)=o
             if section==s:
-                print '%-16s = %-20s (default %s)' % (name, typename(otype), str(default))
+                print '%-16s = %-10s (default %s)' % (name, typename(otype), str(default))
+                if doc is not None:
+                    print ' '*18,doc
 
 if __name__=='__main__':
     
