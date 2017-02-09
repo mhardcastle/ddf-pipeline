@@ -36,7 +36,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,donorm=True,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -80,8 +80,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if cleanmask is not None:
         runcommand += ' --Mask-External=%s'%cleanmask
     if applysols is not None:
-        if donorm:
-            runcommand += ' --DDESolutions-GlobalNorm=MeanAbs'
+        if normalization is not None:
+            runcommand += ' --DDESolutions-GlobalNorm=Mean'+normalization
         runcommand += ' --DDESolutions-DDModeGrid=%s --DDESolutions-DDModeDeGrid=%s --DDESolutions-DDSols=%s'%(applysols,applysols,ddsols)
     if use_dicomodel:
         if dicomodel_base is not None:
@@ -272,7 +272,7 @@ if __name__=='__main__':
         make_external_mask('external_mask.fits',use_tgss=True,clobber=True,extended_use='mask_high.fits')
 
     # Apply phase solutions and image again
-    ddf_image('image_phase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=o['robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1])
+    ddf_image('image_phase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=o['robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0])
 
     make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask='external_mask.fits')
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel')
@@ -280,7 +280,7 @@ if __name__=='__main__':
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NiterKF'][1])
 
     # Apply phase and amplitude solutions and image again
-    ddf_image('image_ampphase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=4,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2])
+    ddf_image('image_ampphase1',o['mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=4,robust=o['robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1])
     make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask='external_mask.fits')
     mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel')
 
@@ -292,7 +292,7 @@ if __name__=='__main__':
         check_imaging_weight(o['full_mslist'])
         # single AP cal of full dataset and final image. Is this enough?
         killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=o['NiterKF'][2])
-        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=4,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],saveimages='H')
+        ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='external_mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=4,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],saveimages='H',normalization=o['normalize'][2])
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
@@ -306,5 +306,5 @@ if __name__=='__main__':
                 extmask='mask_low.fits'
             else:
                 extmask=None
-            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,saveimages='H',automask=True,automask_threshold=5)
+            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,saveimages='H',automask=True,automask_threshold=5,normalization='Amp')
 
