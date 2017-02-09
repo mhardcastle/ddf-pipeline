@@ -302,7 +302,7 @@ if __name__=='__main__':
             else:
                 low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask_low exists then use it
-            if os.path.isfile('mask_low.fits') and low_imsize=o['bsimsize']:
+            if os.path.isfile('mask_low.fits') and low_imsize==o['bsimsize']:
                 extmask='mask_low.fits'
             else:
                 extmask=None
