@@ -259,15 +259,12 @@ if __name__=='__main__':
 
     killms_data('image_dirin_SSD',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0])
 
-    # TBD -- not fixed yet
-    # bootstrap, and change the column name if it runs
+    # run bootstrap, and change the column name if it runs
     if o['bootstrap']:
-        die("Can't run bootstrap, not working yet")
         report('Running bootstrap')
         run('bootstrap.py '+sys.argv[1],log=None)
         colname='SCALED_DATA'
 
-    # TBD -- not fixed yet
     # make the extended mask if required and possible
     if os.path.isfile('image_low_initial_HMP.app.restored.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
@@ -276,7 +273,7 @@ if __name__=='__main__':
         else:
             warn('Extended source mask already exists, using existing version')
         external_mask='external_mask_ext.fits'
-        make_external_mask(external_mask,use_tgss=True,clobber=True,extended_use='mask_high.fits')
+        make_external_mask(external_mask,use_tgss=True,clobber=False,extended_use='mask_high.fits')
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask=external_mask,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=o['robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0])
