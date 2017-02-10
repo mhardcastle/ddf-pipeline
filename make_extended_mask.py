@@ -24,7 +24,7 @@ def merge_mask(in1,in2,outfile):
     map1=hdu1[0].data.astype(np.int32)
     map2=hdu2[0].data.astype(np.int32)
 
-    hdu1[0].data = map1 | map2
+    hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
