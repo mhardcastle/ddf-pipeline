@@ -269,11 +269,11 @@ if __name__=='__main__':
     if os.path.isfile('image_low_initial_HMP.app.restored.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
             report('Making the extended source mask')
-            make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_HMP.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
+            make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')
         external_mask='external_mask_ext.fits'
-        make_external_mask(external_mask,use_tgss=True,clobber=False,extended_use='mask_high.fits')
+        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='mask-high.fits')
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask=external_mask,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=o['robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0])
@@ -305,9 +305,9 @@ if __name__=='__main__':
                 low_imsize=o['low_imsize'] # allow over-ride
             else:
                 low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # if mask_low exists then use it
-            if os.path.isfile('mask_low.fits') and low_imsize==o['bsimsize']:
-                extmask='mask_low.fits'
+            # if mask-low exists then use it
+            if os.path.isfile('mask-low.fits') and low_imsize==o['bsimsize']:
+                extmask='mask-low.fits'
             else:
                 extmask=None
             ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,saveimages='H',automask=True,automask_threshold=5,normalization='Amp')
