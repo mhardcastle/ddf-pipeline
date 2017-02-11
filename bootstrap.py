@@ -83,7 +83,7 @@ def run_bootstrap(o):
         warn('Cube file exists, skipping cube assembly')
     else:
         warn('Making the cube')
-        make_cube('cube.fits',['image_low_%i_SSDm.int.restored.fits' % i for i in range(len(mslist))],freqs)
+        make_cube('cube.fits',['image_low_%i_SSD.int.restored.fits' % i for i in range(len(mslist))],freqs)
     if os.path.isfile('cube.pybdsm.srl'):
         warn('Source list exists, skipping source extraction')
     else:
