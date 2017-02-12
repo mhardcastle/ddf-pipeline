@@ -68,7 +68,7 @@ def run_bootstrap(o):
     # we can use this for each of the bands. We use the
     # lowest-frequency dataset.
 
-    ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'])
+    ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=False)
     make_mask('image_low_initial_HMP.app.restored.fits',20,options=o)
 
     # now loop over the MSs to make the images

@@ -76,7 +76,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
     if automask:
-        runcommand += ' --Mask-Auto=1 --Mask-AutoStats=[50,2,%.2f]' % automask_threshold
+        runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
     if cleanmask is not None:
         runcommand += ' --Mask-External=%s'%cleanmask
     if applysols is not None:
@@ -171,7 +171,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --DicoModel '+dicomodel
             if o['nobar']:
                 runcommand+=' --DoBar=0'
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+outsols+'.log'),quiet=o['quiet'])
+            rootfilename=outsols.split('/')[-1]
+            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename):
     # returns True if the step was run, False if skipped
