@@ -78,6 +78,7 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                   'If generating a mask from the bootstrap low-res images, use islands larger than this size in pixels' ),
                 ( 'masking', 'extended_rms', float, 3.0,
                   'Threshold value defining an island in the extended mask'), 
+                ( 'masking', 'stack_bootstrap', bool, False, 'If True, stack the bootstrap SSD images and make the extended mask from the stack. Else use the original HMP image.' ),
                 ( 'control', 'quiet', bool, False, 'If True, do not log to screen' ),
                 ( 'control', 'nobar', bool, False, 'If True, do not print progress bars' ),
                 ( 'control', 'logging', str, 'logs', 'Name of directory to save logs to, or \'None\' for no logging' ),
@@ -126,7 +127,7 @@ def print_options():
     # expected to be called if a config file is not specified. Print a
     # list of options
     width,height=_get_terminal_size_linux()
-    sections=set(x[0] for x in option_list)
+    sections=sorted(set(x[0] for x in option_list))
     klen=max([len(x[1]) for x in option_list])
     tlen=max([len(typename(x[2])) for x in option_list])
     fstring='%-'+str(klen)+'s = %-'+str(tlen)+'s (default %s)'
@@ -146,7 +147,7 @@ def print_options():
                 
                 print bcolors.BOLD+fstring % (name, typename(otype), str(default))+bcolors.ENDC
                 if doc is not None:
-                    print textwrap.fill(doc,width,initial_indent=indent,subsequent_indent=indent)
+                    print textwrap.fill(doc,width-1,initial_indent=indent,subsequent_indent=indent)
 
 if __name__=='__main__':
     

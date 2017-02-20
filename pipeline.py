@@ -278,7 +278,15 @@ if __name__=='__main__':
     if os.path.isfile('image_low_initial_HMP.app.restored.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
             report('Making the extended source mask')
-            make_extended_mask('image_low_initial_HMP.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
+            if o['stack_bootstrap']:
+                from stack_bootstrap import stack_bootstrap
+                report('Stacking the bootstrap images')
+                stack_bootstrap()
+                mask_base_image='bootstrap_stack.fits'
+            else:
+                report('Using the initial bootstrap HMP')
+                mask_base_image='image_low_initial_HMP.app.restored.fits'
+            make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')
         external_mask='external_mask_ext.fits'
