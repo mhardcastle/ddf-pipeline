@@ -10,7 +10,8 @@ from lofar import bdsm
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
-from pipeline import ddf_image, make_mask
+from pipeline import ddf_image
+import shutil
 
 def logfilename(s):
     if o['logging'] is not None:
@@ -47,11 +48,9 @@ def run_bootstrap(o):
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])
 
-    # We use the individual ms in mslist.
-    mslist=[s.strip() for s in open(o['mslist']).readlines()]
-
     # Get the frequencies -- need to take this from the MSs
 
+    mslist=[s.strip() for s in open(o['mslist']).readlines()]
     freqs=[]
     for ms in mslist:
         t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
@@ -64,31 +63,15 @@ def run_bootstrap(o):
     for f,m in zip(freqs,mslist):
         print m,f
 
-    # First we need to do a HMP clean to make an initial mask; then
-    # we can use this for each of the bands. We use the
-    # lowest-frequency dataset.
+    # Clean in cube mode
 
-    ddf_image('image_low_initial_HMP',mslist[0],cleanmode='HMP',ddsols='killms_p1',applysols='P',threshold=5e-3,majorcycles=3,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=False,singlefreq=True)
-    make_mask('image_low_initial_HMP.app.restored.fits',20,options=o)
+    ddf_image('image_bootstrap',o['mslist'],cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True)
 
-    # now loop over the MSs to make the images
-    for i,ms in enumerate(mslist):
-        imroot='image_low_%i_SSD' % i
-        ddf_image(imroot,ms,cleanmask='image_low_initial_HMP.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,singlefreq=True)
-
-    from make_cube import make_cube
-
-    #make the cube
-    if os.path.isfile('cube.fits'):
-        warn('Cube file exists, skipping cube assembly')
-    else:
-        warn('Making the cube')
-        make_cube('cube.fits',['image_low_%i_SSD.smooth.int.restored.fits' % i for i in range(len(mslist))],freqs)
-    if os.path.isfile('cube.pybdsm.srl'):
+    if os.path.isfile('image_bootstrap.cube.int.restored.pybdsm.srl'):
         warn('Source list exists, skipping source extraction')
     else:
         warn('Running PyBDSM, please wait...')
-        img=bdsm.process_image('cube.fits',thresh_pix=5,rms_map=True,atrous_do=True,atrous_jmax=2,group_by_isl=True,rms_box=(80,20), adaptive_rms_box=True, adaptive_thresh=80, rms_box_bright=(35,7),mean_map='zero',spectralindex_do=True,specind_maxchan=1,debug=True,kappa_clip=3,flagchan_rms=False,flagchan_snr=False,incl_chan=True,spline_rank=1)
+        img=bdsm.process_image('image_bootstrap.cube.int.restored.fits',thresh_pix=5,rms_map=True,atrous_do=True,atrous_jmax=2,group_by_isl=True,rms_box=(80,20), adaptive_rms_box=True, adaptive_thresh=80, rms_box_bright=(35,7),mean_map='zero',spectralindex_do=True,specind_maxchan=1,debug=True,kappa_clip=3,flagchan_rms=False,flagchan_snr=False,incl_chan=True,spline_rank=1)
         # Write out in ASCII to work round bug in pybdsm
         img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
         img.export_image(img_type='rms',img_format='fits')
@@ -112,7 +95,7 @@ def run_bootstrap(o):
         dec*=180.0/np.pi
 
         cats=zip(o['catalogues'],o['names'],o['groups'],o['radii'])
-        make_catalogue('cube.pybdsm.srl',ra,dec,2.5,cats)
+        make_catalogue('image_bootstrap.cube.int.restored.pybdsm.srl',ra,dec,2.5,cats)
     
     freqlist=open('frequencies.txt','w')
     for n,f in zip(o['names'],o['frequencies']):
@@ -126,21 +109,19 @@ def run_bootstrap(o):
     if os.path.isfile('crossmatch-results-1.npy'):
         warn('Results 1 exists, skipping first fit')
     else:
-        if o['use_mpi']:
-            run('mpiexec -np 24 fitting_factors.py 1',dryrun=o['dryrun'],log=None,quiet=o['quiet'])
-        else:
-            fitting_factors.run_all(1)
+        fitting_factors.run_all(1)
 
+    nreject=-1 # avoid error if we fail somewhere
     if os.path.isfile('crossmatch-2.fits'):
         warn('Second crossmatch exists, skipping outlier rejection')
     else:
-        find_outliers.run_all(1)
+        nreject=find_outliers.run_all(1)
     
     if os.path.isfile('crossmatch-results-2.npy'):
         warn('Results 1 exists, skipping second fit')
     else:
-        if o['use_mpi']:
-            run('mpiexec -np 24 fitting_factors.py 2',dryrun=o['dryrun'],log=None,quiet=o['quiet'])
+        if nreject==0:
+            shutil.copyfile('crossmatch-results-1.npy','crossmatch-results-2.npy')
         else:
             fitting_factors.run_all(2)
 

@@ -36,7 +36,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,singlefreq=False,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False):
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
@@ -55,24 +55,28 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if cellsize is None:
         cellsize=options['cellsize']
 
+    cache_dir=options['cache_dir']
+    if cache_dir is None:
+        cache_dir='.'
+
     if majorcycles>0:
         fname=imagename+'.app.restored.fits'
     else:
         fname=imagename+'.dirty.fits'
 
-    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Freq-NBand=%i --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Weight-ColName IMAGING_WEIGHT --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=2.5 --Data-Sort 1"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize)
+    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Weight-ColName IMAGING_WEIGHT --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=2.5 --Data-Sort 1 --Cache-Dir=%s"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize,cache_dir)
     
-    # runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Freq-NBand=%i --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Weight-ColName IMAGING_WEIGHT --Image-NPix=%i --CF-wmax 10000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=3 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 15 --Facets-DiamMin 0.1 --Data-Sort 1"%(imagename,mslist,peakfactor,1 if singlefreq else 2,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize)
-    
+    if cubemode:
+        channels=len(open(mslist).readlines())
+        runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
+    else:
+        runcommand+=' --Freq-NBand=2'
     
     if do_decorr:
         runcommand += ' --RIME-DecorrMode=FT'
 
     if cleanmode == 'SSD':
-        if singlefreq:
-            runcommand += ' --SSDClean-SSDSolvePars [S] --SSDClean-BICFactor 0'
-        else:
-            runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
+        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
     if automask:
@@ -200,8 +204,11 @@ def mask_dicomodel(indico,maskname,outdico):
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
         return True
 
-def clearcache(mslist):
+def clearcache(mslist,cachedir):
     report('Clearing cache for '+mslist)
+    if cachedir is not None:
+        prevdir=os.getcwd()
+        os.chdir(cachedir)
     try:
         rmtree(mslist+'.ddfcache')
     except OSError:
@@ -212,7 +219,8 @@ def clearcache(mslist):
             rmtree(f+'.ddfcache')
         except OSError:
             pass
-
+    if cachedir is not None:
+        os.chdir(prevdir)
 
 if __name__=='__main__':
     # Main loop
@@ -236,9 +244,9 @@ if __name__=='__main__':
     run('CleanSHM.py',dryrun=o['dryrun'])    
     if o['clearcache']:
         # Clear the cache, we don't know where it's been
-        clearcache(o['mslist'])
+        clearcache(o['mslist'],o['cache_dir'])
         if o['full_mslist'] is not None:
-            clearcache(o['full_mslist'])
+            clearcache(o['full_mslist'],o['cache_dir'])
 
     # Check imaging weights -- needed before DDF
     check_imaging_weight(o['mslist'])
@@ -264,7 +272,7 @@ if __name__=='__main__':
         os.symlink('image_dirin_SSD_init.dirty.fits','image_dirin_SSD.dirty.fits')
     if make_model('image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD'):
         # if this step runs, clear the cache to remove facet info
-        clearcache(o['mslist'])
+        clearcache(o['mslist'],o['cache_dir'])
 
     killms_data('image_dirin_SSD',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0])
 
@@ -275,17 +283,10 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # make the extended mask if required and possible
-    if os.path.isfile('image_low_initial_HMP.app.restored.fits') and o['extended_size'] is not None:
+    if os.path.isfile('image_bootstrap.app.restored.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
             report('Making the extended source mask')
-            if o['stack_bootstrap']:
-                from stack_bootstrap import stack_bootstrap
-                report('Stacking the bootstrap images')
-                stack_bootstrap()
-                mask_base_image='bootstrap_stack.fits'
-            else:
-                report('Using the initial bootstrap HMP')
-                mask_base_image='image_low_initial_HMP.app.restored.fits'
+            mask_base_image='image_bootstrap.app.restored.fits'
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')

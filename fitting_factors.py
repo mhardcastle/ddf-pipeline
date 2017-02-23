@@ -6,30 +6,10 @@
 from scipy.optimize import curve_fit
 from astropy.table import Table
 import numpy as np
-import emcee
 #import corner
 #import matplotlib.pyplot as plt
 import sys
 
-def check_mpi():
-    have_mpi=False
-    rank=0
-    try:
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank=comm.Get_rank()
-        size=comm.Get_size()
-        if size>1:
-            if rank==0:
-                print 'Using MPI with',size,'threads'
-            have_mpi=True
-        else:
-            print 'MPI is present but inactive'
-            have_mpi=False
-    except:
-        print 'MPI not present or not working'
-    return have_mpi,rank
-    
 def pl(freq,norm,alpha):
      normfreq=140e6
      return norm*(freq/normfreq)**alpha
@@ -102,17 +82,15 @@ def run_all(run):
     global frequencies
     global smask
 
+    import emcee
+
     frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
 
-    have_mpi,rank=check_mpi()
-
-    if rank==0:
-        print 'About to fit to',len(data),'data points'
+    print 'About to fit to',len(data),'data points'
 
     nwalkers=24
     ndim=np.sum(smask)
-    if rank==0:
-        print 'Fitting',ndim,'scale factors'
+    print 'Fitting',ndim,'scale factors'
     if run>1:
         oscale=np.load('crossmatch-results-'+str(run-1)+'.npy')[:,0]
         scale=[oscale+np.random.normal(loc=0.0,scale=0.02,size=ndim)
@@ -121,24 +99,10 @@ def run_all(run):
         scale=[np.abs(np.random.normal(loc=1.0,scale=0.1,size=ndim))
                for i in range(nwalkers)]
 
-    if have_mpi:
-        threads=None
-        from emcee.utils import MPIPool
-        pool = MPIPool()
-        if not pool.is_master():
-            pool.wait()
-            sys.exit(0)
-    else:
-        pool=None
-
     # run MCMC
-    print 'run the sampler, pool is',pool
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost,
-                                    args=(frequencies,fluxes,errors), pool=pool)
+                                    args=(frequencies,fluxes,errors))
     sampler.run_mcmc(scale, 1000)
-
-    if pool:
-        pool.close()
 
     samples=sampler.chain[:, 400:, :].reshape((-1, ndim))
     samplest=samples.transpose()
@@ -151,18 +115,6 @@ def run_all(run):
 
     output=np.vstack((means,errors)).T
     np.save('crossmatch-results-'+str(run)+'.npy',output)
-
-    # plot the sampler chain
-#    for i in range(ndim):
-#        plt.subplot(ndim,1,i+1)
-#        plt.plot(sampler.chain[:,:,i].transpose())
-#        plt.ylabel(str(i))
-#    plt.xlabel('Samples')
-#    plt.savefig('walkers-'+str(run)+'.pdf')
-
-    # make triangle plot
-#    fig = corner.corner(samples)
-#    plt.savefig('corner-'+str(run)+'.pdf')
 
 if __name__=='__main__':
     run_all(int(sys.argv[1]))
