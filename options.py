@@ -28,6 +28,8 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus() ),
                 ( 'image', 'final_robust', float, -0.5 ),
                 ( 'image', 'psf_arcsec', float, None ),     # Force restore with this value if set, otherwise use default
                 ( 'image', 'final_psf_arcsec', float, None ),
+                ( 'image', 'final_psf_minor_arcsec', float, None ),
+                ( 'image', 'final_psf_pa_deg', float, None ),
                 ( 'image', 'low_psf_arcsec', float, None ),
                 ( 'image', 'low_robust', float, -0.20 ),
                 ( 'image', 'low_cell', float, 4.5 ),
