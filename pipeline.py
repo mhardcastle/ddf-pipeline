@@ -96,10 +96,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += ' --Deconv-FluxThreshold=%f'%threshold
     if uvrange is not None:
         runcommand += ' --Selection-UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
+    if dirty_from_resid and reuse_dirty:
+        raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
         if os.path.exists(mslist+'.ddfcache/LastResidual'):
-            runcommand += ' --Cache-Dirty forceresidual --Cache-PSF force'
+            runcommand += ' --Cache-Dirty forceresidual'
     if reuse_dirty:
         if os.path.exists(mslist+'.ddfcache/Dirty'):
             runcommand += ' --Cache-Dirty forcedirty'
