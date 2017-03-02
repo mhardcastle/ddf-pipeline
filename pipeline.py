@@ -292,7 +292,12 @@ if __name__=='__main__':
                 die('If you are specifying a non-circular beam the position angle should also be defined as final_psf_pa_deg')
             ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],beamsize_minor=o['final_psf_minor_arcsec'],beamsize_pa=o['final_psf_pa_deg'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1m_masked')
         make_mask('image_full_ampphase1.app.restored.fits',o['full'],use_tgss=True,extended_use='mask-high.fits')
-        ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
+        if o['final_psf_minor_arcsec'] is None:
+            ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
+        else:
+            if o['final_psf_pa_deg'] is None:
+                die('If you are specifying a non-circular beam the position angle should also be defined as final_psf_pa_deg')
+            ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,previous_image='image_full_ampphase1',use_dicomodel=True,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],beamsize_minor=o['final_psf_minor_arcsec'],beamsize_pa=o['final_psf_pa_deg'],reuse_psf=True,dirty_from_resid=True,saveimages='H',colname=colname,peakfactor=0.001)
 
         if o['low_psf_arcsec'] is not None:
             # low-res reimage requested
