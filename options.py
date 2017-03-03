@@ -54,6 +54,8 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'solutions', 'LambdaKF', float, 0.5, 'Kalman filter lambda for killMS' ),
                 ( 'solutions', 'NIterKF', list, [1, 6, 6], 'Kalman filter iterations for killMS for the three self-cal steps' ),
                 ( 'solutions', 'normalize', list, ['AbsAnt', 'AbsAnt', 'Abs'], 'How to normalize solutions for the three self-cal steps' ),
+                ( 'solutions', 'uvmin', float, None, 'Minimum baseline length to use in self-calibration (km)' ),
+                ( 'solutions', 'auto_uvmin', bool, False, 'Optimize uv distance in self-calibration automatically from model and measurement sets.' ),
                 ( 'image', 'imsize', int, 20000, 'Image size in pixels' ),
                 ( 'image', 'cellsize', float, 1.5, 'Pixel size in arcsec' ),
                 ( 'image', 'robust', float, -0.15, 'Imaging robustness' ),
@@ -66,6 +68,7 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'image', 'low_imsize', int, None, 'Low-resolution image size in pixels' ),
                 ( 'image', 'do_decorr', bool, True, 'Use DDF\'s decorrelation mode' ),
                 ( 'image', 'HMPsize', int, 10, 'Island size to use HMP initialization' ),
+                ( 'image', 'uvmin', float, 0.1, 'Minimum baseline length to use in imaging (km)'),
                 ( 'masking', 'thresholds', list, [25,20,10,5],
                   'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
                 ( 'masking', 'tgss', str, None, 'Path to TGSS catalogue file' ),
@@ -97,22 +100,27 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
 def options(filename):
 
     # option_list format is: section, name, type, default
-    # names must be unique -- section names are not used in output dict
+    # section names are used in the output dict only if names are not unique
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
     config.read(filename)
     cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get, list: lambda x,y: eval(config.get(x,y))}
     for o in option_list:
-        if len(o)==4:
-            (section, name, otype, default)=o
-        else:
-            (section, name, otype, default,_)=o
+        (section, name, otype, default)=o[:4]
+        # if this name is duplicated in another section, we need to know
+        count=0
+        for o2 in option_list:
+            if o2[1]==name: count+=1
+        # get result
         try:
             result=cased[otype](section,name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             result=default
-        odict[name]=result
+        if count>1:
+            odict[section+'_'+name]=result
+        else:
+            odict[name]=result
     if odict['logging']=='None':
         odict['logging']=None
     return odict
@@ -149,6 +157,7 @@ def print_options():
                     print textwrap.fill(doc,width-1,initial_indent=indent,subsequent_indent=indent)
 
 if __name__=='__main__':
-    
-    #print options('example.cfg')
-    print_options()
+    import sys
+    config=sys.argv[1]
+    print options(config)
+
