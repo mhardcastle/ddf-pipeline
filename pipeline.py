@@ -228,10 +228,16 @@ def clearcache(mslist,cachedir):
         os.chdir(prevdir)
 
 def optimize_uvmin(rootname,mslist,colname):
+    uvminfile=rootname+'_uvmin.txt'
     report('Optimizing uvmin for self-cal')
-    level=sumdico(rootname)
-    result=find_uvmin(mslist,level,colname=colname)*1.1
-    print 'Will use shortest baseline of',result,'km'
+    if os.path.isfile(uvminfile):
+        result=float(open(uvminfile).readlines()[0].rstrip())
+    else:
+        level=sumdico(rootname)
+        result=find_uvmin(mslist,level,colname=colname)*1.1
+        print 'Will use shortest baseline of',result,'km'
+        with open(uvminfile,'w') as f:
+            f.write('%f\n' % result)
     return result
 
 if __name__=='__main__':
@@ -318,7 +324,7 @@ if __name__=='__main__':
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel')
     # Calibrate off the model
     if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname)
+        killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname)
 
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NIterKF'][1],uvrange=killms_uvrange)
 
@@ -335,7 +341,7 @@ if __name__=='__main__':
         check_imaging_weight(o['full_mslist'])
 
         if o['auto_uvmin']:
-            killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname)
+            killms_uvrange[0]=optimize_uvmin('image_ampphase1',o['mslist'],colname)
         killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=o['NIterKF'][2],uvrange=killms_uvrange)
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=2,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],uvrange=uvrange)
         make_mask('image_full_ampphase1.app.restored.fits',o['thresholds'][3],external_mask=external_mask)
@@ -353,4 +359,4 @@ if __name__=='__main__':
                 extmask='mask-low.fits'
             else:
                 extmask=None
-            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Amp',colname=colname)
+            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=5,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Abs',colname=colname)
