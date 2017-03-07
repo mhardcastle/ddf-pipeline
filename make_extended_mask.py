@@ -53,7 +53,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
     big_slices=[slices[i-1] for i in big_regions if i]
 
     w=WCS(hdu[0].header)
-    hdu[0].data=mask.astype(np.int32)
+    hdu[0].data=mask.astype(np.float32)
     hdu.writeto('mask-low.fits',clobber=True)
 
     if fullresfile is not None:
@@ -97,8 +97,8 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
                 if mask[int(op[1]),int(op[0])]>0:
                     maskf[yv,xv]=1
 
-        hduf[0].data=maskf.astype(np.int32)
+        hduf[0].data=maskf.astype(np.float32)
         hduf.writeto('mask-high.fits',clobber=True)
 
 if __name__=='__main__':
-    make_extended_mask('bootstrap_stack.fits','image_dirin_SSD.app.restored.fits',sizethresh=2000)
+    make_extended_mask('image_bootstrap.app.restored.fits','image_dirin_SSD.app.restored.fits',sizethresh=2000)
