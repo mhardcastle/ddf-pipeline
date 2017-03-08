@@ -179,7 +179,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         else:
             runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %i --Weighting Natural --BeamMode LOFAR --LOFARBeamMode=A --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --InCol %s"%(f,imagename,o['dt'],niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],colname)
             if uvrange is not None:
-                runcommand+=' --UVMinMax=%f,%f' % (uvrange[0], uvrange[1])
+                runcommand+=' --WTUV=0.1 --WeightUVMinMax=%f,%f' % (uvrange[0], uvrange[1])
             if clusterfile is not None:
                 runcommand+=' --NodesFile '+clusterfile
             if dicomodel is not None:
