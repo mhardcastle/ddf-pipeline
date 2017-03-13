@@ -84,7 +84,7 @@ def flatten(f):
     copy=('EQUINOX','EPOCH','BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER')
     for k in copy:
         r=f[0].header.get(k)
-        if r:
+        if r is not None:
             header[k]=r
 
     slice=[]
