@@ -5,8 +5,6 @@
 DDFacet and KillMS, of course: astropy; pyrap
 
 emcee for bootstrap, and
-mpi4py if you want to use MPI to speed up emcee (not typically necessary).
-
 reproject for the mosaicing script.
 
 The bootstrap code also expects the script directory (this directory)
@@ -14,7 +12,8 @@ to be on the user's PATH.
 
 ## running pipeline
 
-pipeline.py takes one option, the name of a config file. This is in the standard python ConfigParser format. If no config file is given, the code prints out a skeleton of a file with some default values.
+pipeline.py takes one option, the name of a config file. This is in the standard python ConfigParser format. If no config file is given, the code prints out all the possible options and some documentation
+for each.
 
 A minimal set of parameters is
 

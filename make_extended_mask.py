@@ -24,7 +24,7 @@ def merge_mask(in1,in2,outfile):
     map1=hdu1[0].data.astype(np.int32)
     map2=hdu2[0].data.astype(np.int32)
 
-    hdu1[0].data = map1 | map2
+    hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
@@ -53,7 +53,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
     big_slices=[slices[i-1] for i in big_regions if i]
 
     w=WCS(hdu[0].header)
-    hdu[0].data=mask.astype(np.int32)
+    hdu[0].data=mask.astype(np.float32)
     hdu.writeto('mask-low.fits',clobber=True)
 
     if fullresfile is not None:
@@ -97,8 +97,8 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
                 if mask[int(op[1]),int(op[0])]>0:
                     maskf[yv,xv]=1
 
-        hduf[0].data=maskf.astype(np.int32)
+        hduf[0].data=maskf.astype(np.float32)
         hduf.writeto('mask-high.fits',clobber=True)
 
 if __name__=='__main__':
-    make_extended_mask('image_low_initial_MSMF.app.restored.fits','image_dirin_MSMF.app.restored.fits')
+    make_extended_mask('image_bootstrap.app.restored.fits','image_dirin_SSD.app.restored.fits',sizethresh=2000)

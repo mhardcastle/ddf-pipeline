@@ -14,6 +14,8 @@ class bcolors:
    WARNING = '\033[93m'
    FAIL = '\033[91m'
    ENDC = '\033[0m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
 
 def die(s):
    print bcolors.FAIL+s+bcolors.ENDC
@@ -28,6 +30,7 @@ def warn(s):
 def run(s,proceed=False,dryrun=False,log=None,quiet=False):
    report('Running: '+s)
    if not dryrun:
+#      retval=os.system(s)
       if log is None:
          #print 'Log is none, using "call" to run '+s
          retval=call(s,shell=True)
