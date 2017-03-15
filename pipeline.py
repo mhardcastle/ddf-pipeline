@@ -91,7 +91,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += ' --Mask-External=%s'%cleanmask
     if applysols is not None:
         if normalization is not None:
-            runcommand += ' --DDESolutions-GlobalNorm=Mean'+normalization
+            if normalization[:3]=='Abs':
+                normalization='Mean'+normalization # backward compat. hack
+            runcommand += ' --DDESolutions-GlobalNorm='+normalization
         runcommand += ' --DDESolutions-DDModeGrid=%s --DDESolutions-DDModeDeGrid=%s --DDESolutions-DDSols=%s'%(applysols,applysols,ddsols)
     if use_dicomodel:
         if dicomodel_base is not None:
