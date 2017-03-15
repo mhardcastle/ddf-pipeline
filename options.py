@@ -3,6 +3,7 @@
 import ConfigParser
 import os
 import struct
+import re
 
 def _get_terminal_size_linux():
     ''' From https://gist.github.com/jtriley/1108174 '''
@@ -100,14 +101,34 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'bootstrap', 'names', list, None, 'Short names for catalogues' ), 
                 ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ) )
 
-def options(filename):
+def options(optlist):
 
     # option_list format is: section, name, type, default
     # section names are used in the output dict only if names are not unique
 
     odict = {}
     config=ConfigParser.SafeConfigParser()
-    config.read(filename)
+    filenames=[]
+    cmdlineset=[]
+    for o in optlist:
+        if o[:2]=='--':
+            optstring=o[2:]
+            result=re.match('(\w*)-(\w*)\s*=\s*(.*)',optstring)
+            if result is None:
+                print 'Cannot parse option',optstring
+            else:
+                cmdlineset.append(result.groups())
+        else:
+            filenames.append(o)
+
+    print filenames, cmdlineset
+    config.read(filenames)
+    for c in cmdlineset:
+        try:
+            config.add_section(c[0])
+        except ConfigParser.DuplicateSectionError:
+            pass
+        config.set(c[0],c[1],c[2])
     cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get, list: lambda x,y: eval(config.get(x,y))}
     for o in option_list:
         (section, name, otype, default)=o[:4]
@@ -161,6 +182,6 @@ def print_options():
 
 if __name__=='__main__':
     import sys
-    config=sys.argv[1]
+    config=sys.argv[1:]
     print options(config)
 
