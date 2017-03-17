@@ -110,6 +110,8 @@ def options(optlist):
     config=ConfigParser.SafeConfigParser()
     filenames=[]
     cmdlineset=[]
+    if isinstance(optlist,str):
+        optlist=[optlist]
     for o in optlist:
         if o[:2]=='--':
             optstring=o[2:]
@@ -121,7 +123,6 @@ def options(optlist):
         else:
             filenames.append(o)
 
-    print filenames, cmdlineset
     config.read(filenames)
     for c in cmdlineset:
         try:
