@@ -392,5 +392,5 @@ if __name__=='__main__':
             else:
                 extmask=None
             ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Abs',colname=colname,catcher=catcher)
-            make_mask('image_full_low.app.restored.fits',o['thresholds'][3],external_mask=extmask,catcher=catcher)
+            make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Abs',colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',catcher=catcher)
