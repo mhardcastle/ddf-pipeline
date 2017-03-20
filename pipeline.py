@@ -372,11 +372,13 @@ if __name__=='__main__':
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=1,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=True,dirty_from_resid=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher)
 
         if o['second_selfcal']:
+            if not os.path.exists('image_full_ampphase1m.Norm.fits'):
+                os.symlink('image_full_ampphase1.Norm.fits','image_full_ampphase1m.Norm.fits')
             if o['auto_uvmin']:
                 killms_uvrange[0]=optimize_uvmin('image_full_ampphase1m',o['mslist'],colname)
             make_mask('image_full_ampphase1m.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
             mask_dicomodel('image_full_ampphase1m.DicoModel','image_full_ampphase1m.app.restored.fits.mask.fits','image_full_ampphase1m_masked.DicoModel',catcher=catcher)
-            killms_data('image_full_ampphase1',o['full_mslist'],'killms_f_ap2',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_full_ampphase1m_masked.DicoModel',niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+            killms_data('image_full_ampphase1m',o['full_mslist'],'killms_f_ap2',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_full_ampphase1m_masked.DicoModel',niterkf=o['NIterKF'][2],catcher=catcher)
             ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap2',applysols='AP',majorcycles=1,beamsize=o['final_psf_arcsec'],robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher)
 
         if o['low_psf_arcsec'] is not None:
