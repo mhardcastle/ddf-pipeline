@@ -12,6 +12,8 @@ from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
 from histmsamp import find_uvmin,sumdico
 import numpy as np
 from astropy.io import fits
+from version import version
+__version__=version()
 
 def logfilename(s,options=None):
     if options is None:
@@ -262,6 +264,7 @@ def optimize_uvmin(rootname,mslist,colname):
 
 if __name__=='__main__':
     # Main loop
+    report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
         warn('pipeline.py must be called with at least one parameter file or a command-line\noption list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
         print_options()
