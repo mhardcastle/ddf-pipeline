@@ -93,6 +93,8 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'control', 'cache_dir', str, None, 'Directory for ddf cache files -- default is working directory'),
                 ( 'control', 'clearcache', bool, True, 'If True, clear all DDF cache before running' ),
                 ( 'control', 'bootstrap', bool, False, 'If True, do bootstrap' ),
+                ( 'control', 'second_selfcal', bool, False, 'If True, do second round of selfcal on full bandwidth' ),
+                ( 'control', 'catch_signal', bool, True, 'If True, catch SIGUSR1 as graceful exit signal -- stops when control returns to the pipeline.'),
                 ( 'bootstrap', 'bscell', float, 4.5, 'Bootstrap image cell size') ,
                 ( 'bootstrap', 'bsimsize', int, 6000, 'Bootstrap image size' ) ,
                 ( 'bootstrap', 'catalogues', list, None, 'File names of catalogues for doing bootstrap' ),
@@ -124,7 +126,6 @@ def options(optlist):
         else:
             filenames.append(o)
 
-    print filenames, cmdlineset
     config.read(filenames)
     for c in cmdlineset:
         try:
