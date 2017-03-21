@@ -114,6 +114,7 @@ def options(optlist):
     cmdlineset=[]
     if isinstance(optlist,str):
         optlist=[optlist]
+
     for o in optlist:
         if o[:2]=='--':
             optstring=o[2:]
