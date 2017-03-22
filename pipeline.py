@@ -202,8 +202,11 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --DicoModel '+dicomodel
             if o['nobar']:
                 runcommand+=' --DoBar=0'
-            rootfilename=outsols.split('/')[-1]
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=o['quiet'])
+            #rootfilename=outsols.split('/')[-1]
+            #run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=o['quiet'])
+
+            rootfilename="_".join(outsols.split('/')[-2::])
+            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+rootfilename+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
