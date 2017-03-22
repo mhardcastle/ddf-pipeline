@@ -39,7 +39,7 @@ def check_imaging_weight(mslist_name):
         else:
             pt.addImagingColumns(ms)
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,MachineMode="Clean",NpixMaskSquare=None):
 
     if catcher: catcher.check()
     # saveimages lists _additional_ images to save
@@ -69,12 +69,19 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
         fname=imagename+'.dirty.fits'
 
-    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.0 --Data-Sort 1 --Cache-Dir=%s"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize,cache_dir)
+    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Output-RestoringBeam %f --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.0 --Data-Sort 1 --Cache-Dir=%s"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),beamsize,cache_dir)
     
     if apply_weights:
         runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
     else:
         runcommand+=' --Weight-ColName="None"'
+
+    if MachineMode=="Clean":
+        runcommand+=' --Image-Mode=Clean'
+    elif MachineMode=="Predict":
+        runcommand+=' --Image-Mode=Predict --Predict-MaskSquare [0,%i] --Predict-ColName DATA_SUB'%NpixMaskSquare
+        runcommand+=' --Predict-InitDicoModel=%s.DicoModel'%dicomodel_base
+        
 
     if cubemode:
         channels=len(open(mslist).readlines())
@@ -265,6 +272,61 @@ def optimize_uvmin(rootname,mslist,colname):
             f.write('%f\n' % result)
     return result
 
+def substract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
+    from pyrap.tables import table
+    for msname in mslist:
+        t=table(msname,readonly=False)
+        d=t.getcol(colname_a)
+        p=t.getcol(colname_b)
+        d-=p
+        if out_colname not in t.colnames():
+            report('Adding column %s in %s'%(out_colname,msname))
+            desc=t.getcoldesc(colname_a)
+            desc["name"]=out_colname
+            desc['comment']=desc['comment'].replace(" ","_")
+            t.addcols(desc)
+        t.putcol(out_colname)
+        t.close()
+    
+
+def substractOuterSquare(o):
+    NPixLarge=o['imsize']
+    NPixSmall=int(NPixLarge/float(o['fact_reduce_field']))
+
+    ddf_image('wide_image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,imsize=NPixLarge)
+    external_mask='external_mask.fits'
+    make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+
+    # Deep SSD clean with this external mask and automasking
+    ddf_image('wide_image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',majorcycles=4,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,imsize=NPixLarge)
+
+    # make a mask from the final image
+    make_mask('wide_image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
+    mask_dicomodel('image_dirin_SSD.DicoModel','image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD_masked.DicoModel',catcher=catcher)
+
+    # cluster to get facets
+    if not os.path.exists('wide_image_dirin_SSD.Norm.fits'):
+        os.symlink('wide_image_dirin_SSD_init.Norm.fits','wide_image_dirin_SSD.Norm.fits')
+    if not os.path.exists('wide_image_dirin_SSD.dirty.fits'):
+        os.symlink('wide_image_dirin_SSD_init.dirty.fits','wide_image_dirin_SSD.dirty.fits')
+    if make_model('wide_image_dirin_SSD.app.restored.fits.mask.fits','wide_image_dirin_SSD',catcher=catcher):
+        # if this step runs, clear the cache to remove facet info
+        clearcache(o['mslist'],o['cache_dir'])
+
+    if o['auto_uvmin']:
+        killms_uvrange[0]=optimize_uvmin('wide_image_dirin_SSD',o['mslist'],colname)
+
+    killms_data('wide_image_dirin_SSD',o['mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+
+    # predict outside the central rectangle
+    ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
+              cleanmode='SSD',majorcycles=3,cleanmask=external_mask,automask=True,automask_threshold=o['thresholds'][1],
+              ddsols='killms_p1',applysols='P',normalization=o['normalize'][0],
+              peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
+              MachineMode="Predict",NpixMaskSquare=NPixSmall,dicomodel_base='image_dirin_SSD_masked')
+    # substract predicted visibilities
+    substract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+
 if __name__=='__main__':
     # Main loop
     report('Welcome to ddf-pipeline, version '+__version__)
@@ -273,6 +335,7 @@ if __name__=='__main__':
         print_options()
         sys.exit(1)
 
+    print sys.argv[1:]
     o=options(sys.argv[1:])
 
     if o['catch_signal']:
@@ -304,6 +367,17 @@ if __name__=='__main__':
     # Check imaging weights -- needed before DDF
     check_imaging_weight(o['mslist'])
 
+    # #######################################
+    # if substraction
+    if o['fact_reduce_field']!=1:
+        substractOuterSquare(o)
+        colname="DATA_SUB"
+        ReduceFactor=o['fact_reduce_field']
+        NPixSmall=int(o['imsize']/float(ReduceFactor))
+        o['imsize']=NPixSmall
+        o['ndir']=int(o['ndir']/float(ReduceFactor))
+        
+
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
     external_mask='external_mask.fits'
     make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
@@ -328,6 +402,9 @@ if __name__=='__main__':
         killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname)
 
     killms_data('image_dirin_SSD',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+
+        
+
 
     # run bootstrap, and change the column name if it runs
     if o['bootstrap']:
