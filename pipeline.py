@@ -331,7 +331,7 @@ def substractOuterSquare(o):
 
     # predict outside the central rectangle
     FileHasPredicted='wide_image_phase1_predict.HasPredicted'
-    if options['restart'] and os.path.isfile(FileHasPredicted):
+    if o['restart'] and os.path.isfile(FileHasPredicted):
         warn('File %s already exists, skipping Predict step'%FileHasPredicted)
     else:
         ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
@@ -345,8 +345,8 @@ def substractOuterSquare(o):
 
     # substract predicted visibilities
     FileHasSubstracted='wide_image_phase1_predict.HasSubstracted'
-    if options['restart'] and os.path.isfile(FileHasSubstracted):
-        warn('File %s already exists, skipping DDF step'%FileHasSubstracted)
+    if o['restart'] and os.path.isfile(FileHasSubstracted):
+        warn('File %s already exists, skipping substract vis step'%FileHasSubstracted)
     else:
         substract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
         os.system("touch %s"%FileHasSubstracted)
