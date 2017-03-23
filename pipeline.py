@@ -219,6 +219,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if o['nobar']:
                 runcommand+=' --DoBar=0'
             rootfilename=outsols.split('/')[-1]
+            f=f.replace("/","_")
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
 def make_model(maskname,imagename,catcher=None):
