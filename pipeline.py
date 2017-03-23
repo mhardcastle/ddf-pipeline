@@ -275,7 +275,11 @@ def optimize_uvmin(rootname,mslist,colname):
 
 def substract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
+    f=file(mslist)
+    mslist=f.readlines()
+    mslist=[msname.replace("\n","") for msname in mslist]
     for msname in mslist:
+        report('Subtracting: %s = %s - %s'%(out_colname,colname_a,colname_b))
         t=table(msname,readonly=False)
         d=t.getcol(colname_a)
         p=t.getcol(colname_b)
@@ -286,16 +290,22 @@ def substract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",ou
             desc["name"]=out_colname
             desc['comment']=desc['comment'].replace(" ","_")
             t.addcols(desc)
-        t.putcol(out_colname)
+        t.putcol(out_colname,d)
         t.close()
     
 
 def substractOuterSquare(o):
     NPixLarge=o['imsize']
     NPixSmall=int(NPixLarge/float(o['fact_reduce_field']))
+    colname=o['colname']
+
+    if o['catch_signal']:
+        catcher=Catcher()
+    else:
+        catcher=None
 
     ddf_image('wide_image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,imsize=NPixLarge)
-    external_mask='external_mask.fits'
+    external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'wide_image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
 
     # Deep SSD clean with this external mask and automasking
@@ -317,16 +327,29 @@ def substractOuterSquare(o):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('wide_image_dirin_SSD',o['mslist'],colname)
 
-    killms_data('wide_image_dirin_SSD',o['mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+    killms_data('wide_image_dirin_SSD',o['full_mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
     # predict outside the central rectangle
-    ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
-              cleanmode='SSD',majorcycles=3,cleanmask=external_mask,automask=True,automask_threshold=o['thresholds'][1],
-              ddsols='wide_killms_p1',applysols='P',normalization=o['normalize'][0],
-              peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
-              MachineMode="Predict",NpixMaskSquare=NPixSmall,dicomodel_base='wide_image_dirin_SSD_masked')
+    FileHasPredicted='wide_image_phase1_predict.HasPredicted'
+    if options['restart'] and os.path.isfile(FileHasPredicted):
+        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
+    else:
+        ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
+                  cleanmode='SSD',majorcycles=3,cleanmask=external_mask,automask=True,automask_threshold=o['thresholds'][1],
+                  ddsols='wide_killms_p1',
+                  applysols='AP',#normalization=o['normalize'][0],
+                  peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
+                  MachineMode="Predict",NpixMaskSquare=NPixSmall,dicomodel_base='wide_image_dirin_SSD_masked')
+        os.system("touch %s"%FileHasPredicted)
+
+
     # substract predicted visibilities
-    substract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+    FileHasSubstracted='wide_image_phase1_predict.HasSubstracted'
+    if options['restart'] and os.path.isfile(FileHasSubstracted):
+        warn('File %s already exists, skipping DDF step'%FileHasSubstracted)
+    else:
+        substract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+        os.system("touch %s"%FileHasSubstracted)
 
 if __name__=='__main__':
     # Main loop
@@ -370,6 +393,8 @@ if __name__=='__main__':
 
     # #######################################
     # if substraction
+
+    kwargs_ddf={}
     if o['fact_reduce_field']!=1:
         substractOuterSquare(o)
         colname="DATA_SUB"
@@ -378,13 +403,22 @@ if __name__=='__main__':
         o['imsize']=NPixSmall
         o['ndir']=int(o['ndir']/float(ReduceFactor))
         
+        # Apply phase solutions and image again
+        kwargs_ddf["ddsols"]='wide_killms_p1'
+        kwargs_ddf["applysols"]='P'
+        kwargs_ddf["use_dicomodel"]=True
+        kwargs_ddf["dicomodel_base"]='wide_image_dirin_SSD_masked'
 
-    ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
+    ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
+              reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],
+              uvrange=uvrange,catcher=catcher,**kwargs_ddf)
     external_mask='external_mask.fits'
     make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
 
     # Deep SSD clean with this external mask and automasking
-    ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',majorcycles=4,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
+    ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',majorcycles=4,robust=o['image_robust'],
+              reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,
+              automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,**kwargs_ddf)
 
     # make a mask from the final image
     make_mask('image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
