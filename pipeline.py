@@ -404,8 +404,8 @@ if __name__=='__main__':
         o['ndir']=int(o['ndir']/float(ReduceFactor))
         
         # Apply phase solutions and image again
-        kwargs_ddf["ddsols"]='wide_killms_p1'
-        kwargs_ddf["applysols"]='P'
+        #kwargs_ddf["ddsols"]='wide_killms_p1'
+        #kwargs_ddf["applysols"]='P'
         #kwargs_ddf["use_dicomodel"]=True
         #kwargs_ddf["dicomodel_base"]='wide_image_dirin_SSD_masked'
 
