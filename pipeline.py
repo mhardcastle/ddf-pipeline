@@ -14,6 +14,20 @@ import numpy as np
 from astropy.io import fits
 from version import version
 __version__=version()
+import datetime
+
+def summary(o):
+    with open('summary.txt','w') as f:
+        ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+        f.write('ddf-pipeline completed at '+ts+'\n')
+        f.write('ddf-pipeline version was '+__version__+'\n')
+        from DDFacet.DDF import report_version as ddf_version
+        f.write('DDF version was '+ddf_version()+'\n')
+        from killMS2.Other.logo import report_version as killms_version
+        f.write('killMS version was '+killms_version()+'\n\n')
+        f.write('Options dictionary was as follows:\n')
+        for k in o:
+            f.write("%-20s : %s\n" % (k,str(o[k])))
 
 def logfilename(s,options=None):
     if options is None:
@@ -399,3 +413,7 @@ if __name__=='__main__':
             ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=3,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Abs',colname=colname,catcher=catcher)
             make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap1',applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization='Abs',colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',catcher=catcher)
+
+    # we got to the end, write a summary file
+    
+    summary(o)
