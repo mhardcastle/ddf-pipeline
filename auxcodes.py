@@ -23,7 +23,6 @@ def die(s):
     raise Exception(s)
 
 def report(s):
-    print "=================================================="
     print bcolors.OKGREEN+s+bcolors.ENDC
 
 def warn(s):
