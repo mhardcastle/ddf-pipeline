@@ -94,7 +94,7 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
     if options['restart'] and os.path.isfile(catprefix +'.cat.fits'):
         warn('File ' + catprefix +'.cat.fits already exists, skipping source finding step')
     else:
-        img = bdsm.process_image(pbimage,adaptive_rms_box=True,advanced_opts=True,detection_image=nonpbimage,thresh_isl=3,thresh_pix=5,adaptive_thresh=100,rms_box_bright=[30,10],trim_box=(lowerx,upperx,lowery,uppery),atrous_do=options['atrous'],atrous_jmax=3,group_by_isl=True,mean_map='zero')
+        img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
         img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
         img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)

@@ -73,6 +73,13 @@ Enable the use of masks for extended sources with `tgss_extended=True`.
 
 If you want to discard all the self-calibration for a run and start again, delete all output images you don't want and run `archive_old_solutions.py` (takes the parameter file name as an argument).
 
+## signal handling
+
+The pipeline interprets SIGUSR1 as a request to stop running at the
+next convenient point, i.e. normally when a KillMS or DDF would
+otherwise be about to start. Initiate this process with e.g. `killall
+-USR1 pipeline.py`.
+
 ## data preparation for Tier 1
 
 Run a Tier 1 reduction as follows:
@@ -108,3 +115,4 @@ the `--directories` argument which contain standard pipeline
 output. You can also determine the noise from the image with the
 `--find_noise` option and remove global offsets with respect to FIRST
 (quality pipeline must have been run first) with the `--shift` option.
+
