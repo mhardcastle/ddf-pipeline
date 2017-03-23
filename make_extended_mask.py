@@ -5,6 +5,7 @@ from auxcodes import flatten
 import scipy.ndimage as nd
 import numpy as np
 import pyregion
+from scipy.signal import convolve2d
 
 def add_manual_mask(infile,ds9region,outfile):
     hdu=fits.open(infile)
@@ -28,6 +29,7 @@ def merge_mask(in1,in2,outfile):
     hdu1.writeto(outfile,clobber=True)
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
+    ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
 
     hdu=fits.open(infile)
     rms=get_rms(hdu)
@@ -51,7 +53,9 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
 
     slices=nd.find_objects(mask)
     big_slices=[slices[i-1] for i in big_regions if i]
-
+    kernel = np.ones((3,3))
+    mask = convolve2d(mask, kernel, mode='same', fillvalue=1)
+    mask=(mask>1)
     w=WCS(hdu[0].header)
     hdu[0].data=mask.astype(np.float32)
     hdu.writeto('mask-low.fits',clobber=True)
@@ -101,4 +105,5 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
         hduf.writeto('mask-high.fits',clobber=True)
 
 if __name__=='__main__':
-    make_extended_mask('image_bootstrap.app.restored.fits','image_dirin_SSD.app.restored.fits',sizethresh=2000)
+    import sys
+    make_extended_mask(sys.argv[1],sys.argv[2],sizethresh=int(sys.argv[3]),rmsthresh=float(sys.argv[4]))
