@@ -335,7 +335,7 @@ def substractOuterSquare(o):
         warn('File %s already exists, skipping Predict step'%FileHasPredicted)
     else:
         ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
-                  cleanmode='SSD',majorcycles=3,cleanmask=external_mask,automask=True,automask_threshold=o['thresholds'][1],
+                  cleanmode='SSD',majorcycles=3,automask=True,automask_threshold=o['thresholds'][1],
                   ddsols='wide_killms_p1',
                   applysols='AP',#normalization=o['normalize'][0],
                   peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
@@ -406,8 +406,8 @@ if __name__=='__main__':
         # Apply phase solutions and image again
         kwargs_ddf["ddsols"]='wide_killms_p1'
         kwargs_ddf["applysols"]='P'
-        kwargs_ddf["use_dicomodel"]=True
-        kwargs_ddf["dicomodel_base"]='wide_image_dirin_SSD_masked'
+        #kwargs_ddf["use_dicomodel"]=True
+        #kwargs_ddf["dicomodel_base"]='wide_image_dirin_SSD_masked'
 
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
               reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],
