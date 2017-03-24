@@ -7,13 +7,16 @@ class Tarfile():
     def __init__(self,filename):
         self.filename=filename
         self.append=False
+        self.flist=[]
     def add(self,files):
         if isinstance(files,str):
             files=[files]
         for f in files:
-            print 'adding',f
+            if f in self.flist:
+                continue
             if not os.path.exists(f):
                 continue
+            print 'adding',f
             command='tar '
             if not self.append:
                 command+='-c'
@@ -22,6 +25,7 @@ class Tarfile():
             command+='f '+self.filename+' '+f
             os.system(command)
             self.append=True
+            self.flist.append(f)
 
 def images(rootname):
     list=[rootname+'.'+f+'.fits' for f in ['dirty','app.restored','int.restored','smooth.int.restored','int.model','int.residual']]
@@ -41,3 +45,4 @@ t.add(glob.glob('*ms/killMS.killms_f_ap?.sols.npz'))
 t.add(glob.glob('*.cfg'))
 t.add(glob.glob('*.png'))
 t.add(glob.glob('*crossmatch*2*'))
+t.add(glob.glob('*.cat.*'))
