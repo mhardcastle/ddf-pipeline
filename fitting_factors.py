@@ -44,8 +44,8 @@ def lnprior(X):
 def lnpost(scale,x,y,yerr):
     return lnprior(scale)+lnlike(scale,frequencies,fluxes,errors)
 
-def read_frequencies_fluxes(intable):
-    lines=open('frequencies.txt').readlines()
+def read_frequencies_fluxes(intable,name=''):
+    lines=open(name+'frequencies.txt').readlines()
     frequencies=[]
     keywords=[]
     e_keywords=[]
@@ -75,16 +75,15 @@ def read_frequencies_fluxes(intable):
 
     return frequencies,fluxes,errors,smask,data
 
-def run_all(run):
+def run_all(run, name=''):
 
     global fluxes
     global errors
     global frequencies
     global smask
-
     import emcee
 
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name=name)
 
     print 'About to fit to',len(data),'data points'
 
@@ -92,7 +91,7 @@ def run_all(run):
     ndim=np.sum(smask)
     print 'Fitting',ndim,'scale factors'
     if run>1:
-        oscale=np.load('crossmatch-results-'+str(run-1)+'.npy')[:,0]
+        oscale=np.load(name+'crossmatch-results-'+str(run-1)+'.npy')[:,0]
         scale=[oscale+np.random.normal(loc=0.0,scale=0.02,size=ndim)
                for i in range(nwalkers)]
     else:
@@ -114,7 +113,10 @@ def run_all(run):
         print i,means[i],errors[0,i],errors[1,i]
 
     output=np.vstack((means,errors)).T
-    np.save('crossmatch-results-'+str(run)+'.npy',output)
+    np.save(name+'crossmatch-results-'+str(run)+'.npy',output)
 
 if __name__=='__main__':
-    run_all(int(sys.argv[1]))
+    if len(sys.argv) == 2:
+        run_all(int(sys.argv[1]))
+    else:
+        run_all(int(sys.argv[1]),name=sys.argv[2])
