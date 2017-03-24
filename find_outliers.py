@@ -47,8 +47,9 @@ def run_all(run, name=''):
     threshold=100
     print 'Number of sources rejected',np.sum(a[2]>threshold)
     filtered=data[a[2]<threshold]
+
     filtered.write(name+'crossmatch-'+str(run+1)+'.fits',overwrite=True)
-    return True
+    return np.sum(a[2]>threshold)
 
 if __name__=='__main__':
     if len(sys.argv) == 2:

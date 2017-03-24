@@ -8,7 +8,10 @@ def run_log(cmd,logfile,quiet=False):
     logfile.write('Running process with command: '+cmd+'\n')
     proc=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
-        select.select([proc.stdout],[],[proc.stdout])
+        try:
+            select.select([proc.stdout],[],[proc.stdout])
+        except select.error:
+            pass
         line=proc.stdout.readline()
         if line=='':
             break

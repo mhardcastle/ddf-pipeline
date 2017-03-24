@@ -6,50 +6,52 @@ from pipeline_logging import run_log
 from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
+import signal
 
 class bcolors:
-   HEADER = '\033[95m'
-   OKBLUE = '\033[94m'
-   OKGREEN = '\033[92m'
-   WARNING = '\033[93m'
-   FAIL = '\033[91m'
-   ENDC = '\033[0m'
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 def die(s):
-   print bcolors.FAIL+s+bcolors.ENDC
-   raise Exception(s)
+    print bcolors.FAIL+s+bcolors.ENDC
+    raise Exception(s)
 
 def report(s):
-   print bcolors.OKGREEN+s+bcolors.ENDC
+    print bcolors.OKGREEN+s+bcolors.ENDC
 
 def warn(s):
-   print bcolors.OKBLUE+s+bcolors.ENDC
+    print bcolors.OKBLUE+s+bcolors.ENDC
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False):
-   report('Running: '+s)
-   if not dryrun:
-      if log is None:
-         #print 'Log is none, using "call" to run '+s
-         retval=call(s,shell=True)
-      else:
-         retval=run_log(s,log,quiet)
-      if not(proceed) and retval!=0:
-         os.system('CleanSHM.py')
-         die('FAILED to run '+s+': return value is '+str(retval))
-
-      return retval
-   else:
-      warn('Dry run, skipping this step')
+    report('Running: '+s)
+    if not dryrun:
+#      retval=os.system(s)
+        if log is None:
+            retval=call(s,shell=True)
+        else:
+            retval=run_log(s,log,quiet)
+        if not(proceed) and retval!=0:
+           os.system('CleanSHM.py')
+           die('FAILED to run '+s+': return value is '+str(retval))
+        return retval
+    else:
+        warn('Dry run, skipping this step')
 
 def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
 
     data=hdu[0].data
     if len(data.shape)==4:
-       _,_,ys,xs=data.shape
-       subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+        _,_,ys,xs=data.shape
+        subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
     else:
-       ys,xs=data.shape
-       subim=data[ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+        ys,xs=data.shape
+        subim=data[ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
     oldrms=1
     for i in range(niter):
         rms=np.std(subim)
@@ -97,6 +99,18 @@ def flatten(f):
     hdu = fits.PrimaryHDU(header=header,data=f[0].data[slice])
     return hdu
 
+class Catcher():
+    def __init__(self):
+        self.stop=False
+        signal.signal(signal.SIGUSR1, self.handler)
+        signal.siginterrupt(signal.SIGUSR1,False) 
+    def handler(self,signum,frame):
+        print 'Signal handler called with signal', signum
+        self.stop=True
+    def check(self):
+        if self.stop:
+            os.system('CleanSHM.py')
+            raise RuntimeError('Caught user-defined exception, terminating gracefully')
 
 def find_imagenoise(workingimage,estnoise):
     f = fits.open(workingimage)

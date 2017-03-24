@@ -5,8 +5,6 @@
 DDFacet and KillMS, of course: astropy; pyrap
 
 emcee for bootstrap, and
-mpi4py if you want to use MPI to speed up emcee (not typically necessary).
-
 reproject for the mosaicing script.
 
 The bootstrap code also expects the script directory (this directory)
@@ -14,7 +12,8 @@ to be on the user's PATH.
 
 ## running pipeline
 
-pipeline.py takes one option, the name of a config file. This is in the standard python ConfigParser format. If no config file is given, the code prints out a skeleton of a file with some default values.
+pipeline.py takes one option, the name of a config file. This is in the standard python ConfigParser format. If no config file is given, the code prints out all the possible options and some documentation
+for each.
 
 A minimal set of parameters is
 
@@ -74,6 +73,13 @@ Enable the use of masks for extended sources with `tgss_extended=True`.
 
 If you want to discard all the self-calibration for a run and start again, delete all output images you don't want and run `archive_old_solutions.py` (takes the parameter file name as an argument).
 
+## signal handling
+
+The pipeline interprets SIGUSR1 as a request to stop running at the
+next convenient point, i.e. normally when a KillMS or DDF would
+otherwise be about to start. Initiate this process with e.g. `killall
+-USR1 pipeline.py`.
+
 ## data preparation for Tier 1
 
 Run a Tier 1 reduction as follows:
@@ -109,3 +115,4 @@ the `--directories` argument which contain standard pipeline
 output. You can also determine the noise from the image with the
 `--find_noise` option and remove global offsets with respect to FIRST
 (quality pipeline must have been run first) with the `--shift` option.
+
