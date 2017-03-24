@@ -6,7 +6,10 @@ import os.path
 from quality_options import options,print_options
 from astropy.io import fits
 from astropy.table import Table
-import lofar.bdsm as bdsm
+try:
+    import bdsf as bdsm
+except ImportError:
+    import lofar.bdsm as bdsm
 from auxcodes import report,run,get_rms,warn,die
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
