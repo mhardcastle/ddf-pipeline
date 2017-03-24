@@ -33,9 +33,11 @@ def images(rootname):
     return list
 
 t=Tarfile('archive.tar')
-t.add(['summary.txt','logs','crossmatch-2.fits','crossmatch-results-2.npy'])
+t.add(['summary.txt','logs'])
 t.add(images('image_full_ampphase1m'))
 t.add(images('image_full_ampphase2'))
 t.add(images('image_full_low_m'))
 t.add(glob.glob('*ms/killMS.killms_f_ap?.sols.npz'))
 t.add(glob.glob('*.cfg'))
+t.add(glob.glob('*.png'))
+t.add(glob.glob('*crossmatch*2*'))

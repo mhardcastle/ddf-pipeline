@@ -6,7 +6,7 @@ from astropy.table import Table
 import numpy as np
 from crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
 
-def make_catalogue(name,c_ra,c_dec,radius,cats):
+def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=None):
 
     # cats needs to be a list of catalogues with a filename, short
     # name, group ID and matching radius in arcsec.
@@ -54,7 +54,6 @@ def make_catalogue(name,c_ra,c_dec,radius,cats):
     for g in groups:
         t=t[t['g_count_'+str(g)]>0]
         
-    outnameprefix = name.replace('cube.pybdsm.srl','')
     t.write(outnameprefix+'crossmatch-1.fits',overwrite=True)
                           
 

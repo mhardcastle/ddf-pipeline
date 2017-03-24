@@ -6,7 +6,10 @@
 import os,sys
 import os.path
 from auxcodes import run,warn,die
-from lofar import bdsm
+try:
+    import bdsf as bdsm
+except ImportError:
+    from lofar import bdsm
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -77,9 +80,11 @@ def run_bootstrap(o):
             print m,f
 
 
-      # Clean in cube mode
-
-        ddf_image('image_bootstrap_'+obsid,omslist,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True)
+        # Clean in cube mode
+        with open('temp_mslist.txt','w') as f:
+            for line in omslist:
+                f.write(line+'\n')
+        ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True)
 
         if os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl'):
             warn('Source list exists, skipping source extraction')
@@ -108,7 +113,7 @@ def run_bootstrap(o):
             dec*=180.0/np.pi
 
             cats=zip(o['catalogues'],o['names'],o['groups'],o['radii'])
-            make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl',ra,dec,2.5,cats)
+            make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl',ra,dec,2.5,cats,outnameprefix=obsid)
     
         freqlist=open(obsid+'frequencies.txt','w')
         for n,f in zip(o['names'],o['frequencies']):

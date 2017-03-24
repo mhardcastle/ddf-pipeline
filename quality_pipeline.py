@@ -160,40 +160,43 @@ if __name__=='__main__':
 
     # matching with catalogs
     for cat in o['list']:
+        print 'Doing catalogue',cat
         crossmatch_image(o['catprefix'] + '.cat.fits',cat)
         filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
 
     # Filter catalogs (only keep isolated compact sources within 3deg of pointing centre)
 
     # Astrometric plots
-    report('Plotting position offsets')
-    plot_position_offset('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_positions.png'%o['catprefix'],'FIRST',options=o)
+    if 'FIRST' in o['list']:
+        report('Plotting position offsets')
+        plot_position_offset('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_positions.png'%o['catprefix'],'FIRST',options=o)
 
-    t=Table.read(o['catprefix']+'.cat.fits_FIRST_match_filtered.fits')
-    bsra=np.percentile(bootstrap(t['FIRST_dRA'],np.mean,10000),(16,84))
-    bsdec=np.percentile(bootstrap(t['FIRST_dDEC'],np.mean,10000),(16,84))
-    mdra=np.mean(t['FIRST_dRA'])
-    mddec=np.mean(t['FIRST_dDEC'])
-    print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1])
-    print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
+        t=Table.read(o['catprefix']+'.cat.fits_FIRST_match_filtered.fits')
+        bsra=np.percentile(bootstrap(t['FIRST_dRA'],np.mean,10000),(16,84))
+        bsdec=np.percentile(bootstrap(t['FIRST_dDEC'],np.mean,10000),(16,84))
+        mdra=np.mean(t['FIRST_dRA'])
+        mddec=np.mean(t['FIRST_dDEC'])
+        print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1])
+        print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
 
-    report('Plotting per-facet position offsets')
-    do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
-    t['FIRST_dRA']-=mdra
-    t['FIRST_dDEC']-=mddec
-    do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
+        report('Plotting per-facet position offsets')
+        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
+        t['FIRST_dRA']-=mdra
+        t['FIRST_dDEC']-=mddec
+        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
 
-    report('Plotting flux ratios')
-    # Flux ratio plots (only compact sources)
-    plot_flux_ratios('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_fluxerrors.png'%o['catprefix'],options=o)
+        report('Plotting flux ratios')
+        # Flux ratio plots (only compact sources)
+        plot_flux_ratios('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_fluxerrors.png'%o['catprefix'],options=o)
     
     report('Plotting flux scale comparison')
     # Flux scale comparison plots
-    plot_flux_errors('%s.cat.fits_TGSS_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_TGSS_match_filtered_fluxratio.png'%o['catprefix'],'TGSS',options=o)
-    t=Table.read(o['catprefix']+'.cat.fits_TGSS_match_filtered.fits')
-    ratios=t['Total_flux']/(t['TGSS_Total_flux']/o['TGSS_fluxfactor'])
-    bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
-    print 'Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+    if 'TGSS' in o['list']:
+        plot_flux_errors('%s.cat.fits_TGSS_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_TGSS_match_filtered_fluxratio.png'%o['catprefix'],'TGSS',options=o)
+        t=Table.read(o['catprefix']+'.cat.fits_TGSS_match_filtered.fits')
+        ratios=t['Total_flux']/(t['TGSS_Total_flux']/o['TGSS_fluxfactor'])
+        bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
+        print 'Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
     if 'NVSS' in o['list']:
         t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
         t=t[t['Total_flux']>10e-3]
