@@ -36,13 +36,19 @@ def images(rootname):
         list.append(rootname+'.mask%02i.fits' % (n-1))
     return list
 
-t=Tarfile('archive.tar')
-t.add(['summary.txt','logs'])
-t.add(images('image_full_ampphase1m'))
-t.add(images('image_full_ampphase2'))
-t.add(images('image_full_low_m'))
-t.add(glob.glob('*ms/killMS.killms_f_ap?.sols.npz'))
-t.add(glob.glob('*.cfg'))
-t.add(glob.glob('*.png'))
-t.add(glob.glob('*crossmatch*2*'))
-t.add(glob.glob('*.cat.*'))
+def do_archive(name='archive.tar'):
+
+    t=Tarfile(name)
+    t.add(['summary.txt','logs'])
+    t.add(images('image_full_ampphase1m'))
+    t.add(images('image_full_ampphase2'))
+    t.add(images('image_full_low_m'))
+    t.add(glob.glob('*ms/killMS.killms_f_ap?.sols.npz'))
+    t.add(glob.glob('*.cfg'))
+    t.add(glob.glob('*.png'))
+    t.add(glob.glob('*crossmatch*2*'))
+    t.add(glob.glob('*.cat.*'))
+
+if __name__=='__main__':
+    do_archive()
+
