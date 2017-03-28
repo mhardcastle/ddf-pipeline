@@ -15,6 +15,7 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 from pipeline import ddf_image
 import shutil
+from astropy.io import fits
 
 def logfilename(s):
     if o['logging'] is not None:
@@ -56,7 +57,7 @@ def run_bootstrap(o):
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
     
     obsids = [ms.split('_')[0] for ms in mslist]
-    Uobsid = np.unique(np.array(obsids))
+    Uobsid = set(obsids)
     
     for obsid in Uobsid:
         
@@ -181,7 +182,18 @@ def run_bootstrap(o):
                     d*=factor
                     t.putcol('SCALED_DATA',d)
                     t.close()
-
+    if os.path.isfile('image_bootstrap.app.mean.fits'):
+        warn('Mean bootstrap image exists, not creating it')
+    else:
+        warn('Creating mean bootstrap image')
+        hdus=[]
+        for obsid in Uobsid:
+            hdus.append(fits.open('image_bootstrap_'+obsid+'.app.restored.fits'))
+        for i in range(1,len(Uobsid)):
+            hdus[0][0].data+=hdus[i][0].data
+        hdus[0][0].data/=len(Uobsid)
+        hdus[0].writeto('image_bootstrap.app.mean.fits')
+                
 if __name__=='__main__':
     from options import options
     o=options(sys.argv[1])

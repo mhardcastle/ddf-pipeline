@@ -54,8 +54,8 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
     slices=nd.find_objects(mask)
     big_slices=[slices[i-1] for i in big_regions if i]
     kernel = np.ones((3,3))
-    mask = convolve2d(mask, kernel, mode='same', fillvalue=1)
-    mask=(mask>1)
+    mask = convolve2d(mask, kernel, mode='same', fillvalue=0)
+    mask = (mask>1)
     w=WCS(hdu[0].header)
     hdu[0].data=mask.astype(np.float32)
     hdu.writeto('mask-low.fits',clobber=True)

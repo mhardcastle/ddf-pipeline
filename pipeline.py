@@ -356,10 +356,10 @@ if __name__=='__main__':
         colname='SCALED_DATA'
 
     # make the extended mask if required and possible
-    if os.path.isfile('image_bootstrap.app.restored.fits') and o['extended_size'] is not None:
+    if os.path.isfile('image_bootstrap.app.mean.fits') and o['extended_size'] is not None:
         if not(os.path.isfile('mask-high.fits')):
             report('Making the extended source mask')
-            mask_base_image='image_bootstrap.app.restored.fits'
+            mask_base_image='image_bootstrap.app.mean.fits'
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
         else:
             warn('Extended source mask already exists, using existing version')
@@ -389,6 +389,10 @@ if __name__=='__main__':
 
         if o['auto_uvmin']:
             killms_uvrange[0]=optimize_uvmin('image_ampphase1',o['mslist'],colname)
+
+        make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
+        mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel',catcher=catcher)
+
         killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
         # Do the low-res image first so we can use a mask from it on
