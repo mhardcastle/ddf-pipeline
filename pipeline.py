@@ -327,7 +327,7 @@ def substractOuterSquare(o):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('wide_image_dirin_SSD',o['mslist'],colname)
 
-    killms_data('wide_image_dirin_SSD',o['full_mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+    killms_data('wide_image_dirin_SSD',o['full_mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=6,uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
     # predict outside the central rectangle
     FileHasPredicted='wide_image_phase1_predict.HasPredicted'
