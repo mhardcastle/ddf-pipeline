@@ -42,6 +42,6 @@ if o['full_mslist'] is not None:
     with open(o['full_mslist'],'r') as f:
         msnames=[l.strip() for l in f.readlines()]
     for ms in msnames:
-        s='f_ap1'
-        for file in ['npz','parset']:
-            rename(ms+'/killMS.killms_'+s+'.sols.'+file,ms+'/'+prefix+'.killms_'+s+'.sols.'+file)
+        for s in ['f_ap1', 'f_ap2']:
+            for file in ['npz','parset']:
+                rename(ms+'/killMS.killms_'+s+'.sols.'+file,ms+'/'+prefix+'.killms_'+s+'.sols.'+file)
