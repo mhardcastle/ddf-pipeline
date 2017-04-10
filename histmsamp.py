@@ -96,6 +96,8 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
 if __name__=='__main__':
 
     import sys
+    level=sumdico(sys.argv[2])
+    print 'Total apparent flux is',level,'Jy'
     listname=sys.argv[1]
-    level=float(sys.argv[2])
+    
     print find_uvmin(listname,level,plot=True)
