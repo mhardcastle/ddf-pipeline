@@ -79,7 +79,7 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
         if plot: plt.scatter(0.5*(bins[i]+bins[i+1]),histv[i])
 
     if plot:
-        plt.xlabel('UV dist (klambda)')
+        plt.xlabel('UV dist (km)')
         plt.ylabel('Apparent flux (Jy)')
 
     for i in range(len(bins)-1):
