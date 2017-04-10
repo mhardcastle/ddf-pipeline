@@ -272,7 +272,7 @@ def clearcache(mslist,cachedir):
     if cachedir is not None:
         os.chdir(prevdir)
 
-def optimize_uvmin(rootname,mslist,colname):
+def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
     uvminfile=rootname+'_uvmin.txt'
     report('Optimizing uvmin for self-cal')
     if os.path.isfile(uvminfile):
@@ -283,6 +283,8 @@ def optimize_uvmin(rootname,mslist,colname):
         print 'Will use shortest baseline of',result,'km'
         with open(uvminfile,'w') as f:
             f.write('%f\n' % result)
+    if uvmin_limit is not None and result<uvmin_limit:
+        result=uvmin_limit
     return result
 
 if __name__=='__main__':
@@ -345,7 +347,7 @@ if __name__=='__main__':
         clearcache(o['mslist'],o['cache_dir'])
 
     if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname)
+        killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname,o['solutions_uvmin'])
 
     killms_data('image_dirin_SSD',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
@@ -373,7 +375,7 @@ if __name__=='__main__':
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel',catcher=catcher)
     # Calibrate off the model
     if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname)
+        killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
@@ -388,7 +390,7 @@ if __name__=='__main__':
         check_imaging_weight(o['full_mslist'])
 
         if o['auto_uvmin']:
-            killms_uvrange[0]=optimize_uvmin('image_ampphase1',o['mslist'],colname)
+            killms_uvrange[0]=optimize_uvmin('image_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
 
         make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
         mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel',catcher=catcher)
@@ -447,7 +449,7 @@ if __name__=='__main__':
             if not os.path.exists('image_full_ampphase1m.Norm.fits'):
                 os.symlink('image_full_ampphase1.Norm.fits','image_full_ampphase1m.Norm.fits')
             if o['auto_uvmin']:
-                killms_uvrange[0]=optimize_uvmin('image_full_ampphase1m',o['mslist'],colname)
+                killms_uvrange[0]=optimize_uvmin('image_full_ampphase1m',o['mslist'],colname,o['solutions_uvmin'])
             make_mask('image_full_ampphase1m.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
             mask_dicomodel('image_full_ampphase1m.DicoModel','image_full_ampphase1m.app.restored.fits.mask.fits','image_full_ampphase1m_masked.DicoModel',catcher=catcher)
             killms_data('image_full_ampphase1m',o['full_mslist'],'killms_f_ap2',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_full_ampphase1m_masked.DicoModel',niterkf=o['NIterKF'][2],catcher=catcher)
