@@ -13,5 +13,8 @@ for f in filenames:
         gu=np.load(gufile)
         plt.plot(gu[0,:,0],label=f)
 
-plt.legend(loc=0)
+if len(filenames)<=6:
+    plt.legend(loc=0)
+plt.xlabel('Antenna number')
+plt.ylabel('Scaling factor')
 plt.show()
