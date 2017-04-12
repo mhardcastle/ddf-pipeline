@@ -3,7 +3,6 @@
 import optparse
 import pickle
 import numpy as np
-import pylab
 import os
 from itertools import product as ItP
 #from DDFacet.Other import MyLogger
@@ -180,24 +179,25 @@ class ClassSmooth():
                     yp=np.angle(G0[:,0,iAnt,iDir,ipol])
                     G1[:,iAnt,iDir,ipol]*=np.exp(1j*yp[:])
                 if self.doplot:
+                    import matplotlib.pyplot as plt
                     xp=(Sols0.t0+Sols0.t1)/2.
                     op0=np.abs
                     op1=np.angle
-                    pylab.clf()
-                    pylab.suptitle('Direction = %i Antenna = %i' % (iDir,iAnt))
+                    plt.clf()
+                    plt.suptitle('Direction = %i Antenna = %i' % (iDir,iAnt))
                     for ipol in Pols:
-                        pylab.subplot(2,1,1)
-                        pylab.scatter(xp,op0(G0[:,0,iAnt,iDir,ipol]))
-                        pylab.plot(xp,op0(G1[:,iAnt,iDir,ipol]),marker=".",ls="",label=str(ipol))
-                        pylab.legend(loc=0)
+                        plt.subplot(2,1,1)
+                        plt.scatter(xp,op0(G0[:,0,iAnt,iDir,ipol]))
+                        plt.plot(xp,op0(G1[:,iAnt,iDir,ipol]),marker=".",ls="",label=str(ipol))
+                        plt.legend(loc=0)
 
-                        pylab.subplot(2,1,2)
-                        pylab.scatter(xp,op1(G0[:,0,iAnt,iDir,ipol]))
-                        pylab.plot(xp,op1(G1[:,iAnt,iDir,ipol]))
+                        plt.subplot(2,1,2)
+                        plt.scatter(xp,op1(G0[:,0,iAnt,iDir,ipol]))
+                        plt.plot(xp,op1(G1[:,iAnt,iDir,ipol]))
 
-                    pylab.draw()
-                    pylab.show(False)
-                    pylab.pause(0.1)
+                    plt.draw()
+                    plt.show(False)
+                    plt.pause(0.1)
 
         G1=G1.reshape((nt0,nch,na,nd,2,2))
         Sols1.G=G1
@@ -222,7 +222,7 @@ def test():
     CI.Save()
 
 def main(options=None):
-    if options==None:
+    if options is None:
         f = open(SaveName,'rb')
         options = pickle.load(f)
     #FileName="killMS.KAFCA.sols.npz"
