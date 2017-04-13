@@ -398,6 +398,11 @@ if __name__=='__main__':
 
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
+    ddsols='killms_ap1'
+    if o['smoothing'] is not None:
+        report('Smoothing amplitude solutions')
+        ddsols=smooth_solutions(o['mslist'],ddsols,o['smoothing'],catcher=catcher)
+
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_ap1',applysols='AP',majorcycles=3,robust=o['image_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1],uvrange=uvrange,apply_weights=o['apply_weights'][2],catcher=catcher)
 
@@ -418,8 +423,8 @@ if __name__=='__main__':
 
         ddsols='killms_f_ap1'
         if o['smoothing'] is not None:
-            report('Smoothing data')
-            ddsols=smooth_solutions(o['full_mslist'],ddsols,o['smoothing'])
+            report('Smoothing amplitude solutions')
+            ddsols=smooth_solutions(o['full_mslist'],ddsols,o['smoothing'],catcher=catcher)
 
         # Do the low-res image first so we can use a mask from it on
         # the high-res image
