@@ -77,8 +77,8 @@ If you want to discard all the self-calibration for a run and start again, delet
 
 The pipeline interprets SIGUSR1 as a request to stop running at the
 next convenient point, i.e. normally when a KillMS or DDF would
-otherwise be about to start. Initiate this process with e.g. `killall
--USR1 pipeline.py`.
+otherwise be about to start. Initiate this process with e.g. `pkill
+-USR1 -f pipeline.py`.
 
 ## data preparation for Tier 1
 
