@@ -2,11 +2,11 @@
 
 #PBS -m abe
 #PBS -N pipeline
-#PBS -l nodes=1:ppn=32:chassis6
+#PBS -l nodes=1:ppn=32
 #PBS -l pmem=7gb
-#PBS -l walltime=48:00:00
+#PBS -l walltime=120:00:00
 #PBS -k oe
-#PBS -q smp
+#PBS -q lofar
 #PBS -W group_list=lofar
 
 echo ------------------------------------------------------

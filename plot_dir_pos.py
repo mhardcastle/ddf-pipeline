@@ -43,9 +43,12 @@ for d in sys.argv[1:]:
     if len(mss)>0:
         name,ra,dec=getpos(mss[0])
         print d,name,ra,dec
-        circles.append((name,ra,dec,'blue'))
+        colour='blue'
+        if os.path.isfile('summary.txt'):
+            colour='green'
+        circles.append((name,ra,dec,colour))
     
-    ims=glob.glob('image_full_ampphase1m.smooth.int.restored.fits')
+    ims=glob.glob('image_full_ampphase1m.int.restored.fits')
     if len(ims)>0:
         ra,dec=getposim(ims[0])
         if name is None:

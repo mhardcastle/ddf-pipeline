@@ -98,8 +98,12 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
             world=wf.wcs_pix2world(pix,0)
             opix=w.wcs_world2pix(world,0)
             for xv,yv,op in zip(x,y,opix):
-                if mask[int(op[1]),int(op[0])]>0:
-                    maskf[yv,xv]=1
+                try:
+                    if mask[int(op[1]),int(op[0])]>0:
+                        maskf[yv,xv]=1
+                except IndexError:
+                    # catch wcs mismatches or similar
+                    pass
 
         hduf[0].data=maskf.astype(np.float32)
         hduf.writeto('mask-high.fits',clobber=True)
