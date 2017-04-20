@@ -69,7 +69,7 @@ def flatten(f):
     if naxis<2:
         raise RadioError('Can\'t make map from this')
     if naxis==2:
-        return f[0].header,f[0].data
+        return fits.PrimaryHDU(header=f[0].header,data=f[0].data)
 
     w = WCS(f[0].header)
     wn=WCS(naxis=2)

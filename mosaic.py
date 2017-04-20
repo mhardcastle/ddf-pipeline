@@ -3,7 +3,6 @@
 # Mosaic final images
 
 # arguments are directories with final images
-# we use the .smooth.int.restored.fits and .fluxscale.fits files
 
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
@@ -55,7 +54,7 @@ noise=[]
 name=[]
 for d in args.directories:
     name.append(d.split('/')[-1])
-    hdu=fits.open(d+'/image_full_ampphase1m.smooth.int.restored.fits')
+    hdu=fits.open(d+'/image_full_ampphase1m.int.restored.fits')
     if args.find_noise:
         noise.append(get_rms(hdu))
     hdus.append(flatten(hdu))
