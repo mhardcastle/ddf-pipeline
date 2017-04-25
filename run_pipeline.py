@@ -15,7 +15,7 @@ name=sys.argv[1]
 try:
     qsubfile=sys.argv[2]
 except:
-    qsubfile='/home/mjh/git/ddf-pipeline/pipeline-xeon1.qsub'
+    qsubfile='/home/mjh/git/ddf-pipeline/pipeline.qsub'
 
 try:
     os.mkdir(name)
@@ -36,4 +36,4 @@ report('Making ms lists')
 make_list()
 
 report('Submit job')
-os.system('qsub -v WD='+rootdir+'/'+name+' '+qsubfile)
+os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
