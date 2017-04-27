@@ -31,6 +31,10 @@ def make_list():
     # check for multiple observations
     Ustart_times = np.unique(start_times)
 
+    if len(full_mslist)<18:
+        warn('Too few MS found for normal running: only %i' % len(full_mslist))
+        return False
+
     if len(full_mslist)<24:
         warn('Warning -- only %i ms found' % len(full_mslist))
         
@@ -43,6 +47,7 @@ def make_list():
 
     open('big-mslist.txt','w').writelines(ms+'\n' for ms in write_full_mslist)
     open('mslist.txt','w').writelines(ms+'\n' for ms in write_mslist)
+    return True
 
 if __name__=='__main__':
     make_list()

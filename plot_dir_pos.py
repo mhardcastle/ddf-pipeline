@@ -36,29 +36,41 @@ def getposim(image):
     return ra,dec
 
 circles=[]
+s_colours={'downloading':'red','downloaded':'orange','started':'yellow','complete':'green'}
 for d in sys.argv[1:]:
     os.chdir(d)
     mss=glob.glob('*.ms')
     name=None
     if len(mss)>0:
         name,ra,dec=getpos(mss[0])
-        print d,name,ra,dec
-        colour='blue'
+        if os.path.isfile('big-mslist.txt'):
+            status='downloaded'
+        else:
+            status='downloading'
+        if os.path.isfile('image_dirin_SSD_init.tessel.reg'):
+            status='started'
         if os.path.isfile('summary.txt'):
-            colour='green'
-        circles.append((name,ra,dec,colour))
-    
+            status='complete'
+        circles.append((name,ra,dec,s_colours[status]))
+        print "%-30s %-15s %8.3f %8.3f %s" % (d,name,ra,dec,status)
+        continue
+    # else check for image only
     ims=glob.glob('image_full_ampphase1m.int.restored.fits')
     if len(ims)>0:
         ra,dec=getposim(ims[0])
         if name is None:
             name=d.split('/')[-1]
-        circles.append((name,ra,dec,'red'))
+        circles.append((name,ra,dec,'magenta'))
 
 ras=np.array([ra for _,ra,_,_ in circles])
 decs=np.array([dec for _,_,dec,_ in circles])
+rarange=max(ras)-min(ras)
+decrange=max(decs)-min(decs)
+yfigsize=6
+xfigsize=yfigsize*(rarange/decrange)*np.cos(np.mean(decs)*np.pi/180.0)
+print xfigsize,yfigsize
 
-plt.figure(figsize=(10/np.cos(np.mean(decs)*np.pi/180.0),10))
+plt.figure(figsize=(xfigsize,yfigsize))
 
 plt.xlim(np.min(ras)-csize,np.max(ras)+csize)
 plt.ylim(np.min(decs)-csize,np.max(decs)+csize)

@@ -33,7 +33,6 @@ report('Deleting tar files')
 os.system('rm *.tar.gz')
 
 report('Making ms lists')
-make_list()
-
-report('Submit job')
-os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
+if make_list():
+    report('Submit job')
+    os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)

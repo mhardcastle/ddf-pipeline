@@ -78,7 +78,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         cellsize=options['cellsize']
 
     cache_dir=options['cache_dir']
+
+    # allow cache_dir that only exists on some machines to be specified,
+    # fall back to working directory otherwise
     if cache_dir is None:
+        cache_dir='.'
+    elif not os.path.isdir(cache_dir):
         cache_dir='.'
 
     if majorcycles>0:
@@ -257,6 +262,7 @@ def mask_dicomodel(indico,maskname,outdico,catcher=None):
 
 def clearcache(mslist,cachedir):
     report('Clearing cache for '+mslist)
+    filenames=[l.strip() for l in open(mslist,'r').readlines()]
     if cachedir is not None:
         prevdir=os.getcwd()
         os.chdir(cachedir)
@@ -264,7 +270,6 @@ def clearcache(mslist,cachedir):
         rmtree(mslist+'.ddfcache')
     except OSError:
         pass
-    filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
         try:
             rmtree(f+'.ddfcache')
