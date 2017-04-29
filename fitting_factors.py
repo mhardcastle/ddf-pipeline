@@ -33,7 +33,11 @@ def lnlike(scale,frequencies,fluxes,errors):
             print 'Caught maxfev error:',scale
             cs+=1e6
 #        print i,pcov[1],chi
-    return -0.5*cs-d*np.sum(np.log(scale))
+    retval=-0.5*cs-d*np.sum(np.log(scale))
+    if np.isnan(retval):
+         return -np.inf
+    else:
+         return retval
 
 def lnprior(X):
     for s in X:

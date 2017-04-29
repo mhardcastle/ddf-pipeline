@@ -6,7 +6,7 @@ from astropy.table import Table
 import numpy as np
 from crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
 
-def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=None):
+def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=''):
 
     # cats needs to be a list of catalogues with a filename, short
     # name, group ID and matching radius in arcsec.
@@ -23,6 +23,8 @@ def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=None):
     # Filter for isolated sources
     t=select_isolated_sources(t,100)
     print 'Remove close neighbours:',len(t)
+    if len(t)==0:
+        raise RuntimeError('No sources in table before crossmatching')
 
     ctab=[]
     groups=[]
@@ -53,7 +55,9 @@ def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=None):
     # Now reject sources that have no match in a given group
     for g in groups:
         t=t[t['g_count_'+str(g)]>0]
-        
+
+    if len(t)==0:
+        raise RuntimeError('No crossmatches exist after group matching')
     t.write(outnameprefix+'crossmatch-1.fits',overwrite=True)
                           
 
