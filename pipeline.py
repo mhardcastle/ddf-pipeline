@@ -6,6 +6,7 @@ import os.path
 from auxcodes import report,run,find_imagenoise,warn,die,Catcher
 from options import options,print_options
 from shutil import copyfile,rmtree
+import glob
 import pyrap.tables as pt
 from modify_mask import modify_mask
 from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
@@ -140,13 +141,13 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
-        if os.path.exists(mslist+'.ddfcache/LastResidual'):
+        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/LastResidual'):
             runcommand += ' --Cache-Dirty forceresidual'
     if reuse_dirty:
-        if os.path.exists(mslist+'.ddfcache/Dirty'):
+        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/Dirty'):
             runcommand += ' --Cache-Dirty forcedirty'
     if reuse_psf:
-        if os.path.exists(mslist+'.ddfcache/PSF'):
+        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/PSF'):
             runcommand += ' --Cache-PSF force'
 
     if HMPsize is not None:
@@ -260,23 +261,27 @@ def mask_dicomodel(indico,maskname,outdico,catcher=None):
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
         return True
 
+def rmtglob(path):
+    g=glob.glob(path)
+    for f in g:
+        print 'Removing',f
+        rmtree(f)
+
 def clearcache(mslist,cachedir):
     report('Clearing cache for '+mslist)
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
-    if cachedir is not None:
-        prevdir=os.getcwd()
-        os.chdir(cachedir)
+    if cachedir is None:
+        cachedir='.'
     try:
-        rmtree(mslist+'.ddfcache')
+        rmtglob(cachedir+'/'+mslist+'*.ddfcache')
+        rmtglob(mslist+'*.ddfcache')
     except OSError:
         pass
     for f in filenames:
         try:
-            rmtree(f+'.ddfcache')
+            rmtglob(cachedir+'/'+f+'*.ddfcache')
         except OSError:
             pass
-    if cachedir is not None:
-        os.chdir(prevdir)
 
 def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
     uvminfile=rootname+'_uvmin.txt'
