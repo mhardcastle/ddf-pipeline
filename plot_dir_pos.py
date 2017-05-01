@@ -76,7 +76,7 @@ for d in sys.argv[1:]:
             status='started'
         if os.path.isfile('summary.txt'):
             status='complete'
-        if status == 'started':
+        if status == 'started' or status == 'downloaded':
             job_status = ''
             if len(jobs)>0:
                 if shortname not in jobs:
