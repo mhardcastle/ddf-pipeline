@@ -15,10 +15,16 @@ def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=''):
 
     t=Table.read(name,format='ascii.commented_header',header_start=-1)
     print 'Total table length is',len(t)
+    if len(t)==0:
+        raise RuntimeError('No sources in table from pybdsm')
     t=filter_catalogue(t,c_ra,c_dec,radius)
     print 'Filtered within',radius,'degrees:',len(t)
+    if len(t)==0:
+        raise RuntimeError('No sources in central part of image')
     t=t[t['Total_flux']>0.15]
     print 'Bright sources:',len(t)
+    if len(t)==0:
+        raise RuntimeError('No bright sources for crossmatching')
 
     # Filter for isolated sources
     t=select_isolated_sources(t,100)

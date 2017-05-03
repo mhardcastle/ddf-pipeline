@@ -55,7 +55,7 @@ def getposim(image):
 
 jobs=qstat()
 circles=[]
-s_colours={'downloading':'red','downloaded':'orange','started':'yellow','complete':'green'}
+s_colours={'unpacking':'red','downloaded':'orange','started':'yellow','complete':'green'}
 s_files=['dirin_SSD_init','dirin_SSD','phase1','ampphase1','full_low','full_low_m','full_ampphase1','full_ampphase1m']
 for d in sys.argv[1:]:
     os.chdir(d)

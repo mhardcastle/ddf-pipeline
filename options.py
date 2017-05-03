@@ -31,14 +31,28 @@ def _get_terminal_size_linux():
             return None
     return int(cr[1]), int(cr[0])
 
+def get_physical_cpus():
+    # find total number of physical cores, ignoring hyperthreading
+    lines=open('/proc/cpuinfo').readlines()
+    cpus=[]
+    for l in lines:
+        bits=l.split(':')
+        if 'physical id' in l:
+            phys=int(bits[1])
+        if 'core id' in l:
+            core=int(bits[1])
+        if l=='\n':
+            cpus.append((phys,core))
+    cpus=set(cpus)
+    return len(cpus)
+
 def getcpus():
     nodefile=os.getenv('PBS_NODEFILE')
     if nodefile:
         lines=len(open(nodefile).readlines())
         return lines
     else:
-        import multiprocessing
-        return multiprocessing.cpu_count()
+        return get_physical_cpus()
 
 option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                   'Number of CPUS to use for DDF'),
