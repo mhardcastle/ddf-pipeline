@@ -8,6 +8,8 @@
 # 4) fit to offset histograms
 # 5) apply shift -- to be done by ddf-pipeline
 
+import matplotlib
+matplotlib.use('Agg')
 from options import options
 from auxcodes import report,run,warn,die
 from quality_pipeline import sepn
@@ -16,35 +18,38 @@ import os
 from get_cat import get_cat
 import glob
 from astropy.table import Table, vstack, unique
+import numpy as np
+from scipy.optimize import curve_fit
+import sys
+from scipy.special import gammaln
+from facet_offsets import label_table,region_to_poly,assign_labels_to_poly, labels_to_integers, which_poly
+import pickle
 try:
     import bdsf as bdsm
 except ImportError:
     import lofar.bdsm as bdsm
-import numpy as np
-from scipy.optimize import curve_fit
+degtorad=np.pi/180.0
+
 import sys
-import emcee
-from scipy.special import gammaln
-from facet_offsets import label_table,region_to_poly,assign_labels_to_poly, labels_to_integers, which_poly
-import pickle
 
 def model(x,norm,sigma,offset,bl,radius=60):
     return bl*np.sqrt(radius**2.0-x**2.0)/radius+norm*np.exp(-(x-offset)**2.0/(2*sigma**2.0))
 
 class Offsets(object):
-    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None):
+    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc'):
         self.prefix=prefix
         self.n=n
         self.chains=[]
         self.cellsize=cellsize
         self.imroot=imroot
+        self.fitmethod=fitmethod
         if imroot is not None:
             self.read_regfile(imroot+'.tessel.reg')
 
     def read_regfile(self,regfile):
         self.polys,self.labels=region_to_poly(regfile)
-        self.plab=assign_labels_to_poly(polys,labels)
-        self.pli=labels_to_integers(plab)
+        self.plab=assign_labels_to_poly(self.polys,self.labels)
+        self.pli=labels_to_integers(self.plab)
 
     def find_offsets(self,tf,ot,sep=1.0):
         self.dral=[]
@@ -58,7 +63,7 @@ class Offsets(object):
             maxdec=np.max(t['DEC'])
             otf=ot[(ot['ra']>=(minra-sep/60.0)) & (ot['ra']<=(maxra+sep/60.0)) &
                    (ot['dec']>=(mindec-sep/60.0)) & (ot['dec']<=(maxdec+sep/60.0))]
-            print 'Facet %2i has %5i LOFAR sources and %5i comparison sources' % (f,len(t),len(otf))
+            print 'Facet %2i has %4i LOFAR sources and %6i comparison sources' % (f,len(t),len(otf))
 
             dral=[]
             ddecl=[]
@@ -120,6 +125,7 @@ class Offsets(object):
         return 0
 
     def fit_emcee(self,h):
+        import emcee
         height=np.median(h)
         norm=np.max(h)-height
         peak=self.bcenter[np.argmax(h)]
@@ -130,7 +136,9 @@ class Offsets(object):
         parms=[]
         for i in range(nwalkers):
             parms.append([norm+np.random.normal(0,0.5),0.5+np.random.normal(0,0.05),peak+np.random.normal(0,0.1),height+np.random.normal(0,2.0)])
-        parms=np.abs(np.array(parms))
+        parms=np.array(parms)
+        for i in (0,1,3):
+            parms[:,i]=np.abs(parms[:,i])
         sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnpost, args=(h,))
         
         sampler.run_mcmc(parms,1000)
@@ -157,6 +165,12 @@ class Offsets(object):
         return means,err
 
     def fit_offsets(self,minv=-40,maxv=40,nbins=150):
+        if self.fitmethod=='mcmc':
+            fitfn=self.fit_emcee
+        elif self.fitmethod=='chi2':
+            fitfn=self.fit_chi2
+        else:
+            raise NotImplementedError('Fit method '+self.fitmethod)
         self.bins=np.linspace(minv,maxv,nbins+1)
         self.bcenter=0.5*(self.bins[:-1]+self.bins[1:])
         self.rar=[]
@@ -169,13 +183,13 @@ class Offsets(object):
             print 'Facet',i
             h,_=np.histogram(self.dral[i],self.bins)
             self.rah.append(h)
-            p,perr=self.fit_emcee(h)
+            p,perr=fitfn(h)
             print 'RA Offset is ',p[2],'+/-',perr[2]
             self.rar.append(p)
             self.rae.append(perr)
             h,_=np.histogram(self.ddecl[i],self.bins)
             self.dech.append(h)
-            p,perr=self.fit_emcee(h)
+            p,perr=fitfn(h)
             self.decr.append(p)
             self.dece.append(perr)
             print 'DEC Offset is ',p[2],'+/-',perr[2]
@@ -223,7 +237,7 @@ class Offsets(object):
             self.lofar_table=Table.read(lofar_table)
         tf=self.lofar_table
 
-        poly,labels=self.poly,self.labels
+        poly,labels=self.polys,self.labels
 
         basesize=10
         rarange=(np.min(tf['RA']),np.max(tf['RA']))
@@ -263,7 +277,7 @@ class Offsets(object):
 
         plt.savefig('SKO-'+self.prefix+'.png')
 
-    def offsets_to_facetshift(filename):
+    def offsets_to_facetshift(self,filename):
 
         cellsize=1.5
         outfile=open(filename,'w')
@@ -274,10 +288,10 @@ class Offsets(object):
             ra=rar/degtorad
             decr=float(bits[3])
             dec=decr/degtorad
-            number=which_poly(ra,dec,polys)
+            number=which_poly(ra,dec,self.polys)
             #print 'Direction',pli[number]
-            direction=pli[number]
-            print >>outfile, rar,decr,-rar[direction,2]/cellsize,-decr[direction,2]/cellsize
+            direction=self.pli[number]
+            print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,-self.decr[direction,2]/cellsize
         outfile.close()
 
     def save(self,filename):
@@ -333,6 +347,7 @@ def do_offsets(o):
         nonpbimage=image_root+'.app.restored.fits'
         img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
         img.write_catalog(outfile=catfile,catalog_type='srl',format='fits',correct_proj='True')
+
     lofar=Table.read(catfile)
     print len(lofar),'LOFAR sources before filtering'
     filter=(lofar['E_RA']*3600.0)<2.0
@@ -343,12 +358,12 @@ def do_offsets(o):
     regfile=image_root+'.tessel.reg'
     lofar_l=label_table(lofar,regfile)
 
-    oo=Offsets(method,n=o['ndir'],imroot=image_root,cellsize=o['cellsize'])
+    oo=Offsets(method,n=o['ndir'],imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
     oo.find_offsets(lofar_l,data)
     oo.fit_offsets()
     oo.plot_fits(method+'-fits.pdf')
     oo.save_fits()
-    oo.plot_offsets(image_root)
+    oo.plot_offsets()
     oo.save(method+'-fit_state.pickle')
     oo.offsets_to_facetshift('facet-offset.txt')
 

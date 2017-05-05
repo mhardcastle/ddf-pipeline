@@ -383,7 +383,7 @@ if __name__=='__main__':
     # run bootstrap, and change the column name if it runs
     if o['bootstrap']:
         report('Running bootstrap')
-        run('bootstrap.py '+sys.argv[1],log=None)
+        run('bootstrap.py '+' '.join(sys.argv[1:]),log=None)
         colname='SCALED_DATA'
 
     # make the extended mask if required and possible
@@ -511,7 +511,7 @@ if __name__=='__main__':
                 warn('Re-downloading some or all of the catalogue')
                 get_cat(o['method'])
 
-            do_offsets(o)
+            run('offsets.py '+' '.join(sys.argv[1:]),log=None)
 
     # we got to the end, write a summary file
     
