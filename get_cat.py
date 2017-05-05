@@ -11,7 +11,7 @@ def tile(file):
     return hextile(file,CSIZE*0.9)
 
 def download_required(method):
-    ra_factor,pos=tile('image_ampphase1.app.restored.fits',CSIZE*0.9)
+    ra_factor,pos=tile('image_ampphase1.app.restored.fits')
     for i,p in enumerate(pos):
         outfile=method+'-'+str(i)+'.vo'
         if not os.path.isfile(outfile):
@@ -26,7 +26,6 @@ def get_cat(method):
     except OSError:
         pass
 
-    os.chdir(method)
     if method=='wise':
         from astroquery.irsa import Irsa
         Irsa.ROW_LIMIT=1000000
@@ -35,11 +34,17 @@ def get_cat(method):
     print 'Downloading catalogues for',len(pos),'sky positions'
     for i,p in enumerate(pos):
         print p
-        outfile=method+'-'+str(i)+'.vo'
+        outfile=method+'/'+method+'-'+str(i)+'.vo'
         if os.path.isfile(outfile):
             continue
         if method=='panstarrs':
-            r = requests.post('http://archive.stsci.edu/panstarrs/search.php', data = {'ra':p[0],'dec':p[1],'SR':CSIZE,'max_records':100000,'nDetections':">+5",'action':'Search','selectedColumnsCsv':'objid,ramean,decmean'})
+            while True:
+                try:
+                    r = requests.post('http://archive.stsci.edu/panstarrs/search.php', data = {'ra':p[0],'dec':p[1],'SR':CSIZE,'max_records':100000,'nDetections':">+5",'action':'Search','selectedColumnsCsv':'objid,ramean,decmean'},timeout=300)
+                except requests.exceptions.Timeout:
+                    print 'Timeout, retrying!'
+                else:
+                    break
             f=open(outfile,'w')
             f.writelines(r.text)
             f.close()

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Compute optical offsets and do a shift
 # Steps are:
 # -1) download optical (or other) data -- do in parallel if possible, so should be done by the time this is run as a script
@@ -23,6 +24,8 @@ from scipy.optimize import curve_fit
 import sys
 from scipy.special import gammaln
 from facet_offsets import label_table,region_to_poly,assign_labels_to_poly, labels_to_integers, which_poly
+from astropy.io import fits
+from astropy.wcs import WCS
 import pickle
 try:
     import bdsf as bdsm
@@ -216,20 +219,23 @@ class Offsets(object):
                 pdf.savefig()
                 plt.close()
 
-    def plot_chains(self):
+    def plot_chains(self,pdffile):
+        from matplotlib.backends.backend_pdf import PdfPages
         import matplotlib.pyplot as plt
-        for j,c in enumerate(self.chains):
-            labels=['norm','sigma','offset','bline']
-            ndim=len(labels)
-            for i in range(len(labels)):
-                plt.subplot(ndim,1,i+1)
-                plt.plot(c[:,:,i].transpose())
-                plt.ylabel(labels[i])
-                plt.xlabel('Samples')
+        with PdfPages(pdffile) as pdf:
+            for j,c in enumerate(self.chains):
+                labels=['norm','sigma','offset','bline']
+                ndim=len(labels)
+                for i in range(len(labels)):
+                    plt.subplot(ndim,1,i+1)
+                    plt.plot(c[:,:,i].transpose())
+                    plt.ylabel(labels[i])
+                    plt.xlabel('Samples')
                 facet=j/2
                 chain=j%2
                 plt.suptitle('Facet %i chain %i' % (facet,chain))
-            plt.show()
+                pdf.savefig()
+                plt.close()
 
     def plot_offsets(self,lofar_table=None):
         import matplotlib.pyplot as plt
@@ -279,7 +285,7 @@ class Offsets(object):
 
     def offsets_to_facetshift(self,filename):
 
-        cellsize=1.5
+        cellsize=self.cellsize
         outfile=open(filename,'w')
         lines=open('image_full_ampphase1m.facetCoord.txt').readlines()
         for l in lines:
@@ -293,6 +299,31 @@ class Offsets(object):
             direction=self.pli[number]
             print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,-self.decr[direction,2]/cellsize
         outfile.close()
+
+    def make_astrometry_map(self,outname,factor):
+        # factor tells us how much bigger than cellsize the pixels will be
+        hdus=fits.open(self.imroot+'.app.restored.fits')
+        _,_,yd,xd=hdus[0].data.shape
+        yd/=factor
+        xd/=factor
+        hdus[0].header['CDELT1']*=factor
+        hdus[0].header['CDELT2']*=factor
+        hdus[0].header['CRPIX1']/=factor
+        hdus[0].header['CRPIX2']/=factor
+        w=WCS(hdus[0].header)
+        rmap=np.ones((1,1,yd,xd))*np.nan
+        # this would be faster with use of e.g. PIL
+        for y in range(yd):
+            print '.',
+            for x in range(xd):
+                ra,dec,_,_=w.wcs_pix2world(x,y,0,0,0)
+                number=which_poly(ra,dec,self.polys)
+                if number is not None:
+                    direction=self.pli[number]
+                    rmap[0,0,y,x]=np.sqrt(self.rae[direction,2]**2.0+self.dece[direction,2]**2.0)
+        hdus[0].data=rmap
+        hdus.writeto(outname)
+        print
 
     def save(self,filename):
         f = file(filename, 'wb')
@@ -359,12 +390,17 @@ def do_offsets(o):
     lofar_l=label_table(lofar,regfile)
 
     oo=Offsets(method,n=o['ndir'],imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
+    report('Finding offsets')
     oo.find_offsets(lofar_l,data)
+    report('Fitting offsets')
     oo.fit_offsets()
+    report('Making plots and saving output')
     oo.plot_fits(method+'-fits.pdf')
     oo.save_fits()
     oo.plot_offsets()
     oo.save(method+'-fit_state.pickle')
+    report('Making astrometry error map, please wait')
+    oo.make_astrometry_map('astromap.fits',20)
     oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':

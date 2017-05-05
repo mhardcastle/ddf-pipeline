@@ -28,8 +28,13 @@ def merge_mask(in1,in2,outfile):
     hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
-def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
+def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,rootname=None):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
+
+    if rootname is None:
+        prefix=''
+    else:
+        prefix=rootname+'-'
 
     hdu=fits.open(infile)
     rms=get_rms(hdu)
@@ -58,7 +63,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
     mask = (mask>1)
     w=WCS(hdu[0].header)
     hdu[0].data=mask.astype(np.float32)
-    hdu.writeto('mask-low.fits',clobber=True)
+    hdu.writeto(prefix+'mask-low.fits',clobber=True)
 
     if fullresfile is not None:
 
@@ -106,7 +111,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500):
                     pass
 
         hduf[0].data=maskf.astype(np.float32)
-        hduf.writeto('mask-high.fits',clobber=True)
+        hduf.writeto(prefix+'mask-high.fits',clobber=True)
 
 if __name__=='__main__':
     import sys

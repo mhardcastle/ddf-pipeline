@@ -17,6 +17,7 @@ from version import version
 __version__=version()
 import smoothsols
 import datetime
+import threading
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -54,6 +55,28 @@ def check_imaging_weight(mslist_name):
             warn('Table '+ms+' already has imaging weights')
         else:
             pt.addImagingColumns(ms)
+
+def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
+    if catcher: catcher.check()
+    if options is None:
+        options=o # attempt to get global if it exists
+
+    cache_dir=options['cache_dir']
+
+    # allow cache_dir that only exists on some machines to be specified,
+    # fall back to working directory otherwise
+    if cache_dir is None:
+        cache_dir='.'
+    elif not os.path.isdir(cache_dir):
+        cache_dir='.'
+
+    runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Image-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+imagename+'.DicoModel --Cache-SmoothBeam=force --Cache-Dir='+cache_dir
+    if options['restart'] and os.path.isfile(imagename+'_shift.app.facetRestored.fits'):
+        warn('File '+fname+' already exists, skipping DDF-shift step')
+        if verbose:
+            print 'would have run',runcommand
+    else:
+         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0):
@@ -388,14 +411,14 @@ if __name__=='__main__':
 
     # make the extended mask if required and possible
     if os.path.isfile('image_bootstrap.app.mean.fits') and o['extended_size'] is not None:
-        if not(os.path.isfile('mask-high.fits')):
+        if o['restart'] and os.path.isfile('bootstrap-mask-high.fits'):
+            warn('Extended source mask already exists, using existing version')
+        else:
             report('Making the extended source mask')
             mask_base_image='image_bootstrap.app.mean.fits'
-            make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'])
-        else:
-            warn('Extended source mask already exists, using existing version')
+            make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'],rootname='bootstrap')
         external_mask='external_mask_ext.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='mask-high.fits')
+        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
 
     # Apply phase solutions and image again
     ddf_image('image_phase1',o['mslist'],cleanmask=external_mask,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=3,robust=o['image_robust'],colname=colname,peakfactor=0.01,automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,dicomodel_base='image_dirin_SSD_masked',catcher=catcher)
@@ -447,15 +470,19 @@ if __name__=='__main__':
             else:
                 low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask-low exists then use it
-            if os.path.isfile('mask-low.fits') and low_imsize==o['bsimsize']:
-                extmask='mask-low.fits'
+            if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
+                extmask='bootstrap-mask-low.fits'
             else:
                 extmask=None
             ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,catcher=catcher)
             make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
             ddf_image('image_full_low_im',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',catcher=catcher)
-            make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=1.8,sizethresh=1500)
-            extmask='mask-low.fits'
+            if o['restart'] and os.path.isfile('full-mask-low.fits'):
+                warn('Full-bw mask exists, not making it')
+            else:
+                report('Making the full-bw extended source mask')
+                make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=1.8,sizethresh=1500,rootname='full')
+            extmask='full-mask-low.fits'
             make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low_im.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',catcher=catcher,rms_factor=2.5)
             external_mask='external_mask_ext-deep.fits'
@@ -463,7 +490,7 @@ if __name__=='__main__':
                 warn('Deep external mask already exists, skipping creation')
             else:
                 report('Make deep external mask')
-                make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='mask-high.fits')
+                make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
         # make mask from the previous run, will use new external mask if it exists
         make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
@@ -511,8 +538,16 @@ if __name__=='__main__':
                 warn('Retrying download or some or all of the catalogue')
                 get_cat(o['method'])
 
-            if not os.path.isfile('facet-offset.txt'):
+            facet_offset_file='facet-offset.txt'
+            if o['restart'] and os.path.isfile(facet_offset_file):
+                warn('Offset file already exists, not running offsets.py')
+            else:
                 run('offsets.py '+' '.join(sys.argv[1:]),log=None)
+
+            last_image_root='image_full_ampphase1m'
+            if o['second_selfcal']:
+                last_image_root='image_full_ampphase2'
+            ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
 
     # we got to the end, write a summary file
     
