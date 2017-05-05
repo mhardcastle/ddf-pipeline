@@ -508,10 +508,11 @@ if __name__=='__main__':
                 download_thread.join()
             # maybe the thread died, check the files are there
             if download_required(o['method']):
-                warn('Re-downloading some or all of the catalogue')
+                warn('Retrying download or some or all of the catalogue')
                 get_cat(o['method'])
 
-            run('offsets.py '+' '.join(sys.argv[1:]),log=None)
+            if not os.path.isfile('facet-offset.txt'):
+                run('offsets.py '+' '.join(sys.argv[1:]),log=None)
 
     # we got to the end, write a summary file
     
