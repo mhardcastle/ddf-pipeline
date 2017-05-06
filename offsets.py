@@ -352,6 +352,10 @@ def merge_cat(rootname,rastr='ra',decstr='dec'):
 
 def do_offsets(o):
     # o is the options file
+
+    if o['mode']!='normal' and  o['mode']!='test':
+        raise NotImplementedError('Offsets called with mode '+o['mode'])
+
     if o['second_selfcal']:
         image_root='image_full_ampphase2'
     else:
