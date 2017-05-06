@@ -120,7 +120,8 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'bootstrap', 'names', list, None, 'Short names for catalogues' ), 
                 ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ),
                 ( 'offsets', 'method', str, None, 'Offset correction method to use. None -- no correction'),
-                ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ) )
+                ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
+                ( 'offsets', 'mode', str, 'normal', 'Mode of operation' ) )
 
 def options(optlist):
 

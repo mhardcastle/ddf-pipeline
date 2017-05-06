@@ -297,7 +297,7 @@ class Offsets(object):
             number=which_poly(ra,dec,self.polys)
             #print 'Direction',pli[number]
             direction=self.pli[number]
-            print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,-self.decr[direction,2]/cellsize
+            print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,self.decr[direction,2]/cellsize
         outfile.close()
 
     def make_astrometry_map(self,outname,factor):
@@ -358,24 +358,34 @@ def do_offsets(o):
         image_root='image_full_ampphase1m'
 
     method=o['method']
-    report('Determining astrometric offsets with method '+method)
+
+    report('Determining astrometric offsets with method '+method+' in mode '+o['mode'])
     report('Merging downloaded catalogues')
     if os.path.isfile(method+'.fits'):
         warn('Merged file exists, reading from disk instead')
         data=Table.read(method+'.fits')
     else:
         kwargs={}
-        if method=='panstarrs':
+        if 'panstarrs' in method:
             kwargs['rastr']='ramean'
             kwargs['decstr']='decmean'
         data=merge_cat(method,**kwargs)
+
+    if o['mode']=='test':
+        image_root+='_shift'
+        method+='-test'
+
     report('Running PyBDSM on LOFAR image, please wait...')
     catfile=image_root+'.offset_cat.fits'
     if os.path.isfile(catfile):
         warn('Catalogue already exists')
     else:
-        pbimage=image_root+'.int.restored.fits'
-        nonpbimage=image_root+'.app.restored.fits'
+        if o['mode']=='test':
+            suffix='facetRestored'
+        else:
+            suffix='restored'
+        pbimage=image_root+'.int.'+suffix+'.fits'
+        nonpbimage=image_root+'.app.'+suffix+'.fits'
         img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
         img.write_catalog(outfile=catfile,catalog_type='srl',format='fits',correct_proj='True')
 
@@ -398,10 +408,11 @@ def do_offsets(o):
     oo.plot_fits(method+'-fits.pdf')
     oo.save_fits()
     oo.plot_offsets()
-    oo.save(method+'-fit_state.pickle')
-    report('Making astrometry error map, please wait')
-    oo.make_astrometry_map('astromap.fits',20)
-    oo.offsets_to_facetshift('facet-offset.txt')
+    if 'test' not in o['mode']:
+        oo.save(method+'-fit_state.pickle')
+        report('Making astrometry error map, please wait')
+        oo.make_astrometry_map('astromap.fits',20)
+        oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
     o=options(sys.argv[1:])
