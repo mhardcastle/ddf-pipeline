@@ -23,8 +23,8 @@ def download_dataset(server,root):
                 url=server+r.attrib['href']
                 while True:
                     try:
-                        response = requests.get(url, stream=True,verify=False)
-                    except requests.exceptions.ConnectionError:
+                        response = requests.get(url, stream=True,verify=False,timeout=300)
+                    except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
                         print 'Connection error! sleeping 60 seconds before retry...'
                         sleep(60)
                     else:

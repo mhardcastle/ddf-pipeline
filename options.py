@@ -118,7 +118,10 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'bootstrap', 'groups', list, None, 'Group numbers for catalogues. At least one match must be found in each group. Optional -- if not present each catalogue is in a different group.' ), 
                 ( 'bootstrap', 'frequencies', list, None, 'Frequencies for catalogues (Hz)' ), 
                 ( 'bootstrap', 'names', list, None, 'Short names for catalogues' ), 
-                ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ) )
+                ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ),
+                ( 'offsets', 'method', str, None, 'Offset correction method to use. None -- no correction'),
+                ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
+                ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ) )
 
 def options(optlist):
 

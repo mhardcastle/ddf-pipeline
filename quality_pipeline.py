@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 # Routine to check quality of LOFAR images
+import matplotlib
+matplotlib.use('Agg')
+
 import os,sys
 import os.path
 from quality_options import options,print_options

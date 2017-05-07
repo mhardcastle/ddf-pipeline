@@ -125,4 +125,5 @@ for c in circles:
 plt.gca().invert_xaxis()
 plt.xlabel('RA')
 plt.ylabel('Dec')
+plt.tight_layout()
 plt.show()
