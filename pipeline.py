@@ -535,7 +535,7 @@ if __name__=='__main__':
                 download_thread.join()
             # maybe the thread died, check the files are there
             if download_required(o['method']):
-                warn('Retrying download or some or all of the catalogue')
+                warn('Retrying download for some or all of the catalogue')
                 get_cat(o['method'])
 
             facet_offset_file='facet-offset.txt'

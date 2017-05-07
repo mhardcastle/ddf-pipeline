@@ -13,7 +13,7 @@ def tile(file):
 def download_required(method):
     ra_factor,pos=tile('image_ampphase1.app.restored.fits')
     for i,p in enumerate(pos):
-        outfile=method+'-'+str(i)+'.vo'
+        outfile=method+'/'+method+'-'+str(i)+'.vo'
         if not os.path.isfile(outfile):
             return True
     return False
@@ -33,10 +33,11 @@ def get_cat(method):
     ra_factor,pos=tile(cwd+'/image_ampphase1.app.restored.fits')
     print 'Downloading catalogues for',len(pos),'sky positions'
     for i,p in enumerate(pos):
-        print p
         outfile=method+'/'+method+'-'+str(i)+'.vo'
         if os.path.isfile(outfile):
+            print 'Catalogue at position',p,'already present'
             continue
+        print 'Downloading at position',p
         if method=='panstarrs':
             while True:
                 try:

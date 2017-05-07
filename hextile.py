@@ -14,14 +14,13 @@ def hextile(image,radius):
     hdu=flatten(hdus)
     maxy,maxx=hdu.data.shape
     w=WCS(hdu.header)
-    print w
+    print 'Hex tiling image'
     # co-ords of bottom left of image
     ra_c,dec_c=w.wcs_pix2world(maxx/2,maxy/2,0)
     ra_factor=np.cos(dec_c*np.pi/180.0)
     ra_ll,dec_ll=w.wcs_pix2world(0,0,0)
     ra_lr,_=w.wcs_pix2world(maxx,0,0)
     _,dec_ul=w.wcs_pix2world(0,maxy,0)
-    print ra_ll,dec_ll
     nha=(ra_ll-ra_lr)*ra_factor/hs
     print 'Number of hexes across',nha
     nhu=(dec_ul-dec_ll)/hs
