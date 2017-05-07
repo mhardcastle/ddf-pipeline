@@ -409,7 +409,7 @@ def do_offsets(o):
     report('Fitting offsets')
     oo.fit_offsets()
     report('Making plots and saving output')
-    oo.plot_fits(method+'-fits.pdf')
+    #oo.plot_fits(method+'-fits.pdf')
     oo.save_fits()
     oo.plot_offsets()
     if 'test' not in o['mode']:

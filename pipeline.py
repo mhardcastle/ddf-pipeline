@@ -498,10 +498,14 @@ if __name__=='__main__':
 
         # before starting the final image, run the download thread if needed
         if o['method'] is not None:
+            report('Checking if optical catalogue download is required')
             from get_cat import get_cat, download_required
             if download_required(o['method']):
                 download_thread = threading.Thread(target=get_cat, args=('panstarrs',))
                 download_thread.start()
+            else:
+                warn('All data present, skipping download')
+                download_thread = None
 
         # final image
         ddf_kw={}
@@ -530,7 +534,7 @@ if __name__=='__main__':
 
         if o['method'] is not None:
             # have we got the catalogue?
-            if download_thread.isAlive():
+            if download_thread is not None and download_thread.isAlive():
                 warn('Waiting for background download thread to finish...')
                 download_thread.join()
             # maybe the thread died, check the files are there
