@@ -37,7 +37,7 @@ def download_dataset(server,root):
                     sleep(60)
                 else:
                     break
-            with open(r.text, 'wb') as out_file:
+            with open(f, 'wb') as out_file:
                 shutil.copyfileobj(response.raw, out_file)
             del response
     return True
