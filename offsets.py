@@ -60,6 +60,11 @@ class Offsets(object):
         self.lofar_table=tf
         for f in range(self.n):
             t=tf[tf['Facet']==f]
+            if len(t)==0:
+                print 'No sources in facet',f
+                self.dral.append(None)
+                self.ddecl.append(None)
+                continue
             minra=np.min(t['RA'])
             maxra=np.max(t['RA'])
             mindec=np.min(t['DEC'])
@@ -184,18 +189,26 @@ class Offsets(object):
         self.dech=[]
         for i in range(self.n):
             print 'Facet',i
-            h,_=np.histogram(self.dral[i],self.bins)
-            self.rah.append(h)
-            p,perr=fitfn(h)
-            print 'RA Offset is ',p[2],'+/-',perr[2]
-            self.rar.append(p)
-            self.rae.append(perr)
-            h,_=np.histogram(self.ddecl[i],self.bins)
-            self.dech.append(h)
-            p,perr=fitfn(h)
-            self.decr.append(p)
-            self.dece.append(perr)
-            print 'DEC Offset is ',p[2],'+/-',perr[2]
+            if self.dral[i] is None:
+                print 'Not fitting, no data'
+                self.rar.append([0,0,0,0])
+                self.rae.append([100,100,100,100])
+                self.decr.append([0,0,0,0])
+                self.dece.append([100,100,100,100])
+                pass
+            else:
+                h,_=np.histogram(self.dral[i],self.bins)
+                self.rah.append(h)
+                p,perr=fitfn(h)
+                print 'RA Offset is ',p[2],'+/-',perr[2]
+                self.rar.append(p)
+                self.rae.append(perr)
+                h,_=np.histogram(self.ddecl[i],self.bins)
+                self.dech.append(h)
+                p,perr=fitfn(h)
+                self.decr.append(p)
+                self.dece.append(perr)
+                print 'DEC Offset is ',p[2],'+/-',perr[2]
         self.rar=np.array(self.rar)
         self.rae=np.array(self.rae)
         self.decr=np.array(self.decr)
@@ -269,17 +282,18 @@ class Offsets(object):
         mddec=[]
         for f in range(self.n):
             t=tf[tf['Facet']==f]
-            mra.append(np.mean(t['RA']))
-            mdec.append(np.mean(t['DEC']))
-            plt.text(mra[-1],mdec[-1],str(f),color='blue')
-            mdra.append(self.rar[f,2])
-            mddec.append(self.decr[f,2])
-            print f,len(t),mra[-1],mdec[-1],mdra[-1],mddec[-1]
+            if len(t)>0:
+                mra.append(np.mean(t['RA']))
+                mdec.append(np.mean(t['DEC']))
+                plt.text(mra[-1],mdec[-1],str(f),color='blue')
+                mdra.append(self.rar[f,2])
+                mddec.append(self.decr[f,2])
+                print f,len(t),mra[-1],mdec[-1],mdra[-1],mddec[-1]
 
-            plt.gca().invert_xaxis()
-            plt.quiver(mra,mdec,mdra,mddec,units = 'xy', angles='xy', scale=1.0,color='red')
-            plt.quiver(np.mean(tf['RA']),np.mean(tf['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
-            plt.text(np.mean(tf['RA']),np.mean(tf['DEC']),'1 arcsec',color='green')
+                plt.gca().invert_xaxis()
+                plt.quiver(mra,mdec,mdra,mddec,units = 'xy', angles='xy', scale=1.0,color='red')
+                plt.quiver(np.mean(tf['RA']),np.mean(tf['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
+                plt.text(np.mean(tf['RA']),np.mean(tf['DEC']),'1 arcsec',color='green')
 
         plt.savefig('SKO-'+self.prefix+'.png')
 
