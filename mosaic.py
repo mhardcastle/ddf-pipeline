@@ -25,6 +25,7 @@ parser.add_argument('--save', dest='save', action='store_true', help='Save inter
 parser.add_argument('--load', dest='load', action='store_true', help='Load existing intermediate images')
 parser.add_argument('--noise', dest='noise', type=float, nargs='+', help='UNSCALED Central noise level for weighting: must match numbers of maps')
 parser.add_argument('--scale', dest='scale', type=float, nargs='+', help='Scale factors by which maps should be multiplied: must match numbers of maps')
+parser.add_argument('--use_shifted', dest='use_shifted', action='store_true', help='Shift images before mosaicing')
 parser.add_argument('--shift', dest='shift', action='store_true', help='Shift images before mosaicing')
 parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
 parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
@@ -45,6 +46,13 @@ if args.exact:
 else:
     reproj=reproject_interp_chunk_2d
 
+if args.use_shifted:
+    intname='image_full_ampphase1m_shift.int.facetRestored.fits'
+    appname='image_full_ampphase1m_shift.app.facetRestored.fits'
+else:
+    intname='image_full_ampphase1m.int.restored.fits'
+    appname='image_full_ampphase1m.app.restored.fits'
+
 threshold=float(args.beamcut)
 hdus=[]
 app=[]
@@ -54,11 +62,11 @@ noise=[]
 name=[]
 for d in args.directories:
     name.append(d.split('/')[-1])
-    hdu=fits.open(d+'/image_full_ampphase1m.int.restored.fits')
+    hdu=fits.open(d+'/'+intname)
     if args.find_noise:
         noise.append(get_rms(hdu))
     hdus.append(flatten(hdu))
-    app.append(flatten(fits.open(d+'/image_full_ampphase1m.app.restored.fits')))
+    app.append(flatten(fits.open(d+'/'+appname)))
 
 if args.find_noise:
     args.noise=noise
@@ -215,3 +223,7 @@ if not(args.no_write):
 
     hdu = fits.PrimaryHDU(header=header,data=isum)
     hdu.writeto('mosaic.fits',clobber=True)
+
+    hdu = fits.PrimaryHDU(header=header,data=wsum)
+    hdu.writeto('mosaic-weights.fits',clobber=True)
+

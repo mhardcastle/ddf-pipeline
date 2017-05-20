@@ -372,6 +372,7 @@ if __name__=='__main__':
     if o['clearcache']:
         # Clear the cache, we don't know where it's been
         clearcache(o['mslist'],o['cache_dir'])
+        clearcache('temp_mslist.txt',o['cache_dir'])
         if o['full_mslist'] is not None:
             clearcache(o['full_mslist'],o['cache_dir'])
 

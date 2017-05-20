@@ -67,7 +67,7 @@ for d in sys.argv[1:]:
         status=''
         secondary_status=''
         job_status=''
-        name,ra,dec=getpos(mss[0])
+        name,ra,dec=getpos(mss[1])
         if os.path.isfile('big-mslist.txt'):
             status='downloaded'
         else:
@@ -95,22 +95,27 @@ for d in sys.argv[1:]:
                 if os.path.isfile('image_'+ft+'.app.restored.fits'):
                     secondary_status = ft
         circles.append((name,ra,dec,s_colours[status],d_colour))
-        print "%-25s %-15s %8.3f %8.3f %-12s %-10s %s" % (d,name,ra,dec,status,job_status,secondary_status)
+        print "%-45s %-15s %8.3f %8.3f %-12s %-10s %s" % (d,name,ra,dec,status,job_status,secondary_status)
         continue
     # else check for image only
-    ims=glob.glob('image_full_ampphase1m.int.restored.fits')
+    ims=glob.glob('image_full_ampphase1m_shift.int.facetRestored.fits')
     if len(ims)>0:
         ra,dec=getposim(ims[0])
         if name is None:
             name=d.split('/')[-1]
-        circles.append((name,ra,dec,'magenta'))
+            name=name.split('_')[0]
+        print "%-45s %-15s %8.3f %8.3f %-12s" % (d,name,ra,dec,'final')
+        circles.append((name,ra,dec,'blue'))
 
 ras=np.array([c[1] for c in circles])
 decs=np.array([c[2] for c in circles])
 rarange=max(ras)-min(ras)
 decrange=max(decs)-min(decs)
-yfigsize=6
-xfigsize=yfigsize*(rarange/decrange)*np.cos(np.mean(decs)*np.pi/180.0)
+yfigsize=1
+xfigsize=(rarange/decrange)*np.cos(np.mean(decs)*np.pi/180.0)
+maxs=max((xfigsize,yfigsize))
+xfigsize*=18/maxs
+yfigsize*=18/maxs
 print xfigsize,yfigsize
 
 plt.figure(figsize=(xfigsize,yfigsize))
