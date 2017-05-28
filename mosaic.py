@@ -216,7 +216,7 @@ if not(args.no_write):
     isum/=wsum
     # mask now contains True where a non-nan region was present in either map
     isum[~mask]=np.nan
-    for ch in ('BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER'):
+    for ch in ('BMAJ', 'BMIN', 'BPA'):
         header[ch]=hdus[0].header[ch]
     header['ORIGIN']='ddf-pipeline-mosaic'
     header['UNITS']='Jy/beam'
