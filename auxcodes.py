@@ -7,6 +7,8 @@ from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
 import signal
+from facet_offsets import region_to_poly
+import pyregion
 
 class bcolors:
     HEADER = '\033[95m'
@@ -151,3 +153,42 @@ def fit_gaussian_histogram(pixelvals,plotting):
     #print 'Sigma is %s'%(x[3]*abs(cellsizes[1]-cellsizes[0]))
     
     return (x[3]*abs(cellsizes[1]-cellsizes[0]))
+
+def get_rms_array(subim,boxsize=1000,niter=20,eps=1e-6,verbose=False):
+    oldrms=1
+    for i in range(niter):
+        rms=np.std(subim)
+        if verbose: print len(subim),rms
+        if np.abs(oldrms-rms)/rms < eps:
+            return rms
+        subim=subim[np.abs(subim)<5*rms]
+        oldrms=rms
+    raise Exception('Failed to converge')
+
+
+def convert_regionfile_to_poly(inregfile):
+    polys,labels=region_to_poly(inregfile)
+    polylist = []
+    for i in range(0,len(polys)):
+        polystring = 'fk5;polygon('
+        for j in range(0,len(polys[i])):
+            polystring += ('%s,%s,'%(polys[i][j][0],polys[i][j][1]))
+        polystring = polystring[:-1]
+        polystring +=(')')
+        polylist.append(polystring)
+    return polylist
+
+def get_rms_map(infilename,ds9region,outfilename):
+
+    polylist = convert_regionfile_to_poly(ds9region)
+    hdu=fits.open(infilename)
+    hduflat = flatten(hdu)
+    map=hdu[0].data
+
+    for ds9region in polylist:
+        r = pyregion.parse(ds9region)
+        manualmask = r.get_mask(hdu=hduflat)
+        rmsval = get_rms_array(hdu[0].data[0][0][np.where(manualmask == True)])
+        hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
+        print 'RMS = %s for %s'%(rmsval,ds9region)
+    hdu.writeto(outfilename,clobber=True)
