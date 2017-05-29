@@ -4,7 +4,6 @@ from astropy.io import fits
 from astropy.table import Table
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 
 def region_to_poly(inreg):
     lines=open(inreg).readlines()
@@ -155,6 +154,7 @@ def label_table(t,regfile):
 
 def do_plot_facet_offsets(t,regfile,savefig=None):
 
+    import matplotlib.pyplot as plt
     polys,labels=region_to_poly(regfile)
     plab=assign_labels_to_poly(polys,labels)
     pli=labels_to_integers(plab)

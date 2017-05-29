@@ -192,3 +192,9 @@ def get_rms_map(infilename,ds9region,outfilename):
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
         print 'RMS = %s for %s'%(rmsval,ds9region)
     hdu.writeto(outfilename,clobber=True)
+
+class dotdict(dict):
+    """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__

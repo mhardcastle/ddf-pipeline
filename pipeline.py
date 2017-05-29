@@ -3,7 +3,7 @@
 # Routine is to use killms/ddf to self-calibrate the data
 import os,sys
 import os.path
-from auxcodes import report,run,find_imagenoise,warn,die,Catcher
+from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict
 from options import options,print_options
 from shutil import copyfile,rmtree
 import glob
@@ -320,12 +320,6 @@ def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
     if uvmin_limit is not None and result<uvmin_limit:
         result=uvmin_limit
     return result
-
-class dotdict(dict):
-    """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
 
 def smooth_solutions(mslist,ddsols,interval,catcher=None):
     outsols=ddsols+'.Smooth'
