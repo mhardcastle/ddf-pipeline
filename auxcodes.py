@@ -180,7 +180,6 @@ def convert_regionfile_to_poly(inregfile):
     polys,labels=region_to_poly(inregfile)
     plab=assign_labels_to_poly(polys,labels)
     pli=labels_to_integers(plab)
-    print pli
     polystringlist = []
     for p in sorted(list(set(pli))):
         polylist = []
