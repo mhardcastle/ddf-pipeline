@@ -159,7 +159,7 @@ def fit_gaussian_histogram(pixelvals,plotting):
 def get_rms_array(subim,size=500000,niter=20,eps=1e-6,verbose=False):
     oldrms=1
     if len(subim)>size:
-        subim=subim[0:size]
+        subim=np.random.choice(subim,size,replace=False)
     for i in range(niter):
         rms=np.std(subim)
         if verbose: print len(subim),rms
