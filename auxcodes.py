@@ -7,7 +7,7 @@ from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
 import signal
-from facet_offsets import region_to_poly
+from facet_offsets import region_to_poly,assign_labels_to_poly,labels_to_integers
 import pyregion
 
 # these are small routines used by more than one part of the pipeline
@@ -156,8 +156,10 @@ def fit_gaussian_histogram(pixelvals,plotting):
     
     return (x[3]*abs(cellsizes[1]-cellsizes[0]))
 
-def get_rms_array(subim,boxsize=1000,niter=20,eps=1e-6,verbose=False):
+def get_rms_array(subim,size=500000,niter=20,eps=1e-6,verbose=False):
     oldrms=1
+    if len(subim)>size:
+        subim=subim[0:size]
     for i in range(niter):
         rms=np.std(subim)
         if verbose: print len(subim),rms
@@ -167,18 +169,30 @@ def get_rms_array(subim,boxsize=1000,niter=20,eps=1e-6,verbose=False):
         oldrms=rms
     raise Exception('Failed to converge')
 
+def polylist_to_string(poly):
+    polystring='polygon('
+    for j in range(0,len(poly)):
+        polystring += ('%s,%s,'%(poly[j][0],poly[j][1]))
+    polystring = polystring[:-1]+')'
+    return polystring
 
 def convert_regionfile_to_poly(inregfile):
     polys,labels=region_to_poly(inregfile)
-    polylist = []
-    for i in range(0,len(polys)):
-        polystring = 'fk5;polygon('
-        for j in range(0,len(polys[i])):
-            polystring += ('%s,%s,'%(polys[i][j][0],polys[i][j][1]))
-        polystring = polystring[:-1]
-        polystring +=(')')
-        polylist.append(polystring)
-    return polylist
+    plab=assign_labels_to_poly(polys,labels)
+    pli=labels_to_integers(plab)
+    print pli
+    polystringlist = []
+    for p in sorted(list(set(pli))):
+        polylist = []
+        for i,poly in enumerate(polys):
+            if pli[i]==p:
+                polylist.append(poly)
+        # now polylist contains all the polygons in this set
+        polystring = 'fk5;'
+        for poly in polylist:
+            polystring += polylist_to_string(poly)+';'
+        polystringlist.append(polystring[:-1])
+    return polystringlist
 
 def get_rms_map(infilename,ds9region,outfilename):
 
@@ -187,12 +201,12 @@ def get_rms_map(infilename,ds9region,outfilename):
     hduflat = flatten(hdu)
     map=hdu[0].data
 
-    for ds9region in polylist:
+    for direction,ds9region in enumerate(polylist):
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
         rmsval = get_rms_array(hdu[0].data[0][0][np.where(manualmask == True)])
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
-        print 'RMS = %s for %s'%(rmsval,ds9region)
+        print 'RMS = %s for direction %i'%(rmsval,direction)
     hdu.writeto(outfilename,clobber=True)
 
 class dotdict(dict):

@@ -2,10 +2,9 @@
 
 ## prerequisites
 
-DDFacet and KillMS, of course: astropy; pyrap
+DDFacet and KillMS, of course: astropy; pyrap; pyregion
 
-emcee for bootstrap, and
-reproject for the mosaicing script.
+emcee for bootstrap, and reproject for the mosaicing script.
 
 The bootstrap code also expects the script directory (this directory)
 to be on the user's PATH.
