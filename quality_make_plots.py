@@ -7,6 +7,7 @@ from matplotlib.ticker import NullFormatter
 import numpy.random as npr
 from astropy.table import Table
 from astropy.io import fits
+from auxcodes import sepn
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -20,17 +21,6 @@ rad2arcmin=1.0/arcmin2rad
 rad2arcsec=1.0/arcsec2rad
 steradians2degsquared = (180.0/np.pi)**2.0
 degsquared2steradians = 1.0/steradians2degsquared
-
-def sepn(r1,d1,r2,d2):
-    """
-    Calculate the separation between 2 sources, RA and Dec must be
-    given in radians. Returns the separation in radians
-    """
-    # NB slalib sla_dsep does this
-    # www.starlink.rl.ac.uk/star/docs/sun67.htx/node72.html
-    cos_sepn=np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(r1-r2)
-    sepn = np.arccos(cos_sepn)
-    return sepn
 
 def bootstrap(data, num_samples, statistic, alpha):
     """Returns bootstrap estimate of 100.0*(1-alpha) CI for statistic."""

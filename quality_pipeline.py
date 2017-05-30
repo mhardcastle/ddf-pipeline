@@ -13,7 +13,7 @@ try:
     import bdsf as bdsm
 except ImportError:
     import lofar.bdsm as bdsm
-from auxcodes import report,run,get_rms,warn,die
+from auxcodes import report,run,get_rms,warn,die,sepn
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
@@ -39,17 +39,6 @@ def logfilename(s,options=None):
         return options['logging']+'/'+s 
     else:
         return None
-
-def sepn(r1,d1,r2,d2):
-    """
-    Calculate the separation between 2 sources, RA and Dec must be
-    given in radians. Returns the separation in radians
-    """
-    # NB slalib sla_dsep does this
-    # www.starlink.rl.ac.uk/star/docs/sun67.htx/node72.html
-    cos_sepn=np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(r1-r2)
-    sepn = np.arccos(cos_sepn)
-    return sepn
 
 def filter_catalog(singlecat,matchedcat,fitsimage,outname,auxcatname,options=None):
     if options is None:

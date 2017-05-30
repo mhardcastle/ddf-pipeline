@@ -7,6 +7,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from auxcodes import getpos,getposim
 csize=2.5
 import subprocess
 
@@ -27,31 +28,11 @@ def qstat():
                 jobs[jobname[5:]]=status
     return jobs
 
-def getpos(ms):
-    t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
-    name=t[0]['LOFAR_TARGET']
-
-    t = pt.table(ms+'/FIELD', readonly=True, ack=False)
-
-    direction = t[0]['PHASE_DIR']
-    ra, dec = direction[0]
-
-    if (ra<0):
-        ra+=2*np.pi;
-
-    return name[0],ra*(180/np.pi),dec*(180/np.pi)
-
 def plotcircle(name,ra,dec,color,pcolor='black'):
     circle1=plt.Circle((ra,dec),csize,color=color,alpha=0.2)
     plt.gcf().gca().add_artist(circle1)
     plt.scatter(ra,dec,color=pcolor)
     plt.text(ra,dec,name)
-
-def getposim(image):
-    hdus=fits.open(image)
-    ra=hdus[0].header['CRVAL1']
-    dec=hdus[0].header['CRVAL2']
-    return ra,dec
 
 jobs=qstat()
 circles=[]

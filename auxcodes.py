@@ -10,6 +10,8 @@ import signal
 from facet_offsets import region_to_poly
 import pyregion
 
+# these are small routines used by more than one part of the pipeline
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -198,3 +200,35 @@ class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+def sepn(r1,d1,r2,d2):
+    """
+    Calculate the separation between 2 sources, RA and Dec must be
+    given in radians. Returns the separation in radians
+    """
+    # NB slalib sla_dsep does this
+    # www.starlink.rl.ac.uk/star/docs/sun67.htx/node72.html
+    cos_sepn=np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(r1-r2)
+    sepn = np.arccos(cos_sepn)
+    return sepn
+
+def getpos(ms):
+    import pyrap.tables as pt
+    t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
+    name=t[0]['LOFAR_TARGET']
+
+    t = pt.table(ms+'/FIELD', readonly=True, ack=False)
+
+    direction = t[0]['PHASE_DIR']
+    ra, dec = direction[0]
+
+    if (ra<0):
+        ra+=2*np.pi;
+
+    return name[0],ra*(180/np.pi),dec*(180/np.pi)
+
+def getposim(image):
+    hdus=fits.open(image)
+    ra=hdus[0].header['CRVAL1']
+    dec=hdus[0].header['CRVAL2']
+    return ra,dec
