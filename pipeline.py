@@ -42,6 +42,8 @@ def logfilename(s,options=None):
 
 def check_imaging_weight(mslist_name):
 
+    # returns a boolean that says whether it did something
+    result=False
     report('Checking for IMAGING_WEIGHT in input MSS')
     mslist=[s.strip() for s in open(mslist_name).readlines()]
     for ms in mslist:
@@ -55,6 +57,8 @@ def check_imaging_weight(mslist_name):
             warn('Table '+ms+' already has imaging weights')
         else:
             pt.addImagingColumns(ms)
+            result=True
+    return result
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
     if catcher: catcher.check()
@@ -363,15 +367,20 @@ if __name__=='__main__':
 
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
-    if o['clearcache']:
-        # Clear the cache, we don't know where it's been
+
+    # Check imaging weights -- needed before DDF
+    new=check_imaging_weight(o['mslist'])
+
+    if o['clearcache'] or new:
+        # Clear the cache, we don't know where it's been. If this is a
+        # completely new dataset it is always safe (and required) to
+        # clear the cache -- solves problems where the cache is not
+        # stored per dataset
         clearcache(o['mslist'],o['cache_dir'])
         clearcache('temp_mslist.txt',o['cache_dir'])
         if o['full_mslist'] is not None:
             clearcache(o['full_mslist'],o['cache_dir'])
 
-    # Check imaging weights -- needed before DDF
-    check_imaging_weight(o['mslist'])
 
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
     external_mask='external_mask.fits'
