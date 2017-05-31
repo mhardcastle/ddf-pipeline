@@ -21,7 +21,7 @@ if __name__=='__main__':
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directories to search for pipeline output')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
-    
+    parset.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
     parser.add_argument('pointingfile', type=str, help='LoTSS pointing progress file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     
@@ -67,7 +67,8 @@ if __name__=='__main__':
                 break
         else:
             print 'Pointing',p,'not found'
-            raise RuntimeError('Failed to find a required pointing')
+            if not(args.no_check):
+                raise RuntimeError('Failed to find a required pointing')
 
     print 'Mosaicing using directories', mosaicdirs
 
