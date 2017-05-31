@@ -78,6 +78,7 @@ if __name__=='__main__':
     mos_args.directories=mosaicdirs
     
     # construct template FITS header
+    restfrq=143.65e6
     header=fits.Header()
     size=maxsep/2.0
     cellsize=1.5/3600.0
@@ -106,7 +107,7 @@ if __name__=='__main__':
     header['BMIN']=4.0*cellsize
     header['BPA']=0
     header['TELESCOP']='LOFAR'
-    header['RESTFRQ']=143.65e6
+    header['RESTFRQ']=restfrq
     header['OBSERVER']='LoTSS'
     mos_args.header=header
     print 'Calling make_mosaic'
@@ -128,7 +129,7 @@ if __name__=='__main__':
     print 'Now running PyBDSF to extract sources'
     
     catprefix='mosaic'
-    img = bdsm.process_image('mosaic-blanked.fits', thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
+    img = bdsm.process_image('mosaic-blanked.fits', thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None,frequency=restfrq)
     img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
     img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
     img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
