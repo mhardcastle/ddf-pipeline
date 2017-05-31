@@ -11,6 +11,10 @@ from mosaic import make_mosaic
 from astropy.io import fits
 import numpy as np
 import pickle
+try:
+    import bdsf as bdsm
+except ImportError:
+    import lofar.bdsm as bdsm
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic LoTSS pointings')
@@ -110,3 +114,23 @@ if __name__=='__main__':
         pickle.dump(header,f)
 
     make_mosaic(mos_args)
+
+    print 'Blanking the mosaic...'
+
+    hdu=fits.open('mosaic.fits')
+    x=np.array(range(0,2*himsize))
+    xv, yv = np.meshgrid(x, x)
+    xv-=himsize
+    yv-=himsize
+    hdu[0].data[np.sqrt(xv**2.0+yv**2.0)>himsize]=np.nan
+    hdu.writeto('mosaic-blanked.fits', clobber=True)
+
+    print 'Now running PyBDSF to extract sources'
+    
+    catprefix='mosaic'
+    img = bdsm.process_image('mosaic-blanked.fits', thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
+    img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
+    img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
+    img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
+    img.export_image(outfile=catprefix +'.pybdsmmask.fits',img_type='island_mask',img_format='fits',clobber=True)
+    img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')

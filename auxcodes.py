@@ -156,7 +156,7 @@ def fit_gaussian_histogram(pixelvals,plotting):
     
     return (x[3]*abs(cellsizes[1]-cellsizes[0]))
 
-def get_rms_array(subim,size=500000,niter=20,eps=1e-6,verbose=False):
+def get_rms_array(subim,size=500000,niter=25,eps=1e-6,verbose=False):
     oldrms=1
     if len(subim)>size:
         subim=np.random.choice(subim,size,replace=False)
@@ -167,7 +167,8 @@ def get_rms_array(subim,size=500000,niter=20,eps=1e-6,verbose=False):
             return rms
         subim=subim[np.abs(subim)<5*rms]
         oldrms=rms
-    raise Exception('Failed to converge')
+    print 'Warning -- failed to converge!',rms,oldrms
+    return rms
 
 def polylist_to_string(poly):
     polystring='polygon('
