@@ -28,7 +28,7 @@ def merge_mask(in1,in2,outfile):
     hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
-def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,rootname=None):
+def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
 
     if rootname is None:
@@ -47,10 +47,11 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,rootname
     label=np.unique(labels)
     counts=np.bincount(labels.flatten())
 
-    big=(counts>sizethresh)
+    big=(counts>sizethresh) & (counts<maxsize)
     big_regions=label[big]
 
     print 'Found',len(big_regions)-1,'large islands'
+    if verbose: print counts[big]
 
     mask=np.zeros_like(det,dtype=int)
     for l in big_regions:
@@ -115,4 +116,4 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,rootname
 
 if __name__=='__main__':
     import sys
-    make_extended_mask(sys.argv[1],sys.argv[2],sizethresh=int(sys.argv[3]),rmsthresh=float(sys.argv[4]))
+    make_extended_mask(sys.argv[1],sys.argv[2],sizethresh=int(sys.argv[3]),rmsthresh=float(sys.argv[4]),rootname='test',verbose=True)
