@@ -21,7 +21,7 @@ if __name__=='__main__':
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directories to search for pipeline output')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
-    parset.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
+    parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
     parser.add_argument('pointingfile', type=str, help='LoTSS pointing progress file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     
@@ -81,7 +81,7 @@ if __name__=='__main__':
     # construct template FITS header
     restfrq=143.65e6
     header=fits.Header()
-    size=maxsep/2.0
+    size=(maxsep/2.0)*1.1
     cellsize=1.5/3600.0
     himsize=int(size/cellsize)
     header['SIMPLE']=True

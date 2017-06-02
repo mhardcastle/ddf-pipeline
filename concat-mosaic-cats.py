@@ -6,6 +6,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from auxcodes import sepn
 import argparse
+import time
 
 # Code to concatenate catalogs made from mosaics, remove repeated sources and to manipulate catalog entries to the final catalog format.
 
@@ -41,7 +42,7 @@ def concat_catalogs(directories):
     pointingras = np.array([])
     pointingdecs = np.array([])
     for mosaiccat in mosaiccats:
-        pointing = mosaiccat.replace('.cat.fits','.app.facetRestored.fits')
+        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
         f = pyfits.open(pointing)
         pointingras = np.append(pointingras,f[0].header['CRVAL1']*deg2rad)
         pointingdecs = np.append(pointingdecs,f[0].header['CRVAL2']*deg2rad)
@@ -74,16 +75,20 @@ def concat_catalogs(directories):
     for mosaiccat in mosaiccats:
 
         cat = pyfits.open(mosaiccat)
-        pointing = mosaiccat.replace('.cat.fits','.app.facetRestored.fits')
+        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
         f = pyfits.open(pointing)
         rapointing = f[0].header['CRVAL1']*deg2rad
         decpointing = f[0].header['CRVAL2']*deg2rad
         f.close()
 
         numsources = len(cat[1].data['RA'])
+
+        closepointingindex = np.where(sepn(pointingras,pointingdecs,rapointing,decpointing)*rad2deg < 5.0)
+        print closepointingindex
         keepindices = []
+        time1 = time.time()
         for i in range(0,numsources):
-            allsep = sepn(pointingras,pointingdecs,cat[1].data['RA'][i]*deg2rad,cat[1].data['DEC'][i]*deg2rad)
+            allsep = sepn(pointingras[closepointingindex],pointingdecs[closepointingindex],cat[1].data['RA'][i]*deg2rad,cat[1].data['DEC'][i]*deg2rad)
             centsep =  sepn(rapointing,decpointing,cat[1].data['RA'][i]*deg2rad,cat[1].data['DEC'][i]*deg2rad)
             if min(allsep) != centsep:
                 continue
@@ -108,7 +113,7 @@ def concat_catalogs(directories):
             else:
                 sourceresolved = np.append(sourceresolved,'U')
 
-        print 'Keeping %s sources for %s'%(len(keepindices),pointing)
+        print 'Keeping %s sources for %s -- took %s'%(len(keepindices),pointing,time.time()-time1)
 
         sourcera = np.append(sourcera,cat[1].data[keepindices]['RA'])
         e_sourcera = np.append(e_sourcera,cat[1].data[keepindices]['E_RA'])
