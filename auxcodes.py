@@ -224,6 +224,8 @@ def sepn(r1,d1,r2,d2):
     # www.starlink.rl.ac.uk/star/docs/sun67.htx/node72.html
     cos_sepn=np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(r1-r2)
     sepn = np.arccos(cos_sepn)
+    # Catch when r1==r2 and d1==d2 and convert to 0
+    sepn = np.nan_to_num(sepn)
     return sepn
 
 def getpos(ms):
