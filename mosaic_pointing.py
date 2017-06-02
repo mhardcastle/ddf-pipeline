@@ -81,7 +81,7 @@ if __name__=='__main__':
     # construct template FITS header
     restfrq=143.65e6
     header=fits.Header()
-    size=maxsep/2.0
+    size=(maxsep/2.0)*1.1
     cellsize=1.5/3600.0
     himsize=int(size/cellsize)
     header['SIMPLE']=True
