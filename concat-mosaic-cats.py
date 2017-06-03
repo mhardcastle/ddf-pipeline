@@ -84,7 +84,7 @@ def concat_catalogs(directories):
         numsources = len(cat[1].data['RA'])
 
         closepointingindex = np.where(sepn(pointingras,pointingdecs,rapointing,decpointing)*rad2deg < 5.0)
-        print closepointingindex
+
         keepindices = []
         time1 = time.time()
         for i in range(0,numsources):
@@ -140,7 +140,6 @@ def concat_catalogs(directories):
         rms_noise = np.append(rms_noise,cat[1].data[keepindices]['Isl_rms'])
         stype = np.append(stype,cat[1].data[keepindices]['S_Code'])
 
-
     col1 = pyfits.Column(name='Source_id',format='24A',unit='',array=sourceids)
     col2 = pyfits.Column(name='RA',format='f8',unit='deg',array=sourcera)
     col3 = pyfits.Column(name='E_RA',format='f8',unit='arcsec',array=e_sourcera*deg2arcsec)
@@ -168,6 +167,13 @@ def concat_catalogs(directories):
     cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17])
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
+    regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.reg','w')
+    regionfile.write('# Region file format: DS9 version 4.0\n')
+    regionfile.write('global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source\n')
+    regionfile.write('fk5\n')
+    for i in range(0,len(sourceids)):
+	regionfile.write('circle(%s,%s,5.0")\n'%(sourcera[i],sourcedec[i]))
+    regionfile.close()
 
     prihdr = pyfits.Header()
     prihdr['NAME'] = 'LOFAR_HBA_T1_DR1_catalog_v0.1'
