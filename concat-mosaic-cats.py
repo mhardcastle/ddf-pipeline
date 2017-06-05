@@ -156,15 +156,24 @@ def concat_catalogs(directories):
     col11 = pyfits.Column(name='Total_flux',format='f8',unit='mJy',array=sint*1000.0)
     col12 = pyfits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
     col13 = pyfits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
+
+    col14 =  pyfits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
+    col15 =  pyfits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
     
-    col14 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
+    col16 =  pyfits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
+    col17 =  pyfits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
+
+    col18 =  pyfits.Column(name='PA',format='f8',unit='deg',array=pa)
+    col19 =  pyfits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
+
+    col20 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
     
-    col15 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
-    col16 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
+    col21 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
+    col22 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
     
-    col17 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
+    col23 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
     
-    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17])
+    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23])
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
     regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.reg','w')
