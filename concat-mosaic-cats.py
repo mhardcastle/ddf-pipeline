@@ -159,6 +159,13 @@ def concat_catalogs(directories):
     col12 = pyfits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
     col13 = pyfits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
 
+    maj[np.where(sourceresolved=='U')] = np.nan
+    e_maj[np.where(sourceresolved=='U')] = np.nan
+    smin[np.where(sourceresolved=='U')] = np.nan
+    e_smin[np.where(sourceresolved=='U')] = np.nan
+    pa[np.where(sourceresolved=='U')] = np.nan
+    e_pa[np.where(sourceresolved=='U')] = np.nan
+
     col14 =  pyfits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
     col15 =  pyfits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
     
@@ -183,7 +190,10 @@ def concat_catalogs(directories):
     regionfile.write('global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source\n')
     regionfile.write('fk5\n')
     for i in range(0,len(sourceids)):
-	regionfile.write('circle(%s,%s,5.0")\n'%(sourcera[i],sourcedec[i]))
+	if not np.isnan(maj[i]):
+		regionfile.write('ellipse(%s,%s,%s,%s,%s)\n'%(sourcera[i],sourcedec[i],maj[i],smin[i],pa[i]+90))
+	else:
+		regionfile.write('box(%s,%s,5.0",5.0",0.0)\n'%(sourcera[i],sourcedec[i]))
     regionfile.close()
 
     prihdr = pyfits.Header()
