@@ -14,7 +14,9 @@ import time
 # -- Need to finalise the column choices
 # -- We probably want to check the masks for each image use those mask islands to determine which mosaic to select the source from as perhaps there  are very extneded sources approximately midway between pointings
 # -- We probably want an entry in the catalog to say if the source was in mask used for the final deconvolution
-
+# -- Needs speeding up -- each pointing separately to parallise
+# -- update the errors that are put on the RA and DEC
+# -- update the source extension definition
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
