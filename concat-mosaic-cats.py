@@ -97,9 +97,9 @@ def concat_catalogs(directories):
             else:
                 keepindices.append(i)
 
-            rah,ram,ras = SkyCoord(ra=0.5*u.rad,dec=0.3*u.rad,frame='icrs').ra.hms
-            decd,decm,decs = SkyCoord(ra=0.5*u.rad,dec=0.3*u.rad,frame='icrs').dec.dms
-           
+            rah,ram,ras = SkyCoord(ra=cat[1].data['RA'][i]*deg2rad*u.rad,dec=cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs').ra.hms
+            decd,decm,decs = SkyCoord(ra=cat[1].data['RA'][i]*deg2rad*u.rad,dec=cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs').dec.dms
+
             ras = np.round(ras,1)
             decs = np.round(decs,1)
                 
@@ -110,7 +110,8 @@ def concat_catalogs(directories):
             snr  = cat[1].data['Peak_flux'][i]/cat[1].data['Isl_rms'][i]
 
             # Some equation to figure out if the source is resolved -- leave these dummy values for now.
-            if fluxratio > (1.50341355 + 1.78467767/(snr**0.78385826)):
+            if fluxratio > (1.483 + 1000.4/(snr**3.94)):
+            #if fluxratio > (1.50341355 + 1.78467767/(snr**0.78385826)):
                 sourceresolved = np.append(sourceresolved,'R')
             else:
                 sourceresolved = np.append(sourceresolved,'U')
@@ -159,12 +160,12 @@ def concat_catalogs(directories):
     col12 = pyfits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
     col13 = pyfits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
 
-    maj[np.where(sourceresolved=='U')] = np.nan
-    e_maj[np.where(sourceresolved=='U')] = np.nan
-    smin[np.where(sourceresolved=='U')] = np.nan
-    e_smin[np.where(sourceresolved=='U')] = np.nan
-    pa[np.where(sourceresolved=='U')] = np.nan
-    e_pa[np.where(sourceresolved=='U')] = np.nan
+    #maj[np.where(sourceresolved=='U')] = np.nan
+    #e_maj[np.where(sourceresolved=='U')] = np.nan
+    #smin[np.where(sourceresolved=='U')] = np.nan
+    #e_smin[np.where(sourceresolved=='U')] = np.nan
+    #pa[np.where(sourceresolved=='U')] = np.nan
+    #e_pa[np.where(sourceresolved=='U')] = np.nan
 
     col14 =  pyfits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
     col15 =  pyfits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
@@ -175,14 +176,14 @@ def concat_catalogs(directories):
     col18 =  pyfits.Column(name='PA',format='f8',unit='deg',array=pa)
     col19 =  pyfits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
 
-    col20 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
+    #col20 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
     
-    col21 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
-    col22 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
+    col20 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
+    col21 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
     
-    col23 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
+    col22 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
     
-    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23])
+    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22])#,col23])
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
     regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.reg','w')
