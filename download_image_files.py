@@ -4,9 +4,13 @@
 import requests
 from astropy.io import fits
 from astropy.table import Table
+import astropy.coordinates as coord
+import astropy.units as u
+from astroquery.ibe import Ibe
 import shutil
 import os.path
 import sys
+import re
 
 def download_file(url,outname):
     if os.path.isfile(outname):
@@ -16,6 +20,8 @@ def download_file(url,outname):
         while True:
             try:
                 response = requests.get(url, stream=True,verify=False)
+                if response.status_code!=200:
+                    print 'Warning, HTML status code',response.status_code
             except requests.exceptions.ConnectionError:
                 print 'Connection error! sleeping 60 seconds before retry...'
                 sleep(60)
@@ -38,10 +44,47 @@ def get_panstarrs(ra,dec,psband):
             downloads.append(bits[8])
     return downloads
 
+def get_wise(ra,dec,band):
+    mission='wise'
+    dataset='allwise'
+    table='p3am_cdd'
+    results=Ibe.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'),mission=mission,dataset=dataset,table=table)
+    url = 'http://irsa.ipac.caltech.edu/ibe/data/'+mission+'/'+dataset+'/'+table+'/'
+    params = { 'coadd_id': results[results['band']==band]['coadd_id'][0],
+           'band': band }
+    params['coaddgrp'] = params['coadd_id'][:2]
+    params['coadd_ra'] = params['coadd_id'][:4]
+    path = str.format('{coaddgrp:s}/{coadd_ra:s}/{coadd_id:s}/{coadd_id:s}-w{band:1d}-int-3.fits',**params)
+    outname=path.split('/')[-1]
+    download_file(url+path,outname)
+    return outname
+
+def get_first(ra,dec):
+    url="http://archive.stsci.edu/"
+    page=requests.get(url+"vlafirst/search.php?RA=%f&DEC=%f&Radius=30.0&action=Search" % (ra,dec),verify=False)
+    print page.status_code
+    lines=page.text.split('\n')
+    path=None
+    for l in lines:
+        if 'href="/pub' in l:
+            bits=l.split()
+            for b in bits:
+                m=re.search('href=\"(.*)\"',b)
+                if m:
+                  path=m.group(1)
+                  break
+    if path:
+        outname=path.split('/')[-1]
+        download_file(url+path,outname)
+        return outname
+    else:
+        return None
+
 if __name__=='__main__':
     outfile=open('panstarrs-list.txt','w')
     t=Table.read(sys.argv[1])
     for r in t:
         psnames=get_panstarrs(r['RA'],r['DEC'],'i')
-        print >>outfile,r['Source_id'],psnames[0]
+        wisename=get_wise(r['RA'],r['DEC'],1)
+        print >>outfile,r['Source_id'],psnames[0],wisename
     outfile.close()
