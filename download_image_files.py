@@ -11,6 +11,8 @@ import shutil
 import os.path
 import sys
 import re
+import numpy as np
+from lxml import html
 
 def download_file(url,outname):
     if os.path.isfile(outname):
@@ -61,30 +63,31 @@ def get_wise(ra,dec,band):
 
 def get_first(ra,dec):
     url="http://archive.stsci.edu/"
-    page=requests.get(url+"vlafirst/search.php?RA=%f&DEC=%f&Radius=30.0&action=Search" % (ra,dec),verify=False)
+    page=requests.get(url+"vlafirst/search.php?RA=%.7f&DEC=%.6f&Radius=30.0&action=Search" % (ra,dec),verify=False)
     print page.status_code
-    lines=page.text.split('\n')
-    path=None
-    for l in lines:
-        if 'href="/pub' in l:
-            bits=l.split()
-            for b in bits:
-                m=re.search('href=\"(.*)\"',b)
-                if m:
-                  path=m.group(1)
-                  break
-    if path:
-        outname=path.split('/')[-1]
-        download_file(url+path,outname)
-        return outname
-    else:
-        return None
+
+    tree=html.fromstring(page.text)
+    table=tree.xpath('//tbody')
+    links=[]
+    dists=[]
+    for row in table[0].getchildren():
+        td=row.getchildren()
+        links.append(td[0].getchildren()[0].attrib['href'])
+        dists.append(float(td[8].text))
+
+    index=np.argmin(dists)
+    path=links[index]
+   
+    outname=path.split('/')[-1]
+    download_file(url+path,outname)
+    return outname
 
 if __name__=='__main__':
-    outfile=open('panstarrs-list.txt','w')
     t=Table.read(sys.argv[1])
+    outfile=open(sys.argv[1].replace('.fits','-list.txt'),'w')
     for r in t:
         psnames=get_panstarrs(r['RA'],r['DEC'],'i')
         wisename=get_wise(r['RA'],r['DEC'],1)
-        print >>outfile,r['Source_id'],psnames[0],wisename
+        firstname=get_first(r['RA'],r['DEC'])
+        print >>outfile,r['Source_id'],psnames[0],wisename,firstname
     outfile.close()
