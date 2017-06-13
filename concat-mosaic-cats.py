@@ -11,6 +11,7 @@ import time
 # Code to concatenate catalogs made from mosaics, remove repeated sources and to manipulate catalog entries to the final catalog format.
 
 ## To do
+# -- Deal with Gaussian catalogues too
 # -- Need to finalise the column choices
 # -- We probably want to check the masks for each image use those mask islands to determine which mosaic to select the source from as perhaps there  are very extneded sources approximately midway between pointings
 # -- We probably want an entry in the catalog to say if the source was in mask used for the final deconvolution
@@ -34,9 +35,13 @@ degsquared2steradians = 1.0/steradians2degsquared
 def concat_catalogs(directories):
 
     directories = args.directories
+    cattype = args.cattype
     mosaiccats = []
     for directory in directories:
-        dircats = glob.glob('%s/*cat.fits'%directory)
+	if cattype == 'srl':
+	        dircats = glob.glob('%s/*cat.fits'%directory)
+	if cattype == 'gaus':
+		dircats = glob.glob('%s/*mosaic-blanked.pybdsm.gaul.FITS'%directory)
         for mosaiccat in dircats:
             mosaiccats.append(mosaiccat)
 
@@ -44,7 +49,10 @@ def concat_catalogs(directories):
     pointingras = np.array([])
     pointingdecs = np.array([])
     for mosaiccat in mosaiccats:
-        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
+	if cattype == 'srl':
+	        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
+	if cattype == 'gaus':
+		pointing = mosaiccat.replace('-blanked.pybdsm.gaul.FITS','-blanked.fits')
         f = pyfits.open(pointing)
         pointingras = np.append(pointingras,f[0].header['CRVAL1']*deg2rad)
         pointingdecs = np.append(pointingdecs,f[0].header['CRVAL2']*deg2rad)
@@ -73,11 +81,17 @@ def concat_catalogs(directories):
     rms_noise = np.array([])
     stype = np.array([])
     mosaic_identifier  = np.array([])
+    gausid = np.array([])
+    islid = np.array([])
+    sourcenum = np.array([])
 
     for mosaiccat in mosaiccats:
 
         cat = pyfits.open(mosaiccat)
-        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
+	if cattype == 'srl':
+	        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
+	if cattype == 'gaus':
+		pointing = mosaiccat.replace('-blanked.pybdsm.gaul.FITS','-blanked.fits')
         f = pyfits.open(pointing)
         rapointing = f[0].header['CRVAL1']*deg2rad
         decpointing = f[0].header['CRVAL2']*deg2rad
@@ -97,13 +111,10 @@ def concat_catalogs(directories):
             else:
                 keepindices.append(i)
 
-            rah,ram,ras = SkyCoord(ra=cat[1].data['RA'][i]*deg2rad*u.rad,dec=cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs').ra.hms
-            decd,decm,decs = SkyCoord(ra=cat[1].data['RA'][i]*deg2rad*u.rad,dec=cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs').dec.dms
+	    sc=SkyCoord(cat[1].data['RA'][i]*deg2rad*u.rad,cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs')
+            s=sc.to_string(style='hmsdms',sep='',precision=2)
+            identity = str('ILTJ'+s).replace(' ','')[:-1]
 
-            ras = np.round(ras,1)
-            decs = np.round(decs,1)
-                
-            identity = 'ILTJ%s%s%s+%s%s%s'%(rah,ram,ras,decd,decm,decs)
             sourceids = np.append(sourceids,identity)
             mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-2])
             fluxratio = cat[1].data['Total_flux'][i]/cat[1].data['Peak_flux'][i]
@@ -143,7 +154,12 @@ def concat_catalogs(directories):
         rms_noise = np.append(rms_noise,cat[1].data[keepindices]['Isl_rms'])
         stype = np.append(stype,cat[1].data[keepindices]['S_Code'])
 
-    col1 = pyfits.Column(name='Source_id',format='24A',unit='',array=sourceids)
+	if cattype == 'gaus':
+	        gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
+	        islid = np.append(islid,cat[1].data[keepindices]['Isl_id'])
+        	sourcenum = np.append(sourcenum,cat[1].data[keepindices]['Source_id'])
+
+    col1 = pyfits.Column(name='Source_Name',format='24A',unit='',array=sourceids)
     col2 = pyfits.Column(name='RA',format='f8',unit='deg',array=sourcera)
     col3 = pyfits.Column(name='E_RA',format='f8',unit='arcsec',array=e_sourcera*deg2arcsec)
     col4 = pyfits.Column(name='E_RA_tot',format='f8',unit='arcsec',array=e_sourcera_tot*deg2arcsec)
@@ -182,11 +198,23 @@ def concat_catalogs(directories):
     col21 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
     
     col22 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
-    
-    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22])#,col23])
+
+    if cattype == 'gaus':
+	    col23 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
+	    col24 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
+	    col25 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
+
+
+    if cattype == 'srl':    
+	    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22])#,col23])
+    if cattype == 'gaus':
+	    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25])
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
-    regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.reg','w')
+    if cattype == 'gaus':
+	    regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.gaus.reg','w')
+    if cattype == 'srl':
+	    regionfile = open('LOFAR_HBA_T1_DR1_catalog_v0.1.reg','w')
     regionfile.write('# Region file format: DS9 version 4.0\n')
     regionfile.write('global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source\n')
     regionfile.write('fk5\n')
@@ -201,14 +229,17 @@ def concat_catalogs(directories):
     prihdr['NAME'] = 'LOFAR_HBA_T1_DR1_catalog_v0.1'
     prihdu = pyfits.PrimaryHDU(header=prihdr)
     tbhdulist = pyfits.HDUList([prihdu, tbhdu])
-    tbhdulist.writeto('LOFAR_HBA_T1_DR1_catalog_v0.1.fits')
+    if cattype == 'srl':
+	    tbhdulist.writeto('LOFAR_HBA_T1_DR1_catalog_v0.1.fits')
+    if cattype == 'gaus':
+	    tbhdulist.writeto('LOFAR_HBA_T1_DR1_catalog_v0.1.gaus.fits')
 
     return
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Concatenate ddf-pipeline mosaic directories')
     parser.add_argument('--directories', metavar='D', nargs='+',help='directory name')
-
+    parser.add_argument('--type', dest='cattype', type=str, help='Catalogue type (gaus or srl)')
     args = parser.parse_args()
     concat_catalogs(args)
 
