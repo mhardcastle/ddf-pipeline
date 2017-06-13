@@ -11,12 +11,11 @@ import time
 # Code to concatenate catalogs made from mosaics, remove repeated sources and to manipulate catalog entries to the final catalog format.
 
 ## To do
-# -- Deal with Gaussian catalogues too
 # -- Need to finalise the column choices
-# -- We probably want to check the masks for each image use those mask islands to determine which mosaic to select the source from as perhaps there  are very extneded sources approximately midway between pointings
+# -- We probably want to check the masks for each image use those mask islands to determine which mosaic to select the source from as perhaps there  are very extneded sources approximately midway between pointings (especially for gaussian components list)
 # -- We probably want an entry in the catalog to say if the source was in mask used for the final deconvolution
-# -- Needs speeding up -- each pointing separately to parallise
-# -- update the errors that are put on the RA and DEC
+# -- Needs speeding up -- each pointing separately
+# -- update the errors that are put on the RA and DEC (could use astrometry error maps?)
 # -- update the source extension definition
 
 #Define various angle conversion factors
