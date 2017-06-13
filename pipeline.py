@@ -296,7 +296,10 @@ def rmtglob(path):
 
 def clearcache(mslist,cachedir):
     report('Clearing cache for '+mslist)
-    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    if os.path.isfile(mslist):
+        filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    else:
+        filenames=[]
     if cachedir is None:
         cachedir='.'
     try:

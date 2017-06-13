@@ -4,9 +4,15 @@
 import requests
 from astropy.io import fits
 from astropy.table import Table
+import astropy.coordinates as coord
+import astropy.units as u
+from astroquery.ibe import Ibe
 import shutil
 import os.path
 import sys
+import re
+import numpy as np
+from lxml import html
 
 def download_file(url,outname):
     if os.path.isfile(outname):
@@ -16,6 +22,8 @@ def download_file(url,outname):
         while True:
             try:
                 response = requests.get(url, stream=True,verify=False)
+                if response.status_code!=200:
+                    print 'Warning, HTML status code',response.status_code
             except requests.exceptions.ConnectionError:
                 print 'Connection error! sleeping 60 seconds before retry...'
                 sleep(60)
@@ -38,10 +46,48 @@ def get_panstarrs(ra,dec,psband):
             downloads.append(bits[8])
     return downloads
 
+def get_wise(ra,dec,band):
+    mission='wise'
+    dataset='allwise'
+    table='p3am_cdd'
+    results=Ibe.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'),mission=mission,dataset=dataset,table=table)
+    url = 'http://irsa.ipac.caltech.edu/ibe/data/'+mission+'/'+dataset+'/'+table+'/'
+    params = { 'coadd_id': results[results['band']==band]['coadd_id'][0],
+           'band': band }
+    params['coaddgrp'] = params['coadd_id'][:2]
+    params['coadd_ra'] = params['coadd_id'][:4]
+    path = str.format('{coaddgrp:s}/{coadd_ra:s}/{coadd_id:s}/{coadd_id:s}-w{band:1d}-int-3.fits',**params)
+    outname=path.split('/')[-1]
+    download_file(url+path,outname)
+    return outname
+
+def get_first(ra,dec):
+    url="http://archive.stsci.edu/"
+    page=requests.get(url+"vlafirst/search.php?RA=%.7f&DEC=%.6f&Radius=30.0&action=Search" % (ra,dec),verify=False)
+    print page.status_code
+
+    tree=html.fromstring(page.text)
+    table=tree.xpath('//tbody')
+    links=[]
+    dists=[]
+    for row in table[0].getchildren():
+        td=row.getchildren()
+        links.append(td[0].getchildren()[0].attrib['href'])
+        dists.append(float(td[8].text))
+
+    index=np.argmin(dists)
+    path=links[index]
+   
+    outname=path.split('/')[-1]
+    download_file(url+path,outname)
+    return outname
+
 if __name__=='__main__':
-    outfile=open('panstarrs-list.txt','w')
     t=Table.read(sys.argv[1])
+    outfile=open(sys.argv[1].replace('.fits','-list.txt'),'w')
     for r in t:
         psnames=get_panstarrs(r['RA'],r['DEC'],'i')
-        print >>outfile,r['Source_id'],psnames[0]
+        wisename=get_wise(r['RA'],r['DEC'],1)
+        firstname=get_first(r['RA'],r['DEC'])
+        print >>outfile,r['Source_id'],psnames[0],wisename,firstname
     outfile.close()
