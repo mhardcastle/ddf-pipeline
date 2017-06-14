@@ -1,6 +1,6 @@
 from astropy.io import fits
 from astropy.wcs import WCS
-from auxcodes import get_rms
+from auxcodes import get_rms_map,get_rms,get_rms_map2
 from auxcodes import flatten
 import scipy.ndimage as nd
 import numpy as np
@@ -28,7 +28,7 @@ def merge_mask(in1,in2,outfile):
     hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
-def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False):
+def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD.tessel.reg'):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
 
     if rootname is None:
@@ -37,7 +37,12 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
         prefix=rootname+'-'
 
     hdu=fits.open(infile)
-    rms=get_rms(hdu)
+    if rmsfacet == False:
+        rms=get_rms(hdu)
+    if rmsfacet == True:
+        get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
+        hdu2=fits.open(prefix+'rms-low.fits')
+        rms=hdu2[0].data[0,0,:]
 
     det=hdu[0].data[0,0,:]>rmsthresh*rms
     labels, count = nd.label(det)
@@ -116,4 +121,4 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
 
 if __name__=='__main__':
     import sys
-    make_extended_mask(sys.argv[1],sys.argv[2],sizethresh=int(sys.argv[3]),rmsthresh=float(sys.argv[4]),rootname='test',verbose=True)
+    make_extended_mask(sys.argv[1],sys.argv[2],sizethresh=int(sys.argv[3]),rmsthresh=float(sys.argv[4]),rmsfacet=eval(sys.argv[5]),ds9region=sys.argv[6],rootname='test',verbose=True)
