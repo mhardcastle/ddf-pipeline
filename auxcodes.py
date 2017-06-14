@@ -211,7 +211,7 @@ def get_rms_map(infilename,ds9region,outfilename):
 
 def get_rms_map2(infilename,ds9region,outfilename):
 
-    runcommand = "MakeMask.py --RestoredIm=%s --OutName=%s.rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap='%s.rms'"%(infilename,3.0,infilename,infilename)
+    runcommand = "MakeMask.py --RestoredIm=%s --OutName=%s.rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap='%s.rms'"%(infilename,infilename,3.0infilename)
 
     run(runcommand,log=None)
 
