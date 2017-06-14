@@ -85,7 +85,6 @@ def concat_catalogs(directories):
     sourcenum = np.array([])
 
     for mosaiccat in mosaiccats:
-
         cat = pyfits.open(mosaiccat)
 	if cattype == 'srl':
 	        pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
@@ -152,11 +151,11 @@ def concat_catalogs(directories):
         e_pa = np.append(e_pa,cat[1].data[keepindices]['E_PA'])
         rms_noise = np.append(rms_noise,cat[1].data[keepindices]['Isl_rms'])
         stype = np.append(stype,cat[1].data[keepindices]['S_Code'])
+	islid = np.append(islid,cat[1].data[keepindices]['Isl_id'])
+        sourcenum = np.append(sourcenum,cat[1].data[keepindices]['Source_id'])
 
 	if cattype == 'gaus':
 	        gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
-	        islid = np.append(islid,cat[1].data[keepindices]['Isl_id'])
-        	sourcenum = np.append(sourcenum,cat[1].data[keepindices]['Source_id'])
 
     col1 = pyfits.Column(name='Source_Name',format='24A',unit='',array=sourceids)
     col2 = pyfits.Column(name='RA',format='f8',unit='deg',array=sourcera)
@@ -198,14 +197,15 @@ def concat_catalogs(directories):
     
     col22 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
 
+    col23 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
+    col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
+
     if cattype == 'gaus':
-	    col23 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
-	    col24 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
-	    col25 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
+	    col25 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
 
     if cattype == 'srl':    
-	    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22])#,col23])
+	    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24])#,col23])
     if cattype == 'gaus':
 	    cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25])
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
