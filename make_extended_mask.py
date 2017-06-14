@@ -40,6 +40,8 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     if rmsfacet == False:
         rms=get_rms(hdu)
     if rmsfacet == True:
+        if rmsthresh == 1.8:
+            rmsthresh = 3.0 # Not this is a dummy value because 1.8 used in the make_extended_mask call but this is to make it compatible as 3.0 seems to work better here.
         get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
         hdu2=fits.open(prefix+'rms-low.fits')
         rms=hdu2[0].data[0,0,:]
