@@ -209,6 +209,26 @@ def get_rms_map(infilename,ds9region,outfilename):
         print 'RMS = %s for direction %i'%(rmsval,direction)
     hdu.writeto(outfilename,clobber=True)
 
+def get_rms_map2(infilename,ds9region,outfilename):
+
+    runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2 --OutNameNoiseMap='%s.rms'"%(infilename,3.0,infilename)
+
+    run(runcommand,log=None)
+
+    infilename = '%s.rms.fits.fits'%infilename
+    polylist = convert_regionfile_to_poly(ds9region)
+    hdu=fits.open(infilename)
+    hduflat = flatten(hdu)
+    map=hdu[0].data
+
+    for direction,ds9region in enumerate(polylist):
+        r = pyregion.parse(ds9region)
+        manualmask = r.get_mask(hdu=hduflat)
+        rmsval = np.mean(hdu[0].data[0][0][np.where(manualmask == True)])
+        hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
+        print 'RMS = %s for direction %i'%(rmsval,direction)
+    hdu.writeto(outfilename,clobber=True)
+    
 class dotdict(dict):
     """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""
     __getattr__ = dict.get
