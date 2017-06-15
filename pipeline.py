@@ -408,6 +408,10 @@ if __name__=='__main__':
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname,o['solutions_uvmin'])
 
+    if o['exitafter'] == 'dirin':
+        warn('User specified exit after image_dirin.')
+        sys.exit(2)
+        
     killms_data('image_dirin_SSD',o['mslist'],'killms_p1',colname=colname,dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
     # run bootstrap, and change the column name if it runs
@@ -432,6 +436,11 @@ if __name__=='__main__':
 
     make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     mask_dicomodel('image_phase1.DicoModel','image_phase1.app.restored.fits.mask.fits','image_phase1_masked.DicoModel',catcher=catcher)
+
+    if o['exitafter'] == 'phase':
+        warn('User specified exit after image_phase.')
+        sys.exit(2)
+
     # Calibrate off the model
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
@@ -445,6 +454,10 @@ if __name__=='__main__':
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=3,robust=o['image_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1],uvrange=uvrange,apply_weights=o['apply_weights'][2],catcher=catcher)
+
+    if o['exitafter'] == 'ampphase':
+        warn('User specified exit after image_ampphase.')
+        sys.exit(2)
 
     # Now move to the full dataset, if it exists
     if o['full_mslist'] is None:
@@ -502,6 +515,10 @@ if __name__=='__main__':
         # make mask from the previous run, will use new external mask if it exists
         make_mask('image_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
         mask_dicomodel('image_ampphase1.DicoModel','image_ampphase1.app.restored.fits.mask.fits','image_ampphase1_masked.DicoModel',catcher=catcher)
+
+        if o['exitafter'] == 'fulllow':
+            warn('User specified exit after image_full_low.')
+            sys.exit(2)
 
         # before starting the final image, run the download thread if needed
         if o['method'] is not None:
