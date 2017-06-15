@@ -13,6 +13,7 @@ import sys
 import re
 import numpy as np
 from lxml import html
+import glob
 
 def download_file(url,outname):
     if os.path.isfile(outname):
@@ -85,9 +86,30 @@ def get_first(ra,dec):
 if __name__=='__main__':
     t=Table.read(sys.argv[1])
     outfile=open(sys.argv[1].replace('.fits','-list.txt'),'w')
+
+    # read the LOFAR map positions
+    g=glob.glob('/data/lofar/mjh/hetdex_v3/mosaics/P*')
+
+    files=[]
+    ras=[]
+    decs=[]
+    for d in g:
+        file=d+'/mosaic.fits'
+        hdu=fits.open(file)
+        ras.append(hdu[0].header['CRVAL1'])
+        decs.append(hdu[0].header['CRVAL2'])
+        files.append(file)
+    ras=np.array(ras)
+    decs=np.array(decs)
+
     for r in t:
+        dist=np.cos(decs*np.pi/180.0)*(ras-r['RA'])**2.0 + (decs-r['DEC'])**2.0
+        i=np.argmin(dist)
+        lofarname=files[i]
+
         psnames=get_panstarrs(r['RA'],r['DEC'],'i')
         wisename=get_wise(r['RA'],r['DEC'],1)
         firstname=get_first(r['RA'],r['DEC'])
-        print >>outfile,r['Source_id'],psnames[0],wisename,firstname
+        print >>outfile,r['Source_id'],lofarname,psnames[0],wisename,firstname
+
     outfile.close()
