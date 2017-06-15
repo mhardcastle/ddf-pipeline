@@ -5,7 +5,7 @@ import os,sys
 import os.path
 from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict
 from options import options,print_options
-from shutil import copyfile,rmtree
+from shutil import copyfile,rmtree,move
 import glob
 import pyrap.tables as pt
 from modify_mask import modify_mask
@@ -18,6 +18,7 @@ __version__=version()
 import smoothsols
 import datetime
 import threading
+from archive_old_solutions import do_archive
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -294,6 +295,12 @@ def rmtglob(path):
         print 'Removing',f
         rmtree(f)
 
+def mvglob(path,dest):
+    g=glob.glob(path)
+    for f in g:
+        print 'Moving',f,'to',dest
+        move(f,dest)
+
 def clearcache(mslist,cachedir):
     report('Clearing cache for '+mslist)
     if os.path.isfile(mslist):
@@ -374,16 +381,52 @@ if __name__=='__main__':
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
 
-    if o['clearcache'] or new:
+    if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to
         # clear the cache -- solves problems where the cache is not
-        # stored per dataset
+        # stored per dataset. If we are redoing, cache needs to be removed
         clearcache(o['mslist'],o['cache_dir'])
         clearcache('temp_mslist.txt',o['cache_dir'])
         if o['full_mslist'] is not None:
             clearcache(o['full_mslist'],o['cache_dir'])
 
+    if o['redofrom']:
+
+        if not os.path.isdir(o['archive_dir']):
+            os.mkdir(o['archive_dir'])
+
+        # If redoing from a specified point, move all relevant files somewhere
+        # else, and archive relevant killms solutions
+
+        # we list the stages and the templates of the files that have to
+        # be removed to restart from after each one
+        stages = [('start', ('image_dirin*','external_mask.fits'), None),
+                  ('dirin', ('*bootstrap*', 'image_phase1*', '*crossmatch*', 'external_mask_ext.fits'), 'p1'),
+                  ('phase', 'image_ampphase1*', 'ap1'),
+                  ('ampphase', ('image_full_low*','full-mask*.fits','external_mask_ext-deep.fits'), 'f_ap1'),
+                  ('fulllow', 'image_full_ampphase1*', None),
+                  ('full', 'image_full_ampphase2*', 'f_ap2'),
+                  ('full2', ('panstarrs-*', 'astromap.fits', 'facet-offset.txt', 'summary.txt'), None)]
+
+        after=False
+        alist=[]
+        for i,stage in enumerate(stages):
+            sname,files,sols=stage
+            if sname==o['redofrom']:
+                after=True
+            if after:
+                if not isinstance(files,(list,tuple)):
+                    files=(files,)
+                for f in files:
+                    mvglob(f,o['archive_dir'])
+                if sols:
+                    alist.append(sols)
+    
+        if not after:
+            die('Redofrom option not supported')
+        else:
+            do_archive(o,alist)
 
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
     external_mask='external_mask.fits'
