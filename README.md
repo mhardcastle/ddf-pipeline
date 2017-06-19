@@ -68,9 +68,11 @@ tgss=/stri-data/mjh/tgss/TGSSADR1_7sigma_catalog.fits
 
 Enable the use of masks for extended sources with `tgss_extended=True`.
 
-## cleanup
+## restart
 
 If you want to discard all the self-calibration for a run and start again, delete all output images you don't want and run `archive_old_solutions.py` (takes the parameter file name as an argument).
+
+The option `[control] redofrom` can be used to start again from after a specified step in the pipeline. Available options are start, dirin, phase, ampphase, fullow, full. Solutions and, if necessary, bootstrap results will be removed before the restart. `[control] restart` must be True.
 
 ## signal handling
 

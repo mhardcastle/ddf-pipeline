@@ -19,6 +19,7 @@ import smoothsols
 import datetime
 import threading
 from archive_old_solutions import do_archive
+from remove_bootstrap import remove_columns
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -431,6 +432,7 @@ if __name__=='__main__':
                   ('full2', ('panstarrs-*', 'astromap.fits', 'facet-offset.txt', 'summary.txt'), None)]
 
         after=False
+        bootstrap_removed=False
         alist=[]
         for i,stage in enumerate(stages):
             sname,files,sols=stage
@@ -443,6 +445,13 @@ if __name__=='__main__':
                     mvglob(f,o['archive_dir'])
                 if sols:
                     alist.append(sols)
+                if i<2 and not(bootstrap_removed):
+                    warn('Removing bootstrap')
+                    if o['full_mslist'] is not None:
+                        remove_columns(o['full_mslist'])
+                    else:
+                        remove_columns(o['mslist'])
+                    bootstrap_removed=True
     
         if not after:
             die('Redofrom option not supported')
