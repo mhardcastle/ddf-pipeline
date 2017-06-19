@@ -309,10 +309,17 @@ def rmtglob(path):
         print 'Removing',f
         rmtree(f)
 
+def _basename(path):
+    return os.path.basename(path.rstrip(os.path.sep))
+
 def mvglob(path,dest):
     g=glob.glob(path)
     for f in g:
         print 'Moving',f,'to',dest
+        # work round shutil non-overwriting behaviour
+        real_dst = os.path.join(dst, _basename(src))
+        if os.path.exists(real_dst):
+            rmtree(real_dst)
         move(f,dest)
 
 def clearcache(mslist,cachedir):
