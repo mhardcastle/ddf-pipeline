@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
 # Compute optical offsets and do a shift
 # Steps are:
 # -1) download optical (or other) data -- do in parallel if possible, so should be done by the time this is run as a script
