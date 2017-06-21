@@ -318,7 +318,7 @@ def mvglob(path,dest):
     for f in g:
         print 'Moving',f,'to',dest
         # work round shutil non-overwriting behaviour
-        real_dst = os.path.join(dst, _basename(src))
+        real_dst = os.path.join(dest, _basename(path))
         if os.path.exists(real_dst):
             rmtree(real_dst)
         move(f,dest)
