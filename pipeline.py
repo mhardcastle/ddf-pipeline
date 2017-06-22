@@ -318,9 +318,10 @@ def mvglob(path,dest):
     for f in g:
         print 'Moving',f,'to',dest
         # work round shutil non-overwriting behaviour
-        real_dst = os.path.join(dest, _basename(path))
+        real_dst = os.path.join(dest, _basename(f))
+        print 'Target is',real_dst
         if os.path.exists(real_dst):
-            rmtree(real_dst)
+            os.remove(real_dst)
         move(f,dest)
 
 def clearcache(mslist,cachedir):
