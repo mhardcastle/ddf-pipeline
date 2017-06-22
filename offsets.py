@@ -337,7 +337,7 @@ class Offsets(object):
                     direction=self.pli[number]
                     rmap[0,0,y,x]=np.sqrt(self.rae[direction,2]**2.0+self.dece[direction,2]**2.0)
         hdus[0].data=rmap
-        hdus.writeto(outname)
+        hdus.writeto(outname,clobber=True)
         print
 
     def save(self,filename):

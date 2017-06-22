@@ -92,7 +92,7 @@ def add_facet_labels(t,polys,pli):
     t['Facet']=facets
 
 def plot_offsets(t,poly,color):
-
+    import matplotlib.pyplot as plt
     basesize=10
     rarange=(np.min(t['RA']),np.max(t['RA']))
     decrange=(np.min(t['DEC']),np.max(t['DEC']))

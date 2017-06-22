@@ -13,8 +13,8 @@ def getcpus():
         return multiprocessing.cpu_count()
 
 option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
-                ( 'image', 'pbimage', str, 'image_full_ampphase1m.int.restored.fits' ),
-                ( 'image', 'nonpbimage', str, 'image_full_ampphase1m.app.restored.fits' ),
+                ( 'image', 'pbimage', str, 'image_full_ampphase1m_shift.int.facetRestored.fits' ),
+                ( 'image', 'nonpbimage', str, 'image_full_ampphase1m_shift.app.facetRestored.fits' ),
                 ( 'image', 'catprefix', str, 'image_full_ampphase1m' ),
                 ( 'control', 'sfind', bool, True ),
                 ( 'control', 'sfind_pixel_fraction', float, 1.0 ),
