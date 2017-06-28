@@ -4,6 +4,7 @@
 import os,sys
 import os.path
 from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict
+from parset import option_list
 from options import options,print_options
 from shutil import copyfile,rmtree,move
 import glob
@@ -375,10 +376,10 @@ if __name__=='__main__':
     report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
         warn('pipeline.py must be called with at least one parameter file or a command-line\noption list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
-        print_options()
+        print_options(option_list)
         sys.exit(1)
 
-    o=options(sys.argv[1:])
+    o=options(sys.argv[1:],option_list)
 
     if o['catch_signal']:
         catcher=Catcher()

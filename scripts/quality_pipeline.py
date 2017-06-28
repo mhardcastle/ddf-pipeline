@@ -6,7 +6,8 @@ matplotlib.use('Agg')
 
 import os,sys
 import os.path
-from quality_options import options,print_options
+from quality_parset import option_list
+from options import options,print_options
 from astropy.io import fits
 from astropy.table import Table
 try:
@@ -116,11 +117,11 @@ def crossmatch_image(lofarcat,auxcatname,options=None):
 if __name__=='__main__':
     # Main loop
     if len(sys.argv)<2:
-        warn('quality-pipeline.py must be called with a parameter file.\n')
-        print_options()
+        warn('quality_pipeline.py must be called with at least one parameter file\nor a command-line option list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
+        print_options(option_list)
         sys.exit(1)
 
-    o=options(sys.argv[1])
+    o=options(sys.argv[1:],option_list)
     if o['pbimage'] is None:
         die('pbimage must be specified')
     if o['nonpbimage'] is None:
