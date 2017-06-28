@@ -3,9 +3,48 @@
 This is the users' manual for ddf-pipeline, a pipeline for the
 direction-dependent self-calibration and imaging of LOFAR data.
 
-## prerequisites
+## what it does
 
-In addition to the software directly required for ddf-pipeline, you
+ddf-pipeline carries out several iterations of direction-dependent
+self-calibration on your LOFAR imaging data using DDFacet and KillMS
+For more on KillMS see Tasse 2014a,b
+(http://adsabs.harvard.edu/abs/2014arXiv1410.8706T
+http://adsabs.harvard.edu/abs/2014A%26A...566A.127T) and Smirnov &
+Tasse 2015 (http://adsabs.harvard.edu/abs/2015MNRAS.449.2668S); for
+DDFacet see Tasse et al 2017 submitted. The objective of ddf-pipeline is to
+fully reduce LOFAR (continuum, Stokes I) imaging data to a
+science-ready state with no human intervention. ddf-pipeline is
+currently in use by the LOFAR Surveys KSP for reduction of the LoTSS
+survey (Shimwell et al 2017
+http://adsabs.harvard.edu/abs/2017A%26A...598A.104S).
+
+ddf-pipeline was written by Martin Hardcastle, Tim Shimwell, Cyril
+Tasse and Wendy Williams and will be described by Shimwell et al (in prep).
+Scientific users of ddf-pipeline are requested to cite the relevant
+papers and refer to the ddf-pipeline github.
+
+## hardware prerequisites
+
+For reduction of LOFAR data you will need a Linux machine with at
+least 192 GB of physical RAM. 256 GB RAM and 32 cores works well; this
+will give a full reduction in 3-4 days. Hyperthreading does not give a
+significant advantage and can be disabled.
+
+Several TB of fast storage attached (ideally) directly to the node are
+necessary for a reduction of a 48-MHz 8-h dataset.
+
+As root you or or your sysadmin should do:
+
+```
+mount -o remount -o size=256g /dev/shm
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+```
+
+Also ensure that your machine has some swap &mdash 100 GB or so is fine.
+
+## software prerequisites
+
+In addition to the software directly required for ddf-pipeline (see below), you
 will need:
 
 * pyrap
@@ -14,6 +53,8 @@ will need:
 * pyregion
 * emcee
 * reproject (for mosaicing)
+
+Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
 ## installation
 
@@ -42,7 +83,16 @@ git clone https://github.com/cyriltasse/DDFacet.git
 4. Source the modified `DDF.sh` file. The ddf-pipeline scripts
    directory, DDFacet and KillMS should now all be on your path. We
    assume that you have done this from here on.
-   
+
+## directory structure
+
+ddf-pipeline provides the following directory structure:
+
+* scripts: should be on your PATH and PYTHONPATH
+* utils: should be on your PYTHONPATH
+* examples: contains example configuration files
+* docs: contains documentation, including this file
+
 ## getting ready to run
 
 ddf-pipeline assumes that your LOFAR data have been through prefactor
@@ -74,3 +124,86 @@ local environment before use and so we do not describe it here.)
 
 ## preparing the configuration file
 
+`pipeline.py` takes as command line options an arbitrary mixture of
+names of configuration files (more than one can be specified) and
+direct option settings. If you run the script without any options, the
+default settings are shown. Most of these are sensible for LOFAR data.
+
+Config files follow the standard Python ConfigParser layout of section
+names in square brackets followed by name-value pairs separated by an
+equals sign.  An example configuration file is in examples/example.cfg
+. A more detailed example is in examples/tier1.cfg &mdash; note that
+this includes many settings which are the current defaults.
+
+Command-line options are specified by two dashes, the name of the
+section, a dash, and the name of the parameter within that section,
+followed by an equals sign and the parameter value. They over-ride
+settings in files, so you can do e.g.
+
+```pipeline.py examples/tier1.cfg --control-restart=False```
+
+Below we describe each section of the config file
+
+### [control]
+
+Options that control the overall running of the pipeline. Defaults are
+mostly sensible here. If you expect to have to restart frequently, set
+`clearcache=False` otherwise a lot of time will be spent re-making the
+cache.
+
+Some parts of the pipeline are only enabled by switching them on
+here, for example `bootstrap=True` enables bootstrap (see below)
+
+### [bootstrap]
+
+Specifies the images and catalogues to be used for bootstrap. See
+below for more information on this.
+
+### [data]
+
+Specifies the MS lists to be used. This must be set. `mslist` refers
+to your short MS list and `full_mslist` to the MS list containing all
+the data. `colname` is the column of the MS to image (usually
+CORRECTED_DATA).
+
+### [image]
+
+The properties of the image to be made. These parameters are generally
+sensible for high-declination LOFAR data. Note that there are
+different values of the robust parameter and the PSF size for the
+intermediate (self-cal) maps and the final maps made with the full
+bandwidth. If you want to make a low-resolution image from the final
+self-calibrated data, set `low_imsize`, `low_cell` and `low_psf_arcsec`.
+
+### [machine]
+
+Parameters of the machine to be used, particularly the number of
+CPUs. Normally these should be calculated automatically by
+ddf-pipeline.
+
+### [masking]
+
+This section allows control over the masks made for cleaning. A useful
+option is to use the TGSS ADR catalogue, by setting `tgss=TGSS.fits`
+where TGSS.fits is the filename of the full FITS catalogue downloaded
+from http://tgssadr.strw.leidenuniv.nl/doku.php (see Intema et al 2016
+https://arxiv.org/abs/1603.04368 for more on TGSS). This will ensure
+that all bright TGSS sources are automatically included, which helps
+the self-calibration to converge faster. If a TGSS path is specified,
+the other default options are probably sensible.
+
+### [offsets]
+
+Controls whether offsets from the optical frame are corrected for (see
+below).
+
+### [solutions]
+
+These control KillMS (most directly translate into KillMS input
+parameters). Generally these values should be sensible. An important
+choice is whether to set a `uvmin` (in km) for self-calibration. The
+default (no uvmin) gives maps with good noise properties but tends to
+absorb unmodelled extended structure. We currently use `uvmin=1.5`
+which does a better job of preserving large-scale extended flux at the
+cost of some additional structure in the large-scale noise. Most other
+options should be left at their default settings.
