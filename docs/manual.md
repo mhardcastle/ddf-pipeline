@@ -92,6 +92,7 @@ ddf-pipeline provides the following directory structure:
 * utils: should be on your PYTHONPATH
 * examples: contains example configuration files
 * docs: contains documentation, including this file
+* misc: miscellaneous useful files
 
 ## getting ready to run
 
