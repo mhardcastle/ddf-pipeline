@@ -40,7 +40,7 @@ mount -o remount -o size=256g /dev/shm
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 ```
 
-Also ensure that your machine has some swap &mdash 100 GB or so is fine.
+Also ensure that your machine has some swap &mdash; 100 GB or so is fine.
 
 ## software prerequisites
 
@@ -140,9 +140,11 @@ section, a dash, and the name of the parameter within that section,
 followed by an equals sign and the parameter value. They over-ride
 settings in files, so you can do e.g.
 
-```pipeline.py examples/tier1.cfg --control-restart=False```
+```
+pipeline.py examples/tier1.cfg --control-restart=False
+```
 
-Below we describe each section of the config file
+Below we describe each section of the config file in more detail.
 
 ### [control]
 
@@ -190,7 +192,7 @@ from http://tgssadr.strw.leidenuniv.nl/doku.php (see Intema et al 2016
 https://arxiv.org/abs/1603.04368 for more on TGSS). This will ensure
 that all bright TGSS sources are automatically included, which helps
 the self-calibration to converge faster. If a TGSS path is specified,
-the other default options are probably sensible.
+the other default options are probably sensible. Enable the use of masks for extended sources with `tgss_extended=True`.
 
 ### [offsets]
 
@@ -207,3 +209,88 @@ absorb unmodelled extended structure. We currently use `uvmin=1.5`
 which does a better job of preserving large-scale extended flux at the
 cost of some additional structure in the large-scale noise. Most other
 options should be left at their default settings.
+
+## bootstrap
+
+Flux scale bootstrap (see Hardcastle et al 2016 http://adsabs.harvard.edu/abs/2016MNRAS.462.1910H) requires the following in the config file:
+
+```
+[control]
+bootstrap=True
+
+[bootstrap]
+catalogues=['cat1.fits','cat2.fits'...]
+radii=[40,10..]
+frequencies=[74e6,327e6,...]
+```
+
+Catalogues, radii, frequencies are lists in Python list
+format.
+
+* catalogues must be a list of existing files in PyBDSM format
+(i.e. they must contain RA, Dec, Total_flux, E_Total_flux). Some suitable
+files are available at http://www.extragalactic.info/bootstrap/ . 
+
+* radii are the separation distances in arcsec to use for each catalogue. If not specified this will default to 10 arcsec for each, but this is probably not what you want.
+
+* frequencies are the frequencies of each catalogue in Hz.
+
+Optionally you may supply in the `bootstrap` block a list of names which will be used in the
+crossmatch tables to identify the catalogues (`names`) and a
+list of group identifiers for each catalogue (`groups`). If `groups` is used, matches from one or more of the catalogues in each group are required for a source to be fitted. The default is that a match in each individual catalogue is required.
+
+Bootstrap operates on the `mslist` specified and so needs that to contain enough measurement sets to do the fitting. 5 or 6 is a good compromise.
+
+If bootstrap runs successfully then a `SCALED_DATA` column will be
+generated and used thereafter for imaging.
+
+Results can be plotted using the `plot_factors.py` script.
+
+## offsets
+Set
+```
+[offsets]
+method=panstarrs
+fit=mcmc
+```
+to determine and correct for the per-direction offset from the
+PanSTARRS frame. This is particularly useful if you intend to do
+optical crossmatching or any form of mosaicing.
+
+## restart
+
+The option `[control] redofrom` can be used to start again from after
+a specified step in the pipeline. Available options are start, dirin,
+phase, ampphase, fullow, full. Solutions and, if necessary, bootstrap
+results will be removed before the restart; all old files are moved to
+an `archive_dir` directory. `[control] restart` must be True for this
+to work.
+
+## signal handling
+
+By default, the pipeline interprets SIGUSR1 as a request to stop
+running at the next convenient point, i.e. normally when a KillMS or
+DDF would otherwise be about to start. Initiate this process with
+e.g. `pkill -USR1 -f pipeline.py`.
+
+## quality pipeline
+
+Once the pipeline has run you can use `quality_pipeline.py` to get
+some basic quality information, including estimates of positional and
+flux scale offsets. Copy `quality_pipeline.cfg` from the examples
+directory and amend suitably. By default this looks for the standard
+pipeline products in the current working directory. Catalogues used in
+the quality pipeline must conform (at least roughly) to the PyBDSM
+format. See http://www.extragalactic.info/bootstrap/ for examples.
+
+TGSS and FIRST catalogues must be provided here to allow the code to run.
+
+## mosaicing
+
+Make a mosaic of adjacent observations from the pipeline with the
+`mosaic.py` script. At a minimum it needs directories specified with
+the `--directories` argument which contain standard pipeline
+output. You can also determine the noise from the image with the
+`--find_noise` option and remove global offsets with respect to FIRST
+(quality pipeline must have been run first) with the `--shift` option.
+
