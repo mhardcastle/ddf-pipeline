@@ -19,4 +19,5 @@ Scientific users of ddf-pipeline are requested to cite the relevant
 papers and refer to the ddf-pipeline github.
 
 ddf-pipeline is licensed under the GPL and is free to use. For full
-documentation and installation instructions see docs/manual.md.
+documentation and installation instructions
+see docs/manual.md.
