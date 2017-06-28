@@ -139,7 +139,7 @@ this includes many settings which are the current defaults.
 Command-line options are specified by two dashes, the name of the
 section, a dash, and the name of the parameter within that section,
 followed by an equals sign and the parameter value. They over-ride
-settings in files, so you can do e.g.
+settings in files, so when running the code you can do e.g.
 
 ```
 pipeline.py examples/tier1.cfg --control-restart=False
@@ -156,6 +156,10 @@ cache.
 
 Some parts of the pipeline are only enabled by switching them on
 here, for example `bootstrap=True` enables bootstrap (see below)
+
+If you have your MS files on slow/high-latency remote storage, you may
+want to set `cache_dir` to any fast local storage you have (order of 1
+TB may be used during the pipeline run).
 
 ### [bootstrap]
 
@@ -211,6 +215,18 @@ which does a better job of preserving large-scale extended flux at the
 cost of some additional structure in the large-scale noise. Most other
 options should be left at their default settings.
 
+## running the code
+
+Once you have set up a config file, make sure you are in the directory
+where you want to work (and probably where your MS are stored) and do
+
+```
+pipeline.py my_config_file.cfg
+```
+
+The code will then start the self-calibration cycle. Come back in 3-4 days.
+Some more advanced topics are discussed below.
+
 ## bootstrap
 
 Flux scale bootstrap (see Hardcastle et al 2016 http://adsabs.harvard.edu/abs/2016MNRAS.462.1910H) requires the following in the config file:
@@ -248,6 +264,7 @@ generated and used thereafter for imaging.
 Results can be plotted using the `plot_factors.py` script.
 
 ## offsets
+
 Set
 ```
 [offsets]
@@ -292,6 +309,5 @@ Make a mosaic of adjacent observations from the pipeline with the
 `mosaic.py` script. At a minimum it needs directories specified with
 the `--directories` argument which contain standard pipeline
 output. You can also determine the noise from the image with the
-`--find_noise` option and remove global offsets with respect to FIRST
-(quality pipeline must have been run first) with the `--shift` option.
+`--find_noise` option.
 
