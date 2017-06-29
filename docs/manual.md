@@ -213,9 +213,12 @@ option is to use the TGSS ADR catalogue, by setting `tgss=TGSS.fits`
 where TGSS.fits is the filename of the full FITS catalogue downloaded
 from http://tgssadr.strw.leidenuniv.nl/doku.php (see Intema et al 2016
 https://arxiv.org/abs/1603.04368 for more on TGSS). This will ensure
-that all bright TGSS sources are automatically included, which helps
-the self-calibration to converge faster. If a TGSS path is specified,
-the other default options are probably sensible. Enable the use of masks for extended sources with `tgss_extended=True`.
+that all bright TGSS sources are automatically included in the mask,
+which helps the self-calibration to converge faster. If a TGSS path is
+specified, the other default options are probably sensible. Enable the
+use of extended masks for extended sources with `tgss_extended=True`
+&mdash; this is slightly more risky but can be helpful if you have a bright
+extended source far off-axis in your field.
 
 ### [offsets]
 
@@ -309,6 +312,10 @@ PanSTARRS frame. This is particularly useful if you intend to do
 optical crossmatching or any form of mosaicing.
 
 ### restart
+
+If the pipeline crashes, then if `[control] restart=True`, the
+default, it will attempt to pick up from where it left off on
+rerun. Normally this is what you want.
 
 The option `[control] redofrom` can be used to start again from after
 a specified step in the pipeline. Available options are start, dirin,
