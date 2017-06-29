@@ -3,7 +3,7 @@
 This is the users' manual for ddf-pipeline, a pipeline for the
 direction-dependent self-calibration and imaging of LOFAR data.
 
-## what it does
+## introduction
 
 ddf-pipeline carries out several iterations of direction-dependent
 self-calibration on your LOFAR imaging data using DDFacet and KillMS
@@ -33,7 +33,7 @@ significant advantage and can be disabled.
 Several TB of fast storage attached (ideally) directly to the node are
 necessary for a reduction of a 48-MHz 8-h dataset.
 
-As root you or or your sysadmin should do:
+As root you or your sysadmin should do:
 
 ```
 mount -o remount -o size=256g /dev/shm
@@ -76,7 +76,7 @@ git clone https://github.com/cyriltasse/DDFacet.git
 2. Compile the DDFacet / killMS code by following the instructions in
    the relevant documentation.
    
-3. Copy the `DDF.sh` script from this directory to the root directory
+3. Copy the `ddf-pipeline/misc/DDF.sh` bash script to the root directory
    of your working directory and modify it appropriately to refer to
    your installation directory.
    
@@ -92,7 +92,24 @@ ddf-pipeline provides the following directory structure:
 * utils: should be on your PYTHONPATH
 * examples: contains example configuration files
 * docs: contains documentation, including this file
+* torque: some examples of how to use ddf-pipeline via torque
 * misc: miscellaneous useful files
+
+## what it does
+
+In normal use ddf-pipeline will go through four rounds of imaging and
+three rounds of self-calibration. The steps are as follows:
+
+1. direction-independent imaging
+2. phase-only self-calibration with direction-independent sky model
+3. (optional bootstrap)
+4. phase-only imaging
+5. amplitude and phase self-calibration with phase-only image
+6. amplitude and phase imaging
+7. full-bandwidth self-calibration with amplitude and phase image
+8. (optional low-resolution full-bandwidth imaging)
+9. full-bandwidth amplitude and phase imaging
+10. (optional second full-bandwidth self-calibration and imaging)
 
 ## getting ready to run
 
@@ -170,8 +187,9 @@ below for more information on this.
 
 Specifies the MS lists to be used. This must be set. `mslist` refers
 to your short MS list and `full_mslist` to the MS list containing all
-the data. `colname` is the column of the MS to image (usually
-CORRECTED_DATA).
+the data. If no `full_mslist` is set then only the steps involving the
+short MS list will be carried out. `colname` is the column of the MS
+to image (usually CORRECTED_DATA).
 
 ### [image]
 
@@ -225,9 +243,24 @@ pipeline.py my_config_file.cfg
 ```
 
 The code will then start the self-calibration cycle. Come back in 3-4 days.
-Some more advanced topics are discussed below.
 
-## bootstrap
+## the output
+
+The code produces a large amount of output, most of it no use to
+you. Good images to look at (use a FITS viewer like ds9) are files of
+the form `image_*_app.restored.fits`. These are the final imaging
+products, in apparent flux units, for each of the self-calibration
+steps. When the code is finished,
+`image_full_ampphase1m.int.restored.fits` is the full-resolution image
+in physical units (unless you have specified correction for offsets,
+see below). A file `summary.txt` is also created summarizing the
+run. Log files for the individual steps are stored by default in the
+'logs' directory &mdash; you can use the `analyse_logs.py` script to
+do some very basic profiling of the time taken by the various steps.
+
+## advanced topics
+
+### bootstrap
 
 Flux scale bootstrap (see Hardcastle et al 2016 http://adsabs.harvard.edu/abs/2016MNRAS.462.1910H) requires the following in the config file:
 
@@ -263,7 +296,7 @@ generated and used thereafter for imaging.
 
 Results can be plotted using the `plot_factors.py` script.
 
-## offsets
+### offsets
 
 Set
 ```
@@ -275,7 +308,7 @@ to determine and correct for the per-direction offset from the
 PanSTARRS frame. This is particularly useful if you intend to do
 optical crossmatching or any form of mosaicing.
 
-## restart
+### restart
 
 The option `[control] redofrom` can be used to start again from after
 a specified step in the pipeline. Available options are start, dirin,
@@ -284,14 +317,14 @@ results will be removed before the restart; all old files are moved to
 an `archive_dir` directory. `[control] restart` must be True for this
 to work.
 
-## signal handling
+### signal handling
 
 By default, the pipeline interprets SIGUSR1 as a request to stop
 running at the next convenient point, i.e. normally when a KillMS or
 DDF would otherwise be about to start. Initiate this process with
 e.g. `pkill -USR1 -f pipeline.py`.
 
-## quality pipeline
+### quality pipeline
 
 Once the pipeline has run you can use `quality_pipeline.py` to get
 some basic quality information, including estimates of positional and
@@ -303,7 +336,7 @@ format. See http://www.extragalactic.info/bootstrap/ for examples.
 
 TGSS and FIRST catalogues must be provided here to allow the code to run.
 
-## mosaicing
+### mosaicing
 
 Make a mosaic of adjacent observations from the pipeline with the
 `mosaic.py` script. At a minimum it needs directories specified with
