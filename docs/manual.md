@@ -309,7 +309,9 @@ fit=mcmc
 ```
 to determine and correct for the per-direction offset from the
 PanSTARRS frame. This is particularly useful if you intend to do
-optical crossmatching or any form of mosaicing.
+optical crossmatching or any form of mosaicing. Output images after
+shifting have names of the form
+`image_full_ampphase1m_shift.*.facetRestored.fit`
 
 ### restart
 

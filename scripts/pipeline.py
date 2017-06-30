@@ -95,7 +95,9 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
         cache_dir='.'
 
     runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Image-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+imagename+'.DicoModel --Cache-SmoothBeam=force --Cache-Dir='+cache_dir
-    if options['restart'] and os.path.isfile(imagename+'_shift.app.facetRestored.fits'):
+    
+    fname=imagename+'_shift.app.facetRestored.fits'
+    if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF-shift step')
         if verbose:
             print 'would have run',runcommand
