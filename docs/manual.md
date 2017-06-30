@@ -23,6 +23,17 @@ Tasse and Wendy Williams and will be described by Shimwell et al (in prep).
 Scientific users of ddf-pipeline are requested to cite the relevant
 papers and refer to the ddf-pipeline github.
 
+## getting support
+
+Support for ddf-pipeline and the code that backs it up is provided on
+a best-efforts basis &mdash; it is not supported by ASTRON and all of
+the programmers have other work to do. ddf-pipeline is not recommended
+for people who don't have considerable experience with Python and
+LOFAR already.
+
+Please request support by raising an issue on the github, **not** by
+direct e-mail to the programmers.
+
 ## hardware prerequisites
 
 For reduction of LOFAR data you will need a Linux machine with at
@@ -169,7 +180,8 @@ Below we describe each section of the config file in more detail.
 Options that control the overall running of the pipeline. Defaults are
 mostly sensible here. If you expect to have to restart frequently, set
 `clearcache=False` otherwise a lot of time will be spent re-making the
-cache.
+cache. Note that by default `clearcache_end=True` and so DDF cache
+will be tidied up at the end of a successful run.
 
 Some parts of the pipeline are only enabled by switching them on
 here, for example `bootstrap=True` enables bootstrap (see below)

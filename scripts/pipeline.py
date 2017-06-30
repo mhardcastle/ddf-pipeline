@@ -390,6 +390,13 @@ def smooth_solutions(mslist,ddsols,interval,catcher=None):
             smoothsols.main(options=dotdict({'MSName':f,'Order':2,'Plot':False,'SolsFile':ddsols,'WSize':interval}))
     return outsols
 
+def full_clearcache(o):
+    clearcache(o['mslist'],o['cache_dir'])
+    clearcache('temp_mslist.txt',o['cache_dir'])
+    if o['full_mslist'] is not None:
+        clearcache(o['full_mslist'],o['cache_dir'])
+
+
 if __name__=='__main__':
     # Main loop
     report('Welcome to ddf-pipeline, version '+__version__)
@@ -429,10 +436,7 @@ if __name__=='__main__':
         # completely new dataset it is always safe (and required) to
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
-        clearcache(o['mslist'],o['cache_dir'])
-        clearcache('temp_mslist.txt',o['cache_dir'])
-        if o['full_mslist'] is not None:
-            clearcache(o['full_mslist'],o['cache_dir'])
+        full_clearcache(o)
 
     if o['redofrom']:
 
@@ -674,3 +678,5 @@ if __name__=='__main__':
     # we got to the end, write a summary file
     
     summary(o)
+    if o['clearcache_end']:
+        full_clearcache(o)
