@@ -195,6 +195,7 @@ def run_bootstrap(o):
         hdus[0].writeto('image_bootstrap.app.mean.fits')
                 
 if __name__=='__main__':
+    from parset import option_list
     from options import options
-    o=options(sys.argv[1])
+    o=options(sys.argv[1:],option_list)
     run_bootstrap(o)

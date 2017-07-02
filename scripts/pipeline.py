@@ -1,9 +1,27 @@
 #!/usr/bin/env python
+"""
+ddf-pipeline, a pipeline for LOFAR data reduction
+Copyright (C) 2017 Martin Hardcastle (mjh@extragalactic.info) and others
 
-# Routine is to use killms/ddf to self-calibrate the data
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+"""
+
 import os,sys
 import os.path
 from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict
+from parset import option_list
 from options import options,print_options
 from shutil import copyfile,rmtree,move
 import glob
@@ -13,7 +31,7 @@ from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
 from histmsamp import find_uvmin,sumdico
 import numpy as np
 from astropy.io import fits
-from version import version
+from pipeline_version import version
 __version__=version()
 import smoothsols
 import datetime
@@ -77,7 +95,9 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
         cache_dir='.'
 
     runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Image-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+imagename+'.DicoModel --Cache-SmoothBeam=force --Cache-Dir='+cache_dir
-    if options['restart'] and os.path.isfile(imagename+'_shift.app.facetRestored.fits'):
+    
+    fname=imagename+'_shift.app.facetRestored.fits'
+    if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF-shift step')
         if verbose:
             print 'would have run',runcommand
@@ -370,15 +390,22 @@ def smooth_solutions(mslist,ddsols,interval,catcher=None):
             smoothsols.main(options=dotdict({'MSName':f,'Order':2,'Plot':False,'SolsFile':ddsols,'WSize':interval}))
     return outsols
 
+def full_clearcache(o):
+    clearcache(o['mslist'],o['cache_dir'])
+    clearcache('temp_mslist.txt',o['cache_dir'])
+    if o['full_mslist'] is not None:
+        clearcache(o['full_mslist'],o['cache_dir'])
+
+
 if __name__=='__main__':
     # Main loop
     report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
         warn('pipeline.py must be called with at least one parameter file or a command-line\noption list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
-        print_options()
+        print_options(option_list)
         sys.exit(1)
 
-    o=options(sys.argv[1:])
+    o=options(sys.argv[1:],option_list)
 
     if o['catch_signal']:
         catcher=Catcher()
@@ -409,10 +436,7 @@ if __name__=='__main__':
         # completely new dataset it is always safe (and required) to
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
-        clearcache(o['mslist'],o['cache_dir'])
-        clearcache('temp_mslist.txt',o['cache_dir'])
-        if o['full_mslist'] is not None:
-            clearcache(o['full_mslist'],o['cache_dir'])
+        full_clearcache(o)
 
     if o['redofrom']:
 
@@ -575,7 +599,7 @@ if __name__=='__main__':
                 warn('Full-bw mask exists, not making it')
             else:
                 report('Making the full-bw extended source mask')
-                make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=1.8,sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
+                make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
             extmask='full-mask-low.fits'
             make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
             ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low_im.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',catcher=catcher,rms_factor=2.5)
@@ -654,3 +678,5 @@ if __name__=='__main__':
     # we got to the end, write a summary file
     
     summary(o)
+    if o['clearcache_end']:
+        full_clearcache(o)

@@ -12,7 +12,6 @@
 
 import matplotlib
 matplotlib.use('Agg')
-from options import options
 from auxcodes import report,run,warn,die
 from quality_pipeline import sepn
 import requests
@@ -434,5 +433,7 @@ def do_offsets(o):
         oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
-    o=options(sys.argv[1:])
+    from options import options
+    from parset import option_list
+    o=options(sys.argv[1:],option_list)
     do_offsets(o)
