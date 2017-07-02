@@ -58,6 +58,7 @@ Also ensure that your machine has some swap &mdash; 100 GB or so is fine.
 In addition to the software directly required for ddf-pipeline (see below), you
 will need:
 
+* git (for installation)
 * pyrap
 * pybdsf (possibly from the LOFAR tree)
 * astropy
@@ -71,7 +72,8 @@ Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
 Currently we recommend that you install ddf-pipeline and its
 prerequisites KillMS, DDFacet and SkyModel directly from the Github
-repositories, so that you can easily get updates with `git pull`.
+repositories, so that you can easily get updates with `git pull`. The
+installation process is below (assumes that your shell is bash):
 
 1. Make a suitable directory and clone all of the Github repos to it:
 
@@ -79,19 +81,9 @@ repositories, so that you can easily get updates with `git pull`.
 mkdir DDF
 cd DDF
 git clone https://github.com/mhardcastle/ddf-pipeline.git
-git clone https://github.com/cyriltasse/killMS2.git
-git clone https://github.com/cyriltasse/SkyModel.git
-git clone https://github.com/cyriltasse/DDFacet.git
-```
+./ddf-pipeline/scripts/install.sh
 
-2. Compile the DDFacet / killMS code by following the instructions in
-   the relevant documentation.
-   
-3. Copy the `ddf-pipeline/misc/DDF.sh` bash script to the root directory
-   of your working directory and modify it appropriately to refer to
-   your installation directory.
-   
-4. Source the modified `DDF.sh` file. The ddf-pipeline scripts
+2. Source the modified `init.sh` file. The ddf-pipeline scripts
    directory, DDFacet and KillMS should now all be on your path. We
    assume that you have done this from here on.
 
