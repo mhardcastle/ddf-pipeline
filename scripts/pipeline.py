@@ -31,7 +31,7 @@ from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
 from histmsamp import find_uvmin,sumdico
 import numpy as np
 from astropy.io import fits
-from version import version
+from pipeline_version import version
 __version__=version()
 import smoothsols
 import datetime
