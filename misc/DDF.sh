@@ -13,7 +13,7 @@ export PYTHONPATH=$DDF_DIR/DDFacet/build/lib:$DDF_DIR/DDFacet/build/lib/DDFacet:
 
 export LD_LIBRARY_PATH=$DDF_DIR/DDFacet/DDFacet/cbuild:$LD_LIBRARY_PATH
 
-export PATH=$DDF_DIR/killMS2:$PATH
+export PATH=$DDF_DIR/killMS:$PATH
 export PATH=$DDF_DIR/DDFacet/build/scripts-2.7:$PATH
 export PATH=$DDF_DIR/SkyModel:$PATH
 export PATH=$DDF_DIR/ddf-pipeline/scripts:$PATH
