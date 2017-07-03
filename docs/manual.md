@@ -82,6 +82,7 @@ mkdir DDF
 cd DDF
 git clone https://github.com/mhardcastle/ddf-pipeline.git
 ./ddf-pipeline/scripts/install.sh
+```
 
 2. Source the modified `init.sh` file. The ddf-pipeline scripts
    directory, DDFacet and KillMS should now all be on your path. We
