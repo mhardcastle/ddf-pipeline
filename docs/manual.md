@@ -65,6 +65,12 @@ will need:
 * pyregion
 * emcee
 * reproject (for mosaicing)
+* Polygon
+* pyephem
+* pyFFTW
+* pyfits
+* SharedArray
+* deap
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
