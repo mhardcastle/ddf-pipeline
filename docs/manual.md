@@ -75,16 +75,21 @@ prerequisites KillMS, DDFacet and SkyModel directly from the Github
 repositories, so that you can easily get updates with `git pull`. The
 installation process is below (assumes that your shell is bash):
 
-1. Make a suitable directory and clone all of the Github repos to it:
+1. Make a suitable directory and clone the Github repo to it:
 
 ```
 mkdir DDF
 cd DDF
 git clone https://github.com/mhardcastle/ddf-pipeline.git
+```
+
+2. Run the install script from the cloned repo; this installs KillMS and DDFacet and builds an `init.sh` file that sets up the paths:
+
+```
 ./ddf-pipeline/scripts/install.sh
 ```
 
-2. Source the modified `init.sh` file. The ddf-pipeline scripts
+3. Source the `init.sh` file. The ddf-pipeline scripts
    directory, DDFacet and KillMS should now all be on your path. We
    assume that you have done this from here on.
 
