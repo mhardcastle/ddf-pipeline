@@ -317,6 +317,12 @@ Results can be plotted using the `plot_factors.py` script.
 
 ### offsets
 
+ddf-pipeline can correct for astrometric offsets using a version of
+the method of Smith et al (2011) &mdash;
+http://adsabs.harvard.edu/abs/2011MNRAS.416..857S . Empirically we
+have found that the best results come from aligning with PanSTARRS,
+which works anywhere in the Northern hemisphere.
+
 Set
 ```
 [offsets]
