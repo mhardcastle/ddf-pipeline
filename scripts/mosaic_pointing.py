@@ -54,6 +54,7 @@ if __name__=='__main__':
     maxsep=np.max(mosseps)
     # now find whether we have got these pointings somewhere!
     mosaicdirs=[]
+    missingpointing = False
     for p in mosaicpointings:
         _,ra,dec,_=pointingdict[p]
         for r in results:
@@ -67,8 +68,10 @@ if __name__=='__main__':
                 break
         else:
             print 'Pointing',p,'not found'
-            if not(args.no_check):
-                raise RuntimeError('Failed to find a required pointing')
+            missingpointing = True
+            
+    if not(args.no_check) and missingpointing == True:
+        raise RuntimeError('Failed to find a required pointing')
 
     print 'Mosaicing using directories', mosaicdirs
 
