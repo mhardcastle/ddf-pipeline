@@ -107,7 +107,7 @@ if __name__=='__main__':
     mosaicdirs=[]
     missingpointing = False
     for p in mosaicpointings:
-        print 'Wanting to put pointing %s in mosiac'%p
+        print 'Wanting to put pointing %s in mosaic'%p
         _,ra,dec,_=pointingdict[p]
         for r in results:
             rd,rname,rra,rdec=r
