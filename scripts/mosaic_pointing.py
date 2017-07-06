@@ -131,7 +131,7 @@ if __name__=='__main__':
     # now construct the inputs for make_mosaic
 
     mos_args=dotdict({'save':True, 'load':True,'exact':False,'use_shifted':True,'find_noise':True})
-    mos.args.astromap_blank=args.astromap_blank
+    mos_args.astromap_blank=args.astromap_blank
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
 
@@ -148,21 +148,22 @@ if __name__=='__main__':
 
     blank_mosaic('mosaic.fits',himsize)
 
-    print 'Making the low-resolution mosaic...'
-    header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
-    mos_args.header=header
-    mos_args.rootname='low'
-    mos_args.do_lowres=True
-    mos_args.astromap_blank=False # don't bother with low-res map
-    
-    #with open('low-mosaic-header.pickle','w') as f:
-    #    pickle.dump(header,f)
+    if args.do_lowres:
+        print 'Making the low-resolution mosaic...'
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
+        mos_args.header=header
+        mos_args.rootname='low'
+        mos_args.do_lowres=True
+        mos_args.astromap_blank=False # don't bother with low-res map
 
-    make_mosaic(mos_args)
+        #with open('low-mosaic-header.pickle','w') as f:
+        #    pickle.dump(header,f)
 
-    print 'Blanking the mosaic...'
+        make_mosaic(mos_args)
 
-    blank_mosaic('low-mosaic.fits',himsize)
+        print 'Blanking the mosaic...'
+
+        blank_mosaic('low-mosaic.fits',himsize)
 
     print 'Now running PyBDSF to extract sources'
     
