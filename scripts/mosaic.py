@@ -46,9 +46,17 @@ def make_mosaic(args):
         intname='image_full_ampphase1m.int.restored.fits'
         appname='image_full_ampphase1m.app.restored.fits'
 
+    # astromap blanking if required
+    bth=None
+    try:
+        bth=float(args.astromap_blank)
+    except:
+        pass
+
     threshold=float(args.beamcut)
     hdus=[]
     app=[]
+    astromaps=[]
     wcs=[]
     print 'Reading files...'
     noise=[]
@@ -60,6 +68,8 @@ def make_mosaic(args):
             noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
         app.append(flatten(fits.open(d+'/'+appname)))
+        if bth:
+            astromaps.append(flatten(fits.open(d+'/astromap.fits')))
 
     if args.find_noise:
         args.noise=noise
@@ -84,7 +94,7 @@ def make_mosaic(args):
             hdus[i].data*=args.scale[i]
 
     if args.shift:
-        print 'Finding shifts...'
+        print 'Finding shifts (NOTE THIS CODE IS OBSOLETE)...'
         # shift according to the FIRST delta ra/dec from quality pipeline
         dras=[]
         ddecs=[]
@@ -103,15 +113,50 @@ def make_mosaic(args):
     print 'WCS values are:'
     for i in range(len(app)):
         wcs.append(WCS(hdus[i].header))
-        print wcs[-1]
+
+    # astromap blanking
+    if bth:
+        print 'Blanking using astrometry quality maps with threshold',bth,'arcsec'
+        for i in range(len(app)):
+            outname=rootname+'astroblank-'+name[i]+'.fits'
+            if args.load and os.path.isfile(outname):
+                print 'Loading previously blanked image'
+                hdu=fits.open(outname)
+                hdus[i].data=hdu[0].data
+            else:
+                print 'Blanking image',i
+                dmaxy,dmaxx=hdus[i].data.shape
+                count=0
+                am=astromaps[i]
+                awcs=WCS(am.header)
+                maxy,maxx=am.data.shape
+                for y in range(maxy):
+                    for x in range(maxx):
+                        value=am.data[y,x]
+                        if np.isnan(value):
+                            if y<maxy-1:
+                                value=am.data[y+1,x]
+                        if value>bth:
+                            ra,dec=[float(f) for f in awcs.wcs_pix2world(x,y,0)]
+                            rx,ry=[int(p) for p in wcs[i].wcs_world2pix(ra,dec,0)]
+                            rxp=rx+21 # astromap pix size, with margin
+                            ryp=ry+21
+                            if rx<0: rx=0
+                            if ry<0: ry=0
+                            if rxp>dmaxx: rxp=dmaxx
+                            if ryp>dmaxy: ryp=dmaxy
+                            hdus[i].data[ry:ryp,rx:rxp]=np.nan
+                            count+=1
+                print '... blanked',count*900.0/3600,'square arcmin'
+                outname=rootname+'astroblank-'+name[i]+'.fits'
+                if args.save: hdus[i].writeto(outname,clobber=True)
 
     # If the header is directly passed in, use it
     try:
         header=args.header
         xsize=header['NAXIS1']
         ysize=header['NAXIS2']
-        print 'Mosaic using programmatically supplied header:'
-        print header
+        print 'Mosaic using header passed from calling program'
     except:
         header=None
     if header is None:
@@ -120,10 +165,9 @@ def make_mosaic(args):
                 header=pickle.load(f)
             xsize=header['NAXIS1']
             ysize=header['NAXIS2']
-            print 'Mosaic using loaded header:'
-            print header
+            print 'Mosaic using loaded header'
         else:
-
+            print 'Creating the mosaic header'
             ras=np.array([w.wcs.crval[0] for w in wcs])
             decs=np.array([w.wcs.crval[1] for w in wcs])
 
@@ -246,6 +290,7 @@ if __name__=='__main__':
     parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
+    parser.add_argument('--astromap_blank',dest='astromap_blank', help='')
     parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')
 
     args = parser.parse_args()

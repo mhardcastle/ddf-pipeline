@@ -70,6 +70,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic LoTSS pointings')
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directories to search for pipeline output')
+    parser.add_argument('--astromap_blank', dest='astromap_blank', default=0.5, help='Acceptable astrometry error in arcsec')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
@@ -130,6 +131,7 @@ if __name__=='__main__':
     # now construct the inputs for make_mosaic
 
     mos_args=dotdict({'save':True, 'load':True,'exact':False,'use_shifted':True,'find_noise':True})
+    mos.args.astromap_blank=args.astromap_blank
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
 
@@ -137,8 +139,8 @@ if __name__=='__main__':
     
     mos_args.header=header
     print 'Calling make_mosaic'
-    with open('mosaic-header.pickle','w') as f:
-        pickle.dump(header,f)
+    #with open('mosaic-header.pickle','w') as f:
+    #    pickle.dump(header,f)
 
     make_mosaic(mos_args)
 
@@ -151,9 +153,10 @@ if __name__=='__main__':
     mos_args.header=header
     mos_args.rootname='low'
     mos_args.do_lowres=True
+    mos_args.astromap_blank=False # don't bother with low-res map
     
-    with open('low-mosaic-header.pickle','w') as f:
-        pickle.dump(header,f)
+    #with open('low-mosaic-header.pickle','w') as f:
+    #    pickle.dump(header,f)
 
     make_mosaic(mos_args)
 
