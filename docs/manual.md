@@ -23,6 +23,14 @@ Tasse and Wendy Williams and will be described by Shimwell et al (in prep).
 Scientific users of ddf-pipeline are requested to cite the relevant
 papers and refer to the ddf-pipeline github.
 
+## who is this release for?
+
+This release of ddf-pipeline is mainly aimed at people who want to
+reduce wide-field LOFAR data quickly and to a good standard. If you
+are interested in a single bright source in a LOFAR field and are not
+in a hurry, you may find the current de facto standard factor
+(https://github.com/lofar-astron/factor) to be more useful to you.
+
 ## getting support
 
 Support for ddf-pipeline and the code that backs it up is provided on
@@ -103,8 +111,8 @@ git clone https://github.com/mhardcastle/ddf-pipeline.git
 
 ddf-pipeline provides the following directory structure:
 
-* scripts: should be on your PATH and PYTHONPATH
-* utils: should be on your PYTHONPATH
+* scripts: should be on your PATH and PYTHONPATH after `init.sh`
+* utils: should be on your PYTHONPATH after `init.sh`
 * examples: contains example configuration files
 * docs: contains documentation, including this file
 * torque: some examples of how to use ddf-pipeline via torque
@@ -131,11 +139,12 @@ three rounds of self-calibration. The steps are as follows:
 ddf-pipeline assumes that your LOFAR data have been through prefactor
 (https://github.com/lofar-astron/prefactor) or an equivalent
 (e.g. Reinout van Weeren's equivalent scripts). If you are using LOFAR
-surveys KSP data, you may be able to persuade someone to run this for
-you on SARA.
+surveys KSP data or co-observing with the KSP, you may be able to
+persuade someone to run this for you on SARA.
 
 To image a full LOFAR field we recommend averaging to 2 channels per
-subband and 8s in time.
+subband and 8s in time. 1 channel/16 seconds will take about a factor
+2 longer. International baselines should not be present.
 
 If the data have been processed for you by the KSP, then you should be
 able to run `download.py L123456` (where here, and from now on,
@@ -316,6 +325,12 @@ generated and used thereafter for imaging.
 Results can be plotted using the `plot_factors.py` script.
 
 ### offsets
+
+ddf-pipeline can correct for astrometric offsets using a version of
+the method of Smith et al (2011) &mdash;
+http://adsabs.harvard.edu/abs/2011MNRAS.416..857S . Empirically we
+have found that the best results come from aligning with PanSTARRS,
+which works anywhere in the Northern hemisphere.
 
 Set
 ```
