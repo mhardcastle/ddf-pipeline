@@ -16,12 +16,63 @@ try:
 except ImportError:
     import lofar.bdsm as bdsm
 
+restfrq=143.65e6 # should work this out from the FITS headers eventually
+
+def make_header(maxsep,name,ra,dec,cellsize,resolution):
+    # construct template FITS header
+    header=fits.Header()
+    size=(maxsep/2.0)*1.15
+    cellsize/=3600.0
+    himsize=int(size/cellsize)
+    header['SIMPLE']=True
+    header['BITPIX']=-32
+    header['NAXIS']=2
+    header['WCSAXES']=2
+    header['NAXIS1']=2*himsize
+    header['NAXIS2']=2*himsize
+    header['CTYPE1']='RA---SIN'
+    header['CTYPE2']='DEC--SIN'
+    header['CUNIT1']='deg'
+    header['CUNIT2']='deg'
+    header['CRPIX1']=himsize
+    header['CRPIX2']=himsize
+    header['CRVAL1']=ra
+    header['CRVAL2']=dec
+    header['CDELT1']=-cellsize
+    header['CDELT2']=cellsize
+    header['RADESYS']='ICRS'
+    header['EQUINOX']=2000.0
+    header['LONPOLE']=180.0
+    header['LATPOLE']=header['CRVAL2']
+    header['BMAJ']=resolution/3600.0
+    header['BMIN']=resolution/3600.0
+    header['BPA']=0
+    header['TELESCOP']='LOFAR'
+    header['RESTFRQ']=restfrq
+    header['OBSERVER']='LoTSS'
+    header['BUNIT']='JY/BEAM'
+    header['BSCALE']=1.0
+    header['BZERO']=0
+    header['BTYPE']='Intensity'
+    header['OBJECT']=name
+    return header,himsize
+
+def blank_mosaic(imname,himsize):
+    hdu=fits.open(imname)
+    x=np.array(range(0,2*himsize))
+    xv, yv = np.meshgrid(x, x)
+    xv-=himsize
+    yv-=himsize
+    hdu[0].data[np.sqrt(xv**2.0+yv**2.0)>himsize]=np.nan
+    hdu.writeto(imname.replace('.fits','-blanked.fits'), clobber=True)
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic LoTSS pointings')
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directories to search for pipeline output')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
+    parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
     parser.add_argument('pointingfile', type=str, help='LoTSS pointing progress file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     
@@ -50,7 +101,7 @@ if __name__=='__main__':
 
     os.chdir(cwd)
     # find what we need to put in the mosaic
-    mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,args.mospointingname)
+    mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,mospointingname)
     maxsep=np.max(mosseps)
     # now find whether we have got these pointings somewhere!
     mosaicdirs=[]
@@ -77,39 +128,9 @@ if __name__=='__main__':
     mos_args=dotdict({'save':True, 'load':True,'exact':False,'use_shifted':True,'find_noise':True})
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
+
+    header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
     
-    # construct template FITS header
-    restfrq=143.65e6
-    header=fits.Header()
-    size=(maxsep/2.0)*1.1
-    cellsize=1.5/3600.0
-    himsize=int(size/cellsize)
-    header['SIMPLE']=True
-    header['BITPIX']=-32
-    header['NAXIS']=2
-    header['WCSAXES']=2
-    header['NAXIS1']=2*himsize
-    header['NAXIS2']=2*himsize
-    header['CTYPE1']='RA---SIN'
-    header['CTYPE2']='DEC--SIN'
-    header['CUNIT1']='deg'
-    header['CUNIT2']='deg'
-    header['CRPIX1']=himsize
-    header['CRPIX2']=himsize
-    header['CRVAL1']=pointingdict[args.mospointingname][1]
-    header['CRVAL2']=pointingdict[args.mospointingname][2]
-    header['CDELT1']=-cellsize
-    header['CDELT2']=cellsize
-    header['RADESYS']='ICRS'
-    header['EQUINOX']=2000.0
-    header['LONPOLE']=180.0
-    header['LATPOLE']=header['CRVAL2']
-    header['BMAJ']=4.0*cellsize
-    header['BMIN']=4.0*cellsize
-    header['BPA']=0
-    header['TELESCOP']='LOFAR'
-    header['RESTFRQ']=restfrq
-    header['OBSERVER']='LoTSS'
     mos_args.header=header
     print 'Calling make_mosaic'
     with open('mosaic-header.pickle','w') as f:
@@ -119,13 +140,22 @@ if __name__=='__main__':
 
     print 'Blanking the mosaic...'
 
-    hdu=fits.open('mosaic.fits')
-    x=np.array(range(0,2*himsize))
-    xv, yv = np.meshgrid(x, x)
-    xv-=himsize
-    yv-=himsize
-    hdu[0].data[np.sqrt(xv**2.0+yv**2.0)>himsize]=np.nan
-    hdu.writeto('mosaic-blanked.fits', clobber=True)
+    blank_mosaic('mosaic.fits',himsize)
+
+    print 'Making the low-resolution mosaic...'
+    header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
+    mos_args.header=header
+    mos_args.rootname='low'
+    mos_args.do_lowres=True
+    
+    with open('low-mosaic-header.pickle','w') as f:
+        pickle.dump(header,f)
+
+    make_mosaic(mos_args)
+
+    print 'Blanking the mosaic...'
+
+    blank_mosaic('low-mosaic.fits',himsize)
 
     print 'Now running PyBDSF to extract sources'
     

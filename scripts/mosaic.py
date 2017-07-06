@@ -4,6 +4,7 @@
 
 # arguments are directories with final images
 
+from pipeline_version import version
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
 from auxcodes import die, get_rms, flatten
@@ -25,12 +26,20 @@ def make_mosaic(args):
         if len(args.noise) != len(args.directories):
             die('Noises provided must match directories')
 
+    if args.rootname:
+        rootname=args.rootname+'-'
+    else:
+        rootname=''
+
     if args.exact:
         reproj=reproject_exact
     else:
         reproj=reproject_interp_chunk_2d
 
-    if args.use_shifted:
+    if args.do_lowres:
+        intname='image_full_low_m.int.restored.fits'
+        appname='image_full_low_m.app.restored.fits'
+    elif args.use_shifted:
         intname='image_full_ampphase1m_shift.int.facetRestored.fits'
         appname='image_full_ampphase1m_shift.app.facetRestored.fits'
     else:
@@ -107,7 +116,7 @@ def make_mosaic(args):
         header=None
     if header is None:
         if args.load_layout:
-            with open('mosaic-header.pickle') as f:
+            with open(rootname+'mosaic-header.pickle') as f:
                 header=pickle.load(f)
             xsize=header['NAXIS1']
             ysize=header['NAXIS2']
@@ -168,7 +177,7 @@ def make_mosaic(args):
             header['NAXIS1']=xsize
             header['NAXIS2']=ysize
 
-            with open('mosaic-header.pickle','w') as f:
+            with open(rootname+'mosaic-header.pickle','w') as f:
                 pickle.dump(header,f)
 
     isum=np.zeros([ysize,xsize])
@@ -177,7 +186,7 @@ def make_mosaic(args):
     print 'now making the mosaic'
     for i in range(len(hdus)):
         print 'image',i,'(',name[i],')'
-        outname='reproject-'+name[i]+'.fits'
+        outname=rootname+'reproject-'+name[i]+'.fits'
         if args.load and os.path.exists(outname):
             print 'loading...'
             hdu=fits.open(outname)
@@ -189,7 +198,7 @@ def make_mosaic(args):
             hdu = fits.PrimaryHDU(header=header,data=r)
             if args.save: hdu.writeto(outname,clobber=True)
         print 'weights',i,'(',name[i],')'
-        outname='weight-'+name[i]+'.fits'
+        outname=rootname+'weight-'+name[i]+'.fits'
         if args.load and os.path.exists(outname):
             print 'loading...'
             hdu=fits.open(outname)
@@ -212,20 +221,20 @@ def make_mosaic(args):
         isum[~mask]=np.nan
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             header[ch]=hdus[0].header[ch]
-        header['ORIGIN']='ddf-pipeline-mosaic'
-        header['UNITS']='Jy/beam'
+        header['ORIGIN']='ddf-pipeline '+version()
 
         hdu = fits.PrimaryHDU(header=header,data=isum)
-        hdu.writeto('mosaic.fits',clobber=True)
+        hdu.writeto(rootname+'mosaic.fits',clobber=True)
 
         hdu = fits.PrimaryHDU(header=header,data=wsum)
-        hdu.writeto('mosaic-weights.fits',clobber=True)
+        hdu.writeto(rootname+'mosaic-weights.fits',clobber=True)
 
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic ddf-pipeline directories')
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directory name')
+    parser.add_argument('--rootname', dest='rootname', default='', help='Root name for output files, default uses no prefix')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
     parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
@@ -236,6 +245,7 @@ if __name__=='__main__':
     parser.add_argument('--shift', dest='shift', action='store_true', help='Shift images before mosaicing')
     parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
+    parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')
 
     args = parser.parse_args()
