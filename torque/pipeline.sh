@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CFG=${CONFIG:-/home/mjh/git/public/ddf-pipeline/examples/tier1.cfg}
+CFG=${CONFIG:-/home/mjh/temp/public/ddf-pipeline/examples/tier1.cfg}
 echo Using ddf-pipeline config $CFG
-source /home/mjh/git/public/DDF.sh
+source /home/mjh/temp/public/init.sh
 pipeline.py $CFG
