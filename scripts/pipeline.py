@@ -60,6 +60,17 @@ def logfilename(s,options=None):
     else:
         return None
 
+def find_cache_dir(options):
+    cache_dir=options['cache_dir']
+
+    # allow cache_dir that only exists on some machines to be specified,
+    # fall back to working directory otherwise
+    if cache_dir is None:
+        cache_dir='.'
+    elif not os.path.isdir(cache_dir):
+        cache_dir='.'
+    return cache_dir
+
 def check_imaging_weight(mslist_name):
 
     # returns a boolean that says whether it did something
@@ -85,14 +96,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
     if options is None:
         options=o # attempt to get global if it exists
 
-    cache_dir=options['cache_dir']
-
-    # allow cache_dir that only exists on some machines to be specified,
-    # fall back to working directory otherwise
-    if cache_dir is None:
-        cache_dir='.'
-    elif not os.path.isdir(cache_dir):
-        cache_dir='.'
+    cache_dir=find_cache_dir(options)
 
     runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Image-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+imagename+'.DicoModel --Cache-SmoothBeam=force --Cache-Dir='+cache_dir
     
@@ -127,20 +131,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if cellsize is None:
         cellsize=options['cellsize']
 
-    cache_dir=options['cache_dir']
-
-    # allow cache_dir that only exists on some machines to be specified,
-    # fall back to working directory otherwise
-    if cache_dir is None:
-        cache_dir='.'
-    elif not os.path.isdir(cache_dir):
-        cache_dir='.'
+    cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
         fname=imagename+'.app.restored.fits'
     else:
         fname=imagename+'.dirty.fits'
-
 
     runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --Data-Sort 1 --Cache-Dir=%s"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir)
     
@@ -262,14 +258,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
     if options is None:
         options=o # attempt to get global if it exists
 
-    cache_dir=options['cache_dir']
-
-    # allow cache_dir that only exists on some machines to be specified,
-    # fall back to working directory otherwise
-    if cache_dir is None:
-        cache_dir='.'
-    elif not os.path.isdir(cache_dir):
-        cache_dir='.'
+    cache_dir=find_cache_dir(options)
 
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
@@ -344,14 +333,15 @@ def mvglob(path,dest):
             os.remove(real_dst)
         move(f,dest)
 
-def clearcache(mslist,cachedir):
+def clearcache(mslist,options):
+    cachedir=find_cache_dir(options)
+
     report('Clearing cache for '+mslist)
     if os.path.isfile(mslist):
         filenames=[l.strip() for l in open(mslist,'r').readlines()]
     else:
         filenames=[]
-    if cachedir is None:
-        cachedir='.'
+
     try:
         rmtglob(cachedir+'/'+mslist+'*.ddfcache')
         rmtglob(mslist+'*.ddfcache')
@@ -391,10 +381,10 @@ def smooth_solutions(mslist,ddsols,interval,catcher=None):
     return outsols
 
 def full_clearcache(o):
-    clearcache(o['mslist'],o['cache_dir'])
-    clearcache('temp_mslist.txt',o['cache_dir'])
+    clearcache(o['mslist'],o)
+    clearcache('temp_mslist.txt',o)
     if o['full_mslist'] is not None:
-        clearcache(o['full_mslist'],o['cache_dir'])
+        clearcache(o['full_mslist'],o)
 
 
 if __name__=='__main__':
@@ -501,7 +491,7 @@ if __name__=='__main__':
         os.symlink('image_dirin_SSD_init.dirty.fits','image_dirin_SSD.dirty.fits')
     if make_model('image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD',catcher=catcher):
         # if this step runs, clear the cache to remove facet info
-        clearcache(o['mslist'],o['cache_dir'])
+        clearcache(o['mslist'],o)
 
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_dirin_SSD',o['mslist'],colname,o['solutions_uvmin'])
@@ -678,7 +668,7 @@ if __name__=='__main__':
             # this may not be present, in which case we have to
             # remake.
 
-            if not(os.path.isfile(cache_dir+'/big-mslist.txt.ddfcache/LastResidual')):
+            if not(os.path.isfile(find_cache_dir(o)+'/big-mslist.txt.ddfcache/LastResidual')):
                 ddf_image('image_full_ampphase1m_reimage',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
                 os.symlink('Dirty','big-mslist.txt.ddfcache/LastResidual')
                 os.symlink('Dirty.hash','big-mslist.txt.ddfcache/LastResidual.hash')
