@@ -678,10 +678,10 @@ if __name__=='__main__':
             # this may not be present, in which case we have to
             # remake.
 
-            if not(os.path.isfile('big-mslist.txt.ddfcache/LastResidual')):
+            if not(os.path.isfile(cache_dir+'/big-mslist.txt.ddfcache/LastResidual')):
                 ddf_image('image_full_ampphase1m_reimage',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-                os.symlink('big-mslist.txt.ddfcache/Dirty','big-mslist.txt.ddfcache/LastResidual')
-                os.symlink('big-mslist.txt.ddfcache/Dirty.hash','big-mslist.txt.ddfcache/LastResidual.hash')
+                os.symlink('Dirty','big-mslist.txt.ddfcache/LastResidual')
+                os.symlink('Dirty.hash','big-mslist.txt.ddfcache/LastResidual.hash')
 
             ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
 
