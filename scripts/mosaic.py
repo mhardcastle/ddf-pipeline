@@ -65,7 +65,11 @@ def make_mosaic(args):
         name.append(d.split('/')[-1])
         hdu=fits.open(d+'/'+intname)
         if args.find_noise:
-            noise.append(get_rms(hdu))
+	    print 'Estimating noise for ', d+'/' + intname
+	    if args.do_lowres:
+	            noise.append(get_rms(hdu,boxsize=1500))
+	    else:
+	            noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
         app.append(flatten(fits.open(d+'/'+appname)))
         if bth:
