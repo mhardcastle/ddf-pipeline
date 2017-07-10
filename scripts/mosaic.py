@@ -154,6 +154,7 @@ def make_mosaic(args):
                 print '... blanked',count*900.0/3600,'square arcmin'
                 outname=rootname+'astroblank-'+name[i]+'.fits'
                 if args.save: hdus[i].writeto(outname,clobber=True)
+            app[i].data[np.isnan(hdus[i].data)]=np.nan
 
     # If the header is directly passed in, use it
     try:
