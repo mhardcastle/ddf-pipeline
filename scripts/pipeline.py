@@ -670,8 +670,8 @@ if __name__=='__main__':
             cachedir=find_cache_dir(o)
             if not(os.path.isfile(cachedir+'/'+o['full_mslist']+'.ddfcache/LastResidual')) or not(os.path.isfile(cachedir+'/'+o['full_mslist']+'.ddfcache/PSF')):
                 ddf_image('image_full_ampphase1m_reimage',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-                os.symlink('Dirty','big-mslist.txt.ddfcache/LastResidual')
-                os.symlink('Dirty.hash','big-mslist.txt.ddfcache/LastResidual.hash')
+                os.symlink('Dirty',cachedir+'/'+o['full_mslist']+'.ddfcache/LastResidual')
+                os.symlink('Dirty.hash',cachedir+'/'+o['full_mslist']+'LastResidual.hash')
 
             ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
 
