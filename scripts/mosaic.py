@@ -83,7 +83,8 @@ def make_mosaic(args):
 
     print 'Computing noise/beam factors...'
     for i in range(len(app)):
-        app[i].data/=hdus[i].data
+        np.seterr(divide='ignore')
+	app[i].data=np.divide(app[i].data,hdus[i].data)
         app[i].data[app[i].data<threshold]=0
         # at this point this is the beam factor: we want 1/sigma**2.0, so divide by central noise and square
         if args.noise is not None:
