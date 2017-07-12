@@ -116,7 +116,7 @@ if __name__=='__main__':
                 # name match
                 mosaicdirs.append(rd)
                 break
-            elif ((ra-rra)**2.0+(dec-rdec)**2.0)<0.05:
+            elif ((ra-rra)**2.0+(dec-rdec)**2.0)<0.5:
                 mosaicdirs.append(rd)
                 break
         else:

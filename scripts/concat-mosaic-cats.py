@@ -113,7 +113,7 @@ def filter_catalogs(directories,pointingras,pointingdecs,mosaiccat,outname,desso
     
     pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
     if cattype == 'gaus':
-        mosaiccat = mosaiccat.replace('mosaic.cat.fits','mosaic-blanked.pybdsm.gaul.FITS')
+        mosaiccat = glob.glob(mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS'))[0]
     cat = pyfits.open(mosaiccat)
     
     f = pyfits.open(pointing)
