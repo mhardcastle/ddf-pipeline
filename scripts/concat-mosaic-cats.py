@@ -6,7 +6,7 @@ import pyfits
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from auxcodes import sepn
+from auxcodes import sepn, getposim
 import argparse
 import time
 import random
@@ -34,6 +34,24 @@ rad2arcsec=1.0/arcsec2rad
 steradians2degsquared = (180.0/np.pi)**2.0
 degsquared2steradians = 1.0/steradians2degsquared
 
+def find_median_astrometry(astromaps,pointingra,pointingdec):
+
+    foundpointing = False
+    for astromap in astromaps:
+        ra,dec=getposim('%s/astromap.fits'%astromap)
+        if sepn(ra*deg2rad,dec*deg2rad,pointingra,pointingdec)*rad2deg < 0.6:        
+            foundpointing = True
+            f = pyfits.open('%s/astromap.fits'%astromap)
+            _,_,ys,xs=f[0].data.shape
+            # Use central 20% of the image
+            subim=f[0].data[0][0][ys/2-ys/5:ys/2+ys/5,xs/2-xs/5:xs/2+xs/5].flatten()
+    if foundpointing:
+        subim = np.nan_to_num(subim)
+        return np.median(subim)
+    else:
+        print 'Cant find astrometry near %s, %s'%(pointingra*rad2deg,pointingdec*rad2deg)
+        sys.exit(0)
+   
 
 def concat_catalogs(cats,outconcatcat):
     # Use the first catalogue as a dummy and then just update the entries
@@ -61,10 +79,9 @@ def concat_catalogs(cats,outconcatcat):
 
 def find_pointing_coords(directories):
 
-    directories = args.directories
-    cattype = args.cattype
+    mosdirectories = args.mosdirectories
     mosaiccats = []
-    for directory in directories:
+    for directory in mosdirectories:
         dircats = glob.glob('%s/*cat.fits'%directory)
         for mosaiccat in dircats:
             mosaiccats.append(mosaiccat)
@@ -81,7 +98,9 @@ def find_pointing_coords(directories):
         
     return pointingras,pointingdecs,mosaiccats
 
-def filter_catalogs(directories,pointingras,pointingdecs,mosaiccat,outname,dessourcenums,cattype):
+def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenums,cattype):
+
+    pointdirectories = args.pointdirectories
 
     sourceids = np.array([])
     sourceresolved = np.array([])
@@ -125,6 +144,8 @@ def filter_catalogs(directories,pointingras,pointingdecs,mosaiccat,outname,desso
 
     closepointingindex = np.where(sepn(pointingras,pointingdecs,rapointing,decpointing)*rad2deg < 5.0)
 
+    astromed = find_median_astrometry(pointdirectories,rapointing,decpointing)
+
     keepindices = []
     time1 = time.time()
     for i in range(0,numsources):
@@ -162,11 +183,11 @@ def filter_catalogs(directories,pointingras,pointingdecs,mosaiccat,outname,desso
 
     sourcera = np.append(sourcera,cat[1].data[keepindices]['RA'])
     e_sourcera = np.append(e_sourcera,cat[1].data[keepindices]['E_RA'])
-    e_sourcera_tot = np.append(e_sourcera_tot,(cat[1].data[keepindices]['E_RA']**2.0 + (1.70*arcsec2deg)**2.0)**0.5) #$ ADD SOME ERROR TO THE SOURCE POSITIONS
+    e_sourcera_tot = np.append(e_sourcera_tot,(cat[1].data[keepindices]['E_RA']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) #$ ADD SOME ERROR TO THE SOURCE POSITIONS
     
     sourcedec = np.append(sourcedec,cat[1].data[keepindices]['DEC'])
     e_sourcedec = np.append(e_sourcedec,cat[1].data[keepindices]['E_DEC'])
-    e_sourcedec_tot = np.append(e_sourcedec_tot,(cat[1].data[keepindices]['E_DEC']**2.0 + (1.70*arcsec2deg)**2.0)**0.5) # ADD SOME ERROR TO THE SOURCE POSITIONS
+    e_sourcedec_tot = np.append(e_sourcedec_tot,(cat[1].data[keepindices]['E_DEC']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) # ADD SOME ERROR TO THE SOURCE POSITIONS
     
     sint = np.append(sint,cat[1].data[keepindices]['Total_flux'])
     e_sint =np.append(e_sint,cat[1].data[keepindices]['E_Total_flux'])
@@ -268,8 +289,8 @@ def filter_catalogs(directories,pointingras,pointingdecs,mosaiccat,outname,desso
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Concatenate ddf-pipeline mosaic directories')
-    parser.add_argument('--directories', metavar='D', nargs='+',help='directory name')
-    parser.add_argument('--type', dest='cattype', type=str, help='Catalogue type (gaus or srl)')
+    parser.add_argument('--mosdirectories', metavar='D', nargs='+',help='mosaic directory name')
+    parser.add_argument('--pointdirectories', metavar='D', nargs='+',help='pointing directory name')
     args = parser.parse_args()
 
     pointingras,pointingdecs,mosaiccats = find_pointing_coords(args)
