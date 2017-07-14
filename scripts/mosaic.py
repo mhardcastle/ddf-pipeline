@@ -65,7 +65,7 @@ def make_mosaic(args):
         name.append(d.split('/')[-1])
         hdu=fits.open(d+'/'+intname)
         if args.find_noise:
-	    print 'Estimating noise for ', d+'/' + intname
+	    print 'Estimating noise for', d+'/' + intname
 	    if args.do_lowres:
 	            noise.append(get_rms(hdu,boxsize=1500))
 	    else:
@@ -115,7 +115,6 @@ def make_mosaic(args):
                 hdu.header['CRVAL1']-=dras[i]/(3600.0*np.cos(np.pi*dec/180.0))
                 hdu.header['CRVAL2']-=ddecs[i]/3600.0
 
-    print 'WCS values are:'
     for i in range(len(app)):
         wcs.append(WCS(hdus[i].header))
 

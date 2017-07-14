@@ -79,6 +79,7 @@ will need:
 * pyfits
 * SharedArray
 * deap
+* py-cpuinfo
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
