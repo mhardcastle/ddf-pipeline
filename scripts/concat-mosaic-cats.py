@@ -132,7 +132,9 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     
     pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
     if cattype == 'gaus':
+        sourcecat = pyfits.open(mosaiccat)
         mosaiccat = glob.glob(mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS'))[0]
+        
     cat = pyfits.open(mosaiccat)
     
     f = pyfits.open(pointing)
@@ -163,12 +165,19 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
             else:
                 continue
             
-        sc=SkyCoord(cat[1].data['RA'][i]*deg2rad*u.rad,cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs')
-        s=sc.to_string(style='hmsdms',sep='',precision=2)
+        if cattype == 'srl':
+            sc=SkyCoord(cat[1].data['RA'][i]*deg2rad*u.rad,cat[1].data['DEC'][i]*deg2rad*u.rad,frame='icrs')
+        if cattype == 'gaus':
+            sourceindex=cat[1].data['Source_id'][i]
+            sc=SkyCoord(sourcecat[1].data['RA'][sourceindex]*deg2rad*u.rad,sourcecat[1].data['DEC'][sourceindex]*deg2rad*u.rad,frame='icrs')
+        s=sc.to_string(style='hmsdms',sep='',precision=3)
         identity = str('ILTJ'+s).replace(' ','')[:-1]
 
         sourceids = np.append(sourceids,identity)
-        mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-2])
+        if cattype == 'srl':
+            mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-2])
+        if cattype == 'gaus':
+            mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-5])
         fluxratio = cat[1].data['Total_flux'][i]/cat[1].data['Peak_flux'][i]
         snr  = cat[1].data['Peak_flux'][i]/cat[1].data['Isl_rms'][i]
 
@@ -252,6 +261,7 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
     
     if cattype == 'gaus':
+        gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
         col25 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
     if cattype == 'srl':    
@@ -311,5 +321,5 @@ if __name__=='__main__':
         srlcatnames.append(srlcat)
         gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
-    concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.1.srl.fits')
-    concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.1.gaus.fits')
+    concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.2.srl.fits')
+    concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.2.gaus.fits')
