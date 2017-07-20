@@ -46,7 +46,7 @@ def summary(o):
         f.write('ddf-pipeline version was '+__version__+'\n')
         from DDFacet.DDF import report_version as ddf_version
         f.write('DDF version was '+ddf_version()+'\n')
-        from killMS2.Other.logo import report_version as killms_version
+        from killMS.Other.logo import report_version as killms_version
         f.write('killMS version was '+killms_version()+'\n\n')
         f.write('Options dictionary was as follows:\n')
         for k in o:
