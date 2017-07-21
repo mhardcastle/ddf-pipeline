@@ -18,7 +18,10 @@ def region_to_poly(inreg):
                 coords=[]
                 inpoly=True
             bits=l[5:].split(',')
-            coords.append((float(bits[0]),float(bits[1])))
+            ra=float(bits[0])
+            dec=float(bits[1])
+            if ra<-5: ra+=360.0
+            coords.append((ra,dec))
     #        coords.append((bits[2],bits[3].split(')')[0]))
         else:
             if inpoly:
@@ -27,8 +30,11 @@ def region_to_poly(inreg):
             if l[0:5]=='point':
                 m=re.match(r"point\((.*),(.*)\).*text=\{\[(.*)\]\}",l)
                 if m is None:
-                    print 'Failed to match:',l
-                llist.append((float(m.group(1)),float(m.group(2)),m.group(3)))
+                    raise RuntimeError('Failed to parse region label %s' % l)
+                ra=float(m.group(1))
+                dec=float(m.group(2))
+                if ra<-5: ra+=360.0
+                llist.append((ra,dec,m.group(3)))
 
     if inpoly:
         clist.append(coords)
@@ -66,8 +72,7 @@ def assign_labels_to_poly(plist,llist):
     for ra,dec,label in llist:
         i=which_poly(ra,dec,plist)
         if i is None:
-            print 'Failed to locate a label!'
-            stop
+            raise RuntimeError('Failed to locate a label! (%s)' % label)
         else:
             plabel[i]=label
     return plabel
