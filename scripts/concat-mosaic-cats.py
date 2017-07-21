@@ -258,16 +258,18 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     col22 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
     
     col23 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
-    col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
+	
+    # With unique source names that are matched with source and gaussian catalogs the source_id is not needed.
+    #col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
     
     if cattype == 'gaus':
         gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
-        col25 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
+        col24 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
     if cattype == 'srl':    
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24])
+        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23])
     if cattype == 'gaus':
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25])
+        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24])
         
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
