@@ -56,7 +56,7 @@ def run_bootstrap(o):
     # We use the individual ms in mslist.
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
     
-    obsids = [ms.split('_')[0] for ms in mslist]
+    obsids = [os.path.basename(ms).split('_')[0] for ms in mslist]
     Uobsid = set(obsids)
     
     for obsid in Uobsid:
