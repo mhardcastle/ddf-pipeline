@@ -91,7 +91,9 @@ def run_all(run, name=''):
 
     print 'About to fit to',len(data),'data points'
 
-    nwalkers=24
+    nwalkers=2*(len(data)+1)
+    if nwalkers<24:
+         nwalkers=24
     ndim=np.sum(smask)
     print 'Fitting',ndim,'scale factors'
     if run>1:
