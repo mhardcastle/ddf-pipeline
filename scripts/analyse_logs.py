@@ -19,8 +19,8 @@ for f in g:
     dt=get_time_range(f)
     times.append(dt)
 
-labels=['Miscellaneous','Wide-field KillMS','KillMS phase 60sb','KillMS amp/phase 60sb', 'KillMS amp/phase full', 'KillMS amp/phase full 2', 'Wide-field DDF dirin', 'Predict wide-field', 'DDF dirin', 'DDF phase 60sb', 'DDF amp-phase 60sb', 'DDF full', 'DDF full 2', 'DDF full low', 'DDF bootstrap', 'DDF bootstrap single-band']
-fragments=['***','wide_killms_p1','killms_p1','killms_ap1','killms_f_ap1','killms_f_ap2','wide_image_dirin', 'wide_image_phase1_predict', 'image_dirin','image_phase1','image_ampphase1','image_full_ampphase1','image_full_ampphase2','image_full_low','image_bootstrap','image_low']
+labels=['Miscellaneous','Shift','Wide-field KillMS','KillMS phase 60sb','KillMS amp/phase 60sb', 'KillMS amp/phase full', 'KillMS amp/phase full 2', 'Wide-field DDF dirin', 'Predict wide-field', 'DDF dirin', 'DDF phase 60sb', 'DDF amp-phase 60sb', 'DDF full', 'DDF full 2', 'DDF full low', 'DDF bootstrap', 'DDF bootstrap single-band']
+fragments=['***','shift','wide_killms_p1','killms_p1','killms_ap1','killms_f_ap1','killms_f_ap2','wide_image_dirin', 'wide_image_phase1_predict', 'image_dirin','image_phase1','image_ampphase1','image_full_ampphase1','image_full_ampphase2','image_full_low','image_bootstrap','image_low']
 sums=np.zeros(len(labels))
 print len(labels),len(fragments)
 
