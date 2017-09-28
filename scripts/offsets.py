@@ -306,6 +306,7 @@ class Offsets(object):
             bits=[b.strip() for b in l.split(',')]
             rar=float(bits[2])
             ra=rar/degtorad
+            if ra<-5: ra+=360.0
             decr=float(bits[3])
             dec=decr/degtorad
             number=which_poly(ra,dec,self.polys)
