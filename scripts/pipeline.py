@@ -402,7 +402,7 @@ if __name__=='__main__':
     else:
         catcher=None
 
-    uvrange=[o['image_uvmin'],1000]
+    uvrange=[o['image_uvmin'],o['uvmax']]
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
         killms_uvrange[0]=o['solutions_uvmin']
