@@ -138,7 +138,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
         fname=imagename+'.dirty.fits'
 
-    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Image-Mode=Clean --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --Data-Sort 1 --Cache-Dir=%s"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir)
+    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --Data-Sort 1 --Cache-Dir=%s --GAClean-MinSizeInitHMP=1 --GAClean-MaxMinorIterInitHMP=30000 --GAClean-AllowNegativeInitHMP=True --HMP-OuterSpaceTh .25 --GAClean-RMSFactorInitHMP .5"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir)
     
     if beamsize_minor is not None:
         runcommand += ' --Output-RestoringBeam %f,%f,%f'%(beamsize,beamsize_minor,beamsize_pa)
@@ -195,8 +195,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/PSF'):
             runcommand += ' --Cache-PSF force'
 
-    if HMPsize is not None:
-        runcommand += ' --SSDClean-MinSizeInitHMP=%i' % HMPsize
+    #if HMPsize is not None:
+    #    runcommand += ' --SSDClean-MinSizeInitHMP=%i' % HMPsize
 
     if options['nobar']:
         runcommand += ' --Log-Boring=1'
@@ -253,7 +253,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
         if external_mask is not None:
             merge_mask(fname,external_mask,fname)
 
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,uvrange=None,wtuv=None,robust=None,catcher=None,options=None):
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,uvrange=None,wtuv=None,robust=None,catcher=None,options=None,evolvesols=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -268,7 +268,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running killMS step')
         else:
-            runcommand = "killMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %f --BeamMode LOFAR --LOFARBeamMode=A --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --PowerSmooth=%f --InCol %s --DDFCacheDir=%s"%(f,imagename,o['dt'],niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],o['PowerSmooth'],colname,cache_dir)
+            runcommand = "kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName %s --dt %f --BeamMode LOFAR --LOFARBeamMode=A --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --PowerSmooth=%f --InCol %s --DDFCacheDir=%s"%(f,imagename,o['dt'],niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, o['NChanSols'],o['PowerSmooth'],colname,cache_dir)
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -284,6 +284,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --DicoModel '+dicomodel
             if o['nobar']:
                 runcommand+=' --DoBar=0'
+            if evolvesols is not None:
+                runcommand+= ' --EvolutionSolFile '+evolvesols
 
             rootfilename=outsols.split('/')[-1]
             f=f.replace("/","_")
@@ -371,13 +373,18 @@ def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
 def smooth_solutions(mslist,ddsols,interval,catcher=None):
     outsols=ddsols+'.Smooth'
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
-    for f in filenames:
-        if catcher: catcher.check()
-        checkname=f+'/killMS.'+outsols+'.sols.npz'
-        if o['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running smoothing step')  
-        else:
-            smoothsols.main(options=dotdict({'MSName':f,'Order':2,'Plot':False,'SolsFile':ddsols,'WSize':interval}))
+    #for f in filenames:
+    #    if catcher: catcher.check()
+    #    checkname=f+'/killMS.'+outsols+'.sols.npz'
+    #    if o['restart'] and os.path.isfile(checkname):
+    #        warn('Solutions file '+checkname+' already exists, not running smoothing step')  
+    #    else:
+    #        smoothsols.main(options=dotdict({'MSName':f,'Order':2,'Plot':False,'SolsFile':ddsols,'WSize':interval}))
+    if not os.path.exists('killMS.killms_ap.merge.sols.npz'):
+	    os.system('MergeSols.py --SolsFilesIn L570741\*.ms/\*f_ap1.sols.npz --SolFileOut killMS.killms_ap.merge.sols.npz')
+    if not os.path.exists('killMS.killms_ap.merge.interp.sols.npz'):
+	    os.system('SmoothSols.py --SolsFileIn killMS.killms_ap.merge.sols.npz --SolsFileOut killMS.killms_ap.merge.interp.sols.npz --Amp-SmoothType Poly --Amp-PolyOrder 3 --NCPU 32  --InterpMode CrossTEC,Amp')
+
     return outsols
 
 def full_clearcache(o):
@@ -536,9 +543,9 @@ if __name__=='__main__':
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
     ddsols='killms_ap1'
-    if o['smoothing'] is not None:
-        report('Smoothing amplitude solutions')
-        ddsols=smooth_solutions(o['mslist'],ddsols,o['smoothing'],catcher=catcher)
+    #if o['smoothing'] is not None:
+    #    report('Smoothing amplitude solutions')
+    #    ddsols=smooth_solutions(o['mslist'],ddsols,o['smoothing'],catcher=catcher)
 
     # Apply phase and amplitude solutions and image again
     ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=3,robust=o['image_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1],uvrange=uvrange,apply_weights=o['apply_weights'][2],catcher=catcher)
@@ -566,6 +573,9 @@ if __name__=='__main__':
         if o['smoothing'] is not None:
             report('Smoothing amplitude solutions')
             ddsols=smooth_solutions(o['full_mslist'],ddsols,o['smoothing'],catcher=catcher)
+            # Do a 2nd killms solve using the smoothed solutions as a prior
+            killms_data('image_ampphase1',o['full_mslist'],'killms_f_ap1_prior',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_ampphase1_masked.DicoModel',niterkf=1,uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher,evolvesols='killMS.killms_ap.merge.interp.sols.npz')
+            ddsols = 'killms_f_ap1_prior'
 
         # Do the low-res image first so we can use a mask from it on
         # the high-res image
