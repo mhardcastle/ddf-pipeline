@@ -402,7 +402,7 @@ if __name__=='__main__':
     else:
         catcher=None
 
-    uvrange=[o['image_uvmin'],1000]
+    uvrange=[o['image_uvmin'],o['uvmax']]
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
         killms_uvrange[0]=o['solutions_uvmin']
@@ -667,14 +667,14 @@ if __name__=='__main__':
             # check for LastResidual in cache. In case of a restart,
             # this may not be present, in which case we have to
             # remake.
-            if not os.path.isfile(last_image_root+'.shift.app.facetRestored.fits'):
-                cachedir=find_cache_dir(o)
-                if not(os.path.isfile(cachedir+'/'+o['full_mslist']+'.ddfcache/LastResidual')) or not(os.path.isfile(cachedir+'/'+o['full_mslist']+'.ddfcache/PSF')):
-                    ddf_image('image_full_ampphase1m_reimage',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-                    os.symlink('Dirty',cachedir+'/'+o['full_mslist']+'.ddfcache/LastResidual')
-                    os.symlink('Dirty.hash',cachedir+'/'+o['full_mslist']+'LastResidual.hash')
+            cachedir=find_cache_dir(o)
+            full_mslist_file = os.path.basename(o['full_mslist'])
+            if not(os.path.isfile(cachedir+'/'+full_mslist_file+'.ddfcache/LastResidual')) or not(os.path.isfile(cachedir+'/'+full_mslist_file+'.ddfcache/PSF')):
+                ddf_image('image_full_ampphase1m_reimage',full_mslist_file,cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
+                os.symlink('Dirty',cachedir+'/'+full_mslist_file+'.ddfcache/LastResidual')
+                os.symlink('Dirty.hash',cachedir+'/'+full_mslist_file+'LastResidual.hash')
 
-                ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
+            ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
 
     # we got to the end, write a summary file
     

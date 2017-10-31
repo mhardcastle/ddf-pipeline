@@ -31,14 +31,14 @@ def fitall(scale,frequencies,fluxes,errors):
         alpha.append(popt[1])
     return alpha
 
-def run_all(run):
+def run_all(run, name=''):
 
     global smask
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes('crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits')
 
     print 'About to plot',len(data),'data points'
 
-    scale=np.load('crossmatch-results-'+str(run)+'.npy')[:,0]
+    scale=np.load(name+'crossmatch-results-'+str(run)+'.npy')[:,0]
     print 'Scaling factors applied are',scale
     plt.xscale('log')
     plt.yscale('log')
@@ -51,4 +51,7 @@ def run_all(run):
     plt.show()
 
 if __name__=='__main__':
-    run_all(int(sys.argv[1]))
+    if len(sys.argv) == 2:
+        run_all(int(sys.argv[1]))
+    else:
+        run_all(int(sys.argv[1]),name=sys.argv[2])
