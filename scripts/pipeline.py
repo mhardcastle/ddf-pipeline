@@ -287,7 +287,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
             rootfilename=outsols.split('/')[-1]
             f=f.replace("/","_")
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=options['quiet'])
+            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
