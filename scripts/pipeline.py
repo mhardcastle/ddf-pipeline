@@ -109,7 +109,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None):
 
     if catcher: catcher.check()
 
@@ -204,6 +204,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if smooth:
         runcommand += ' --Beam-Smooth=1'
 
+    if predict_column is not None:
+        runcommand += ' --Predict-ColName=%s' % predict_column
+        
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
@@ -386,6 +389,19 @@ def full_clearcache(o):
     if o['full_mslist'] is not None:
         clearcache(o['full_mslist'],o)
 
+
+def subtract_data(mslist,col1,col2):
+    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    for f in filenames:
+        print 'Subtracting',f
+        t = pt.table(f,readonly=False)
+        desc=t.getcoldesc(col1)
+        desc['name']='SUBTRACTED_DATA'
+        t.addcols(desc)
+        d1=t.getcol(col1)
+        d2=t.getcol(col2)
+        t.putcol('SUBTRACTED_DATA',d1-d2)
+        t.close()
 
 if __name__=='__main__':
     # Main loop
@@ -632,6 +648,8 @@ if __name__=='__main__':
         ddf_image('image_full_ampphase1',o['full_mslist'],cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
         make_mask('image_full_ampphase1.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
         mask_dicomodel('image_full_ampphase1.DicoModel','image_full_ampphase1.app.restored.fits.mask.fits','image_full_ampphase1_masked.DicoModel',catcher=catcher)
+        if o['positions'] is not None:
+            ddf_kw['predict_column']='PREDICT_DATA'
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=True,dirty_from_resid=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rmsfactor=o['final_rmsfactor'],**ddf_kw)
 
         if o['second_selfcal']:
@@ -676,6 +694,12 @@ if __name__=='__main__':
 
             ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
 
+    if o['positions'] is not None:
+        # subtract the predicted data
+        subtract_data(full_mslist_file,colname,'PREDICTED_DATA')
+        # now phase up and do cool stuff
+        pass
+            
     # we got to the end, write a summary file
     
     summary(o)

@@ -12,9 +12,9 @@ make
 cd ../../Gridder
 make
 cd $WD
-git clone https://github.com/saopicc/DDFacet.git
+git clone https://github.com/cyriltasse/DDFacet.git
 cd DDFacet
-git checkout lofar-stable
+git checkout master
 python setup.py build
 cd $WD
 sed -e "s|INSTALLDIR|$WD|" ddf-pipeline/misc/DDF.sh > init.sh

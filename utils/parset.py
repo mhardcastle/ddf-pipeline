@@ -75,5 +75,5 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ),
                 ( 'offsets', 'method', str, None, 'Offset correction method to use. None -- no correction'),
                 ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
-                ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ) )
-
+                ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ),
+                ( 'spectra', 'positions', str, None, 'Filename containing positions at which to compute dynamic spectra') )
