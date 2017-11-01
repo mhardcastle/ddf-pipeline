@@ -196,7 +196,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             runcommand += ' --Cache-PSF force'
 
     if HMPsize is not None:
-        runcommand += ' --SSDClean-MinSizeInit=%i' % HMPsize
+        runcommand += ' --GAClean-MinSizeInit=%i' % HMPsize
 
     if options['nobar']:
         runcommand += ' --Log-Boring=1'
