@@ -151,7 +151,15 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand+=' --Weight-ColName="None"'
 
     if cubemode:
-        channels=len(open(mslist).readlines())
+        # number of channels equals number of distinct freqs in data
+        freqs=[]
+        mss=[l.rstrip() for l in open(mslist).readlines()]
+        for ms in mss:
+            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+            freq=t[0]['REF_FREQUENCY']
+            if freq not in freqs:
+                freqs.append(freq)
+        channels=len(freqs)
         runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
     else:
         runcommand+=' --Freq-NBand=2'
@@ -541,7 +549,11 @@ if __name__=='__main__':
         ddsols=smooth_solutions(o['mslist'],ddsols,o['smoothing'],catcher=catcher)
 
     # Apply phase and amplitude solutions and image again
-    ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=3,robust=o['image_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1],uvrange=uvrange,apply_weights=o['apply_weights'][2],catcher=catcher)
+    ddf_kw={}
+    if o['msss_mode']:
+        ddf_kw['cubemode']=True
+        ddf_kw['smooth']=True
+    ddf_image('image_ampphase1',o['mslist'],cleanmask='image_phase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=3,robust=o['image_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_phase1_masked',peakfactor=0.005,automask=True,automask_threshold=o['thresholds'][2],normalization=o['normalize'][1],uvrange=uvrange,apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
 
     if o['exitafter'] == 'ampphase':
         warn('User specified exit after image_ampphase.')

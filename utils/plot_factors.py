@@ -34,7 +34,7 @@ def fitall(scale,frequencies,fluxes,errors):
 def run_all(run, name=''):
 
     global smask
-    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits')
+    frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name=name)
 
     print 'About to plot',len(data),'data points'
 
