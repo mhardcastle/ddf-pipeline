@@ -91,10 +91,10 @@ def run_all(run, name=''):
 
     print 'About to fit to',len(data),'data points'
 
-    if nwalkers<24:
-         nwalkers=24
     ndim=np.sum(smask)
     nwalkers=2*(ndim+1)
+    if nwalkers<24:
+         nwalkers=24
     print 'Fitting',ndim,'scale factors'
     if run>1:
         oscale=np.load(name+'crossmatch-results-'+str(run-1)+'.npy')[:,0]
