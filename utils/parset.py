@@ -29,7 +29,7 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'image', 'final_psf_arcsec', float, 6.0, 'Final image restored with this PSF size in arcsec' ),
                 ( 'image', 'final_psf_minor_arcsec', float, None, 'Final image restored with this PSF minor axis in arcsec' ),
                 ( 'image', 'final_psf_pa_deg', float, None, 'Final image restored with PSF with this PA in degrees' ),
-                ( 'image', 'final_rmsfactor', float, 3.0, 'Final image RMS factor for cleaning' ),
+                ( 'image', 'final_rmsfactor', float, 1.0, 'Final image RMS factor for cleaning' ),
                 ( 'image', 'low_psf_arcsec', float, None, 'Low-resolution restoring beam in arcsec' ),
                 ( 'image', 'low_robust', float, -0.20, 'Low-resolution image robustness' ),
                 ( 'image', 'low_cell', float, 4.5, 'Low-resolution image pixel size in arcsec' ),
@@ -76,5 +76,5 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'bootstrap', 'radii', list, None, 'Crossmatch radii for catalogues (arcsec)' ),
                 ( 'offsets', 'method', str, None, 'Offset correction method to use. None -- no correction'),
                 ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
-                ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ) )
-
+                ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ),
+                ( 'spectra', 'do_dynspec', str, True, 'Do dynamic spectra, Filename of position should be DynSpecTargets.txt') )
