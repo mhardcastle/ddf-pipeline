@@ -33,7 +33,6 @@ import numpy as np
 from astropy.io import fits
 from pipeline_version import version
 __version__=version()
-import smoothsols
 import datetime
 import threading
 from archive_old_solutions import do_archive
@@ -380,16 +379,24 @@ def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
     return result
 
 def smooth_solutions(mslist,ddsols,interval,catcher=None):
-    outsols=ddsols+'.Smooth'
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
-    for f in filenames:
-        if catcher: catcher.check()
-        checkname=f+'/killMS.'+outsols+'.sols.npz'
-        if o['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running smoothing step')  
-        else:
-            smoothsols.main(options=dotdict({'MSName':f,'Order':2,'Plot':False,'SolsFile':ddsols,'WSize':interval}))
-    return outsols
+    with open('solslist.txt','w') as f:
+        for fname in filenames:
+            solname =fname+'/killMS.'+ddsols+'.sols.npz'
+            f.write('%s\n'%(solname))
+
+    checkname='%s_merged.npz'%ddsols
+    if o['restart'] and os.path.isfile(checkname):
+        warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+    else:
+        run('MergeSols.py --SolsFilesIn=solslist.txt --SolFileOut=%s_merged.npz'%ddsols)
+    checkname='%s_smoothed.npz'%ddsols
+    if o['restart'] and os.path.isfile(checkname):
+        warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+    else:
+        run('SmoothSols.py --SolsFileIn=%s_merged.npz --SolsFileOut=%s_smoothed.npz --InterpMode=TEC,Amp --Amp-SmoothType=Gauss --Amp-GaussKernel=%s'%(ddsols,ddsols,interval))
+
+    return '%s_smoothed.npz'%ddsols
 
 def full_clearcache(o):
     clearcache(o['mslist'],o)
@@ -560,9 +567,6 @@ if __name__=='__main__':
     killms_data('image_phase1',o['mslist'],'killms_ap1',colname=colname,dicomodel='image_phase1_masked.DicoModel',niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
 
     ddsols='killms_ap1'
-    if o['smoothing'] is not None:
-        report('Smoothing amplitude solutions')
-        ddsols=smooth_solutions(o['mslist'],ddsols,o['smoothing'],catcher=catcher)
 
     # Apply phase and amplitude solutions and image again
     ddf_kw={}
