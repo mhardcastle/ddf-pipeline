@@ -686,7 +686,7 @@ if __name__=='__main__':
             LastImage="image_full_ampphase2.app.restored.fits"
 
         if o['do_dynspec']:
-            runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 3. --image %s"%(ddsols,LastImage)
+            runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 2. --image %s"%(ddsols,LastImage)
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
         if o['method'] is not None:
