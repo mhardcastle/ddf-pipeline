@@ -665,9 +665,12 @@ if __name__=='__main__':
             ddf_kw['predict_column']='PREDICT_DATA'
 
         ddf_image('image_full_ampphase1m',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=True,dirty_from_resid=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rms_factor=o['final_rmsfactor'],**ddf_kw)
+        Current_kMS_SolName="killms_f_ap2"
 
+        LastImage="image_full_ampphase1m.app.restored.fits"
 
-        if o['second_selfcal'] or o['do_dynspec']:
+        if o['second_selfcal']:
+            ddsols="killms_f_ap2"
             if not os.path.exists('image_full_ampphase1m.Norm.fits'):
                 os.symlink('image_full_ampphase1.Norm.fits','image_full_ampphase1m.Norm.fits')
             if o['auto_uvmin']:
@@ -676,13 +679,12 @@ if __name__=='__main__':
             mask_dicomodel('image_full_ampphase1m.DicoModel','image_full_ampphase1m.app.restored.fits.mask.fits','image_full_ampphase1m_masked.DicoModel',catcher=catcher)
             killms_data('image_full_ampphase1m',o['full_mslist'],'killms_f_ap2',colname=colname,clusterfile='image_dirin_SSD.npy.ClusterCat.npy',dicomodel='image_full_ampphase1m_masked.DicoModel',niterkf=o['NIterKF'][2],catcher=catcher)
             ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap2',applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rms_factor=o['final_rmsfactor'],**ddf_kw)
+            LastImage="image_full_ampphase2.app.restored.fits"
 
         if o['do_dynspec']:
-            # subtract the predicted data
-            subtract_data(full_mslist_file,colname,'PREDICTED_DATA')
-            # now phase up and do cool stuff
-            pass
-
+            runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 3. --image %s"%(ddsols,LastImage)
+            run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
+            
         if o['method'] is not None:
             # have we got the catalogue?
             if download_thread is not None and download_thread.isAlive():
