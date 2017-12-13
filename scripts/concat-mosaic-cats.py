@@ -120,6 +120,11 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     e_maj = np.array([])
     smin = np.array([])
     e_smin = np.array([])
+    dcmaj = np.array([])
+    e_dcmaj = np.array([])
+    dcsmin = np.array([])
+    e_dcsmin = np.array([])
+    
     pa = np.array([])
     e_pa = np.array([])
     rms_noise = np.array([])
@@ -171,6 +176,7 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
             sourceindex=cat[1].data['Source_id'][i]
             sc=SkyCoord(sourcecat[1].data['RA'][sourceindex]*deg2rad*u.rad,sourcecat[1].data['DEC'][sourceindex]*deg2rad*u.rad,frame='icrs')
         s=sc.to_string(style='hmsdms',sep='',precision=3)
+        s=sc.to_string(style='hmsdms',sep='',precision=2)
         identity = str('ILTJ'+s).replace(' ','')[:-1]
 
         sourceids = np.append(sourceids,identity)
@@ -210,6 +216,10 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     e_maj =np.append(e_maj,cat[1].data[keepindices]['E_Maj'])
     smin = np.append(smin,cat[1].data[keepindices]['Min'])
     e_smin = np.append(e_smin,cat[1].data[keepindices]['E_Min'])
+    dcmaj = np.append(dcmaj,cat[1].data[keepindices]['DC_Maj'])
+    e_dcmaj =np.append(e_dcmaj,cat[1].data[keepindices]['E_DC_Maj'])
+    dcsmin = np.append(dcsmin,cat[1].data[keepindices]['DC_Min'])
+    e_dcsmin = np.append(e_dcsmin,cat[1].data[keepindices]['E_DC_Min'])
     pa = np.append(pa,cat[1].data[keepindices]['PA'])
     e_pa = np.append(e_pa,cat[1].data[keepindices]['E_PA'])
     rms_noise = np.append(rms_noise,cat[1].data[keepindices]['Isl_rms'])
@@ -246,30 +256,36 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     
     col16 =  pyfits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
     col17 =  pyfits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
+
+    col18 =  pyfits.Column(name='DC_Maj',format='f8',unit='arcsec',array=dcmaj*deg2arcsec)
+    col19 =  pyfits.Column(name='E_DC_Maj',format='f8',unit='arcsec',array=e_dcmaj*deg2arcsec)
     
-    col18 =  pyfits.Column(name='PA',format='f8',unit='deg',array=pa)
-    col19 =  pyfits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
+    col20 =  pyfits.Column(name='DC_Min',format='f8',unit='arcsec',array=dcsmin*deg2arcsec)
+    col21 =  pyfits.Column(name='E_DC_Min',format='f8',unit='arcsec',array=e_dcsmin*deg2arcsec)
+    
+    col22 =  pyfits.Column(name='PA',format='f8',unit='deg',array=pa)
+    col23 =  pyfits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
 
     #col20 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
     
-    col20 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
-    col21 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
+    col24 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
+    col25 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
     
-    col22 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
+    col26 = pyfits.Column(name='Mosaic_ID',format='8A',unit='',array=mosaic_identifier)
     
-    col23 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
+    col27 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
 	
     # With unique source names that are matched with source and gaussian catalogs the source_id is not needed.
     #col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
     
     if cattype == 'gaus':
         gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
-        col24 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
+        col28 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
     if cattype == 'srl':    
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23])
+        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27])
     if cattype == 'gaus':
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24])
+        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28])
         
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
@@ -309,7 +325,12 @@ if __name__=='__main__':
 
     srlcatnames = []
     gauscatnames = []
+
     random.shuffle(mosaiccats)
+    
+    # The line below gives the ordering of the mosaic cats for the DR1 release that was circulated to the SKSP on 24/07/2017
+    #mosaiccats = ['/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P22Hetdex04/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P8Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P35Hetdex10/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P182+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P187+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P221+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P210+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P178+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P211+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P200+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P218+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P1Hetdex15/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P227+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P213+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P6/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P3Hetdex16/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P38Hetdex07/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P29Hetdex19/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P219+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P37Hetdex15/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P27Hetdex09/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P214+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P41Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P34Hetdex06/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P4Hetdex16/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P209+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P16Hetdex13/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P12Hetdex11/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P15Hetdex13/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P30Hetdex06/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P205+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P42Hetdex07/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P21/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P25Hetdex09/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P169+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P219+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P26Hetdex03/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P11Hetdex12/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P19Hetdex17/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P7Hetdex11/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P217+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P164+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P191+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P196+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P18Hetdex03/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P14Hetdex04/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P10Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P206+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P33Hetdex08/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P227+53/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P173+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P225+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P23Hetdex20/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P39Hetdex19/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P206+50/mosaic.cat.fits']
+
     for mosaiccat in mosaiccats:
         print 'Working on %s'%mosaiccat
         outname = mosaiccat.split('/')[-2] + 'cat'
@@ -323,5 +344,5 @@ if __name__=='__main__':
         srlcatnames.append(srlcat)
         gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
-    concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.2.srl.fits')
-    concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.2.gaus.fits')
+    concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.srl.fits')
+    concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.gaus.fits')
