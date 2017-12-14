@@ -394,7 +394,7 @@ def smooth_solutions(mslist,ddsols,interval,catcher=None):
     if o['restart'] and os.path.isfile(checkname):
         warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
     else:
-        run('SmoothSols.py --SolsFileIn=%s_merged.npz --SolsFileOut=%s_smoothed.npz --InterpMode=CrossTEC,Amp --Amp-SmoothType=Gauss --Amp-GaussKernel=%s'%(ddsols,ddsols,interval))
+        run('SmoothSols.py --SolsFileIn=%s_merged.npz --SolsFileOut=%s_smoothed.npz --InterpMode=TEC,Amp --Amp-SmoothType=Gauss --Amp-GaussKernel=%s,0'%(ddsols,ddsols,interval))
 
     return '%s_smoothed.npz'%ddsols
 
