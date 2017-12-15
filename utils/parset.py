@@ -78,4 +78,4 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'offsets', 'method', str, None, 'Offset correction method to use. None -- no correction'),
                 ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
                 ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ),
-                ( 'spectra', 'do_dynspec', str, True, 'Do dynamic spectra, Filename of position should be DynSpecTargets.txt') )
+                ( 'spectra', 'do_dynspec', bool, True, 'Do dynamic spectra') )
