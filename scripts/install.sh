@@ -3,6 +3,7 @@
 export WD=`pwd`
 git clone https://github.com/cyriltasse/SkyModel.git
 git clone https://github.com/saopicc/killMS.git
+git clone https://github.com/cyriltasse/DynSpecMS.git
 cd killMS
 git checkout lofar-stable
 cd Predict
