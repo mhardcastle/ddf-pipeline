@@ -14,6 +14,8 @@ cd ../../Gridder
 make
 cd $WD
 git clone https://github.com/cyriltasse/DDFacet.git
+# fix compile options
+cp ddf-pipeline/misc/setup.cfg DDFacet
 cd DDFacet
 git checkout master
 python setup.py build
