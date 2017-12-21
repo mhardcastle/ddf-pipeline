@@ -13,7 +13,7 @@ except ImportError:
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
-from pipeline import ddf_image
+from pipeline import ddf_image,make_external_mask
 import shutil
 from astropy.io import fits
 
@@ -52,7 +52,6 @@ def run_bootstrap(o):
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])
 
-
     # We use the individual ms in mslist.
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
     
@@ -80,12 +79,18 @@ def run_bootstrap(o):
         for f,m in zip(freqs,omslist):
             print m,f
 
-
-        # Clean in cube mode
+        # generate the sorted input mslist
         with open('temp_mslist.txt','w') as f:
             for line in omslist:
                 f.write(line+'\n')
-        ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=4,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True)
+
+        # Clean in cube mode
+        # As for the main pipeline, first make a dirty map
+        ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',cleanmask=None,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=0,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True,conditional_clearcache=True)
+        external_mask='bootstrap_external_mask.fits'
+        make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='bscell',options=o)
+        # Deep SSD clean with this external mask and automasking
+        ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=5,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True,conditional_clearcache=False)
 
         if os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl'):
             warn('Source list exists, skipping source extraction')
