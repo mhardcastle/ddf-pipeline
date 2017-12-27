@@ -691,8 +691,12 @@ if __name__=='__main__':
             ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1m.app.restored.fits.mask.fits',cleanmode='SSD',ddsols='killms_f_ap2',applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rms_factor=o['final_rmsfactor'],**ddf_kw)
 
         if o['do_dynspec']:
-            runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 2. --image %s --LogBoring %i"%(us_ddsols,LastImage,o['nobar'])
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
+            g=glob.glob('DynSpecs_*')
+            if len(g)>0:
+                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+            else:
+                runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 2. --image %s --LogBoring %i"%(us_ddsols,LastImage,o['nobar'])
+                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
         if o['method'] is not None:
             # have we got the catalogue?
