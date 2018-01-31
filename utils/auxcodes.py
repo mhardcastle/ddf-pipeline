@@ -22,6 +22,12 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+def separator(s):
+    print
+    print "%s============================== %s =============================%s"%(bcolors.FAIL,s,bcolors.ENDC)
+    print
+
+    
 def die(s):
     print bcolors.FAIL+s+bcolors.ENDC
     raise Exception(s)
