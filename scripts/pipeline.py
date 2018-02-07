@@ -284,8 +284,9 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
             merge_mask(fname,external_mask,fname)
-
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,DISettings=None,EvolutionSolFile=None):
+    return fname
+            
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,DISettings=None,EvolutionSolFile=None,CovQ=0.1):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -301,7 +302,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
         else:
             
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ 0.1 --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, o['LambdaKF'], o['NCPU_killms'], outsols, NChanSols,o['PowerSmooth'],colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols, NChanSols,o['PowerSmooth'],colname)
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -354,11 +355,10 @@ def mask_dicomodel(indico,maskname,outdico,catcher=None):
 
     if o['restart'] and os.path.isfile(outdico):
         warn('File '+outdico+' already exists, skipping MaskDicoModel step')
-        return False
     else:
         runcommand = "MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(maskname,indico,outdico) 
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
-        return True
+    return outdico.split(".")[0]
 
 def rmtglob(path):
     g=glob.glob(path)
@@ -571,8 +571,8 @@ def main(o=None):
 
     # make a mask from the final image
     separator("MakeMask")
-    make_mask('image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
-    mask_dicomodel('image_dirin_SSD.DicoModel','image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD_masked.DicoModel',catcher=catcher)
+    CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD.DicoModel','image_dirin_SSD.app.restored.fits.mask.fits','image_dirin_SSD_masked.DicoModel',catcher=catcher)
 
     # ##########################################################
     # cluster to get facets
@@ -595,58 +595,66 @@ def main(o=None):
         
     separator("DD calibration")
     CurrentDDkMSSolName=killms_data('image_dirin_SSD',o['mslist'],'DDS0',colname=colname,
-                                    dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
+                                    CovQ=0.02,
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     MergeSmooth=True)
 
 
-
     separator("PhaseOnly deconv")
     ddf_image('image_phase1',o['mslist'],
-              cleanmask="image_dirin_SSD.app.restored.fits.mask.fits",
+              cleanmask=CurrentMaskName,
               cleanmode='SSD',
               ddsols=CurrentDDkMSSolName,applysols='P',majorcycles=2,robust=o['image_robust'],
               colname=colname,peakfactor=0.001,automask=True,
               automask_threshold=o['thresholds'][1],
               normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
-              use_dicomodel=True,dicomodel_base='image_dirin_SSD_masked',catcher=catcher)
+              use_dicomodel=True,dicomodel_base=CurrentBaseDicoModelName,catcher=catcher)
+
+    CurrentBaseDicoModelName='image_phase1'
+    
+    # separator("Mask for deeper deconv")
+    # CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+    # CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
+
+    # separator("Phase deeper deconv")
+    # ddf_image('image_phase1m',o['mslist'],
+    #           cleanmask=CurrentMaskName,
+    #           reuse_psf=True,#reuse_dirty=True,dirty_from_resid=True,
+    #           cleanmode='SSD',
+    #           ddsols=CurrentDDkMSSolName,applysols='P',majorcycles=2,robust=o['image_robust'],
+    #           colname=colname,peakfactor=0.001,automask=True,
+    #           automask_threshold=o['thresholds'][1],
+    #           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+    #           use_dicomodel=True,dicomodel_base=CurrentBaseDicoModelName,catcher=catcher)
     
     separator("DD calibration")
     CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                    dicomodel='image_phase1.DicoModel',
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    CovQ=0.02,
                                     clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
 
+
     separator("AmpPhase deconv")
-    ddf_image('image_ampphase1',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
+    ddf_image('image_ampphase1',o['mslist'],
+              cleanmask=CurrentMaskName,cleanmode='SSD',
               ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
               colname=colname,peakfactor=0.001,automask=True,
               automask_threshold=o['thresholds'][1],
               normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
               use_dicomodel=True,dicomodel_base='image_phase1',catcher=catcher)
 
-    separator("Mask for deeper deconv")
-    make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-
-    separator("Deconv with new mask")
-    ddf_image('image_ampphase1m',o['mslist'],
-              cleanmask='image_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',
-              reuse_psf=True,reuse_dirty=True,dirty_from_resid=True,
-              ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
-              colname=colname,peakfactor=0.001,automask=True,
-              automask_threshold=o['thresholds'][1],
-              normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
-              use_dicomodel=True,dicomodel_base='image_phase1',catcher=catcher)
 
     separator("Update Mask")
-    make_mask('image_ampphase1m.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-    mask_dicomodel('image_ampphase1m.DicoModel','image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel',catcher=catcher)
-    CurrentMaskName,CurrentBaseDicoModelName='image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel'
-
+    CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+    # CurrentMaskName,CurrentBaseDicoModelName='image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel'
 
     # # Compute the DD predict
     # separator("Compute DD predict")
@@ -706,8 +714,9 @@ def main(o=None):
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
     separator("DD Calibration (full mslist)")
-    CurrentDDkMSSolName=killms_data('image_ampphase1m',o['full_mslist'],'DDS2_full',
+    CurrentDDkMSSolName=killms_data('image_ampphase1',o['full_mslist'],'DDS2_full',
                                     colname=colname,
+                                    CovQ=0.02,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],dt=o['dt'],
@@ -724,7 +733,7 @@ def main(o=None):
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Compute DI calibration (full mslist)")
-    killms_data('image_ampphase1m',o['full_mslist'],'DIS0',colname=colname,
+    killms_data('PredictDSS2',o['full_mslist'],'DIS0',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -745,6 +754,21 @@ def main(o=None):
     ddf_image('image_full_ampphase_di',o['full_mslist'],
               cleanmask=CurrentMaskName,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',majorcycles=0,robust=o['image_robust'],
+              colname=colname,use_dicomodel=True,
+              dicomodel_base=CurrentBaseDicoModelName,
+              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
+              normalization=o['normalize'][1],uvrange=uvrange,
+              apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
+
+    separator("MakeMask")
+    CurrentMaskName=make_mask('image_full_ampphase_di.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
+
+    separator("Finish Deconvolution AP (full mslist)")
+    ddf_image('image_full_ampphase_di_m',o['full_mslist'],
+              cleanmask=CurrentMaskName,
+              reuse_psf=True,dirty_from_resid=True,
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
               applysols='AP',majorcycles=1,robust=o['image_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
@@ -757,69 +781,82 @@ def main(o=None):
         sys.exit(2)
 
     # Now move to the full dataset, if it exists
-    if o['full_mslist'] is None:
-        warn('No full MS list supplied, stopping here')
-    else:
-        # Check imaging weights -- needed before DDF
-        check_imaging_weight(o['full_mslist'])
+    # Check imaging weights -- needed before DDF
+    check_imaging_weight(o['full_mslist'])
 
-        if o['auto_uvmin']:
-            killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
+    if o['auto_uvmin']:
+        killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
 
-        separator("MakeMask")
-        make_mask('image_full_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
-        mask_dicomodel('image_full_ampphase1.DicoModel','image_full_ampphase1.app.restored.fits.mask.fits','image_full_ampphase1_masked.DicoModel',catcher=catcher)
+    separator("MakeMask")
+    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
 
-        separator("DD Calibration (full mslist)")
-        CurrentDDkMSSolName=killms_data('image_full_ampphase1',o['full_mslist'],'DDS2',
-                                        colname=colname,clusterfile='image_full_dirin_SSD.npy.ClusterCat.npy',
-                                        dicomodel='image_full_ampphase1_masked.DicoModel',
-                                        niterkf=o['NIterKF'][2],uvrange=killms_uvrange,
-                                        wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                        dt=o['dt'],catcher=catcher,EvolutionSolFile=CurrentDDkMSSolName)
+    separator("DD Calibration (full mslist)")
+    CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
+                                    o['full_mslist'],'DDDS3_full',
+                                    colname=colname,
+                                    clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    niterkf=6,
+                                    CovQ=0.1,
+                                    uvrange=killms_uvrange,
+                                    wtuv=o['wtuv'],
+                                    robust=o['solutions_robust'],
+                                    dt=o['dt'],catcher=catcher,EvolutionSolFile=CurrentDDkMSSolName)
 
-        us_ddsols=ddsols=CurrentDDkMSSolName
+    ddf_image('image_full_ampphase_di_m.NoSmoothDD',o['full_mslist'],
+              cleanmask=CurrentMaskName,
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',majorcycles=1,robust=o['final_robust'],
+              colname=colname,use_dicomodel=True,
+              dicomodel_base=CurrentBaseDicoModelName,beamsize=options['final_psf_arcsec'],
+              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
+              normalization=o['normalize'][1],uvrange=uvrange,
+              apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
 
-        # Do the low-res image first so we can use a mask from it on
-        # the high-res image
+    return
+    us_ddsols=ddsols=CurrentDDkMSSolName
+    
+    # Do the low-res image first so we can use a mask from it on
+    # the high-res image
+    
+    if o['do_lowres_imaging']:
+        # low-res reimage requested
+        low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+        if o['low_imsize'] is not None:
+            low_imsize=o['low_imsize'] # allow over-ride
+        else:
+            low_imsize=o['imsize']*o['cellsize']/o['low_cell']
+        # if mask-low exists then use it
+        if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
+            extmask='bootstrap-mask-low.fits'
+        else:
+            extmask=None
+        ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,catcher=catcher)
+        make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        ddf_image('image_full_low_im',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',catcher=catcher)
+        if o['restart'] and os.path.isfile('full-mask-low.fits'):
+            warn('Full-bw mask exists, not making it')
+        else:
+            report('Making the full-bw extended source mask')
+            make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
+        extmask='full-mask-low.fits'
+        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low_im.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',catcher=catcher,rms_factor=o['final_rmsfactor'])
+        external_mask='external_mask_ext-deep.fits'
+        if os.path.isfile(external_mask):
+            warn('Deep external mask already exists, skipping creation')
+        else:
+            report('Make deep external mask')
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
-        if o['do_lowres_imaging']:
-            # low-res reimage requested
-            low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
-            if o['low_imsize'] is not None:
-                low_imsize=o['low_imsize'] # allow over-ride
-            else:
-                low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # if mask-low exists then use it
-            if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
-                extmask='bootstrap-mask-low.fits'
-            else:
-                extmask=None
-            ddf_image('image_full_low',o['full_mslist'],cleanmask=extmask,cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=2,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,catcher=catcher)
-            make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
-            ddf_image('image_full_low_im',o['full_mslist'],cleanmask='image_full_low.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',catcher=catcher)
-            if o['restart'] and os.path.isfile('full-mask-low.fits'):
-                warn('Full-bw mask exists, not making it')
-            else:
-                report('Making the full-bw extended source mask')
-                make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
-            extmask='full-mask-low.fits'
-            make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
-            ddf_image('image_full_low_m',o['full_mslist'],cleanmask='image_full_low_im.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['low_robust'],uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',catcher=catcher,rms_factor=o['final_rmsfactor'])
-            external_mask='external_mask_ext-deep.fits'
-            if os.path.isfile(external_mask):
-                warn('Deep external mask already exists, skipping creation')
-            else:
-                report('Make deep external mask')
-                make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
+    # make mask from the previous run, will use new external mask if it exists
+    make_mask('image_full_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
+    mask_dicomodel('image_full_ampphase1.DicoModel','image_full_ampphase1.app.restored.fits.mask.fits','image_ampphase1_full_masked.DicoModel',catcher=catcher)
 
-        # make mask from the previous run, will use new external mask if it exists
-        make_mask('image_full_ampphase1.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
-        mask_dicomodel('image_full_ampphase1.DicoModel','image_full_ampphase1.app.restored.fits.mask.fits','image_ampphase1_full_masked.DicoModel',catcher=catcher)
-
-        if o['exitafter'] == 'fulllow':
-            warn('User specified exit after image_full_low.')
-            sys.exit(2)
+    if o['exitafter'] == 'fulllow':
+        warn('User specified exit after image_full_low.')
+        sys.exit(2)
 
         # # before starting the final image, run the download thread if needed
         # if o['method'] is not None:
@@ -832,34 +869,34 @@ def main(o=None):
         #         warn('All data present, skipping download')
         #         download_thread = None
 
-        # final image
-        separator("DD Imaging (full mslist)")
-        ddf_kw={}
-        if o['final_psf_arcsec'] is not None:
-            ddf_kw['beamsize']=o['final_psf_arcsec']
-            if o['final_psf_minor_arcsec'] is not None:
-                if o['final_psf_pa_deg'] is None:
-                    die('If final minor axis is supplied, position angle must be supplied too')
-                ddf_kw['beamsize_minor']=o['final_psf_minor_arcsec']
-                ddf_kw['beamsize_pa']=o['final_psf_pa_deg']
+    # final image
+    separator("DD Imaging (full mslist)")
+    ddf_kw={}
+    if o['final_psf_arcsec'] is not None:
+        ddf_kw['beamsize']=o['final_psf_arcsec']
+        if o['final_psf_minor_arcsec'] is not None:
+            if o['final_psf_pa_deg'] is None:
+                die('If final minor axis is supplied, position angle must be supplied too')
+            ddf_kw['beamsize_minor']=o['final_psf_minor_arcsec']
+            ddf_kw['beamsize_pa']=o['final_psf_pa_deg']
 
-        ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',
-                  cleanmode='SSD',
-                  ddsols=ddsols,applysols='AP',
-                  majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',
-                  peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,
-                  normalization=o['normalize'][2],uvrange=uvrange,
-                  apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-        make_mask('image_full_ampphase2.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
-        mask_dicomodel('image_full_ampphase2.DicoModel','image_full_ampphase2.app.restored.fits.mask.fits','image_full_ampphase2_masked.DicoModel',catcher=catcher)
+    ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',
+              cleanmode='SSD',
+              ddsols=ddsols,applysols='AP',
+              majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',
+              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,
+              normalization=o['normalize'][2],uvrange=uvrange,
+              apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
+    make_mask('image_full_ampphase2.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
+    mask_dicomodel('image_full_ampphase2.DicoModel','image_full_ampphase2.app.restored.fits.mask.fits','image_full_ampphase2_masked.DicoModel',catcher=catcher)
 
-        if o['do_dynspec']:
-            ddf_kw['predict_column']='PREDICT_DATA'
+    if o['do_dynspec']:
+        ddf_kw['predict_column']='PREDICT_DATA'
 
-        separator("Deeper DD deconv (full mslist)")
-        ddf_image('image_full_ampphase2m',o['full_mslist'],cleanmask='image_full_ampphase2.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase2_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=True,dirty_from_resid=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rms_factor=o['final_rmsfactor'],**ddf_kw)
+    separator("Deeper DD deconv (full mslist)")
+    ddf_image('image_full_ampphase2m',o['full_mslist'],cleanmask='image_full_ampphase2.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase2_masked',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=True,dirty_from_resid=True,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,rms_factor=o['final_rmsfactor'],**ddf_kw)
 
-        LastImage="image_full_ampphase2m.app.restored.fits"
+    LastImage="image_full_ampphase2m.app.restored.fits"
 
         
     #     if o['second_selfcal']:
