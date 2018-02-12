@@ -776,7 +776,8 @@ def main(o=None):
               dicomodel_base=CurrentBaseDicoModelName,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,
-              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
+              apply_weights=o['apply_weights'][2],catcher=catcher,
+              RMSFactorInitHMP=1.,**ddf_kw)
 
     if o['exitafter'] == 'ampphase':
         warn('User specified exit after image_ampphase.')
@@ -806,10 +807,13 @@ def main(o=None):
                                     robust=o['solutions_robust'],
                                     dt=o['dt'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
+    # here we do only image the residuals, and restore so use majorcycles=0
+    # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
+              reuse_psf=True,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols='AP',majorcycles=1,robust=o['final_robust'],
+              applysols='AP',majorcycles=0,robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,beamsize=o['final_psf_arcsec'],
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
