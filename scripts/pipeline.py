@@ -790,9 +790,9 @@ def main(o=None):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
 
-    separator("MakeMask")
-    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
+    # separator("MakeMask")
+    # CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
+    # CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
 
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
