@@ -288,7 +288,10 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
             merge_mask(fname,external_mask,fname)
     return fname
             
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,DISettings=None,EvolutionSolFile=None,CovQ=0.1):
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+                uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -334,10 +337,11 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             f=f.replace("/","_")
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f+'_'+rootfilename+'.log'),quiet=o['quiet'])
     if MergeSmooth:
-        return smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'])
-    else:
-        return outsols
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs)
 
+    return outsols
+
+    
     
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
@@ -417,7 +421,7 @@ def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
         result=uvmin_limit
     return result
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     with open('solslist.txt','w') as f:
         for fname in filenames:
@@ -435,7 +439,18 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False):
     else:
         run('SmoothSols.py --SolsFileIn=%s_merged.npz --SolsFileOut=%s_smoothed.npz --InterpMode=TEC,PolyAmp'%(ddsols,ddsols),dryrun=dryrun)
 
-    return '%s_smoothed.npz'%ddsols
+    outname='%s_smoothed.npz'%ddsols
+    if InterpToMSListFreqs:
+        interp_outname="%s_interp.npz"%outname
+        checkname=interp_outname
+        if o['restart'] and os.path.isfile(checkname):
+            warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+        else:
+            command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(outname,interp_outname,InterpToMSListFreqs)
+            run(command,dryrun=dryrun)
+        outname=interp_outname
+        
+    return outname
 
 def full_clearcache(o):
     clearcache(o['mslist'],o)
@@ -640,7 +655,8 @@ def main(o=None):
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=True)
+                                    MergeSmooth=True,
+                                    InterpToMSListFreqs=o['full_mslist'])
 
 
     separator("AmpPhase deconv")
@@ -715,15 +731,6 @@ def main(o=None):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
-    separator("DD Calibration (full mslist)")
-    CurrentDDkMSSolName=killms_data('image_ampphase1',o['full_mslist'],'DDS2_full',
-                                    colname=colname,
-                                    CovQ=0.02,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    niterkf=o['NIterKF'][1],uvrange=killms_uvrange,wtuv=o['wtuv'],
-                                    robust=o['solutions_robust'],dt=o['dt'],
-                                    catcher=catcher,
-                                    MergeSmooth=True,NChanSols=o['NChanSols'])
     # Compute the DD predict
     separator("Compute DD Predict (full mslist)")
     ddf_image('PredictDSS2',o['full_mslist'],cleanmode='SSD',
@@ -790,9 +797,9 @@ def main(o=None):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
 
-    separator("MakeMask")
-    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
+    # separator("MakeMask")
+    # CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
+    # CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
 
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
