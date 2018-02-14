@@ -799,7 +799,7 @@ def main(o=None):
                                     o['full_mslist'],'DDS3_full',
                                     colname=colname,
                                     clusterfile='image_dirin_SSD.npy.ClusterCat.npy',
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    #dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     niterkf=6,
                                     CovQ=0.1,
                                     uvrange=killms_uvrange,
