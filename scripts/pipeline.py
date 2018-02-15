@@ -809,6 +809,7 @@ def main(o=None):
 
     # here we do only image the residuals, and restore so use majorcycles=0
     # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
+    CurrentBaseDicoModelName="image_full_ampphase_di_m"
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=True,
