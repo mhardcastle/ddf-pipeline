@@ -595,7 +595,7 @@ def main(o=None):
     # Deep SSD clean with this external mask and automasking
     separator("DI Deconv")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
-                                       majorcycles=3,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
+                                       majorcycles=2,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                        peakfactor=0.001,rms_factor=0,
                                        colname=colname,clusterfile=None,automask=True,
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
@@ -626,10 +626,10 @@ def main(o=None):
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=30000)
 
-    # CurrentMaskName=make_mask('image_dirin_SSD_m.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
-    # CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD_m.DicoModel',
-    #                                         CurrentMaskName,
-    #                                         'image_dirin_SSD_m_masked.DicoModel',catcher=catcher)
+    CurrentMaskName=make_mask('image_dirin_SSD_m.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD_m.DicoModel',
+                                            CurrentMaskName,
+                                            'image_dirin_SSD_m_masked.DicoModel',catcher=catcher)
 
     # ##########################################################
     # cluster to get facets
@@ -678,7 +678,7 @@ def main(o=None):
 
     separator("Mask for deeper deconv")
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-    #CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 
     # separator("Phase deeper deconv")
     # ddf_image('image_phase1m',o['mslist'],
@@ -719,7 +719,7 @@ def main(o=None):
 
     separator("Update Mask")
     CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    #CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
     # CurrentMaskName,CurrentBaseDicoModelName='image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel'
 
     # # Compute the DD predict
