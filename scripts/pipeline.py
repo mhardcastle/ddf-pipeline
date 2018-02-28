@@ -592,28 +592,38 @@ def main(o=None):
     external_mask='external_mask.fits'
     make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
 
+
     # Deep SSD clean with this external mask and automasking
-    separator("DI Deconv")
+    separator("DI Deconv (externally defined sources)")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
-                                       majorcycles=2,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
+                                       majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                        peakfactor=0.001,rms_factor=0,
-                                       colname=colname,clusterfile=None,automask=True,
+                                       colname=colname,clusterfile=None,automask=False,
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher)
 
+    separator("Make the diffuse emission mask")
+    # Make the diffuse emission mask
+    _=make_mask('image_dirin_SSD.residual01.fits',
+                o['thresholds'][0],
+                external_mask=external_mask,
+                catcher=catcher,
+                OutMaskExtended="MaskDiffuse")
+    separator("Merge diffuse emission mask into external mask")
+    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+    
     # make a mask from the final image
-    separator("MakeMask")
+    separator("Make mask for next iteration")
     CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
                               o['thresholds'][0],
                               external_mask=external_mask,
-                              catcher=catcher,
-                              OutMaskExtended="MaskDiffuse")
+                              catcher=catcher)
     
-    external_mask=[external_mask,"MaskDiffuse.fits"]
     
+    separator("Continue deconvolution")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
-                                       majorcycles=1,robust=o['image_robust'],
+                                       majorcycles=2,robust=o['image_robust'],
                                        reuse_psf=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        use_dicomodel=True,
