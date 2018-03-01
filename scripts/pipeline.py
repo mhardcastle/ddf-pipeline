@@ -145,6 +145,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
+    runcommand += " --GAClean-AllowNegativeInitHMP True"
     if OuterSpaceTh is not None:
         runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
         
@@ -630,7 +631,7 @@ def main(o=None):
                                        dirty_from_resid=True,
                                        peakfactor=0.001,rms_factor=0,
                                        colname=colname,clusterfile=None,
-                                       automask=False,
+                                       automask=True,
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=.5,
