@@ -599,7 +599,7 @@ def main(o=None):
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
                                        majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                        peakfactor=0.001,rms_factor=0,
-                                       colname=colname,clusterfile=None,automask=False,
+                                       colname=colname,clusterfile=None,automask=True,
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher)
 
@@ -877,6 +877,7 @@ def main(o=None):
                                     robust=o['solutions_robust'],
                                     dt=o['dt'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
+
     # here we do only image the residuals, and restore so use majorcycles=0
     # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
@@ -890,6 +891,64 @@ def main(o=None):
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,
               apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
+
+    if o['low_psf_arcsec'] is not None:
+        # low-res reimage requested
+        low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+        if o['low_imsize'] is not None:
+            low_imsize=o['low_imsize'] # allow over-ride
+        else:
+            low_imsize=o['imsize']*o['cellsize']/o['low_cell']
+            # if mask-low exists then use it
+        if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
+            extmask='bootstrap-mask-low.fits'
+        else:
+            extmask=None
+
+        ddf_image('image_full_low',o['full_mslist'],
+              cleanmask=extmask,
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',
+              majorcycles=2,robust=o['low_robust'],
+              colname=colname,use_dicomodel=False,
+              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+              smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
+              catcher=catcher)
+
+        make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+
+        ddf_image('image_full_low_im',o['full_mslist'],
+              cleanmask='image_full_low.app.restored.fits.mask.fits',
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',
+              majorcycles=1,robust=o['low_robust'],
+              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+              smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,
+              reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',
+              catcher=catcher)
+
+
+        if o['restart'] and os.path.isfile('full-mask-low.fits'):
+            warn('Full-bw mask exists, not making it')
+        else:
+            report('Making the full-bw extended source mask')
+            make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
+
+        extmask='full-mask-low.fits'
+        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+
+        ddf_image('image_full_low_m',o['full_mslist'],
+              cleanmask='image_full_low_im.app.restored.fits.mask.fits',
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',
+              majorcycles=1,robust=o['low_robust'],
+              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+              smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
+              reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
+              catcher=catcher,rms_factor=o['final_rmsfactor'])
 
     return
     us_ddsols=ddsols=CurrentDDkMSSolName
