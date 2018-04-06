@@ -692,7 +692,7 @@ def main(o=None):
                                     clusterfile=ClusterFile,
                                     CovQ=0.02,
                                     #PolMode="IDiag",
-                                    niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
+                                    niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     MergeSmooth=True)
 
@@ -764,7 +764,7 @@ def main(o=None):
                                     CovQ=0.02,
                                     clusterfile=ClusterFile,
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                    dt=o['dt'],
+                                    dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
@@ -859,7 +859,7 @@ def main(o=None):
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
                                     niterkf=6,#o['NIterKF'][1],
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
+                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_fast'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     #EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
@@ -951,7 +951,7 @@ def main(o=None):
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
-                                    dt=o['final_dt'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                    dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
 
     # here we do only image the residuals, and restore so use majorcycles=0
