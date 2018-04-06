@@ -766,7 +766,7 @@ def main(o=None):
 
 
     separator("DD calibration")
-    CurrentDDkMSSolName=killms_data('image_dirin_SSD_m',o['mslist'],'DDS0',colname=colname,
+    CurrentDDkMSSolName=killms_data('image_dirin_SSD_m_di_m',o['mslist'],'DDS0',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     clusterfile=ClusterFile,
                                     CovQ=0.02,
@@ -864,9 +864,9 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000)
 
 
-    separator("Update Mask")
-    CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+    # separator("Update Mask")
+    # CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
+    # CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
 
 
     
