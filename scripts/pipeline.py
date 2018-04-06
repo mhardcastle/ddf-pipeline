@@ -690,21 +690,21 @@ def main(o=None):
     colname="DATA_DI_CORRECTED"
 
 
-    CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_di',o['mslist'],
-                                       cleanmask=CurrentMaskName,cleanmode='SSD',
-                                       majorcycles=0,robust=o['image_robust'],
-                                       #reuse_psf=True,
-                                       dicomodel_base=CurrentBaseDicoModelName,
-                                       use_dicomodel=True,
-                                       #dirty_from_resid=True,
-                                       peakfactor=0.001,rms_factor=0,
-                                       colname=colname,clusterfile=None,
-                                       automask=True,
-                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
-                                       uvrange=uvrange,catcher=catcher,
-                                       RMSFactorInitHMP=1.,
-                                       MaxMinorIterInitHMP=10000,
-                                       PredictSettings=("Clean","DD_PREDICT"))
+    _=ddf_image('image_dirin_SSD_m_di',o['mslist'],
+                cleanmask=CurrentMaskName,cleanmode='SSD',
+                majorcycles=0,robust=o['image_robust'],
+                #reuse_psf=True,
+                dicomodel_base=CurrentBaseDicoModelName,
+                use_dicomodel=True,
+                #dirty_from_resid=True,
+                peakfactor=0.001,rms_factor=0,
+                colname=colname,clusterfile=None,
+                automask=True,
+                automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                uvrange=uvrange,catcher=catcher,
+                RMSFactorInitHMP=1.,
+                MaxMinorIterInitHMP=10000,
+                PredictSettings=("Clean","DD_PREDICT"))
 
     separator("Make the diffuse emission mask")
     # Make the diffuse emission mask
