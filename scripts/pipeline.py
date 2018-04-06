@@ -18,7 +18,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-import os,sys
+import sys,os
+if "PYTHONPATH_FIRST" in os.environ.keys() and int(os.environ["PYTHONPATH_FIRST"]):
+    sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
 import os.path
 from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict,separator
 from parset import option_list
@@ -278,6 +280,27 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
 
+
+def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None):
+    if not ".app.restored.fits" in imagename:
+        raise RuntimeError('Input image should be an apparant restored image')
+
+    if options is None:
+        options=o # attempt to get global if it exists
+
+    runcommand="MakeCatalog.py --RestoredIm %s --rmsmean_map [Noise.mean.fits,Noise.fits]"%imagename 
+    run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
+
+    Name=imagename.split(".app.restored.fits")[0]
+
+    #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
+    runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
+    if OutClusterCat is not None:
+        runcommand+=" --OutClusterCat %s"%OutClusterCat
+    run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
+    stop
+
+
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
     if catcher: catcher.check()
 
@@ -289,7 +312,9 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     fname=imagename+'.mask.fits'
     runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
     if OutMaskExtended is not None:
-        runcommand += " --OutMaskExtended %s"%(OutMaskExtended)
+        runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
+
+
         
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeMask step')
@@ -305,6 +330,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
                     merge_mask(fname,mask,fname)
     return fname
             
+
+
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
@@ -626,15 +653,6 @@ def main(o=None):
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher)
 
-    separator("Make the diffuse emission mask")
-    # Make the diffuse emission mask
-    _=make_mask('image_dirin_SSD.residual01.fits',
-                o['thresholds'][0],
-                external_mask=external_mask,
-                catcher=catcher,
-                OutMaskExtended="MaskDiffuse")
-    separator("Merge diffuse emission mask into external mask")
-    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
     
     # make a mask from the final image
     separator("Make mask for next iteration")
@@ -658,23 +676,86 @@ def main(o=None):
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=1.,
-                                       MaxMinorIterInitHMP=10000)
+                                       MaxMinorIterInitHMP=10000,
+                                       PredictSettings=("Clean","DD_PREDICT"))
 
-    CurrentMaskName=make_mask('image_dirin_SSD_m.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD_m.DicoModel',
-                                            CurrentMaskName,
-                                            'image_dirin_SSD_m_masked.DicoModel',catcher=catcher)
+    ########################
+    killms_data('PredictDI',o['mslist'],'DIS0',colname=colname,
+                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                #clusterfile=ClusterFile,
+                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                catcher=catcher,
+                dt=o['dt_di'],
+                NChanSols=o['NChanSols_di'],
+                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    colname="DATA_DI_CORRECTED"
+
+
+    CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_di',o['mslist'],
+                                       cleanmask=CurrentMaskName,cleanmode='SSD',
+                                       majorcycles=0,robust=o['image_robust'],
+                                       #reuse_psf=True,
+                                       dicomodel_base=CurrentBaseDicoModelName,
+                                       use_dicomodel=True,
+                                       #dirty_from_resid=True,
+                                       peakfactor=0.001,rms_factor=0,
+                                       colname=colname,clusterfile=None,
+                                       automask=True,
+                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                       uvrange=uvrange,catcher=catcher,
+                                       RMSFactorInitHMP=1.,
+                                       MaxMinorIterInitHMP=10000,
+                                       PredictSettings=("Clean","DD_PREDICT"))
+
+    separator("Make the diffuse emission mask")
+    # Make the diffuse emission mask
+    _=make_mask('image_dirin_SSD_m_di.dirty.fits',
+                o['thresholds'][0],
+                external_mask=external_mask,
+                catcher=catcher,
+                OutMaskExtended="MaskDiffuse")
+    separator("Merge diffuse emission mask into external mask")
+    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+
+    CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_di_m',o['mslist'],
+                                       cleanmask=CurrentMaskName,cleanmode='SSD',
+                                       majorcycles=1,robust=o['image_robust'],
+                                       reuse_psf=True,
+                                       reuse_dirty=True,
+                                       dicomodel_base=CurrentBaseDicoModelName,
+                                       use_dicomodel=True,
+                                       #dirty_from_resid=True,
+                                       peakfactor=0.001,rms_factor=0,
+                                       colname=colname,clusterfile=None,
+                                       automask=True,
+                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                       uvrange=uvrange,catcher=catcher,
+                                       RMSFactorInitHMP=1.,
+                                       MaxMinorIterInitHMP=10000,
+                                       PredictSettings=("Clean","DD_PREDICT"))
+
+
+    #########################
+    separator("Cluster the sky model")
+    ClusterFile='image_dirin_SSD_m_di_m.npy.ClusterCat.npy'
+    clusterGA(imagename="image_dirin_SSD_m_di_m.app.restored.fits",OutClusterCat=ClusterFile)
+
+
+    # CurrentMaskName=make_mask('image_dirin_SSD_m.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
+    # CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD_m.DicoModel',
+    #                                         CurrentMaskName,
+    #                                         'image_dirin_SSD_m_masked.DicoModel',catcher=catcher)
+
 
     # ##########################################################
     # cluster to get facets
-    separator("Cluster")
     if not os.path.exists('image_dirin_SSD_m.Norm.fits') and not os.path.islink("image_dirin_SSD_m.Norm.fits"):
         os.symlink('image_dirin_SSD_init.Norm.fits','image_dirin_SSD_m.Norm.fits')
     if not os.path.exists('image_dirin_SSD_m.dirty.fits') and not os.path.islink("image_dirin_SSD_m.dirty.fits"):
         os.symlink('image_dirin_SSD_init.dirty.fits','image_dirin_SSD_m.dirty.fits')
-    if make_model('image_dirin_SSD_m.app.restored.fits.mask.fits','image_dirin_SSD_m',catcher=catcher):
-        # if this step runs, clear the cache to remove facet info
-        clearcache(o['mslist'],o)
+    # if make_model('image_dirin_SSD_m.app.restored.fits.mask.fits','image_dirin_SSD_m',catcher=catcher):
+    #     # if this step runs, clear the cache to remove facet info
+    #     clearcache(o['mslist'],o)
 
     # ##########################################################
     if o['auto_uvmin']:
@@ -685,14 +766,13 @@ def main(o=None):
         sys.exit(2)
 
 
-    ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
     separator("DD calibration")
     CurrentDDkMSSolName=killms_data('image_dirin_SSD_m',o['mslist'],'DDS0',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     clusterfile=ClusterFile,
                                     CovQ=0.02,
                                     #PolMode="IDiag",
-                                    niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
+                                    niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     MergeSmooth=True)
 
@@ -764,7 +844,7 @@ def main(o=None):
                                     CovQ=0.02,
                                     clusterfile=ClusterFile,
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                    dt=o['dt'],
+                                    dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
@@ -859,7 +939,7 @@ def main(o=None):
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
                                     niterkf=6,#o['NIterKF'][1],
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt'],
+                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_fast'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     #EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
@@ -951,7 +1031,7 @@ def main(o=None):
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
-                                    dt=o['final_dt'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                    dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
 
     # here we do only image the residuals, and restore so use majorcycles=0
