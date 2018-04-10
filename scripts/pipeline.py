@@ -849,6 +849,10 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
+    separator("Mask for deeper deconv")
+    CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
+
     # separator("Compute DI calibration (full mslist)")
     # killms_data('image_phase1',o['mslist'],'DIS0',colname=colname,
     #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -875,9 +879,6 @@ def main(o=None):
     #                                    MaxMinorIterInitHMP=10000,
     #                                    PredictSettings=("Clean","DD_PREDICT"))
     
-    # separator("Mask for deeper deconv")
-    # CurrentMaskName=make_mask('image_phase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-    # CurrentBaseDicoModelName=mask_dicomodel('image_phase1_di.DicoModel',CurrentMaskName,'image_phase1_di_masked.DicoModel',catcher=catcher)
 
     # ##############################################
     # separator("DD calibration")
@@ -903,7 +904,7 @@ def main(o=None):
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
-                                    EvolutionSolFile=CurrentDDkMSSolName,
+                                    #EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
     ##############################################
 
@@ -925,6 +926,7 @@ def main(o=None):
     # separator("Update Mask")
     # CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
     # CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+
 
 
     
