@@ -726,7 +726,7 @@ def main(o=None):
 
     separator("DI CAL")
     ########################
-    killms_data('PredictDI',o['mslist'],'DIS0',colname=colname,
+    killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 #clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -853,49 +853,6 @@ def main(o=None):
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 
-    # separator("Compute DI calibration (full mslist)")
-    # killms_data('image_phase1',o['mslist'],'DIS0',colname=colname,
-    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #             clusterfile=ClusterFile,
-    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #             catcher=catcher,
-    #             dt=o['dt_di'],
-    #             NChanSols=o['NChanSols_di'],
-    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-    # colname="DATA_DI_CORRECTED"
-
-    # CurrentBaseDicoModelName=ddf_image('image_phase1_di',o['mslist'],
-    #                                    cleanmask=CurrentMaskName,
-    #                                    cleanmode='SSD',
-    #                                    ddsols=CurrentDDkMSSolName,applysols='P',
-    #                                    majorcycles=1,robust=o['image_robust'],
-    #                                    colname=colname,peakfactor=0.001,automask=True,
-    #                                    automask_threshold=o['thresholds'][1],
-    #                                    normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
-    #                                    use_dicomodel=True,
-    #                                    dicomodel_base=CurrentBaseDicoModelName,
-    #                                    catcher=catcher,
-    #                                    RMSFactorInitHMP=1.,
-    #                                    MaxMinorIterInitHMP=10000,
-    #                                    PredictSettings=("Clean","DD_PREDICT"))
-    
-
-    # ##############################################
-    # separator("DD calibration")
-    # CurrentDDkMSSolName=killms_data('image_phase1_di',o['mslist'],'DDS1',colname=colname,
-    #                                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #                                 CovQ=0.02,
-    #                                 clusterfile=ClusterFile,
-    #                                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #                                 dt=o['dt'],
-    #                                 catcher=catcher,NChanSols=o['NChanSols'],
-    #                                 EvolutionSolFile=CurrentDDkMSSolName,
-    #                                 MergeSmooth=True)
-    # ##############################################
-    ##############################################
-    # print "!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    # colname="DATA"
-
     separator("DD calibration")
     CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -904,7 +861,7 @@ def main(o=None):
                                     niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
-                                    #EvolutionSolFile=CurrentDDkMSSolName,
+                                    EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
     ##############################################
 
@@ -923,9 +880,11 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("AmpPhase deconv")
+    separator("Make Mask")
     CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+
+    separator("Second DI calibration")
     ddf_image('Predict_DI1',o['mslist'],
               cleanmask=CurrentMaskName,cleanmode='SSD',
               ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
@@ -941,7 +900,7 @@ def main(o=None):
               PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Another DI step")
-    killms_data('PredictDI1',o['mslist'],'DIS1',colname=o['colname'],
+    killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 #clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -964,37 +923,19 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    # separator("Update Mask")
-    # CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    # CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
 
-
-
-    
-
-    # CurrentMaskName,CurrentBaseDicoModelName='image_ampphase1m.app.restored.fits.mask.fits','image_ampphase1m_masked.DicoModel'
-
-    # # Compute the DD predict
-    # separator("Compute DD predict")
-    # ddf_image('DDS0_Predict',o['mslist'],
-    #           #cleanmask=external_mask,
-    #           cleanmode='SSD',
-    #           #majorcycles=1,robust=o['image_robust'],peakfactor=0.01,
-    #           colname=colname,uvrange=uvrange,
-    #           #automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-    #           #apply_weights=o['apply_weights'][1],
-    #           use_dicomodel=True,applysols='AP',
-    #           dicomodel_base='image_dirin_SSD_masked',catcher=catcher,
-    #           ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
-    # separator("Calibrate DI")
-    # killms_data('image_dirin_SSD',o['mslist'],'DIS0',colname=colname,
-    #             dicomodel='image_dirin_SSD_masked.DicoModel',clusterfile=ClusterFile,
-    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #             catcher=catcher,
-    #             dt=o['dt_di'],
-    #             NChanSols=o['NChanSols_di'],
-    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-    # colname_dical="DATA_DI_CORRECTED"
+    separator("DD calibration")
+    CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['mslist'],'DDS2',colname=colname,
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    CovQ=0.1,
+                                    clusterfile=ClusterFile,
+                                    niterkf=6,#o['NIterKF'][0],
+                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                    dt=o['dt_slow'],
+                                    catcher=catcher,NChanSols=o['NChanSols'],
+                                    #EvolutionSolFile=CurrentDDkMSSolName,
+                                    MergeSmooth=True,
+                                    InterpToMSListFreqs=o['full_mslist'])
 
     # ##########################################################
     # run bootstrap, and change the column name if it runs
@@ -1031,22 +972,9 @@ def main(o=None):
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
-    
-    separator("Calibrate the full mslist")
-    colname=o['colname']
-    CurrentDDkMSSolName=killms_data('image_ampphase1',o['full_mslist'],'DDS2_full',colname=colname,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    CovQ=0.1,
-                                    clusterfile=ClusterFile,
-                                    niterkf=6,#o['NIterKF'][1],
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_fast'],
-                                    catcher=catcher,NChanSols=o['NChanSols'],
-                                    #EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=True)
-
     # Compute the DD predict
     separator("Compute DD Predict (full mslist)")
-    ddf_image('PredictDSS2',o['full_mslist'],cleanmode='SSD',
+    ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
               apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,
@@ -1054,8 +982,9 @@ def main(o=None):
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
+    colname=o['colname']
     separator("Compute DI calibration (full mslist)")
-    killms_data('PredictDSS2',o['full_mslist'],'DIS0_full',colname=colname,
+    killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -1082,6 +1011,7 @@ def main(o=None):
               robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
+              AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,
               apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
@@ -1098,6 +1028,7 @@ def main(o=None):
                                        applysols='AP',majorcycles=1,robust=o['final_robust'],
                                        colname=colname,use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
+                                       AllowNegativeInitHMP=True,
                                        peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
                                        normalization=o['normalize'][1],uvrange=uvrange,
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
@@ -1122,7 +1053,7 @@ def main(o=None):
 
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
-                                    o['full_mslist'],'DDS3_05_full',
+                                    o['full_mslist'],'DDS3_full',
                                     colname=colname,
                                     clusterfile=ClusterFile,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1143,6 +1074,7 @@ def main(o=None):
               applysols='AP',majorcycles=0,robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
+              AllowNegativeInitHMP=True,
               beamsize=o['final_psf_arcsec'],
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,
@@ -1162,15 +1094,15 @@ def main(o=None):
             extmask=None
 
         ddf_image('image_full_low',o['full_mslist'],
-              cleanmask=extmask,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols='AP',
-              majorcycles=2,robust=o['low_robust'],
-              colname=colname,use_dicomodel=False,
-              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
-              smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-              catcher=catcher)
+                  cleanmask=extmask,
+                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  applysols='AP',
+                  majorcycles=2,robust=o['low_robust'],
+                  colname=colname,use_dicomodel=False,
+                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
+                  catcher=catcher)
 
         make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
 
