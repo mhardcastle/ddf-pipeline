@@ -920,8 +920,49 @@ def main(o=None):
                                        catcher=catcher,
                                        RMSFactorInitHMP=1.,
                                        AllowNegativeInitHMP=True,
-                                       MaxMinorIterInitHMP=10000)
+                                       MaxMinorIterInitHMP=10000,
+                                       PredictSettings=("Clean","DD_PREDICT"))
 
+    separator("AmpPhase deconv")
+    CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+    ddf_image('Predict_DI1',o['mslist'],
+              cleanmask=CurrentMaskName,cleanmode='SSD',
+              ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
+              colname=colname,peakfactor=0.001,automask=True,
+              automask_threshold=o['thresholds'][1],
+              normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+              use_dicomodel=True,
+              dicomodel_base=CurrentBaseDicoModelName,
+              catcher=catcher,
+              RMSFactorInitHMP=1.,
+              AllowNegativeInitHMP=True,
+              MaxMinorIterInitHMP=10000,
+              PredictSettings=("Predict","DD_PREDICT"))
+
+    separator("Another DI step")
+    killms_data('PredictDI1',o['mslist'],'DIS1',colname=o['colname'],
+                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                #clusterfile=ClusterFile,
+                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                catcher=catcher,
+                dt=o['dt_di'],
+                NChanSols=o['NChanSols_di'],
+                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+
+    CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
+                                       cleanmask=CurrentMaskName,cleanmode='SSD',
+                                       ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
+                                       colname=colname,peakfactor=0.001,automask=True,
+                                       automask_threshold=o['thresholds'][1],
+                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       use_dicomodel=True,
+                                       dicomodel_base=CurrentBaseDicoModelName,
+                                       catcher=catcher,
+                                       RMSFactorInitHMP=1.,
+                                       AllowNegativeInitHMP=True,
+                                       MaxMinorIterInitHMP=10000,
+                                       PredictSettings=("Clean","DD_PREDICT"))
 
     # separator("Update Mask")
     # CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
