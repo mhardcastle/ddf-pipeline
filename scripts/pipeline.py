@@ -282,7 +282,7 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
             merge_mask(fname,extended_use,fname)
 
 
-def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None):
+def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
 
     if os.path.isfile(OutClusterCat):
         warn('File %s already exists, skipping clustering step'%OutClusterCat)
@@ -294,13 +294,19 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     if options is None:
         options=o # attempt to get global if it exists
 
-    runcommand="MakeCatalog.py --RestoredIm %s --rmsmean_map [Noise.mean.fits,Noise.fits]"%imagename 
+    if use_makemask_products:
+        runcommand="MakeCatalog.py --RestoredIm %s --rmsmean_map [Noise.mean.fits,Noise.fits]"%imagename
+    else:
+        runcommand="MakeCatalog.py --RestoredIm %s"%imagename 
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
 
     Name=imagename.split(".app.restored.fits")[0]
 
     #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
-    runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
+    if use_makemask_products:
+        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
+    else:
+        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     if OutClusterCat is not None:
         runcommand+=" --OutClusterCat %s"%OutClusterCat
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
