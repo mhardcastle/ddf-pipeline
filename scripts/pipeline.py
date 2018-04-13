@@ -716,7 +716,9 @@ def main(o=None):
     #########################
     separator("Cluster the sky model")
     ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
-    clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=ClusterFile)
+    clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+              OutClusterCat=ClusterFile,
+              use_makemask_products=True)
 
     #########################
     separator("Deconv clustered DI image")
