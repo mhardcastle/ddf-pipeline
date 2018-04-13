@@ -697,6 +697,16 @@ def main(o=None):
                                        PredictSettings=("Clean","DD_PREDICT"))
 
 
+    separator("Make the diffuse emission mask")
+    # Make the diffuse emission mask
+    _=make_mask('image_dirin_SSD_m.residual02.fits',
+                o['thresholds'][0],
+                external_mask=external_mask,
+                catcher=catcher,
+                OutMaskExtended="MaskDiffuse")
+    separator("Merge diffuse emission mask into external mask")
+    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+
     #########################
     separator("Cluster the sky model")
     ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
@@ -755,15 +765,6 @@ def main(o=None):
                 MaxMinorIterInitHMP=10000,
                 PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("Make the diffuse emission mask")
-    # Make the diffuse emission mask
-    _=make_mask('image_dirin_SSD_m_c_di.dirty.fits',
-                o['thresholds'][0],
-                external_mask=external_mask,
-                catcher=catcher,
-                OutMaskExtended="MaskDiffuse")
-    separator("Merge diffuse emission mask into external mask")
-    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
 
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
