@@ -977,10 +977,15 @@ def main(o=None):
     # #########################################################################
 
     # ##########################################################
+
+    # check full mslist imaging weights
+    check_imaging_weight(o['full_mslist'])
+
     # Calibrate off the model
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
+        
     # Compute the DD predict
     separator("Compute DD Predict (full mslist)")
     ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
@@ -1049,9 +1054,6 @@ def main(o=None):
         warn('User specified exit after image_ampphase.')
         sys.exit(2)
 
-    # Now move to the full dataset, if it exists
-    # Check imaging weights -- needed before DDF
-    check_imaging_weight(o['full_mslist'])
 
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
@@ -1076,6 +1078,7 @@ def main(o=None):
 
     # here we do only image the residuals, and restore so use majorcycles=0
     # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
+    separator("DD imaging (no deconvolution)")
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=True,
@@ -1130,11 +1133,11 @@ def main(o=None):
         if o['restart'] and os.path.isfile('full-mask-low.fits'):
             warn('Full-bw mask exists, not making it')
         else:
-            report('Making the full-bw extended source mask')
+            report('Making the full-bw extended source mask (first version)')
             make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
-
-        extmask='full-mask-low.fits'
-        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+            report('Make_extended_mask returns')
+            extmask='full-mask-low.fits'
+            make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
