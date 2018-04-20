@@ -1133,7 +1133,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile('full-mask-low.fits'):
             warn('Full-bw mask exists, not making it')
         else:
-            report('Making the full-bw extended source mask (first version)')
+            report('Making the full-bw extended source mask')
             make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
             report('Make_extended_mask returns')
             extmask='full-mask-low.fits'
