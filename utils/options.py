@@ -4,6 +4,7 @@ import ConfigParser
 import os
 import struct
 import re
+import sys
 
 def _get_terminal_size_linux():
     ''' From https://gist.github.com/jtriley/1108174 '''
@@ -53,6 +54,11 @@ def options(optlist,option_list):
                 cmdlineset.append(result.groups())
         else:
             filenames.append(o)
+
+    for f in filenames:
+        if not os.path.isfile(f):
+            print 'Config file',f,'does not exist!'
+            sys.exit(1)
 
     config.read(filenames)
     for c in cmdlineset:

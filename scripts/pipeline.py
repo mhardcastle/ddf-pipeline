@@ -304,7 +304,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
 
     #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
     if use_makemask_products:
-        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
+        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     else:
         runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     if OutClusterCat is not None:
