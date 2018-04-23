@@ -987,6 +987,7 @@ def main(o=None):
 
         
     # Compute the DD predict
+    colname=o['colname']
     separator("Compute DD Predict (full mslist)")
     ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
@@ -996,7 +997,6 @@ def main(o=None):
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
-    colname=o['colname']
     separator("Compute DI calibration (full mslist)")
     killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
