@@ -992,7 +992,7 @@ def main(o=None):
     ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-              apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,
+              apply_weights=o['apply_weights'][0],uvrange=uvrange,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
