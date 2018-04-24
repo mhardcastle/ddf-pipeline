@@ -979,7 +979,6 @@ def main(o=None):
     # ###############                  BIG MSLIST               ###############
     # #########################################################################
 
-    # ##########################################################
 
     # check full mslist imaging weights
     check_imaging_weight(o['full_mslist'])
@@ -1153,7 +1152,21 @@ def main(o=None):
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
               catcher=catcher,rms_factor=o['final_rmsfactor'])
 
+    # ##########################################################
+        
+    separator('Write summary and tidy up')
+    summary(o)
+    if o['clearcache_end']:
+         full_clearcache(o)
+
     return
+
+    # ##########################################################
+    # EVERYTHING BELOW HERE IS OLD CODE                        #
+    # CONTAINS DYNSPEC AND ASTROMETRY CODE
+    # DO NOT DELETE UNTIL MERGED BACK IN                       #
+    # ##########################################################
+
     us_ddsols=ddsols=CurrentDDkMSSolName
     
     # Do the low-res image first so we can use a mask from it on
@@ -1294,9 +1307,6 @@ def main(o=None):
             
     # # we got to the end, write a summary file
     
-    # summary(o)
-    # if o['clearcache_end']:
-    #     full_clearcache(o)
 
 
 if __name__=='__main__':
