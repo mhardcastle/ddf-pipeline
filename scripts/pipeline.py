@@ -304,7 +304,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
 
     #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
     if use_makemask_products:
-        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
+        runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     else:
         runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     if OutClusterCat is not None:
@@ -739,7 +739,7 @@ def main(o=None):
                                        clusterfile=ClusterFile,
                                        automask=True,
                                        automask_threshold=o['thresholds'][0],
-                                       apply_weights=o['apply_weights'][1],
+                                       apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=1.,
                                        MaxMinorIterInitHMP=10000,
@@ -980,21 +980,26 @@ def main(o=None):
     # #########################################################################
 
     # ##########################################################
+
+    # check full mslist imaging weights
+    check_imaging_weight(o['full_mslist'])
+
     # Calibrate off the model
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
 
+        
     # Compute the DD predict
+    colname=o['colname']
     separator("Compute DD Predict (full mslist)")
     ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-              apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,
+              apply_weights=o['apply_weights'][0],uvrange=uvrange,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
-    colname=o['colname']
     separator("Compute DI calibration (full mslist)")
     killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1052,9 +1057,6 @@ def main(o=None):
         warn('User specified exit after image_ampphase.')
         sys.exit(2)
 
-    # Now move to the full dataset, if it exists
-    # Check imaging weights -- needed before DDF
-    check_imaging_weight(o['full_mslist'])
 
     if o['auto_uvmin']:
         killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
@@ -1079,6 +1081,7 @@ def main(o=None):
 
     # here we do only image the residuals, and restore so use majorcycles=0
     # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
+    separator("DD imaging (no deconvolution)")
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=True,
@@ -1135,9 +1138,9 @@ def main(o=None):
         else:
             report('Making the full-bw extended source mask')
             make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
-
-        extmask='full-mask-low.fits'
-        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+            report('Make_extended_mask returns')
+            extmask='full-mask-low.fits'
+            make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',

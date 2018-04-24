@@ -217,11 +217,11 @@ def get_rms_map(infilename,ds9region,outfilename):
 
 def get_rms_map2(infilename,ds9region,outfilename):
 
-    runcommand = "MakeMask.py --RestoredIm=%s --OutName=%s.rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap='%s.rms'"%(infilename,infilename,3.0,infilename)
+    runcommand = "MakeMask.py --RestoredIm=%s --OutName=rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap=%s.noise"%(infilename,3.0,infilename)
 
     run(runcommand,log=None)
 
-    infilename = '%s.rms.fits.fits'%infilename
+    infilename = '%s.noise.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)
