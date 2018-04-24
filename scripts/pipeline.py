@@ -309,6 +309,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --DoPlot=0 --NGen 100 --NCPU %i"%(Name,options['NCPU_DDF'])
     if OutClusterCat is not None:
         runcommand+=" --OutClusterCat %s"%OutClusterCat
+    runcommand+=" --NCluster %i"%o['ndir']
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 
@@ -671,12 +672,22 @@ def main(o=None):
     separator("DI Deconv (externally defined sources)")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
                                        majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
-                                       peakfactor=0.001,rms_factor=0,
+                                       peakfactor=0.01,rms_factor=3,
                                        colname=colname,clusterfile=None,automask=True,
                                        automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher)
 
     
+    separator("Make the diffuse emission mask")
+    # Make the diffuse emission mask
+    _=make_mask('image_dirin_SSD.residual01.fits',
+                o['thresholds'][0],
+                external_mask=external_mask,
+                catcher=catcher,
+                OutMaskExtended="MaskDiffuse")
+    separator("Merge diffuse emission mask into external mask")
+    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+
     # make a mask from the final image
     separator("Make mask for next iteration")
     CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
@@ -703,15 +714,6 @@ def main(o=None):
                                        PredictSettings=("Clean","DD_PREDICT"))
 
 
-    separator("Make the diffuse emission mask")
-    # Make the diffuse emission mask
-    _=make_mask('image_dirin_SSD_m.residual02.fits',
-                o['thresholds'][0],
-                external_mask=external_mask,
-                catcher=catcher,
-                OutMaskExtended="MaskDiffuse")
-    separator("Merge diffuse emission mask into external mask")
-    merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
 
     #########################
     separator("Cluster the sky model")
@@ -721,6 +723,7 @@ def main(o=None):
               use_makemask_products=True)
 
     #########################
+    clearcache(o['mslist'],o)
     separator("Deconv clustered DI image")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
                                        cleanmask=CurrentMaskName,
@@ -885,7 +888,7 @@ def main(o=None):
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
                                        RMSFactorInitHMP=1.,
-                                       AllowNegativeInitHMP=True,
+                                       #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
@@ -904,7 +907,7 @@ def main(o=None):
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
               RMSFactorInitHMP=1.,
-              AllowNegativeInitHMP=True,
+              #AllowNegativeInitHMP=True,
               MaxMinorIterInitHMP=10000,
               PredictSettings=("Predict","DD_PREDICT"))
 
@@ -928,7 +931,7 @@ def main(o=None):
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
                                        RMSFactorInitHMP=1.,
-                                       AllowNegativeInitHMP=True,
+                                       #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
