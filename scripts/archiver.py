@@ -41,7 +41,7 @@ def do_archive(name='archive.tar'):
     t=Tarfile(name)
     t.add(['summary.txt','logs'])
     t.add(images('image_full_ampphase_di_m.NS'))
-Ã   t.add(images('image_full_low_m'))
+    t.add(images('image_full_low_m'))
     t.add(glob.glob('SOLSDIR'))
     t.add(glob.glob('*npz'))
     t.add(glob.glob('*.cfg'))
