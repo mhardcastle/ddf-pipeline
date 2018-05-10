@@ -948,20 +948,23 @@ def main(o=None):
     #                                 EvolutionSolFile=CurrentDDkMSSolName,
     #                                 MergeSmooth=True,
     #                                 InterpToMSListFreqs=o['full_mslist'])
-
+    
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=o['colname'],
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
                                     niterkf=6,
-                                    #o['NIterKF'][0],
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                    # o['NIterKF'][0],
+                                    uvrange=killms_uvrange,
+                                    wtuv=o['wtuv'],
+                                    robust=o['solutions_robust'],
                                     dt=o['dt_slow'],
-                                    catcher=catcher,NChanSols=o['NChanSols'],
-                                    #EvolutionSolFile=CurrentDDkMSSolName,
+                                    catcher=catcher,
+                                    NChanSols=o['NChanSols'],
+                                    # EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True)
-
+    
     # ##########################################################
     # run bootstrap, and change the column name if it runs
     if o['bootstrap']:
