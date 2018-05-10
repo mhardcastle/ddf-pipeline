@@ -40,10 +40,10 @@ def do_archive(name='archive.tar'):
 
     t=Tarfile(name)
     t.add(['summary.txt','logs'])
-    t.add(images('image_full_ampphase1m'))
-    t.add(images('image_full_ampphase2'))
+    t.add(images('image_full_ampphase_di_m.NS'))
     t.add(images('image_full_low_m'))
-    t.add(glob.glob('*ms/killMS.killms_f_ap?.sols.npz'))
+    t.add(glob.glob('SOLSDIR'))
+    t.add(glob.glob('*npz'))
     t.add(glob.glob('*.cfg'))
     t.add(glob.glob('*.png'))
     t.add(glob.glob('*crossmatch*2*'))
