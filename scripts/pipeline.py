@@ -945,7 +945,7 @@ def main(o=None):
                                     uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
-                                    #EvolutionSolFile=CurrentDDkMSSolName,
+                                    EvolutionSolFile=CurrentDDkMSSolName,
                                     MergeSmooth=True,
                                     InterpToMSListFreqs=o['full_mslist'])
 
