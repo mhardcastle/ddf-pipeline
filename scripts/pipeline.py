@@ -937,7 +937,19 @@ def main(o=None):
 
 
     separator("DD calibration")
-    CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['mslist'],'DDS2',colname=colname,
+    # CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['mslist'],'DDS2',colname=colname,
+    #                                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+    #                                 CovQ=0.1,
+    #                                 clusterfile=ClusterFile,
+    #                                 niterkf=6,#o['NIterKF'][0],
+    #                                 uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+    #                                 dt=o['dt_slow'],
+    #                                 catcher=catcher,NChanSols=o['NChanSols'],
+    #                                 EvolutionSolFile=CurrentDDkMSSolName,
+    #                                 MergeSmooth=True,
+    #                                 InterpToMSListFreqs=o['full_mslist'])
+
+    CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
@@ -946,8 +958,7 @@ def main(o=None):
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=True,
-                                    InterpToMSListFreqs=o['full_mslist'])
+                                    MergeSmooth=True)
 
     # ##########################################################
     # run bootstrap, and change the column name if it runs
@@ -1044,10 +1055,10 @@ def main(o=None):
                                        applysols='AP',majorcycles=1,robust=o['final_robust'],
                                        colname=colname,use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
-                                       AllowNegativeInitHMP=True,
                                        peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
                                        normalization=o['normalize'][1],uvrange=uvrange,
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
+                                       AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,
                                        **ddf_kw)
@@ -1075,6 +1086,7 @@ def main(o=None):
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
+                                    MergeSmooth=True,
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
 
