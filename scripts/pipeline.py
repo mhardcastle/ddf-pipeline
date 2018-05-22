@@ -562,6 +562,44 @@ def subtract_data(mslist,col1,col2):
         t.putcol('SUBTRACTED_DATA',d1-d2)
         t.close()
 
+def cubical_data(mslist,
+                 NameSol="DI0",
+                 n_dt=1,
+                 n_df=2,
+                 n_DT=None,
+                 DataColName="DATA",
+                 ModelColName="DD_PREDICT",
+                 OutColName="DATA_DI_CORRECTED",
+                 options=None):
+    if n_DT is None:
+        n_DT=10*n_dt
+        
+    if options is None:
+        options=o # attempt to get global if it exists
+
+    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    for f in filenames:
+        ThisMSName=os.path.abspath(f)
+        SolsDir=options["SolsDir"]
+        
+        MSName=ThisMSName.split("/")[-1]
+        if SolsDir is None or SolsDir=="":
+            solname ="%s/CubiCal_%s"%(MSName,NameSol)
+        else:
+            solname =os.path.abspath(SolsDir)+"/"+MSName+'/CubiCal_%s'%NameSol
+        checkname="%s.noise.antchan.png"%solname
+        if o['restart'] and os.path.isfile(checkname):
+            warn('File '+checkname+' already exists, not running CubiCal step')
+            continue
+
+        command="gocubical --data-ms %s --out-mode sc --g-time-int %i --g-freq-int %i --data-time-chunk %i --data-freq-chunk 0 --data-column %s --model-list %s --out-column %s --dist-ncpu %i --weight-column None --out-casa-gaintables 0 --flags-save None --out-name %s"%(ThisMSName,n_dt,n_df,n_DT,DataColName,ModelColName,OutColName,o['NCPU_DDF'],solname)
+        
+        run(command,dryrun=o['dryrun'])#,log=logfilename('CubiCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+
+        runcommand="ClipCal.py --MSName %s --ColName %s"%(ThisMSName,OutColName)
+        run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+        
+
 def main(o=None):
     if o is None:
         o=MyPickle.Load("ddf-pipeline.last")
@@ -747,15 +785,23 @@ def main(o=None):
 
     separator("DI CAL")
     ########################
-    killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                #clusterfile=ClusterFile,
-                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                catcher=catcher,
-                dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
-                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-
+    # killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+    #             #clusterfile=ClusterFile,
+    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+    #             catcher=catcher,
+    #             dt=o['dt_di'],
+    #             NChanSols=o['NChanSols_di'],
+    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    cubical_data(o['mslist'],
+                 NameSol="DIS0",
+                 n_dt=1,
+                 n_df=2,
+                 n_DT=None,
+                 DataColName=colname,
+                 ModelColName="DD_PREDICT",
+                 OutColName="DATA_DI_CORRECTED")
+    
     colname="DATA_DI_CORRECTED"
 
 
@@ -912,14 +958,22 @@ def main(o=None):
               PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Another DI step")
-    killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
-                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                #clusterfile=ClusterFile,
-                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                catcher=catcher,
-                dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
-                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    # killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
+    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+    #             #clusterfile=ClusterFile,
+    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+    #             catcher=catcher,
+    #             dt=o['dt_di'],
+    #             NChanSols=o['NChanSols_di'],
+    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    cubical_data(o['mslist'],
+                 NameSol="DIS1",
+                 n_dt=1,
+                 n_df=2,
+                 n_DT=None,
+                 DataColName=o['colname'],
+                 ModelColName="DD_PREDICT",
+                 OutColName="DATA_DI_CORRECTED")
 
     CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
@@ -1016,14 +1070,23 @@ def main(o=None):
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Compute DI calibration (full mslist)")
-    killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
-                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                clusterfile=ClusterFile,
-                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                catcher=catcher,
-                dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
-                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    #cubical_data(o['full_mslist'])
+    cubical_data(o['full_mslist'],
+                 NameSol="DIS2_full",
+                 n_dt=1,
+                 n_df=2,
+                 n_DT=None,
+                 DataColName=o['colname'],
+                 ModelColName="DD_PREDICT",
+                 OutColName="DATA_DI_CORRECTED")
+    # killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
+    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+    #             clusterfile=ClusterFile,
+    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+    #             catcher=catcher,
+    #             dt=o['dt_di'],
+    #             NChanSols=o['NChanSols_di'],
+    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
     colname="DATA_DI_CORRECTED"
 
     # ###############################################
