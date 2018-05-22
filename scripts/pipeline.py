@@ -586,7 +586,10 @@ def cubical_data(mslist,
         if SolsDir is None or SolsDir=="":
             solname ="%s/CubiCal_%s"%(MSName,NameSol)
         else:
+            DirName=os.path.abspath(SolsDir)+"/"+MSName
             solname =os.path.abspath(SolsDir)+"/"+MSName+'/CubiCal_%s'%NameSol
+            if not os.path.isdir(DirName):
+                os.makedirs(DirName)
         checkname="%s.noise.antchan.png"%solname
         if o['restart'] and os.path.isfile(checkname):
             warn('File '+checkname+' already exists, not running CubiCal step')
