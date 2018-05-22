@@ -570,7 +570,8 @@ def cubical_data(mslist,
                  DataColName="DATA",
                  ModelColName="DD_PREDICT",
                  OutColName="DATA_DI_CORRECTED",
-                 options=None):
+                 options=None,
+                 ReinitWeights=False):
     if n_DT is None:
         n_DT=10*n_dt
         
@@ -600,6 +601,9 @@ def cubical_data(mslist,
         run(command,dryrun=o['dryrun'])#,log=logfilename('CubiCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
         runcommand="ClipCal.py --MSName %s --ColName %s"%(ThisMSName,OutColName)
+        if ReinitWeights:
+            runcommand+=" --ReinitWeights 1"
+            
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
         
 
@@ -803,7 +807,8 @@ def main(o=None):
                  n_DT=None,
                  DataColName=colname,
                  ModelColName="DD_PREDICT",
-                 OutColName="DATA_DI_CORRECTED")
+                 OutColName="DATA_DI_CORRECTED",
+                 ReinitWeights=True)
     
     colname="DATA_DI_CORRECTED"
 
@@ -819,7 +824,7 @@ def main(o=None):
                 colname=colname,clusterfile=None,
                 automask=True,
                 automask_threshold=o['thresholds'][0],
-                apply_weights=o['apply_weights'][0],
+                apply_weights=True,#o['apply_weights'][0],
                 uvrange=uvrange,catcher=catcher,
                 RMSFactorInitHMP=1.,
                 MaxMinorIterInitHMP=10000,
