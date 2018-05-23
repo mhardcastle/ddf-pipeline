@@ -80,6 +80,7 @@ will need:
 * SharedArray
 * deap
 * py-cpuinfo
+* futures (for CubiCal)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
