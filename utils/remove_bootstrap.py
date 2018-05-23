@@ -7,11 +7,11 @@ import pyrap.tables as pt
 
 def remove_columns(mslist_name,colnames=['SCALED_DATA']):
 
-    print 'Removing',colname,'column in',mslist_name
     mslist=[s.strip() for s in open(mslist_name).readlines()]
     for ms in mslist:
         t = pt.table(ms)
         for colname in colnames:
+            print 'Removing',colname,'column in',mslist_name
             try:
                 dummy=t.getcoldesc(colname)
             except RuntimeError:
