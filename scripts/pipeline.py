@@ -843,7 +843,7 @@ def main(o=None):
                                        colname=colname,clusterfile=None,
                                        automask=True,
                                        automask_threshold=o['thresholds'][0],
-                                       apply_weights=o['apply_weights'][0],
+                                       apply_weights=True,#o['apply_weights'][0],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=1.,
                                        MaxMinorIterInitHMP=10000,
