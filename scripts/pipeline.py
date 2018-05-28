@@ -562,6 +562,38 @@ def subtract_data(mslist,col1,col2):
         t.putcol('SUBTRACTED_DATA',d1-d2)
         t.close()
 
+def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
+    t=table(msname)
+    d=t.getcol(DataCol)
+    _,nch,_=d.shape
+    f=t.getcol("FLAG")
+    p=t.getcol(ModelCol)
+    t.close()
+    fp=f[:,:,np.array([1,2])]
+    dp=d[:,:,np.array([1,2])]
+    dps=dp[fp==0]
+    da=np.abs(d[:,:,0][f[:,:,0]==0])
+    S=np.std(dps)
+    M=np.mean(da)
+    nb=T**2/(M/S)**2
+
+    # find the size of the channel step  
+    nch_step=int(round(np.sqrt(nb)))
+    nch_step=np.max([1,nchbin])
+    nch_step=np.min([nch,nchbin])
+
+    # find the step to have equal interval size
+    nch_bin=int(nch/nch_step)+1
+    nch_step=int(nch/float(nch_bin))
+    nch_step=np.max([1,nchbin])
+    nch_step=np.min([nch,nchbin])
+
+    nt_step=int(round(nb/float(nch_step)))
+
+    warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f)'%(nt_step,nch_step,ThisMSName,M,S))
+    
+    return nt_step,nch_step
+    
 def cubical_data(mslist,
                  NameSol="DI0",
                  n_dt=1,
@@ -578,6 +610,7 @@ def cubical_data(mslist,
     if options is None:
         options=o # attempt to get global if it exists
 
+    
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
         ThisMSName=os.path.abspath(f)
@@ -596,7 +629,12 @@ def cubical_data(mslist,
             warn('File '+checkname+' already exists, not running CubiCal step')
             continue
 
-        command="gocubical --data-ms %s --out-mode sc --g-time-int %i --g-freq-int %i --data-time-chunk %i --data-freq-chunk 0 --data-column %s --model-list %s --out-column %s --dist-ncpu %i --weight-column None --out-casa-gaintables 0 --flags-reinit-bitflag 1 --flags-save None --out-name %s"%(ThisMSName,n_dt,n_df,n_DT,DataColName,ModelColName,OutColName,o['NCPU_DDF'],solname)
+        n_dt,n_df=give_dt_dnu_Cubical(ThisMSName,
+                                      DataCol=DataColName,
+                                      ModelCol=ModelColName,
+                                      T=10.)
+        
+        command="gocubical --data-ms %s --out-mode sc --g-time-int %i --g-freq-int %i --data-time-chunk %i --data-freq-chunk 0 --data-column %s --model-list %s --out-column %s --dist-ncpu %i --weight-column None --out-casa-gaintables 0 --flags-reinit-bitflag 1 --flags-save None --out-name %s --g-max-prior-error 0 --g-max-post-error 0"%(ThisMSName,n_dt,n_df,n_DT,DataColName,ModelColName,OutColName,o['NCPU_DDF'],solname)
         
         run(command,dryrun=o['dryrun'])#,log=logfilename('CubiCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
