@@ -563,7 +563,7 @@ def subtract_data(mslist,col1,col2):
         t.close()
 
 def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
-    t=table(msname)
+    t=pt.table(msname)
     d=t.getcol(DataCol)
     _,nch,_=d.shape
     f=t.getcol("FLAG")
