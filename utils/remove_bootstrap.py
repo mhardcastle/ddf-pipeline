@@ -10,14 +10,11 @@ def remove_columns(mslist_name,colnames=['SCALED_DATA']):
     mslist=[s.strip() for s in open(mslist_name).readlines()]
     for ms in mslist:
         t = pt.table(ms)
+        cpresent = t.colnames()
+        t.close()
         for colname in colnames:
             print 'Removing',colname,'column in',mslist_name
-            try:
-                dummy=t.getcoldesc(colname)
-            except RuntimeError:
-                dummy=None
-            t.close()
-            if dummy is not None:
+            if colname in cpresent:
                 print 'Removing',colname,' from',ms
                 t=pt.table(ms,readonly=False)
                 t.removecols(colname)
