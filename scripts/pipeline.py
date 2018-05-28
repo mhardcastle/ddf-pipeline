@@ -563,7 +563,7 @@ def subtract_data(mslist,col1,col2):
         t.close()
 
 def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
-    t=table(msname)
+    t=pt.table(msname,ack=False)
     d=t.getcol(DataCol)
     _,nch,_=d.shape
     f=t.getcol("FLAG")
@@ -579,18 +579,24 @@ def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
 
     # find the size of the channel step  
     nch_step=int(round(np.sqrt(nb)))
-    nch_step=np.max([1,nchbin])
-    nch_step=np.min([nch,nchbin])
+    nch_step=np.max([1,nch_step])
+    nch_step=np.min([nch,nch_step])
+    warn('nch_step=%i'%(nch_step))
 
     # find the step to have equal interval size
-    nch_bin=int(nch/nch_step)+1
-    nch_step=int(nch/float(nch_bin))
-    nch_step=np.max([1,nchbin])
-    nch_step=np.min([nch,nchbin])
-
+    #nch_bin=int(nch/nch_step)+1
+    #nch_step=int(nch/float(nch_bin))
+    lDiv=np.array([i for i in range(1,nch+1) if nch%i==0])
+    inch=np.argmin(np.abs(lDiv-nch_step))
+    nch_step=lDiv[inch]
+    nch_step=np.max([1,nch_step])
+    nch_step=np.min([nch,nch_step])
+    
     nt_step=int(round(nb/float(nch_step)))
+    nt_step=np.max([1,nt_step])
 
-    warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f)'%(nt_step,nch_step,ThisMSName,M,S))
+    SNR=np.sqrt(nt_step*nch_step)*M/S
+    warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
     
     return nt_step,nch_step
     
@@ -625,6 +631,7 @@ def cubical_data(mslist,
             if not os.path.isdir(DirName):
                 os.makedirs(DirName)
         checkname="%s.noise.antchan.png"%solname
+
         if o['restart'] and os.path.isfile(checkname):
             warn('File '+checkname+' already exists, not running CubiCal step')
             continue
@@ -633,9 +640,11 @@ def cubical_data(mslist,
                                       DataCol=DataColName,
                                       ModelCol=ModelColName,
                                       T=10.)
+
         n_DT=10*n_dt
+
         command="gocubical --data-ms %s --out-mode sc --g-time-int %i --g-freq-int %i --data-time-chunk %i --data-freq-chunk 0 --data-column %s --model-list %s --out-column %s --dist-ncpu %i --weight-column None --out-casa-gaintables 0 --flags-reinit-bitflag 1 --flags-save None --out-name %s --g-max-prior-error 0 --g-max-post-error 0"%(ThisMSName,n_dt,n_df,n_DT,DataColName,ModelColName,OutColName,o['NCPU_DDF'],solname)
-        
+
         run(command,dryrun=o['dryrun'])#,log=logfilename('CubiCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
         runcommand="ClipCal.py --MSName %s --ColName %s"%(ThisMSName,OutColName)
