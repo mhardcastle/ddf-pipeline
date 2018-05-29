@@ -368,6 +368,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             solname =os.path.abspath(SolsDir)+"/"+MSName+'/killMS.'+outsols+'.sols.npz'
         checkname=solname
 
+
+
         #checkname=f+'/killMS.'+outsols+'.sols.npz'
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running killMS step')
@@ -401,6 +403,13 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
+                _,_,ModelColName,DataCol=DISettings
+                _,dt,_,n_df=give_dt_dnu(f,
+                                        DataCol=DataCol,
+                                        ModelCol=ModelColName,
+                                        T=10.)
+                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
+                
                 
                 
             rootfilename=outsols.split('/')[-1]
@@ -562,9 +571,10 @@ def subtract_data(mslist,col1,col2):
         t.putcol('SUBTRACTED_DATA',d1-d2)
         t.close()
 
-def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
+def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     t=pt.table(msname,ack=False)
     d=t.getcol(DataCol)
+    dt_bin_sec=t.getcol("INTERVAL",0,1,1)[0]
     _,nch,_=d.shape
     f=t.getcol("FLAG")
     p=t.getcol(ModelCol)
@@ -598,7 +608,7 @@ def give_dt_dnu_Cubical(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     SNR=np.sqrt(nt_step*nch_step)*M/S
     warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
     
-    return nt_step,nch_step
+    return nt_step, nt_step*dt_bin_sec, nch_step, nch/nch_step
     
 def cubical_data(mslist,
                  NameSol="DI0",
@@ -636,10 +646,10 @@ def cubical_data(mslist,
             warn('File '+checkname+' already exists, not running CubiCal step')
             continue
 
-        n_dt,n_df=give_dt_dnu_Cubical(ThisMSName,
-                                      DataCol=DataColName,
-                                      ModelCol=ModelColName,
-                                      T=10.)
+        n_dt,_,n_df,_=give_dt_dnu(ThisMSName,
+                                DataCol=DataColName,
+                                ModelCol=ModelColName,
+                                T=10.)
 
         n_DT=10*n_dt
 
@@ -839,23 +849,23 @@ def main(o=None):
 
     separator("DI CAL")
     ########################
-    # killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #             #clusterfile=ClusterFile,
-    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #             catcher=catcher,
-    #             dt=o['dt_di'],
-    #             NChanSols=o['NChanSols_di'],
-    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-    cubical_data(o['mslist'],
-                 NameSol="DIS0",
-                 n_dt=1,
-                 n_df=2,
-                 n_DT=None,
-                 DataColName=colname,
-                 ModelColName="DD_PREDICT",
-                 OutColName="DATA_DI_CORRECTED",
-                 ReinitWeights=True)
+    killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                #clusterfile=ClusterFile,
+                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                catcher=catcher,
+                dt=o['dt_di'],
+                NChanSols=o['NChanSols_di'],
+                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    # cubical_data(o['mslist'],
+    #              NameSol="DIS0",
+    #              n_dt=1,
+    #              n_df=2,
+    #              n_DT=None,
+    #              DataColName=colname,
+    #              ModelColName="DD_PREDICT",
+    #              OutColName="DATA_DI_CORRECTED",
+    #              ReinitWeights=True)
     
     colname="DATA_DI_CORRECTED"
 
@@ -1013,22 +1023,22 @@ def main(o=None):
               PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Another DI step")
-    # killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
-    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #             #clusterfile=ClusterFile,
-    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #             catcher=catcher,
-    #             dt=o['dt_di'],
-    #             NChanSols=o['NChanSols_di'],
-    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-    cubical_data(o['mslist'],
-                 NameSol="DIS1",
-                 n_dt=1,
-                 n_df=2,
-                 n_DT=None,
-                 DataColName=o['colname'],
-                 ModelColName="DD_PREDICT",
-                 OutColName="DATA_DI_CORRECTED")
+    killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
+                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                #clusterfile=ClusterFile,
+                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                catcher=catcher,
+                dt=o['dt_di'],
+                NChanSols=o['NChanSols_di'],
+                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    # cubical_data(o['mslist'],
+    #              NameSol="DIS1",
+    #              n_dt=1,
+    #              n_df=2,
+    #              n_DT=None,
+    #              DataColName=o['colname'],
+    #              ModelColName="DD_PREDICT",
+    #              OutColName="DATA_DI_CORRECTED")
 
     CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
@@ -1125,23 +1135,22 @@ def main(o=None):
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Compute DI calibration (full mslist)")
-    #cubical_data(o['full_mslist'])
-    cubical_data(o['full_mslist'],
-                 NameSol="DIS2_full",
-                 n_dt=1,
-                 n_df=2,
-                 n_DT=None,
-                 DataColName=o['colname'],
-                 ModelColName="DD_PREDICT",
-                 OutColName="DATA_DI_CORRECTED")
-    # killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
-    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #             clusterfile=ClusterFile,
-    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #             catcher=catcher,
-    #             dt=o['dt_di'],
-    #             NChanSols=o['NChanSols_di'],
-    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+    # cubical_data(o['full_mslist'],
+    #              NameSol="DIS2_full",
+    #              n_dt=1,
+    #              n_df=2,
+    #              n_DT=None,
+    #              DataColName=o['colname'],
+    #              ModelColName="DD_PREDICT",
+    #              OutColName="DATA_DI_CORRECTED")
+    killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
+                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                clusterfile=ClusterFile,
+                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                catcher=catcher,
+                dt=o['dt_di'],
+                NChanSols=o['NChanSols_di'],
+                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
     colname="DATA_DI_CORRECTED"
 
     # ###############################################
