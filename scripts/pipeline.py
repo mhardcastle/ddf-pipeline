@@ -551,7 +551,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
-            run('MergeSols.py --SolsFilesIn=solslist.txt --SolFileOut=%s_%s_merged.npz'%(ddsols,start_time),dryrun=dryrun)
+            run('MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time),dryrun=dryrun)
         checkname='%s_smoothed.npz'%ddsols
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
