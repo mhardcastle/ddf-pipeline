@@ -608,7 +608,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     SNR=np.sqrt(nt_step*nch_step)*M/S
     warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
     
-    return nt_step, nt_step*dt_bin_sec, nch_step, nch/nch_step
+    return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
     
 def cubical_data(mslist,
                  NameSol="DI0",
