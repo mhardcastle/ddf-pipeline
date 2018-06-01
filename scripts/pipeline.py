@@ -1197,7 +1197,7 @@ def main(o=None):
               dicomodel_base=CurrentBaseDicoModelName,
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,
+              normalization=o['normalize'][1],uvrange=uvrange,smooth=True
               apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
 
     separator("MakeMask")
@@ -1217,7 +1217,7 @@ def main(o=None):
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
-                                       MaxMinorIterInitHMP=10000,
+                                       MaxMinorIterInitHMP=10000,smooth=True
                                        **ddf_kw)
 
     if o['exitafter'] == 'ampphase':
@@ -1332,7 +1332,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               beamsize=o['final_psf_arcsec'],
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,
+              normalization=o['normalize'][1],uvrange=uvrange,smooth=True
               apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
 
     separator('Write summary and tidy up')
