@@ -1326,7 +1326,7 @@ def main(o=None):
               cleanmask=CurrentMaskName,
               reuse_psf=True,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols='AP',majorcycles=0,robust=o['final_robust'],
+              applysols='AP',majorcycles=1,robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               AllowNegativeInitHMP=True,
