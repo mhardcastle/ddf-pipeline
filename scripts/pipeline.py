@@ -1247,22 +1247,6 @@ def main(o=None):
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
 
-    # here we do only image the residuals, and restore so use majorcycles=0
-    # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
-    separator("DD imaging (no deconvolution)")
-    ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
-              cleanmask=CurrentMaskName,
-              reuse_psf=True,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols='AP',majorcycles=0,robust=o['final_robust'],
-              colname=colname,use_dicomodel=True,
-              dicomodel_base=CurrentBaseDicoModelName,
-              AllowNegativeInitHMP=True,
-              beamsize=o['final_psf_arcsec'],
-              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,
-              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
-
     if o['low_psf_arcsec'] is not None:
         # low-res reimage requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
@@ -1320,9 +1304,37 @@ def main(o=None):
               smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
               catcher=catcher,rms_factor=o['final_rmsfactor'])
+        external_mask='external_mask_ext-deep.fits'
+        if os.path.isfile(external_mask):
+            warn('Deep external mask already exists, skipping creation')
+        else:
+            report('Make deep external mask')
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
     # ##########################################################
         
+
+    separator("MakeMask")
+    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
+            
+    
+    # here we do only image the residuals, and restore so use majorcycles=0
+    # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
+    separator("DD imaging (no deconvolution)")
+    ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
+              cleanmask=CurrentMaskName,
+              reuse_psf=True,
+              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              applysols='AP',majorcycles=0,robust=o['final_robust'],
+              colname=colname,use_dicomodel=True,
+              dicomodel_base=CurrentBaseDicoModelName,
+              AllowNegativeInitHMP=True,
+              beamsize=o['final_psf_arcsec'],
+              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
+              normalization=o['normalize'][1],uvrange=uvrange,
+              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
+
     separator('Write summary and tidy up')
     summary(o)
     if o['clearcache_end']:
