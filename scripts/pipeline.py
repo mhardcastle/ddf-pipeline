@@ -1217,7 +1217,7 @@ def main(o=None):
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
-                                       MaxMinorIterInitHMP=10000,smooth=True
+                                       MaxMinorIterInitHMP=10000,smooth=True,
                                        **ddf_kw)
 
     if o['exitafter'] == 'ampphase':
