@@ -560,7 +560,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
         outname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if InterpToMSListFreqs:
-            interp_outname="%s_%s_interp.npz"%outname
+            interp_outname="%s_%s_interp.npz"%(outname,start_time)
             checkname=interp_outname
             if o['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running MergeSols step')
