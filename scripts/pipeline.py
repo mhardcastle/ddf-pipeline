@@ -547,7 +547,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     f.write('%s\n'%(solname))
 
         
-        checkname='%s__%s_merged.npz'%(ddsols,start_time)
+        checkname='%s_%s_merged.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
@@ -1151,7 +1151,7 @@ def main(o=None):
     # Compute the DD predict
     colname=o['colname']
     separator("Compute DD Predict (full mslist)")
-    ddf_image('Predict_DSS2',o['full_mslist'],cleanmode='SSD',
+    ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
               apply_weights=o['apply_weights'][0],uvrange=uvrange,use_dicomodel=True,
@@ -1168,7 +1168,7 @@ def main(o=None):
     #              DataColName=o['colname'],
     #              ModelColName="DD_PREDICT",
     #              OutColName="DATA_DI_CORRECTED")
-    killms_data('Predict_DSS2',o['full_mslist'],'DIS2_full',colname=colname,
+    killms_data('Predict_DDS2',o['full_mslist'],'DIS2_full',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
