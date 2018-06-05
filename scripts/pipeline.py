@@ -1324,7 +1324,7 @@ def main(o=None):
     separator("DD imaging (no deconvolution)")
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
-              reuse_psf=True,
+              reuse_psf=False,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
               applysols='AP',majorcycles=1,robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
