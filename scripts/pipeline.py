@@ -829,7 +829,10 @@ def main(o=None):
 
     #########################
     separator("Cluster the sky model")
-    ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
+    if o['clusterfile'] is None:
+        ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
+    else:
+        ClusterFile=o['clusterfile']
     clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
               OutClusterCat=ClusterFile,
               use_makemask_products=True)
@@ -857,7 +860,11 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("DI CAL")
+    if o['exitafter'] == 'dirin':
+        warn('User specified exit after image_dirin.')
+        sys.exit(2)
+
+        separator("DI CAL")
     ########################
     killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -916,8 +923,8 @@ def main(o=None):
                                        PredictSettings=("Clean","DD_PREDICT"))
 
 
-    if o['exitafter'] == 'dirin':
-        warn('User specified exit after image_dirin.')
+    if o['exitafter'] == 'dirin_di':
+        warn('User specified exit after image_dirin with DI calibration.')
         sys.exit(2)
 
 
