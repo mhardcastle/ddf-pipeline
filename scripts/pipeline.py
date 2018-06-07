@@ -831,11 +831,11 @@ def main(o=None):
     separator("Cluster the sky model")
     if o['clusterfile'] is None:
         ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
+        clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                  OutClusterCat=ClusterFile,
+                  use_makemask_products=True)
     else:
         ClusterFile=o['clusterfile']
-    clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
-              OutClusterCat=ClusterFile,
-              use_makemask_products=True)
 
     #########################
     clearcache(o['mslist'],o)
@@ -962,7 +962,11 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("Mask for deeper deconv")
+    if o['exitafter'] == 'phase':
+        warn('User specified exit after phase-only deconvolution.')
+        sys.exit(2)
+
+        separator("Mask for deeper deconv")
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 
@@ -992,6 +996,10 @@ def main(o=None):
                                        #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
+
+    if o['exitafter'] == 'ampphase':
+        warn('User specified exit after amp-phase deconvolution.')
+        sys.exit(2)
 
     separator("Make Mask")
     CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
@@ -1044,19 +1052,16 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
+    if o['exitafter'] == 'ampphase_di':
+        warn('User specified exit after amp-phase plus DI deconvolution.')
+        sys.exit(2)
 
-    separator("DD calibration")
-    # CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['mslist'],'DDS2',colname=colname,
-    #                                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #                                 CovQ=0.1,
-    #                                 clusterfile=ClusterFile,
-    #                                 niterkf=6,#o['NIterKF'][0],
-    #                                 uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #                                 dt=o['dt_slow'],
-    #                                 catcher=catcher,NChanSols=o['NChanSols'],
-    #                                 EvolutionSolFile=CurrentDDkMSSolName,
-    #                                 MergeSmooth=True,
-    #                                 InterpToMSListFreqs=o['full_mslist'])
+    if o['full_mslist'] is None:
+        warn('No full mslist provided, stopping here')
+        summary(o)
+        sys.exit(3)
+        
+    separator("DD calibration of full mslist")
     
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=o['colname'],
@@ -1095,10 +1100,6 @@ def main(o=None):
         external_mask='external_mask_ext.fits'
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
 
-
-    if o['exitafter'] == 'phase':
-        warn('User specified exit after image_phase.')
-        sys.exit(2)
 
     # #########################################################################
     # ###############                  BIG MSLIST               ###############
@@ -1200,7 +1201,7 @@ def main(o=None):
 
 
     if o['low_psf_arcsec'] is not None:
-        # low-res reimage requested
+        # low-res image requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
         if o['low_imsize'] is not None:
             low_imsize=o['low_imsize'] # allow over-ride
@@ -1264,16 +1265,18 @@ def main(o=None):
             make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
     # ##########################################################
-        
+    if o['exitafter'] == 'fulllow':
+        warn('User specified exit after full low.')
+        sys.exit(2)
+
+
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
             
-    
-    # here we do only image the residuals, and restore so use majorcycles=0
-    # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
-    separator("DD imaging (no deconvolution)")
+    # full resolution, one iter of deconvolution
+    separator("DD imaging (full resolution)")
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=False,
