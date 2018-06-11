@@ -522,15 +522,12 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
     Ustart_times = np.unique(start_times)
 
-    full_outname = []
-    
     for start_time in Ustart_times:
         with open('solslist_%s.txt'%start_time,'w') as f:
             for i in range(0,len(full_sollist)):
                 if start_times[i] == start_time:
                     solname = full_sollist[i]
                     f.write('%s\n'%(solname))
-
         
         checkname='%s_%s_merged.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
@@ -543,22 +540,26 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         else:
             run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=TEC,PolyAmp'%(ddsols,start_time,ddsols,start_time),dryrun=dryrun)
 
-        outname='%s_%s_smoothed.npz'%(ddsols,start_time)
+        smoothoutname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if InterpToMSListFreqs:
-            interp_outname="%s_%s_interp.npz"%(outname,start_time)
+            interp_outname="%s_%s_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
             if o['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running MergeSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(outname,interp_outname,InterpToMSListFreqs)
+                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(smoothoutname,interp_outname,InterpToMSListFreqs)
                 run(command,dryrun=dryrun)
-            outname=interp_outname
-
-        if start_time == Ustart_times[-1]:
-            full_outname.append(outname)
-        else:
-            full_outname.append('%s,'%outname)
         
+        for i in range(0,len(full_sollist)):
+            if start_times[i] == start_time:
+		symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+                if o['restart'] and os.path.isfile(symsolname):
+	            warn('Symlink ' + symsolname + ' already exists')
+		else:
+	            warn('Symlink ' + symsolname + ' does not exist -- creating')
+                    os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
+        outname = ddsols + '_smoothed'
+
     return outname
 
 def full_clearcache(o):
