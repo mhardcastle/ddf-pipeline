@@ -500,21 +500,6 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def optimize_uvmin(rootname,mslist,colname,uvmin_limit=None):
-    uvminfile=rootname+'_uvmin.txt'
-    report('Optimizing uvmin for self-cal')
-    if os.path.isfile(uvminfile):
-        result=float(open(uvminfile).readlines()[0].rstrip())
-    else:
-        level=sumdico(rootname)
-        result=find_uvmin(mslist,level,colname=colname)*1.1
-        print 'Will use shortest baseline of',result,'km'
-        with open(uvminfile,'w') as f:
-            f.write('%f\n' % result)
-    if uvmin_limit is not None and result<uvmin_limit:
-        result=uvmin_limit
-    return result
-
 def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
@@ -843,11 +828,15 @@ def main(o=None):
 
 
     #########################
-    separator("Cluster the sky model")
-    ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
-    clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
-              OutClusterCat=ClusterFile,
-              use_makemask_products=True)
+    if o['clusterfile'] is None:
+        separator("Cluster the sky model")
+        ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
+        clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                  OutClusterCat=ClusterFile,
+                  use_makemask_products=True)
+    else:
+        ClusterFile=o['clusterfile']
+        warn('Using user-specifed cluster file '+ClusterFile)
 
     #########################
     clearcache(o['mslist'],o)
@@ -872,11 +861,14 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("DI CAL")
+    if o['exitafter'] == 'dirin':
+        warn('User specified exit after image_dirin.')
+        sys.exit(2)
+
+        separator("DI CAL")
     ########################
     killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                #clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                 catcher=catcher,
                 dt=o['dt_di'],
@@ -931,35 +923,9 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    # #########################
-    # separator("Cluster the sky model")
-    # ClusterFile='image_dirin_SSD_m_di_m.npy.ClusterCat.npy'
-    # clusterGA(imagename="image_dirin_SSD_m_di_m.app.restored.fits",OutClusterCat=ClusterFile)
 
-
-
-    # CurrentMaskName=make_mask('image_dirin_SSD_m.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
-    # CurrentBaseDicoModelName=mask_dicomodel('image_dirin_SSD_m.DicoModel',
-    #                                         CurrentMaskName,
-    #                                         'image_dirin_SSD_m_masked.DicoModel',catcher=catcher)
-
-
-    # # ##########################################################
-    # # cluster to get facets
-    # if not os.path.exists('image_dirin_SSD_m.Norm.fits') and not os.path.islink("image_dirin_SSD_m.Norm.fits"):
-    #     os.symlink('image_dirin_SSD_init.Norm.fits','image_dirin_SSD_m.Norm.fits')
-    # if not os.path.exists('image_dirin_SSD_m.dirty.fits') and not os.path.islink("image_dirin_SSD_m.dirty.fits"):
-    #     os.symlink('image_dirin_SSD_init.dirty.fits','image_dirin_SSD_m.dirty.fits')
-    # # if make_model('image_dirin_SSD_m.app.restored.fits.mask.fits','image_dirin_SSD_m',catcher=catcher):
-    # #     # if this step runs, clear the cache to remove facet info
-    # #     clearcache(o['mslist'],o)
-
-    # ##########################################################
-    if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_dirin_SSD_m',o['mslist'],colname,o['solutions_uvmin'])
-
-    if o['exitafter'] == 'dirin':
-        warn('User specified exit after image_dirin.')
+    if o['exitafter'] == 'dirin_di':
+        warn('User specified exit after image_dirin with DI calibration.')
         sys.exit(2)
 
 
@@ -997,7 +963,11 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
-    separator("Mask for deeper deconv")
+    if o['exitafter'] == 'phase':
+        warn('User specified exit after phase-only deconvolution.')
+        sys.exit(2)
+
+        separator("Mask for deeper deconv")
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 
@@ -1027,6 +997,10 @@ def main(o=None):
                                        #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
+
+    if o['exitafter'] == 'ampphase':
+        warn('User specified exit after amp-phase deconvolution.')
+        sys.exit(2)
 
     separator("Make Mask")
     CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
@@ -1079,19 +1053,16 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
+    if o['exitafter'] == 'ampphase_di':
+        warn('User specified exit after amp-phase plus DI deconvolution.')
+        sys.exit(2)
 
-    separator("DD calibration")
-    # CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['mslist'],'DDS2',colname=colname,
-    #                                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-    #                                 CovQ=0.1,
-    #                                 clusterfile=ClusterFile,
-    #                                 niterkf=6,#o['NIterKF'][0],
-    #                                 uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-    #                                 dt=o['dt_slow'],
-    #                                 catcher=catcher,NChanSols=o['NChanSols'],
-    #                                 EvolutionSolFile=CurrentDDkMSSolName,
-    #                                 MergeSmooth=True,
-    #                                 InterpToMSListFreqs=o['full_mslist'])
+    if o['full_mslist'] is None:
+        warn('No full mslist provided, stopping here')
+        summary(o)
+        sys.exit(3)
+        
+    separator("DD calibration of full mslist")
     
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=o['colname'],
@@ -1131,10 +1102,6 @@ def main(o=None):
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
 
 
-    if o['exitafter'] == 'phase':
-        warn('User specified exit after image_phase.')
-        sys.exit(2)
-
     # #########################################################################
     # ###############                  BIG MSLIST               ###############
     # #########################################################################
@@ -1142,11 +1109,6 @@ def main(o=None):
 
     # check full mslist imaging weights
     check_imaging_weight(o['full_mslist'])
-
-    # Calibrate off the model
-    if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_phase1',o['mslist'],colname,o['solutions_uvmin'])
-
         
     # Compute the DD predict
     colname=o['colname']
@@ -1224,14 +1186,6 @@ def main(o=None):
         warn('User specified exit after image_ampphase.')
         sys.exit(2)
 
-
-    if o['auto_uvmin']:
-        killms_uvrange[0]=optimize_uvmin('image_full_ampphase1',o['mslist'],colname,o['solutions_uvmin'])
-
-    # separator("MakeMask")
-    # CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',7,external_mask=external_mask,catcher=catcher)
-    # CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
-
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
                                     o['full_mslist'],'DDS3_full',
@@ -1248,7 +1202,7 @@ def main(o=None):
 
 
     if o['low_psf_arcsec'] is not None:
-        # low-res reimage requested
+        # low-res image requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
         if o['low_imsize'] is not None:
             low_imsize=o['low_imsize'] # allow over-ride
@@ -1312,16 +1266,18 @@ def main(o=None):
             make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
     # ##########################################################
-        
+    if o['exitafter'] == 'fulllow':
+        warn('User specified exit after full low.')
+        sys.exit(2)
+
+
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
             
-    
-    # here we do only image the residuals, and restore so use majorcycles=0
-    # (psf is not used so we set reuse_psf=True, so that DDFacet does not recompute it)
-    separator("DD imaging (no deconvolution)")
+    # full resolution, one iter of deconvolution
+    separator("DD imaging (full resolution)")
     ddf_image('image_full_ampphase_di_m.NS',o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=False,
