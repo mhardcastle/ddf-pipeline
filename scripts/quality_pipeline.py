@@ -126,21 +126,21 @@ if __name__=='__main__':
         die('pbimage must be specified')
     if o['nonpbimage'] is None:
         die('nonpbimage must be specified')
-
-    # fix up the new list-type options
-    for i,cat in enumerate(o['list']):
-        try:
-            o[cat]=o['filenames'][i]
-        except:
-            pass
-        try:
-            o[cat+'_matchrad']=o['radii'][i]
-        except:
-            pass
-        try:
-            o[cat+'_fluxfactor']=o['fluxfactor'][i]
-        except:
-            pass
+    if o['list'] is not None:
+        # fix up the new list-type options
+        for i,cat in enumerate(o['list']):
+            try:
+                o[cat]=o['filenames'][i]
+            except:
+                pass
+            try:
+                o[cat+'_matchrad']=o['radii'][i]
+            except:
+                pass
+            try:
+                o[cat+'_fluxfactor']=o['fluxfactor'][i]
+            except:
+                pass
         
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
