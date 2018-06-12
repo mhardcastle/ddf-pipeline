@@ -689,9 +689,7 @@ def main(o=None):
     for fCat in lCat:
         if not os.path.isfile(fCat):
             warn("Catalog %s does not exist"%fCat)
-            sys.exit(2)
-          
-    
+            sys.exit(2)          
     
     if o['catch_signal']:
         catcher=Catcher()
@@ -949,7 +947,10 @@ def main(o=None):
         report('Running bootstrap')
         run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
         colname='SCALED_DATA'
-    
+        if o['exitafter'] == 'bootstrap':
+            warn('User specified exit after phase-only deconvolution.')
+            sys.exit(2)
+
     # make a mask from the full-res image
     separator("Make mask for next iteration")
     CurrentMaskName=make_mask('image_dirin_SSD_m_c_di_m.app.restored.fits',
@@ -976,7 +977,7 @@ def main(o=None):
         warn('User specified exit after phase-only deconvolution.')
         sys.exit(2)
 
-        separator("Mask for deeper deconv")
+    separator("Mask for deeper deconv")
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 

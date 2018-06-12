@@ -37,6 +37,18 @@ def run_bootstrap(o):
     if o['frequencies'] is None or o['catalogues'] is None:
         die('Frequencies and catalogues options must be specified')
 
+    if "DDF_PIPELINE_CATALOGS" not in os.environ.keys():
+        warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
+        sys.exit(2)
+
+    o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
+    o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
+    lCat=o["catalogues"]+[o["tgss"]]
+    for fCat in lCat:
+        if not os.path.isfile(fCat):
+            warn("Catalog %s does not exist"%fCat)
+            sys.exit(2)
+
     cl=len(o['catalogues'])
     if o['names'] is None:
         o['names']=[os.path.basename(x).replace('.fits','') for x in o['catalogues']]
@@ -102,7 +114,7 @@ def run_bootstrap(o):
                   automask_threshold=15,smooth=True,cubemode=True,
                   conditional_clearcache=True)
         external_mask='bootstrap_external_mask.fits'
-        make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize=o['low_cell'],options=o)
+        make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='low_cell',options=o)
         # Deep SSD clean with this external mask and automasking
         ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
                   cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
