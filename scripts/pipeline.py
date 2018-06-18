@@ -696,6 +696,10 @@ def main(o=None):
     else:
         catcher=None
 
+    if o['remove_columns']:
+        warn('Removing all pipeline-created columns')
+        run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
+        
     uvrange=[o['image_uvmin'],o['uvmax']]
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
