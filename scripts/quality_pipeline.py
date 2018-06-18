@@ -151,7 +151,7 @@ if __name__=='__main__':
     # facet labels -- do this now for generality
     t=Table.read(o['catprefix'] + '.cat.fits')
     if 'Facet' not in t.columns:
-        t=label_table(t,'image_full_ampphase1m.tessel.reg')
+        t=label_table(t,'image_full_ampphase_di_m.NS.tessel.reg')
         t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
     # matching with catalogs
