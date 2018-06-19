@@ -690,7 +690,10 @@ def main(o=None):
         if not os.path.isfile(fCat):
             warn("Catalog %s does not exist"%fCat)
             sys.exit(2)          
-    
+
+    if o['pull']:
+        run('pull_ddfpipeline.sh',log=None)
+            
     if o['catch_signal']:
         catcher=Catcher()
     else:
