@@ -81,20 +81,28 @@ def check_imaging_weight(mslist_name):
 
     # returns a boolean that says whether it did something
     result=False
+    error=False
     report('Checking for IMAGING_WEIGHT in input MSS')
     mslist=[s.strip() for s in open(mslist_name).readlines()]
     for ms in mslist:
-        t = pt.table(ms)
         try:
-            dummy=t.getcoldesc('IMAGING_WEIGHT')
+            t = pt.table(ms)
         except RuntimeError:
-            dummy=None
-        t.close()
-        if dummy is not None:
-            warn('Table '+ms+' already has imaging weights')
+            print 'Failed to open table',ms,'-- table may be missing or corrupt'
+            error=True
         else:
-            pt.addImagingColumns(ms)
-            result=True
+            try:
+                dummy=t.getcoldesc('IMAGING_WEIGHT')
+            except RuntimeError:
+                dummy=None
+            t.close()
+            if dummy is not None:
+                warn('Table '+ms+' already has imaging weights')
+            else:
+                pt.addImagingColumns(ms)
+                result=True
+    if error:
+        raise RuntimeError('One or more tables failed to open')
     return result
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
