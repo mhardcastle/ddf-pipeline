@@ -1314,8 +1314,25 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,**ddf_kw)
+              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,
+              PredictSettings=("Clean","DD_PREDICT"),
+              **ddf_kw)
 
+
+    if o['do_dynspec']:
+        LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
+        g=glob.glob('DynSpecs_*')
+        if len(g)>0:
+            warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+        else:
+            runcommand="ms2dynspec.py --ms big-mslist.txt --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
+            run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
+            
+
+
+
+
+    
     separator('Write summary and tidy up')
     summary(o)
     if o['clearcache_end']:
@@ -1359,13 +1376,6 @@ def main(o=None):
 
 
 
-    #     if o['do_dynspec']:
-    #         g=glob.glob('DynSpecs_*')
-    #         if len(g)>0:
-    #             warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
-    #         else:
-    #             runcommand="ms2dynspec.py --ms big-mslist.txt --data SCALED_DATA --model PREDICT_DATA --sols killMS.%s.sols.npz --rad 2. --image %s --LogBoring %i"%(us_ddsols,LastImage,o['nobar'])
-    #             run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
     #     if o['method'] is not None:
     #         # have we got the catalogue?
