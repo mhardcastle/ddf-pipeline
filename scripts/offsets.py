@@ -301,7 +301,7 @@ class Offsets(object):
 
         cellsize=self.cellsize
         outfile=open(filename,'w')
-        lines=open('image_full_ampphase1m.facetCoord.txt').readlines()
+        lines=open(self.imroot+'.facetCoord.txt').readlines()
         for l in lines:
             bits=[b.strip() for b in l.split(',')]
             rar=float(bits[2])
