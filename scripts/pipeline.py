@@ -1294,6 +1294,18 @@ def main(o=None):
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
             
+    # before starting the final image, run the download thread if needed
+    if o['method'] is not None:
+        separator('Offset image downloads')
+        report('Checking if optical catalogue download is required')
+        from get_cat import get_cat, download_required
+        if download_required(o['method']):
+            download_thread = threading.Thread(target=get_cat, args=('panstarrs',))
+            download_thread.start()
+        else:
+            warn('All data present, skipping download')
+            download_thread = None
+
     # full resolution, one iter of deconvolution
     separator("DD imaging (full resolution)")
     ddf_kw={}
@@ -1318,7 +1330,28 @@ def main(o=None):
               PredictSettings=("Clean","DD_PREDICT"),
               **ddf_kw)
 
+    # check for the offset files
+    if o['method'] is not None:
+        separator('Offset correction')
+        # have we got the catalogue?
+        if download_thread is not None and download_thread.isAlive():
+            warn('Waiting for background download thread to finish...')
+            download_thread.join()
+        # maybe the thread died, check the files are there
+        if download_required(o['method']):
+            warn('Retrying download for some or all of the catalogue')
+            get_cat(o['method'])
 
+        # we should now have the catalogue, find the offsets
+        facet_offset_file='facet-offset.txt'
+        if o['restart'] and os.path.isfile(facet_offset_file):
+            warn('Offset file already exists, not running offsets.py')
+        else:
+            run('offsets.py '+' '.join(sys.argv[1:]),log=None)
+
+        # apply the offsets
+        ddf_shift('image_full_ampphase_di_m.NS',facet_offset_file,options=o,catcher=catcher)
+    
     if o['do_dynspec']:
         LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
         g=glob.glob('DynSpecs_*')
@@ -1345,18 +1378,6 @@ def main(o=None):
     # CONTAINS DYNSPEC AND ASTROMETRY CODE
     # DO NOT DELETE UNTIL MERGED BACK IN                       #
     # ##########################################################
-
-
-        # # before starting the final image, run the download thread if needed
-        # if o['method'] is not None:
-        #     report('Checking if optical catalogue download is required')
-        #     from get_cat import get_cat, download_required
-        #     if download_required(o['method']):
-        #         download_thread = threading.Thread(target=get_cat, args=('panstarrs',))
-        #         download_thread.start()
-        #     else:
-        #         warn('All data present, skipping download')
-        #         download_thread = None
 
     # final image
     separator("DD Imaging (full mslist)")
