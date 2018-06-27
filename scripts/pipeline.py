@@ -853,7 +853,9 @@ def main(o=None):
         warn('Using user-specifed cluster file '+ClusterFile)
 
     #########################
-    clearcache(o['mslist'],o)
+    if o['clearcache'] or new or o['redofrom']:
+        clearcache(o['mslist'],o)
+
     separator("Deconv clustered DI image")
     CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
                                        cleanmask=CurrentMaskName,
@@ -1368,8 +1370,8 @@ def main(o=None):
     
     separator('Write summary and tidy up')
     summary(o)
-    if o['clearcache_end']:
-         full_clearcache(o)
+    # if o['clearcache_end']:
+    #      full_clearcache(o)
 
     return
 
