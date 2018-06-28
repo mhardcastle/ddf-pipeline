@@ -1365,8 +1365,16 @@ def main(o=None):
             
 
 
-
-
+    import do_spectral_restored
+    do_spectral_restored.do_spectral_restored(colname,
+                                              CurrentMaskName,
+                                              CurrentBaseDicoModelName,
+                                              CurrentDDkMSSolName,
+                                              uvrange,
+                                              ddf_kw,
+                                              facet_offset_file,
+                                              options=o,
+                                              catcher=catcher)
     
     separator('Write summary and tidy up')
     summary(o)
