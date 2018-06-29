@@ -24,8 +24,8 @@ def do_polcubes(colname,
 
     for i in range(0,len(cuberas)):
         cubera,cubedec = Angle(cuberas[i],u.degree),Angle(cubedecs[i],u.degree)
-	cubera=cubera.to_string(unit=u.hour)
-	cubedec=cubedec.to_string(unit=u.degree)
+	cubera=cubera.to_string(unit=u.hour,sep=":")
+	cubedec=cubedec.to_string(unit=u.degree,sep=":")
 
         ThisImageName = 'image_full_low_QU_Cube%s'%i
 
