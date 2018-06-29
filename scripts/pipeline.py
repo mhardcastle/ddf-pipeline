@@ -269,7 +269,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += ' --Predict-ColName=%s' % predict_column
         
     if phasecenter is not None:
-        runcommand += "--PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
+        runcommand += " --PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
