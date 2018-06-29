@@ -3,6 +3,8 @@ import numpy as np
 from pipeline import *
 from pyrap.tables import table
 from auxcodes import getpos
+from astropy import units as u
+from astropy.coordinates import Angle
 
 def do_polcubes(colname,
                          CurrentDDkMSSolName,
@@ -21,7 +23,10 @@ def do_polcubes(colname,
     cubedecs = [dec+0.75,dec-0.75,dec+0.75,dec-0.75]
 
     for i in range(0,len(cuberas)):
-        cubera,cubedec = cuberas[i],cubedecs[i]
+        cubera,cubedec = Angle(cuberas[i],u.degree),Angle(cubedecs[i],u.degree)
+	cubera=cubera.to_string(unit=u.hour)
+	cubedec=cubedec.to_string(unit=u.degree)
+
         ThisImageName = 'image_full_low_QU_Cube%s'%i
 
         ddf_image(ThisImageName,o['full_mslist'],

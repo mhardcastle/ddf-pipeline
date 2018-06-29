@@ -269,7 +269,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += ' --Predict-ColName=%s' % predict_column
         
     if phasecenter is not None:
-        runcommand += " --PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
+        runcommand += " --Image-PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
@@ -1309,6 +1309,7 @@ def main(o=None):
         warn('User specified exit after full low.')
         sys.exit(2)
 
+
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
@@ -1392,6 +1393,7 @@ def main(o=None):
                                               facet_offset_file,
                                               options=o,
                                               catcher=catcher)
+
     from do_polcubes import do_polcubes
     do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
 
