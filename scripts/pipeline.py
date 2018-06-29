@@ -1309,10 +1309,6 @@ def main(o=None):
         warn('User specified exit after full low.')
         sys.exit(2)
 
-    from do_polcubes import do_polcubes
-    do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
-
-
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
@@ -1396,6 +1392,9 @@ def main(o=None):
                                               facet_offset_file,
                                               options=o,
                                               catcher=catcher)
+    from do_polcubes import do_polcubes
+    do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
+
     separator('Write summary and tidy up')
     summary(o)
     # if o['clearcache_end']:
