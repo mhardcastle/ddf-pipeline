@@ -17,11 +17,11 @@ def download_dataset(server,root):
     files=[]
     urls=[]
     for r in row:
-        if r.text is not None and 'CAL' in r.text:
-            files.append(r.text)
-            urls.append(r.attrib['href'])
+        if 'title' in r.attrib and 'Download' in r.attrib['title']:
+            files.append(r.attrib['download'])
+            urls.append(r.attrib['href'].replace('../..',''))
     if len(files)!=25:
-        print 'There should be 25 files! Check SARA manually.'
+        print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
         return False
     for f,u in zip(files,urls):
         if os.path.isfile(f):
@@ -29,6 +29,7 @@ def download_dataset(server,root):
         else:
             print 'Downloading',f
             url=server+u
+            print url
             while True:
                 try:
                     response = requests.get(url, stream=True,verify=False,timeout=300)
