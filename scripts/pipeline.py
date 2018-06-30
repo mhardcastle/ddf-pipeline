@@ -1382,21 +1382,22 @@ def main(o=None):
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
 
+    if o['spectral_restored']:
+        import do_spectral_restored
+        do_spectral_restored.do_spectral_restored(colname,
+                                                  CurrentMaskName,
+                                                  CurrentBaseDicoModelName,
+                                                  CurrentDDkMSSolName,
+                                                  uvrange,
+                                                  ddf_kw,
+                                                  facet_offset_file,
+                                                  options=o,
+                                                  catcher=catcher)
 
-    import do_spectral_restored
-    do_spectral_restored.do_spectral_restored(colname,
-                                              CurrentMaskName,
-                                              CurrentBaseDicoModelName,
-                                              CurrentDDkMSSolName,
-                                              uvrange,
-                                              ddf_kw,
-                                              facet_offset_file,
-                                              options=o,
-                                              catcher=catcher)
 
-
-    from do_polcubes import do_polcubes
-    do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
+    if o['polcubes']:
+        from do_polcubes import do_polcubes
+        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
 
     separator('Write summary and tidy up')
     summary(o)
@@ -1426,43 +1427,6 @@ def main(o=None):
 
     if o['do_dynspec']:
         ddf_kw['predict_column']='PREDICT_DATA'
-
-
-
-            
-    #     if o['method'] is not None:
-    #         # have we got the catalogue?
-    #         if download_thread is not None and download_thread.isAlive():
-    #             warn('Waiting for background download thread to finish...')
-    #             download_thread.join()
-    #         # maybe the thread died, check the files are there
-    #         if download_required(o['method']):
-    #             warn('Retrying download for some or all of the catalogue')
-    #             get_cat(o['method'])
-
-    #         facet_offset_file='facet-offset.txt'
-    #         if o['restart'] and os.path.isfile(facet_offset_file):
-    #             warn('Offset file already exists, not running offsets.py')
-    #         else:
-    #             run('offsets.py '+' '.join(sys.argv[1:]),log=None)
-
-    #         last_image_root='image_full_ampphase1m'
-    #         if o['second_selfcal']:
-    #             last_image_root='image_full_ampphase2'
-
-    #         # check for LastResidual in cache. In case of a restart,
-    #         # this may not be present, in which case we have to
-    #         # remake.
-    #         cachedir=find_cache_dir(o)
-    #         full_mslist_file = os.path.basename(o['full_mslist'])
-    #         if not(os.path.isfile(cachedir+'/'+full_mslist_file+'.ddfcache/LastResidual')) or not(os.path.isfile(cachedir+'/'+full_mslist_file+'.ddfcache/PSF')):
-    #             ddf_image('image_full_ampphase1m_reimage',full_mslist_file,cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',cleanmode='SSD',ddsols=ddsols,applysols='AP',majorcycles=0,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1m',peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,normalization=o['normalize'][2],reuse_psf=False,dirty_from_resid=False,uvrange=uvrange,apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-    #             os.symlink('Dirty',cachedir+'/'+full_mslist_file+'.ddfcache/LastResidual')
-    #             os.symlink('Dirty.hash',cachedir+'/'+full_mslist_file+'LastResidual.hash')
-
-    #         ddf_shift(last_image_root,facet_offset_file,options=o,catcher=catcher)
-
-            
 
 if __name__=='__main__':
     # Main loop

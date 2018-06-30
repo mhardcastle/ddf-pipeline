@@ -13,8 +13,11 @@ def do_spectral_restored(colname,
                          facet_offset_file,
                          options=None,catcher=None):
     o=options
-    CentralFreqs=np.array([121., 144., 159.])*1.e6
-    CentralFreqs=np.array([128.02581787109375, 143.65081787109375, 160.25238037109375])*1e6
+    if o['centralfreqs']:
+        CentralFreqs=np.array(o['centralfreqs']*1e6)
+    else:
+        # old hard-wired behaviour
+        CentralFreqs=np.array([128.02581787109375, 143.65081787109375, 160.25238037109375])*1e6
 
     mslist=o['full_mslist']
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
@@ -60,4 +63,5 @@ def do_spectral_restored(colname,
                   apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,options=o,
                   **ddf_kw)
 
-        ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher)
+        if o['method'] is not None:
+            ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher)

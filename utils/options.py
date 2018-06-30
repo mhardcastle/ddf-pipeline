@@ -95,6 +95,7 @@ def print_options(option_list):
     from auxcodes import bcolors
     # expected to be called if a config file is not specified. Print a
     # list of options
+    option_list=sorted(option_list,key=lambda x:x[1])
     width,height=_get_terminal_size_linux()
     sections=sorted(set(x[0] for x in option_list))
     klen=max([len(x[1]) for x in option_list])
