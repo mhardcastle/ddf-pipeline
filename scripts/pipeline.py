@@ -123,7 +123,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None):
 
     if catcher: catcher.check()
 
@@ -196,18 +196,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
 
     if polcubemode:
-        # number of channels equals number of distinct freqs in data
-        freqs=[]
-        mss=[l.rstrip() for l in open(mslist).readlines()]
-        for ms in mss:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            chanfreqs=t[0]['CHAN_FREQ']
-            for freq in chanfreqs:
-                if freq not in freqs:
-                    freqs.append(freq)
-        channels=len(freqs)
-
-        runcommand+=' --Output-Cubes=dD --RIME-PolMode=QU --Output-Mode=Dirty  --Freq-NBand=%i' % channels
+        runcommand+=' --Output-Cubes=dD --RIME-PolMode=QU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
 
     if not cubemode and not polcubemode:
         runcommand+=' --Freq-NBand=2'
@@ -1309,7 +1298,6 @@ def main(o=None):
         warn('User specified exit after full low.')
         sys.exit(2)
 
-
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
@@ -1394,10 +1382,11 @@ def main(o=None):
                                                   options=o,
                                                   catcher=catcher)
 
-
     if o['polcubes']:
         from do_polcubes import do_polcubes
-        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
+        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,4,ddf_kw,options=o,catcher=catcher)
+
+
 
     separator('Write summary and tidy up')
     summary(o)
