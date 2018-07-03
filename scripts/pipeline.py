@@ -1391,7 +1391,7 @@ def main(o=None):
 
     if o['polcubes']:
         from do_polcubes import do_polcubes
-        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,4,ddf_kw,options=o,catcher=catcher)
+        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
 
 
     if o['stokesv']:
