@@ -123,7 +123,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
 
     if catcher: catcher.check()
 
@@ -200,7 +200,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     if not cubemode and not polcubemode:
         runcommand+=' --Freq-NBand=2'
-    
+    if stokes:
+        runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
 
 
     if do_decorr:
@@ -1385,6 +1386,19 @@ def main(o=None):
     if o['polcubes']:
         from do_polcubes import do_polcubes
         do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,4,ddf_kw,options=o,catcher=catcher)
+
+
+    if o['stokesv']:
+        ddf_image('image_full_low_stokesV',o['full_mslist'],
+                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  applysols='AP',stokes='IV',
+		  AllowNegativeInitHMP=True,
+                  majorcycles=0,robust=o['low_robust'],
+                  colname=colname,use_dicomodel=False,
+                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
+                  catcher=catcher)
 
 
 
