@@ -1175,19 +1175,25 @@ def main(o=None):
         ddf_kw['cubemode']=True
         ddf_kw['smooth']=True
 
+    if o['final_psf_arcsec'] is not None:
+        ddf_kw['beamsize']=o['final_psf_arcsec']
+        if o['final_psf_minor_arcsec'] is not None:
+            if o['final_psf_pa_deg'] is None:
+                die('If final minor axis is supplied, position angle must be supplied too')
+            ddf_kw['beamsize_minor']=o['final_psf_minor_arcsec']
+            ddf_kw['beamsize_pa']=o['final_psf_pa_deg']
+
     ddf_image('image_full_ampphase_di',o['full_mslist'],
               cleanmask=CurrentMaskName,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
               applysols='AP',
               majorcycles=0,
-              #robust=o['image_robust'],
-              robust=o['final_robust'],beamsize=o['final_psf_arcsec'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher)
+              apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
@@ -1198,7 +1204,7 @@ def main(o=None):
                                        reuse_psf=True,
                                        reuse_dirty=True,
                                        cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                                       applysols='AP',majorcycles=1,robust=o['final_robust'],beamsize=o['final_psf_arcsec'],
+                                       applysols='AP',majorcycles=1,
                                        colname=colname,use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
@@ -1206,7 +1212,7 @@ def main(o=None):
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
-                                       MaxMinorIterInitHMP=10000,smooth=True)
+                                       MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
 
     if o['exitafter'] == 'ampphase':
         warn('User specified exit after image_ampphase.')
