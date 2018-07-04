@@ -555,7 +555,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=TEC,PolyAmp'%(ddsols,start_time,ddsols,start_time),dryrun=dryrun)
+            run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=%s'%(ddsols,start_time,ddsols,start_time,o['smoothingtype']),dryrun=dryrun)
 
         smoothoutname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if InterpToMSListFreqs:
@@ -964,7 +964,7 @@ def main(o=None):
                                     #niterkf=6,
                                     uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
-                                    MergeSmooth=True)
+                                    MergeSmooth=o['smoothing'])
 
     # ##########################################################
     # run bootstrap, and change the column name if it runs
@@ -1016,7 +1016,7 @@ def main(o=None):
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=True)
+                                    MergeSmooth=o['smoothing'])
     ##############################################
 
     separator("AmpPhase deconv")
@@ -1113,7 +1113,7 @@ def main(o=None):
                                     catcher=catcher,
                                     NChanSols=o['NChanSols'],
                                     # EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=True)
+                                    MergeSmooth=o['smoothing'])
     
     # ##########################################################
     # make the extended mask if required and possible
@@ -1229,7 +1229,7 @@ def main(o=None):
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
-                                    MergeSmooth=True,
+                                    MergeSmooth=o['smoothing'],
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
 
