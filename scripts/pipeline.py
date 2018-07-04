@@ -397,7 +397,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
         else:
             
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --NChanSols %i --PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols, NChanSols,o['PowerSmooth'],colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s--PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols, o['PowerSmooth'],colname)
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -414,7 +414,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
                 
             if DISettings is None:
-                runcommand+='  --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
+                runcommand+=' --NChanSols %i' % NChanSols
+                runcommand+=' --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
                 if clusterfile is not None:
                     runcommand+=' --NodesFile '+clusterfile
                 if dicomodel is not None:
@@ -897,7 +898,6 @@ def main(o=None):
                 niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                 catcher=catcher,
                 dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
                 DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
     # cubical_data(o['mslist'],
     #              NameSol="DIS0",
@@ -1064,7 +1064,6 @@ def main(o=None):
                 niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                 catcher=catcher,
                 dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
                 DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
     # cubical_data(o['mslist'],
     #              NameSol="DIS1",
@@ -1163,7 +1162,6 @@ def main(o=None):
                 niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                 catcher=catcher,
                 dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
                 DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
     colname="DATA_DI_CORRECTED"
 

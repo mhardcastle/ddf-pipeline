@@ -62,6 +62,13 @@ def options(optlist,option_list):
 
     config.read(filenames)
     for c in cmdlineset:
+        for o in option_list:
+            (section, name, otype, default)=o[:4]
+            if c[0]==section and c[1]==name:
+                break
+        else:
+            print 'Option %s-%s does not exist!' % (c[0],c[1])
+            sys.exit(2)
         try:
             config.add_section(c[0])
         except ConfigParser.DuplicateSectionError:
