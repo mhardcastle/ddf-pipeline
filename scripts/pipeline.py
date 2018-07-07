@@ -1249,7 +1249,7 @@ def main(o=None):
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask-low exists then use it
-        if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
+        if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
         else:
             extmask=None
