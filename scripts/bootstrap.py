@@ -209,17 +209,31 @@ def run_bootstrap(o):
                 if dummy is not None:
                     warn('Table '+ms+' has already been corrected, skipping')
                 else:
+                    # in this version we need to scale both the original data and the data in colname
                     t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
                     print frq,factor
                     t=pt.table(ms,readonly=False)
-                    desc=t.getcoldesc(colname)
+                    desc=t.getcoldesc(o['colname'])
                     desc['name']='SCALED_DATA'
                     t.addcols(desc)
-                    d=t.getcol(colname)
+                    d=t.getcol(o['colname'])
                     d*=factor
                     t.putcol('SCALED_DATA',d)
+                    try:
+                        dummy=t.getcoldesc(colname)
+                    except RuntimeError:
+                        dummy=None
+                    if dummy is not None:
+                        desc=t.getcoldesc(colname)
+                        newname=colname+'_SCALED'
+                        desc['name']=newname
+                        t.addcols(desc)
+                        d=t.getcol(colname)
+                        d*=factor
+                        t.putcol(newname,d)
+
                     t.close()
     if os.path.isfile('image_bootstrap.app.mean.fits'):
         warn('Mean bootstrap image exists, not creating it')

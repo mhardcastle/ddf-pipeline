@@ -972,7 +972,7 @@ def main(o=None):
         separator("Bootstrap")
         report('Running bootstrap')
         run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
-        colname='SCALED_DATA'
+        colname=colname+'_SCALED' # DI corrected, scaled
         if o['exitafter'] == 'bootstrap':
             warn('User specified exit after phase-only deconvolution.')
             sys.exit(2)
@@ -1058,7 +1058,11 @@ def main(o=None):
               PredictSettings=("Predict","DD_PREDICT"))
 
     separator("Another DI step")
-    killms_data('PredictDI_1',o['mslist'],'DIS1',colname=o['colname'],
+    if o['bootstrap']:
+        colname='SCALED_DATA'
+    else:
+        colname=o['colname']
+    killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                 dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                 #clusterfile=ClusterFile,
                 niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -1074,6 +1078,7 @@ def main(o=None):
     #              ModelColName="DD_PREDICT",
     #              OutColName="DATA_DI_CORRECTED")
 
+    colname='DATA_DI_CORRECTED' # again
     CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
                                        ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
@@ -1098,9 +1103,14 @@ def main(o=None):
         sys.exit(3)
         
     separator("DD calibration of full mslist")
-    
+
+    if o['bootstrap']:
+        colname='SCALED_DATA'
+    else:
+        colname=o['colname']
+
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
-                                    colname=o['colname'],
+                                    colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
@@ -1241,7 +1251,7 @@ def main(o=None):
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask-low exists then use it
-        if os.path.isfile('bootstrap-mask-low.fits') and low_imsize==o['bsimsize']:
+        if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
         else:
             extmask=None
