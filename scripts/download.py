@@ -7,6 +7,8 @@ from lxml import html
 import shutil
 import os.path
 from time import sleep
+from surveys_db import SurveysDB,use_database,get_cluster,get_user
+from auxcodes import die
 
 def download_dataset(server,root):
     page=requests.get(server+root,verify=False)
@@ -43,6 +45,29 @@ def download_dataset(server,root):
             del response
     return True
 
+def db_create(name):
+    sdb=SurveysDB()
+    id=int(name[1:]) # get the L out
+    if sdb.get_id(id):
+        die('ID to be downloaded already exists in database!')
+
+    idd=sdb.create_id(id)
+    idd['status']='Downloading'
+    idd['clustername']=get_cluster()
+    idd['location']=os.getcwd()
+    idd['username']=get_user()
+    idd['nodename']=sdb.hostname
+    sdb.set_id(idd)
+    sdb.close()
+
+def db_update(name,status):
+    sdb=SurveysDB()
+    id=int(name[1:])
+    idd=sdb.get_id(id)
+    idd['status']='Downloaded' if status else 'D/L failed'
+    sdb.set_id(idd)
+    sdb.close()
+    
 if __name__=='__main__':
 
     import sys
@@ -52,4 +77,11 @@ if __name__=='__main__':
     except OSError:
         pass
     os.chdir(name)
-    download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+    if use_database:
+        db_create(name)
+    
+    status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+
+    if use_database:
+        db_update(name,status)
+
