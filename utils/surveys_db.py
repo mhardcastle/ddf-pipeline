@@ -45,6 +45,7 @@ class SurveysDB(object):
             if self.usetunnel:
                 self.tunnel=sshtunnel.SSHTunnelForwarder('lofar.herts.ac.uk',
                                                          ssh_username=self.ssh_user,
+                                                         ssh_pkey=home+'/.ssh/id_rsa',
                                                          remote_bind_address=('127.0.0.1',3306),
                                                          local_bind_address=('127.0.0.1',localport))
                 self.tunnel.start()
@@ -89,7 +90,7 @@ class SurveysDB(object):
 
 if __name__=='__main__':
     sdb=SurveysDB()
-    result=sdb.get_id(123456)
+    result=sdb.get_id(647109)
     #result['location']='Never Never Land'
     #sdb.set_id(result)
     print result
