@@ -89,5 +89,5 @@ def list_db_update(success):
 
 if __name__=='__main__':
     success=make_list()
-    if use_database:
+    if use_database():
         list_db_update(success)

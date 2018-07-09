@@ -23,5 +23,5 @@ def unpack():
 
 if __name__=='__main__':
     unpack()
-    if use_database:
+    if use_database():
         unpack_db_update()

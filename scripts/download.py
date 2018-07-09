@@ -74,11 +74,11 @@ if __name__=='__main__':
     except OSError:
         pass
     os.chdir(name)
-    if use_database:
+    if use_database():
         download_db_create(name)
     
     status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
 
-    if use_database:
+    if use_database():
         download_db_update(name,status)
 
