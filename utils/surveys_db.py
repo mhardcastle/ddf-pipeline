@@ -4,6 +4,18 @@ import MySQLdb as mdb
 import MySQLdb.cursors as mdbcursors
 import os
 
+def tag_idd(sdb,idd):
+    ''' Add location and user tags '''
+    idd['clustername']=get_cluster()
+    idd['location']=os.getcwd()
+    idd['username']=get_user()
+    idd['nodename']=sdb.hostname
+
+def get_id():
+    dir=os.getcwd()
+    dname=dir.split('/')[-1]
+    return int(dname[1:])
+
 def get_user():
     return os.getenv('USER')
 

@@ -7,7 +7,7 @@ from lxml import html
 import shutil
 import os.path
 from time import sleep
-from surveys_db import SurveysDB,use_database,get_cluster,get_user
+from surveys_db import SurveysDB,use_database,tag_idd
 from auxcodes import die
 
 def download_dataset(server,root):
@@ -45,7 +45,7 @@ def download_dataset(server,root):
             del response
     return True
 
-def db_create(name):
+def download_db_create(name):
     sdb=SurveysDB()
     id=int(name[1:]) # get the L out
     if sdb.get_id(id):
@@ -53,14 +53,11 @@ def db_create(name):
 
     idd=sdb.create_id(id)
     idd['status']='Downloading'
-    idd['clustername']=get_cluster()
-    idd['location']=os.getcwd()
-    idd['username']=get_user()
-    idd['nodename']=sdb.hostname
+    tag_idd(sdb,idd)
     sdb.set_id(idd)
     sdb.close()
 
-def db_update(name,status):
+def download_db_update(name,status):
     sdb=SurveysDB()
     id=int(name[1:])
     idd=sdb.get_id(id)
@@ -78,10 +75,10 @@ if __name__=='__main__':
         pass
     os.chdir(name)
     if use_database:
-        db_create(name)
+        download_db_create(name)
     
     status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
 
     if use_database:
-        db_update(name,status)
+        download_db_update(name,status)
 
