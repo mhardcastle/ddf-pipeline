@@ -142,6 +142,9 @@ if __name__=='__main__':
             except:
                 pass
         
+    if "DDF_PIPELINE_CATALOGS" in os.environ.keys():
+        o['catprefix']=os.environ["DDF_PIPELINE_CATALOGS"]
+
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
         
@@ -150,8 +153,9 @@ if __name__=='__main__':
 
     # facet labels -- do this now for generality
     t=Table.read(o['catprefix'] + '.cat.fits')
+    tesselfile=o['catprefix']+'.tessel.reg'
     if 'Facet' not in t.columns:
-        t=label_table(t,'image_full_ampphase_di_m.NS.tessel.reg')
+        t=label_table(t,tesselfile)
         t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
     # matching with catalogs
@@ -176,10 +180,10 @@ if __name__=='__main__':
         print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
 
         report('Plotting per-facet position offsets')
-        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
+        do_plot_facet_offsets(t,tesselfile,o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
         t['FIRST_dRA']-=mdra
         t['FIRST_dDEC']-=mddec
-        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
+        do_plot_facet_offsets(t,tesselfile,o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
 
         report('Plotting flux ratios')
         # Flux ratio plots (only compact sources)
