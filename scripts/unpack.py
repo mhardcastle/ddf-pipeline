@@ -2,15 +2,10 @@
 
 import glob
 import os
-from surveys_db import SurveysDB,use_database,get_id,tag_idd
+from surveys_db import update_status,use_database
 
 def unpack_db_update():
-    id=get_id()
-    sdb=SurveysDB()
-    idd=sdb.get_id(id)
-    idd['status']='Unpacked'
-    tag_idd(sdb,idd)
-    sdb.set_id(idd)
+    update_status(None,'Unpacked')
     
 def unpack():
     # unpack all the files in current working directory

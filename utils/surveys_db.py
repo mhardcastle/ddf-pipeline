@@ -4,13 +4,33 @@ import MySQLdb as mdb
 import MySQLdb.cursors as mdbcursors
 import os
 
+def update_status(name,status):
+    # utility function to just update the status of an observation
+    # name can be None (work it out from cwd), string (strip L) or int (use int)
+
+    if name is None:
+        # work it out
+        id=get_id()
+    else:
+        if isinstance(name,str):
+            id=int(name[1:])
+        else:
+            id=int(name)
+
+    sdb=SurveysDB()
+    idd=sdb.get_id(id)
+    idd['status']=status
+    tag_idd(sdb,idd)
+    sdb.set_id(idd)
+    sdb.close()
+
 def tag_idd(sdb,idd):
-    ''' Add location and user tags '''
+    # Add location and user tags
     idd['clustername']=get_cluster()
     idd['location']=os.getcwd()
     idd['username']=get_user()
     idd['nodename']=sdb.hostname
-
+    
 def get_id():
     dir=os.getcwd()
     dname=dir.split('/')[-1]
