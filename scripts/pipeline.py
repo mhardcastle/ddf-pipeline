@@ -40,6 +40,7 @@ import threading
 from archive_old_solutions import do_archive
 from remove_bootstrap import remove_columns
 from killMS.Other import MyPickle
+from surveys_db import use_database,update_status
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -54,6 +55,11 @@ def summary(o):
         for k in o:
             f.write("%-20s : %s\n" % (k,str(o[k])))
 
+def stop(v=2):
+    if use_database():
+        update_status(None,'Stopped')
+        sys.exit(v)
+            
 def logfilename(s,options=None):
     if options is None:
         options=o
@@ -698,16 +704,14 @@ def main(o=None):
         o=MyPickle.Load("ddf-pipeline.last")
 
     if "DDF_PIPELINE_CATALOGS" not in os.environ.keys():
-        warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
-        sys.exit(2)
+        die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
 
     o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
     o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
     lCat=o["catalogues"]+[o["tgss"]]
     for fCat in lCat:
         if not os.path.isfile(fCat):
-            warn("Catalog %s does not exist"%fCat)
-            sys.exit(2)          
+            die("Catalog %s does not exist"%fCat)
 
     if o['pull']:
         run('pull_ddfpipeline.sh',log=None)
@@ -737,6 +741,10 @@ def main(o=None):
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
 
+    # Pipeline started!
+    if use_database():
+        update_status(None,'Running')
+    
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
 
@@ -889,7 +897,7 @@ def main(o=None):
 
     if o['exitafter'] == 'dirin':
         warn('User specified exit after image_dirin.')
-        sys.exit(2)
+        stop(2)
 
         separator("DI CAL")
     ########################
@@ -951,7 +959,7 @@ def main(o=None):
 
     if o['exitafter'] == 'dirin_di':
         warn('User specified exit after image_dirin with DI calibration.')
-        sys.exit(2)
+        stop(2)
 
 
     separator("DD calibration")
@@ -975,7 +983,7 @@ def main(o=None):
         colname=colname+'_SCALED' # DI corrected, scaled
         if o['exitafter'] == 'bootstrap':
             warn('User specified exit after phase-only deconvolution.')
-            sys.exit(2)
+            stop(2)
 
     # make a mask from the full-res image
     separator("Make mask for next iteration")
@@ -1001,7 +1009,7 @@ def main(o=None):
 
     if o['exitafter'] == 'phase':
         warn('User specified exit after phase-only deconvolution.')
-        sys.exit(2)
+        stop(2)
 
     separator("Mask for deeper deconv")
     CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
@@ -1036,7 +1044,7 @@ def main(o=None):
 
     if o['exitafter'] == 'ampphase':
         warn('User specified exit after amp-phase deconvolution.')
-        sys.exit(2)
+        stop(2)
 
     separator("Make Mask")
     CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
@@ -1097,12 +1105,12 @@ def main(o=None):
 
     if o['exitafter'] == 'ampphase_di':
         warn('User specified exit after amp-phase plus DI deconvolution.')
-        sys.exit(2)
+        stop(2)
 
     if o['full_mslist'] is None:
         warn('No full mslist provided, stopping here')
         summary(o)
-        sys.exit(3)
+        stop(3)
         
     separator("DD calibration of full mslist")
 
@@ -1229,7 +1237,7 @@ def main(o=None):
 
     if o['exitafter'] == 'ampphase':
         warn('User specified exit after image_ampphase.')
-        sys.exit(2)
+        stop(2)
 
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
@@ -1316,7 +1324,7 @@ def main(o=None):
     # ##########################################################
     if o['exitafter'] == 'fulllow':
         warn('User specified exit after full low.')
-        sys.exit(2)
+        stop(2)
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
@@ -1423,9 +1431,15 @@ def main(o=None):
 
     separator('Write summary and tidy up')
     summary(o)
-    # if o['clearcache_end']:
-    #      full_clearcache(o)
 
+    # Clear caches if option set
+    if o['clearcache_end']:
+        full_clearcache(o)
+    
+    if use_database():
+        update_status(None,'Complete')
+
+        
     return
 
     # ##########################################################
