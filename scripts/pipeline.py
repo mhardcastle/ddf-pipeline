@@ -1428,7 +1428,6 @@ def main(o=None):
                   catcher=catcher)
 
 
-
     separator('Write summary and tidy up')
     summary(o)
 
@@ -1438,31 +1437,8 @@ def main(o=None):
     
     if use_database():
         update_status(None,'Complete')
-
         
     return
-
-    # ##########################################################
-    # EVERYTHING BELOW HERE IS OLD CODE                        #
-    # CONTAINS DYNSPEC AND ASTROMETRY CODE
-    # DO NOT DELETE UNTIL MERGED BACK IN                       #
-    # ##########################################################
-
-    # final image
-    separator("DD Imaging (full mslist)")
-
-    ddf_image('image_full_ampphase2',o['full_mslist'],cleanmask='image_full_ampphase1.app.restored.fits.mask.fits',
-              cleanmode='SSD',
-              ddsols=ddsols,applysols='AP',
-              majorcycles=1,robust=o['final_robust'],colname=colname,use_dicomodel=True,dicomodel_base='image_full_ampphase1_masked',
-              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][3],smooth=True,
-              normalization=o['normalize'][2],uvrange=uvrange,
-              apply_weights=o['apply_weights'][3],catcher=catcher,**ddf_kw)
-    make_mask('image_full_ampphase2.app.restored.fits',o['thresholds'][3],external_mask=external_mask,catcher=catcher)
-    mask_dicomodel('image_full_ampphase2.DicoModel','image_full_ampphase2.app.restored.fits.mask.fits','image_full_ampphase2_masked.DicoModel',catcher=catcher)
-
-    if o['do_dynspec']:
-        ddf_kw['predict_column']='PREDICT_DATA'
 
 if __name__=='__main__':
     # Main loop
