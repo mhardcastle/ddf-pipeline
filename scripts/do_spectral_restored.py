@@ -14,7 +14,7 @@ def do_spectral_restored(colname,
                          options=None,catcher=None):
     o=options
     if o['centralfreqs']:
-        CentralFreqs=np.array(o['centralfreqs']*1e6)
+        CentralFreqs=np.array(o['centralfreqs'])*1e6
     else:
         # old hard-wired behaviour
         CentralFreqs=np.array([128.02581787109375, 143.65081787109375, 160.25238037109375])*1e6
