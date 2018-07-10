@@ -111,14 +111,15 @@ def check_imaging_weight(mslist_name):
         raise RuntimeError('One or more tables failed to open')
     return result
 
-def ddf_shift(imagename,shiftfile,catcher=None,options=None,verbose=False):
+def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
     if catcher: catcher.check()
     if options is None:
         options=o # attempt to get global if it exists
 
     cache_dir=find_cache_dir(options)
-
-    runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+imagename+'.DicoModel --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
+    if dicomodel is None:
+        dicomodel=imagename+'.DicoModel'
+    runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+dicomodel+' --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
     
     fname=imagename+'_shift.app.facetRestored.fits'
     if options['restart'] and os.path.isfile(fname):
@@ -747,7 +748,6 @@ def main(o=None):
     
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
-
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to

@@ -64,4 +64,4 @@ def do_spectral_restored(colname,
                   **ddf_kw)
 
         if o['method'] is not None:
-            ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher)
+            ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher,dicomodel=CurrentBaseDicoModelName+'.DicoModel')
