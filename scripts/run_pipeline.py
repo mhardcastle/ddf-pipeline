@@ -16,7 +16,7 @@ name=sys.argv[1]
 try:
     qsubfile=sys.argv[2]
 except:
-    qsubfile='/home/mjh/git/ddf-pipeline/pipeline.qsub'
+    qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
 
 try:
     os.mkdir(name)

@@ -4,6 +4,14 @@ import MySQLdb as mdb
 import MySQLdb.cursors as mdbcursors
 import os
 
+def get_next():
+    # return the name of the top-priority field with status 'Preprocessed'
+    sdb=SurveysDB()
+    sdb.cur.execute('select * from fields where status="Preprocessed" order by priority desc')
+    results=sdb.cur.fetchall()
+    sdb.close()
+    return results[0]['id']
+
 def update_status(name,status):
     # utility function to just update the status of an observation
     # name can be None (work it out from cwd), string (strip L) or int (use int)

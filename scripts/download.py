@@ -8,7 +8,7 @@ import shutil
 import os.path
 from time import sleep
 from surveys_db import SurveysDB,use_database,tag_idd
-from auxcodes import die
+import sys
 
 def download_dataset(server,root):
     page=requests.get(server+root,verify=False)
@@ -48,10 +48,13 @@ def download_dataset(server,root):
 def download_db_create(name):
     sdb=SurveysDB()
     id=int(name[1:]) # get the L out
-    if sdb.get_id(id):
-        die('ID to be downloaded already exists in database!')
-
-    idd=sdb.create_id(id)
+    idd=sdb.get_id(id)
+    if idd is not None:
+        if idd['status']!='Preprocessed':
+            print 'ID to be downloaded already exists in database (status is %s)!' % idd['status']
+            sys.exit(1)
+    else:
+        idd=sdb.create_id(id)
     idd['status']='Downloading'
     tag_idd(sdb,idd)
     sdb.set_id(idd)

@@ -22,4 +22,4 @@ echo ------------------------------------------------------
 echo Working directory is $WD
 
 cd $WD
-bash -c /home/mjh/temp/public/ddf-pipeline/torque/pipeline.sh
+bash -c /home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.sh
