@@ -42,9 +42,10 @@ def make_cube(freqs,hdus,outfile):
 
 def do_polcubes(colname,
                 CurrentDDkMSSolName,
-                uvrange,
-                ddf_kw,
-                options=None,catcher=None):
+		uvrange,imageoutname,
+		ddf_kw,
+                beamsize,imsize,cellsize,robust,
+                options,catcher):
 
     o=options
 
@@ -60,34 +61,34 @@ def do_polcubes(colname,
                 freqs.append(freq)
         channels=len(freqs)
 
-        ThisImageName = 'image_full_low_QU_Cube%s'%i
+        ThisImageName = '%s_QU_Cube%s'%(imageoutname,i)
 
         ddf_image(ThisImageName,filename,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols='AP',
                   polcubemode=True,
 		  AllowNegativeInitHMP=True,
-                  majorcycles=0,robust=o['low_robust'],
+                  majorcycles=0,robust=robust,
                   colname=colname,use_dicomodel=False,
-                  uvrange=uvrange,beamsize=o['low_psf_arcsec'],
-                  imsize=2500,cellsize=o['low_cell'],peakfactor=0.001,
+                  uvrange=uvrange,beamsize=beamsize,
+                  imsize=imsize,cellsize=cellsize,peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],channels=channels,
                   startchan=0,endchan=channels,options=o,
                   catcher=catcher)
 
-    outfile='image_full_low_QU.cube.dirty.fits'
+    outfile='%s_QU.cube.dirty.fits'%imageoutname
     if os.path.isfile(outfile):
         warn('Uncorrected cube file already exists, not making it')
     else:
         report('Making uncorrected cube')
-        freqs,hdus=get_freqs_hdus('image_full_low_QU_Cube*.cube.dirty.fits')
+        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
         make_cube(freqs,hdus,outfile)
 
-    outfile='image_full_low_QU.cube.dirty.corr.fits'
+    outfile='%s_QU.cube.dirty.corr.fits'%imageoutname
     if os.path.isfile(outfile):
         warn('Corrected cube file already exists, not making it')
     else:
-        freqs,hdus=get_freqs_hdus('image_full_low_QU_Cube*.cube.dirty.corr.fits')
+        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
         report('Making corrected cube')
         make_cube(freqs,hdus,outfile)
             
