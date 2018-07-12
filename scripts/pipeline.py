@@ -1412,8 +1412,9 @@ def main(o=None):
 
     if o['polcubes']:
         from do_polcubes import do_polcubes
-        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,ddf_kw,options=o,catcher=catcher)
-
+        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+        vlow_uvrange=[o['image_uvmin'],1.6]
+        do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
 
     if o['stokesv']:
         ddf_image('image_full_low_stokesV',o['full_mslist'],
