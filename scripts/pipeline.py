@@ -578,7 +578,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         for i in range(0,len(full_sollist)):
             if start_times[i] == start_time:
 		symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
-                if o['restart'] and os.path.isfile(symsolname):
+                if o['restart'] and os.path.islink(symsolname):
 	            warn('Symlink ' + symsolname + ' already exists')
 		else:
 	            warn('Symlink ' + symsolname + ' does not exist -- creating')
@@ -744,7 +744,7 @@ def main(o=None):
 
     # Pipeline started!
     if use_database():
-        update_status(None,'Running')
+        update_status(None,'Running',time='start_date')
     
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
@@ -1437,7 +1437,7 @@ def main(o=None):
         full_clearcache(o)
     
     if use_database():
-        update_status(None,'Complete')
+        update_status(None,'Complete',time='end_date')
         
     return
 
