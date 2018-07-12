@@ -5,12 +5,16 @@ import glob
 import pyrap.tables as pt
 import numpy as np
 from auxcodes import warn
-from surveys_db import update_status
+from surveys_db import use_database,update_status
 
 def check_flagged(ms):
     t = pt.table(ms, readonly=True)
     tc = t.getcol('FLAG').flatten()
     return float(np.sum(tc))/len(tc)
+
+def get_timerange(ms):
+    t = pt.table(ms +'/OBSERVATION', readonly=True, ack=False)
+    return t.getcell('TIME_RANGE',0)
 
 def make_list():
     g=sorted(glob.glob('*.ms'))

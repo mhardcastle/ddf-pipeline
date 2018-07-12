@@ -28,7 +28,7 @@ def update_status(name,status,time=None):
     idd['status']=status
     tag_field(sdb,idd)
     if time is not None and idd[time] is None:
-        idd[time]=datetime.now()
+        idd[time]=datetime.datetime.now()
     sdb.set_field(idd)
     sdb.close()
 
