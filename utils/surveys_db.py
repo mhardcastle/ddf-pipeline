@@ -3,18 +3,19 @@ import socket
 import MySQLdb as mdb
 import MySQLdb.cursors as mdbcursors
 import os
+import datetime
 
 def get_next():
     # return the name of the top-priority field with appropriate status
-    sdb=SurveysDB()
+    sdb=SurveysDB(readonly=True)
     sdb.cur.execute('select fields.id as id,sum(integration) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="Preprocessed" group by fields.id having s>7 order by fields.priority desc,ra')
     results=sdb.cur.fetchall()
     sdb.close()
     return results[0]['id']
 
-def update_status(name,status):
+def update_status(name,status,time=None):
     # utility function to just update the status of an observation
-    # name can be None (work it out from cwd), string (strip L) or int (use int)
+    # name can be None (work it out from cwd), or string (field name)
 
     if name is None:
         # work it out
@@ -26,7 +27,9 @@ def update_status(name,status):
     idd=sdb.get_field(id)
     idd['status']=status
     tag_field(sdb,idd)
-    sdb.set_id(idd)
+    if time is not None and idd[time] is None:
+        idd[time]=datetime.now()
+    sdb.set_field(idd)
     sdb.close()
 
 def tag_field(sdb,idd):

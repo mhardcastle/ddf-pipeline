@@ -7,12 +7,13 @@ from lxml import html
 import shutil
 import os.path
 from time import sleep
-from surveys_db import SurveysDB,use_database,tag_idd
 import sys
 
 def download_dataset(server,root):
     page=requests.get(server+root,verify=False)
     print page.status_code
+    if page.status_code!=200:
+        return False
     print page.headers['content-type']
     tree=html.fromstring(page.text)
     row = tree.xpath('//a')
@@ -44,29 +45,6 @@ def download_dataset(server,root):
                 shutil.copyfileobj(response.raw, out_file)
             del response
     return True
-
-def download_db_create(name):
-    sdb=SurveysDB()
-    id=int(name[1:]) # get the L out
-    idd=sdb.get_id(id)
-    if idd is not None:
-        if idd['status']!='Preprocessed':
-            print 'ID to be downloaded already exists in database (status is %s)!' % idd['status']
-            sys.exit(1)
-    else:
-        idd=sdb.create_id(id)
-    idd['status']='Downloading'
-    tag_idd(sdb,idd)
-    sdb.set_id(idd)
-    sdb.close()
-
-def download_db_update(name,status):
-    sdb=SurveysDB()
-    id=int(name[1:])
-    idd=sdb.get_id(id)
-    idd['status']='Downloaded' if status else 'D/L failed'
-    sdb.set_id(idd)
-    sdb.close()
     
 if __name__=='__main__':
 
@@ -77,11 +55,6 @@ if __name__=='__main__':
     except OSError:
         pass
     os.chdir(name)
-    if use_database():
-        download_db_create(name)
     
     status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
-
-    if use_database():
-        download_db_update(name,status)
 

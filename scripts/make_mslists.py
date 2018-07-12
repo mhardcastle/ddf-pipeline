@@ -5,34 +5,12 @@ import glob
 import pyrap.tables as pt
 import numpy as np
 from auxcodes import warn
-from surveys_db import SurveysDB,use_database,get_id,tag_idd
+from surveys_db import update_status
 
 def check_flagged(ms):
     t = pt.table(ms, readonly=True)
     tc = t.getcol('FLAG').flatten()
     return float(np.sum(tc))/len(tc)
-
-def get_timerange(ms):
-    t = pt.table(ms +'/OBSERVATION', readonly=True, ack=False)
-    return t.getcell('TIME_RANGE',0)
-
-def getpos(ms):
-    t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
-    name=t[0]['LOFAR_TARGET']
-    (start,end)=t[0]['TIME_RANGE']
-    t = pt.table(ms+ '/FIELD', readonly=True, ack=False)
-    direction = t[0]['PHASE_DIR']
-    ra, dec = direction[0]
-    if (ra<0):
-        ra+=2*np.pi
-    t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-    channels=t[0]['NUM_CHAN']
-    t=pt.table(ms, readonly=True, ack=False)
-    time=t.getcol('TIME')
-    tv=np.sort(np.unique(time))
-    dt=tv[1]-tv[0]
-    
-    return name[0],ra*(180/np.pi),dec*(180/np.pi),channels,start,dt
 
 def make_list():
     g=sorted(glob.glob('*.ms'))
@@ -69,23 +47,10 @@ def make_list():
     return True
 
 def list_db_update(success):
-    id=get_id()
-    sdb=SurveysDB()
-    idd=sdb.get_id(id)
     if success:
-        idd['status']='Ready'
-        tag_idd(sdb,idd)
-        msname=open('mslist.txt').readlines()[0].rstrip()
-        name,ra,dec,nchan,start,dt=getpos(msname)
-        idd['fieldname']=name
-        idd['ra']=ra
-        idd['decl']=dec
-        idd['nchan']=nchan/10
-        idd['date']=start
-        idd['integration']=dt
+        update_status(None,'Ready')
     else:
-        idd['status']='List failed'
-    sdb.set_id(idd)
+        update_status(None,'List failed')
 
 if __name__=='__main__':
     success=make_list()
