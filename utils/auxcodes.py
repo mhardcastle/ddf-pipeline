@@ -123,7 +123,7 @@ class Catcher():
     def check(self):
         if self.stop:
             if use_database():
-                update_status('Stopped')
+                update_status(None,'Stopped')
             os.system('CleanSHM.py')
             raise RuntimeError('Caught user-defined exception, terminating gracefully')
 
