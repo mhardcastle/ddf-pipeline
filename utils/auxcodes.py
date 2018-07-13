@@ -29,9 +29,9 @@ def separator(s):
     print
 
     
-def die(s):
+def die(s,database=True):
     print bcolors.FAIL+s+bcolors.ENDC
-    if use_database():
+    if database and use_database():
         update_status(None,'Failed')
     raise Exception(s)
 

@@ -49,6 +49,8 @@ def download_field(fname):
             result['status']='D/L failed'
         sdb.set_field(result)
 
+    return overall_success
+        
 if __name__=='__main__':
 
     download_field(sys.argv[1])
