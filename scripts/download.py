@@ -7,10 +7,13 @@ from lxml import html
 import shutil
 import os.path
 from time import sleep
+import sys
 
 def download_dataset(server,root):
     page=requests.get(server+root,verify=False)
     print page.status_code
+    if page.status_code!=200:
+        return False
     print page.headers['content-type']
     tree=html.fromstring(page.text)
     row = tree.xpath('//a')
@@ -42,7 +45,7 @@ def download_dataset(server,root):
                 shutil.copyfileobj(response.raw, out_file)
             del response
     return True
-
+    
 if __name__=='__main__':
 
     import sys
@@ -52,4 +55,6 @@ if __name__=='__main__':
     except OSError:
         pass
     os.chdir(name)
-    download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+    
+    status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+

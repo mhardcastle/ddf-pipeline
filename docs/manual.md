@@ -80,6 +80,9 @@ will need:
 * SharedArray
 * deap
 * py-cpuinfo
+* futures (for CubiCal)
+* sshtunnel (for database code)
+* MySQLdb (for database code)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
@@ -87,7 +90,13 @@ Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
 Currently we recommend that you install ddf-pipeline and its
 prerequisites KillMS, DDFacet and SkyModel directly from the Github
-repositories, so that you can easily get updates with `git pull`. The
+repositories, so that you can easily get updates with `git pull`.
+
+This process checks out the stable 'DR1' branch of ddf-pipeline and
+associated code. The DR2 branch is under active development and is not
+suitable for end users.
+
+The
 installation process is below (assumes that your shell is bash):
 
 1. Make a suitable directory and clone the Github repo to it:
@@ -96,6 +105,7 @@ installation process is below (assumes that your shell is bash):
 mkdir DDF
 cd DDF
 git clone https://github.com/mhardcastle/ddf-pipeline.git
+git checkout DR1
 ```
 
 2. Run the install script from the cloned repo; this installs KillMS and DDFacet and builds an `init.sh` file that sets up the paths:

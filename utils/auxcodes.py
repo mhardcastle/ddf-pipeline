@@ -9,6 +9,7 @@ from astropy.wcs import WCS
 import signal
 from facet_offsets import region_to_poly,assign_labels_to_poly,labels_to_integers
 import pyregion
+from surveys_db import use_database,update_status
 
 # these are small routines used by more than one part of the pipeline
 
@@ -22,8 +23,16 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+def separator(s):
+    print
+    print "%s============================== %s =============================%s"%(bcolors.FAIL,s,bcolors.ENDC)
+    print
+
+    
 def die(s):
     print bcolors.FAIL+s+bcolors.ENDC
+    if use_database():
+        update_status(None,'Failed')
     raise Exception(s)
 
 def report(s):
@@ -113,6 +122,8 @@ class Catcher():
         self.stop=True
     def check(self):
         if self.stop:
+            if use_database():
+                update_status(None,'Stopped')
             os.system('CleanSHM.py')
             raise RuntimeError('Caught user-defined exception, terminating gracefully')
 
@@ -211,11 +222,11 @@ def get_rms_map(infilename,ds9region,outfilename):
 
 def get_rms_map2(infilename,ds9region,outfilename):
 
-    runcommand = "MakeMask.py --RestoredIm=%s --OutName=%s.rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap='%s.rms'"%(infilename,infilename,3.0,infilename)
+    runcommand = "MakeMask.py --RestoredIm=%s --OutName=rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap=%s.noise"%(infilename,3.0,infilename)
 
     run(runcommand,log=None)
 
-    infilename = '%s.rms.fits.fits'%infilename
+    infilename = '%s.noise.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)

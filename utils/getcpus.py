@@ -1,6 +1,8 @@
 import os
+import psutil
 
 def get_physical_cpus():
+    return psutil.cpu_count()
     # find total number of physical cores, ignoring hyperthreading
     lines=open('/proc/cpuinfo').readlines()
     cpus=[]

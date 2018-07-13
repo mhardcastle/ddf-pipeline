@@ -28,7 +28,7 @@ def merge_mask(in1,in2,outfile):
     hdu1[0].data = (map1 | map2).astype(np.float32)
     hdu1.writeto(outfile,clobber=True)
 
-def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD.tessel.reg'):
+def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD_m_c.tessel.reg'):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
 
     if rootname is None:

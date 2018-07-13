@@ -17,4 +17,4 @@ rm -r logs
 rm *.cfg
 rm -r *.ddfcache
 archive_old_solutions.py $DDFACET_DIR/ddf-pipeline/tier1.cfg
-remove_bootstrap.py big-mslist.txt
+remove_columns.py big-mslist.txt

@@ -4,6 +4,7 @@ import ConfigParser
 import os
 import struct
 import re
+import sys
 
 def _get_terminal_size_linux():
     ''' From https://gist.github.com/jtriley/1108174 '''
@@ -54,8 +55,20 @@ def options(optlist,option_list):
         else:
             filenames.append(o)
 
+    for f in filenames:
+        if not os.path.isfile(f):
+            print 'Config file',f,'does not exist!'
+            sys.exit(1)
+
     config.read(filenames)
     for c in cmdlineset:
+        for o in option_list:
+            (section, name, otype, default)=o[:4]
+            if c[0]==section and c[1]==name:
+                break
+        else:
+            print 'Option %s-%s does not exist!' % (c[0],c[1])
+            sys.exit(2)
         try:
             config.add_section(c[0])
         except ConfigParser.DuplicateSectionError:
@@ -89,6 +102,7 @@ def print_options(option_list):
     from auxcodes import bcolors
     # expected to be called if a config file is not specified. Print a
     # list of options
+    option_list=sorted(option_list,key=lambda x:x[1])
     width,height=_get_terminal_size_linux()
     sections=sorted(set(x[0] for x in option_list))
     klen=max([len(x[1]) for x in option_list])

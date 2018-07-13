@@ -100,7 +100,7 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
         img.export_image(outfile=catprefix +'.pybdsmmask.fits',img_type='island_mask',img_format='fits',clobber=True)
         img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
-def crossmatch_image(lofarcat,auxcatname,options=None):
+def crossmatch_image(lofarcat,auxcatname,options=None,catdir='.'):
 
     if options is None:
         options = o
@@ -109,7 +109,7 @@ def crossmatch_image(lofarcat,auxcatname,options=None):
         warn('File ' + lofarcat + '_' + auxcatname + '_match.fits already exists, skipping source matching step')
     else:
         t=Table.read(lofarcat)
-        tab=Table.read(auxcat)
+        tab=Table.read(catdir+'/'+auxcat)
         match_catalogues(t,tab,o[auxcatname+'_matchrad'],auxcatname)
         t=t[~np.isnan(t[auxcatname+'_separation'])]
         t.write(lofarcat+'_'+auxcatname+'_match.fits')
@@ -126,22 +126,25 @@ if __name__=='__main__':
         die('pbimage must be specified')
     if o['nonpbimage'] is None:
         die('nonpbimage must be specified')
-
-    # fix up the new list-type options
-    for i,cat in enumerate(o['list']):
-        try:
-            o[cat]=o['filenames'][i]
-        except:
-            pass
-        try:
-            o[cat+'_matchrad']=o['radii'][i]
-        except:
-            pass
-        try:
-            o[cat+'_fluxfactor']=o['fluxfactor'][i]
-        except:
-            pass
+    if o['list'] is not None:
+        # fix up the new list-type options
+        for i,cat in enumerate(o['list']):
+            try:
+                o[cat]=o['filenames'][i]
+            except:
+                pass
+            try:
+                o[cat+'_matchrad']=o['radii'][i]
+            except:
+                pass
+            try:
+                o[cat+'_fluxfactor']=o['fluxfactor'][i]
+            except:
+                pass
         
+    if "DDF_PIPELINE_CATALOGS" in os.environ.keys():
+        o['catdir']=os.environ["DDF_PIPELINE_CATALOGS"]
+
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
         
@@ -150,14 +153,15 @@ if __name__=='__main__':
 
     # facet labels -- do this now for generality
     t=Table.read(o['catprefix'] + '.cat.fits')
+    tesselfile=o['catprefix']+'.tessel.reg'
     if 'Facet' not in t.columns:
-        t=label_table(t,'image_full_ampphase1m.tessel.reg')
+        t=label_table(t,tesselfile)
         t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
     # matching with catalogs
     for cat in o['list']:
         print 'Doing catalogue',cat
-        crossmatch_image(o['catprefix'] + '.cat.fits',cat)
+        crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir'])
         filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
 
     # Filter catalogs (only keep isolated compact sources within 3deg of pointing centre)
@@ -176,10 +180,10 @@ if __name__=='__main__':
         print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
 
         report('Plotting per-facet position offsets')
-        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
+        do_plot_facet_offsets(t,tesselfile,o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
         t['FIRST_dRA']-=mdra
         t['FIRST_dDEC']-=mddec
-        do_plot_facet_offsets(t,'image_full_ampphase1m.tessel.reg',o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
+        do_plot_facet_offsets(t,tesselfile,o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets_registered.png')
 
         report('Plotting flux ratios')
         # Flux ratio plots (only compact sources)

@@ -2,7 +2,11 @@
 
 import glob
 import os
+from surveys_db import update_status,use_database
 
+def unpack_db_update():
+    update_status(None,'Unpacked')
+    
 def unpack():
     # unpack all the files in current working directory
     destdir='prefactor/results/'
@@ -14,3 +18,5 @@ def unpack():
 
 if __name__=='__main__':
     unpack()
+    if use_database():
+        unpack_db_update()
