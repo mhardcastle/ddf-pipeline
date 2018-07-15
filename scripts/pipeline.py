@@ -580,11 +580,12 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         for i in range(0,len(full_sollist)):
             if start_times[i] == start_time:
 		symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
-                if o['restart'] and os.path.islink(symsolname):
-	            warn('Symlink ' + symsolname + ' already exists')
-		else:
-	            warn('Symlink ' + symsolname + ' does not exist -- creating')
-                    os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
+                # always overwrite the symlink to allow the dataset to move -- costs nothing
+                if os.path.islink(symsolname):
+	            warn('Symlink ' + symsolname + ' already exists, recreating')
+                    os.unlink(symsolname)
+
+                os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
         outname = ddsols + '_smoothed'
 
     return outname
@@ -995,6 +996,7 @@ def main(o=None):
                               catcher=catcher)
 
     separator("PhaseOnly deconv")
+    print 'Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName
     CurrentBaseDicoModelName=ddf_image('image_phase1',o['mslist'],
                                        cleanmask=CurrentMaskName,
                                        cleanmode='SSD',
