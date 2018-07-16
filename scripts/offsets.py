@@ -301,7 +301,7 @@ class Offsets(object):
 
         cellsize=self.cellsize
         outfile=open(filename,'w')
-        lines=open('image_full_ampphase1m.facetCoord.txt').readlines()
+        lines=open('%s.facetCoord.txt'%self.imroot).readlines()
         for l in lines:
             bits=[b.strip() for b in l.split(',')]
             rar=float(bits[2])
@@ -371,10 +371,7 @@ def do_offsets(o):
     if o['mode']!='normal' and  o['mode']!='test':
         raise NotImplementedError('Offsets called with mode '+o['mode'])
 
-    if o['second_selfcal']:
-        image_root='image_full_ampphase2'
-    else:
-        image_root='image_full_ampphase1m'
+    image_root='image_full_ampphase_di_m.NS'
 
     method=o['method']
 

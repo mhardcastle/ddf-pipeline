@@ -5,6 +5,7 @@ import glob
 import pyrap.tables as pt
 import numpy as np
 from auxcodes import warn
+from surveys_db import use_database,update_status
 
 def check_flagged(ms):
     t = pt.table(ms, readonly=True)
@@ -49,5 +50,13 @@ def make_list():
     open('mslist.txt','w').writelines(ms+'\n' for ms in write_mslist)
     return True
 
+def list_db_update(success):
+    if success:
+        update_status(None,'Ready')
+    else:
+        update_status(None,'List failed')
+
 if __name__=='__main__':
-    make_list()
+    success=make_list()
+    if use_database():
+        list_db_update(success)

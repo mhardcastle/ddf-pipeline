@@ -25,6 +25,8 @@ def logfilename(s):
 
 def run_bootstrap(o):
     
+    colname='DATA_DI_CORRECTED'
+    
     if o['mslist'] is None:
         die('MS list must be specified')
 
@@ -34,6 +36,18 @@ def run_bootstrap(o):
     # check the data supplied
     if o['frequencies'] is None or o['catalogues'] is None:
         die('Frequencies and catalogues options must be specified')
+
+    if "DDF_PIPELINE_CATALOGS" not in os.environ.keys():
+        warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
+        sys.exit(2)
+
+    o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
+    o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
+    lCat=o["catalogues"]+[o["tgss"]]
+    for fCat in lCat:
+        if not os.path.isfile(fCat):
+            warn("Catalog %s does not exist"%fCat)
+            sys.exit(2)
 
     cl=len(o['catalogues'])
     if o['names'] is None:
@@ -46,8 +60,13 @@ def run_bootstrap(o):
         len(o['names'])!=cl or len(o['groups'])!=cl):
         die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
 
-    low_robust=-0.25
-    low_uvrange=[0.1,25.0]
+    low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+    if o['low_imsize'] is not None:
+        low_imsize=o['low_imsize'] # allow over-ride
+    else:
+        low_imsize=o['imsize']*o['cellsize']/o['low_cell']
+
+    low_robust=o['low_robust']
 
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])
@@ -86,11 +105,26 @@ def run_bootstrap(o):
 
         # Clean in cube mode
         # As for the main pipeline, first make a dirty map
-        ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',cleanmask=None,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=0,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True,conditional_clearcache=True)
+        ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',
+                  cleanmask=None,cleanmode='SSD',ddsols='DDS0',
+                  applysols='P',majorcycles=0,robust=low_robust,
+                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
+                  imsize=low_imsize,cellsize=o['low_cell'],
+                  options=o,colname=colname,automask=True,
+                  automask_threshold=15,smooth=True,cubemode=True,
+                  conditional_clearcache=True)
         external_mask='bootstrap_external_mask.fits'
-        make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='bscell',options=o)
+        make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='low_cell',options=o)
         # Deep SSD clean with this external mask and automasking
-        ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,cleanmode='SSD',ddsols='killms_p1',applysols='P',majorcycles=5,robust=low_robust,uvrange=low_uvrange,beamsize=20,imsize=o['bsimsize'],cellsize=o['bscell'],options=o,colname=o['colname'],automask=True,automask_threshold=15,smooth=True,cubemode=True,conditional_clearcache=False)
+        ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
+                  cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
+                  cleanmode='SSD',ddsols='DDS0',applysols='P',
+                  majorcycles=5,robust=low_robust,uvrange=low_uvrange,
+                  beamsize=o['low_psf_arcsec'],imsize=low_imsize,
+                  cellsize=o['low_cell'],options=o,
+                  colname=colname,automask=True,
+                  automask_threshold=15,smooth=True,cubemode=True,
+                  conditional_clearcache=False)
 
         if os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl'):
             warn('Source list exists, skipping source extraction')
@@ -175,6 +209,7 @@ def run_bootstrap(o):
                 if dummy is not None:
                     warn('Table '+ms+' has already been corrected, skipping')
                 else:
+                    # in this version we need to scale both the original data and the data in colname
                     t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
@@ -186,6 +221,19 @@ def run_bootstrap(o):
                     d=t.getcol(o['colname'])
                     d*=factor
                     t.putcol('SCALED_DATA',d)
+                    try:
+                        dummy=t.getcoldesc(colname)
+                    except RuntimeError:
+                        dummy=None
+                    if dummy is not None:
+                        desc=t.getcoldesc(colname)
+                        newname=colname+'_SCALED'
+                        desc['name']=newname
+                        t.addcols(desc)
+                        d=t.getcol(colname)
+                        d*=factor
+                        t.putcol(newname,d)
+
                     t.close()
     if os.path.isfile('image_bootstrap.app.mean.fits'):
         warn('Mean bootstrap image exists, not creating it')

@@ -9,6 +9,7 @@ from astropy.wcs import WCS
 import signal
 from facet_offsets import region_to_poly,assign_labels_to_poly,labels_to_integers
 import pyregion
+from surveys_db import use_database,update_status
 
 # these are small routines used by more than one part of the pipeline
 
@@ -30,6 +31,8 @@ def separator(s):
     
 def die(s):
     print bcolors.FAIL+s+bcolors.ENDC
+    if use_database():
+        update_status(None,'Failed')
     raise Exception(s)
 
 def report(s):
@@ -119,6 +122,8 @@ class Catcher():
         self.stop=True
     def check(self):
         if self.stop:
+            if use_database():
+                update_status(None,'Stopped')
             os.system('CleanSHM.py')
             raise RuntimeError('Caught user-defined exception, terminating gracefully')
 
