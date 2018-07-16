@@ -398,6 +398,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     runcommand+=' --NodesFile '+clusterfile
                 if dicomodel is not None:
                     runcommand+=' --DicoModel '+dicomodel
+                EvolutionSolFile=None
                 if EvolutionSolFile is not None:
                     runcommand+=' --EvolutionSolFile '+EvolutionSolFile
                     
@@ -424,6 +425,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
+    MergeSmooth=False
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs)
 
@@ -608,7 +610,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     SNR=np.sqrt(nt_step*nch_step)*M/S
     warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
     
-    return nt_step, nt_step*dt_bin_sec, nch_step, nch/nch_step
+    return nt_step, float(nt_step)*dt_bin_sec/60., nch_step, nch/nch_step
     
 def cubical_data(mslist,
                  NameSol="DI0",
@@ -849,23 +851,25 @@ def main(o=None):
 
     separator("DI CAL")
     ########################
-    killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                #clusterfile=ClusterFile,
-                niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                catcher=catcher,
-                dt=o['dt_di'],
-                NChanSols=o['NChanSols_di'],
-                DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-    # cubical_data(o['mslist'],
-    #              NameSol="DIS0",
-    #              n_dt=1,
-    #              n_df=2,
-    #              n_DT=None,
-    #              DataColName=colname,
-    #              ModelColName="DD_PREDICT",
-    #              OutColName="DATA_DI_CORRECTED",
-    #              ReinitWeights=True)
+
+    # killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+    #             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+    #             #clusterfile=ClusterFile,
+    #             niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+    #             catcher=catcher,
+    #             dt=o['dt_di'],
+    #             NChanSols=o['NChanSols_di'],
+    #             DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+
+    # # cubical_data(o['mslist'],
+    # #              NameSol="DIS0",
+    # #              n_dt=1,
+    # #              n_df=2,
+    # #              n_DT=None,
+    # #              DataColName=colname,
+    # #              ModelColName="DD_PREDICT",
+    # #              OutColName="DATA_DI_CORRECTED",
+    # #              ReinitWeights=True)
     
     colname="DATA_DI_CORRECTED"
 
@@ -942,10 +946,10 @@ def main(o=None):
     CurrentDDkMSSolName=killms_data('image_dirin_SSD_m_c_di_m',o['mslist'],'DDS0',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     clusterfile=ClusterFile,
-                                    CovQ=0.02,
-                                    niterkf=o['NIterKF'][0],
-                                    #CovQ=0.1,
-                                    #niterkf=6,
+                                    #CovQ=0.02,
+                                    #niterkf=o['NIterKF'][0],
+                                    CovQ=0.1,
+                                    niterkf=6,
                                     uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     MergeSmooth=True)
@@ -979,9 +983,12 @@ def main(o=None):
     separator("DD calibration")
     CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    CovQ=0.02,
+                                    #CovQ=0.02,
+                                    #niterkf=o['NIterKF'][0],
+                                    CovQ=0.1,
+                                    niterkf=6,#o['NIterKF'][0],
                                     clusterfile=ClusterFile,
-                                    niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                     dt=o['dt_slow'],
                                     catcher=catcher,NChanSols=o['NChanSols'],
                                     EvolutionSolFile=CurrentDDkMSSolName,
