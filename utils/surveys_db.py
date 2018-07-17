@@ -66,7 +66,7 @@ class SurveysDB(object):
     def __exit__(self, type, value, tb):
         self.close()
 
-    def __init__(self,localport=33306,readonly=False):
+    def __init__(self,readonly=False):
 
         # get the config file -- this must exist
         home=os.getenv("HOME")
@@ -96,8 +96,9 @@ class SurveysDB(object):
                                                          ssh_username=self.ssh_user,
                                                          ssh_pkey=home+'/.ssh/id_rsa',
                                                          remote_bind_address=('127.0.0.1',3306),
-                                                         local_bind_address=('127.0.0.1',localport))
+                                                         local_bind_address=('127.0.0.1',))
                 self.tunnel.start()
+                localport=self.tunnel.local_bind_port
                 self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport)
             else:
                 self.con = mdb.connect('lofar-server.data', 'survey_user', self.password, 'surveys')
