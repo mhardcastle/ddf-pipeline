@@ -597,7 +597,7 @@ def full_clearcache(o,extras=None):
         clearcache(o['full_mslist'],o)
     if extras is not None:
         for mslist in extras:
-        clearcache(mslist,o)
+            clearcache(mslist,o)
 
 def subtract_data(mslist,col1,col2):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]

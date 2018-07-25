@@ -74,33 +74,15 @@ if __name__=='__main__':
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
-    parser.add_argument('pointingfile', type=str, help='LoTSS pointing progress file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     
     args = parser.parse_args()
-    pointingfilename = args.pointingfile
     mospointingname = args.mospointingname
-    pointingdict = read_pointingfile(pointingfilename)
+    pointingdict = read_pointingfile()
+
     print 'Now searching for results directories'
-
     cwd=os.getcwd()
-    # basic process pinched from plot_dir_pos
-    results=[]
-    for d in args.directories:
-        os.chdir(d)
-        mss=glob.glob('*.ms')
-        if len(mss)>0:
-            name,ra,dec=getpos(mss[1])
-            results.append([d,name,ra,dec])
-        else:
-            ims=glob.glob('image_full_ampphase1m_shift.int.facetRestored.fits')
-            if len(ims)>0:
-                ra,dec=getposim(ims[0])
-                name=d.split('/')[-1]
-                name=name.split('_')[0]
-                results.append([d,name,ra,dec])
 
-    os.chdir(cwd)
     # find what we need to put in the mosaic
     mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,mospointingname)
     maxsep=np.max(mosseps)
@@ -109,14 +91,9 @@ if __name__=='__main__':
     missingpointing = False
     for p in mosaicpointings:
         print 'Wanting to put pointing %s in mosaic'%p
-        _,ra,dec,_=pointingdict[p]
-        for r in results:
-            rd,rname,rra,rdec=r
-            if name==p:
-                # name match
-                mosaicdirs.append(rd)
-                break
-            elif ((ra-rra)**2.0+(dec-rdec)**2.0)<1.0:
+        for d in args.directories:
+            rd=d+'/'+p
+            if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
                 mosaicdirs.append(rd)
                 break
         else:

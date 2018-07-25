@@ -40,11 +40,11 @@ def make_mosaic(args):
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
     elif args.use_shifted:
-        intname='image_full_ampphase1m_shift.int.facetRestored.fits'
-        appname='image_full_ampphase1m_shift.app.facetRestored.fits'
+        intname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
+        appname='image_full_ampphase_di_m.NS_shift.app.facetRestored.fits'
     else:
-        intname='image_full_ampphase1m.int.restored.fits'
-        appname='image_full_ampphase1m.app.restored.fits'
+        intname='image_full_ampphase_di_m.NS.int.restored.fits'
+        appname='image_full_ampphase_di_m.NS.app.restored.fits'
 
     # astromap blanking if required
     bth=None

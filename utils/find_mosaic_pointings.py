@@ -3,22 +3,24 @@ import os,sys
 import numpy as np
 import argparse
 from auxcodes import sepn
+from surveys_db import SurveysDB
+
 deg2rad = np.pi/180.0
 rad2deg = 180.0/np.pi
 
-def read_pointingfile(pointingfilename):
+def read_pointingfile(pointingfilename=None):
+        # pointingfilename should no longer be used as we use the database instead
+        assert(pointingfilename is None)
 
 	pointingdict = {}
-	infile = open(pointingfilename,'r')
-	for line in infile:
-		line = line.rstrip()
-		line = line.split(',')
-		while '' in line:
-			line.remove('')
-		if '#' in line[0]:
-			continue
-		pointingname,radeg,decdeg,integrationtime,pointingids = line[0],float(line[1]),float(line[2]),float(line[3]),line[4]
-		pointingdict[pointingname] = [pointingids,radeg,decdeg,integrationtime]
+        with SurveysDB(readonly=True) as sdb:
+                sdb.cur.execute('select * from fields')
+                fields=sdb.cur.fetchall()
+
+        # turn list of dicts into dict of lists...
+        for f in fields:
+                pointingname=f['id']
+                pointingdict[pointingname] = [f['status'],f['ra'],f['decl']]
 	return pointingdict
 
 def find_pointings_to_mosaic(pointingdict,mospointingname):
@@ -41,12 +43,11 @@ def find_pointings_to_mosaic(pointingdict,mospointingname):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('pointingfile', type=str, help='LoTSS pointing progress file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
 
     args = parser.parse_args()
 
-    pointingdict = read_pointingfile(args.pointingfile)
+    pointingdict = read_pointingfile()
 
     mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,args.mospointingname)
 
