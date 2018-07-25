@@ -103,7 +103,11 @@ class SurveysDB(object):
             else:
                 self.con = mdb.connect('lofar-server.data', 'survey_user', self.password, 'surveys')
         self.cur = self.con.cursor(cursorclass=mdbcursors.DictCursor)
-        if not self.readonly:
+        if self.readonly:
+            pass
+            #can't use this feature on lofar's version of MariaDB
+            #self.cur.execute('set session transaction read only')
+        else:
             self.cur.execute('lock table fields write, observations write')
         self.closed=False
 

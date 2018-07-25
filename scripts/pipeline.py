@@ -590,12 +590,14 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
     return outname
 
-def full_clearcache(o):
+def full_clearcache(o,extras=None):
     clearcache(o['mslist'],o)
     clearcache('temp_mslist.txt',o)
     if o['full_mslist'] is not None:
         clearcache(o['full_mslist'],o)
-
+    if extras is not None:
+        for mslist in extras;
+        clearcache(mslist,o)
 
 def subtract_data(mslist,col1,col2):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
@@ -1401,10 +1403,10 @@ def main(o=None):
             runcommand="ms2dynspec.py --ms big-mslist.txt --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
-
+    spectral_mslist=None
     if o['spectral_restored']:
         import do_spectral_restored
-        do_spectral_restored.do_spectral_restored(colname,
+        spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
                                                   CurrentMaskName,
                                                   CurrentBaseDicoModelName,
                                                   CurrentDDkMSSolName,
@@ -1438,7 +1440,7 @@ def main(o=None):
 
     # Clear caches if option set
     if o['clearcache_end']:
-        full_clearcache(o)
+        full_clearcache(o,extras=spectral_mslist)
     
     if use_database():
         update_status(None,'Complete',time='end_date')
@@ -1457,6 +1459,3 @@ if __name__=='__main__':
     MyPickle.Save(o, "ddf-pipeline.last")
 
     main(o)
-    
-
-    

@@ -1,4 +1,3 @@
-
 import numpy as np
 from pipeline import *
 from pyrap.tables import table
@@ -36,6 +35,7 @@ def do_spectral_restored(colname,
     print iBandMapping
 
     print
+    mslistnames=[]
     for iBand in range(CentralFreqs.size):
         ind=np.where(iBandMapping==iBand)[0]
         print "iBand %i -> %i ms"%(iBand,np.count_nonzero(iBandMapping==iBand))
@@ -44,7 +44,8 @@ def do_spectral_restored(colname,
         for iMSName in ind:
             f.write("%s\n"%filenames[iMSName])
         f.close()
-
+        mslistnames.append(MSListFileName)
+        
         ThisImageName='image_full_ampphase_di_m.NS_Band%i'%iBand
         
         ddf_image(ThisImageName,
@@ -65,3 +66,6 @@ def do_spectral_restored(colname,
 
         if o['method'] is not None:
             ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher,dicomodel=CurrentBaseDicoModelName+'.DicoModel')
+
+    return mslistnames # cache for these can be added to the tidy up
+                       # at pipeline end
