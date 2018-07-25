@@ -596,7 +596,7 @@ def full_clearcache(o,extras=None):
     if o['full_mslist'] is not None:
         clearcache(o['full_mslist'],o)
     if extras is not None:
-        for mslist in extras;
+        for mslist in extras:
         clearcache(mslist,o)
 
 def subtract_data(mslist,col1,col2):
