@@ -57,7 +57,7 @@ if do_field:
 if success:
     report('Submit job')
     os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
-    if do_field():
+    if do_field:
         update_status(name,'Queued')
 
 else:
