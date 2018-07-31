@@ -5,6 +5,8 @@ import requests
 import astropy.coordinates as coord
 import astropy.units as u
 import os
+from time import sleep
+
 CSIZE=0.5
 
 def tile(file):
@@ -18,7 +20,7 @@ def download_required(method):
             return True
     return False
 
-def get_cat(method):
+def get_cat(method,retries=100):
 
     cwd=os.getcwd()
     try:
@@ -39,13 +41,23 @@ def get_cat(method):
             continue
         print 'Downloading at position',p
         if method=='panstarrs':
+            count=0
             while True:
                 try:
                     r = requests.post('http://archive.stsci.edu/panstarrs/search.php', data = {'ra':p[0],'dec':p[1],'SR':CSIZE,'max_records':100000,'nDetections':">+5",'action':'Search','selectedColumnsCsv':'objid,ramean,decmean'},timeout=300)
                 except requests.exceptions.Timeout:
                     print 'Timeout, retrying!'
                 else:
-                    break
+                    if 'Warning' not in r.text:
+                        break
+                    else:
+                        # will go round the loop again
+                        print 'Bad response, retry download (%i)' % count
+                        sleep(5)
+                count+=1
+                if count>=retries:
+                    raise RuntimeError('Number of retries exceeded for download')
+                        
             f=open(outfile,'w')
             f.writelines(r.text)
             f.close()
