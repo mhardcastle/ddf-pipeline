@@ -29,7 +29,6 @@ try:
     os.mkdir(name)
 except OSError:
     warn('Working directory already exists')
-    pass
 
 report('Downloading data')
 if do_field:
@@ -40,7 +39,7 @@ else:
 if not success:
     die('Download failed, see earlier errors',database=False)
 
-os.chdir(name)
+os.chdir(rootdir+'/'+name)
     
 report('Unpacking data')
 unpack()
