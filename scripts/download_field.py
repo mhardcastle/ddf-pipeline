@@ -24,7 +24,8 @@ def download_field(fname):
         obs=sdb.cur.fetchall()
         if len(obs)>0:
             result['status']='Downloading'
-            os.mkdir(fname)
+            if not os.path.isdir(fname):
+                os.mkdir(fname)
             os.chdir(fname)
             tag_field(sdb,result)
             sdb.set_field(result)

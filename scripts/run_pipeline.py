@@ -30,7 +30,7 @@ try:
 except OSError:
     warn('Working directory already exists')
     pass
-os.chdir(name)
+
 report('Downloading data')
 if do_field:
     success=download_field(name)
@@ -40,6 +40,7 @@ else:
 if not success:
     die('Download failed, see earlier errors',database=False)
 
+os.chdir(name)
     
 report('Unpacking data')
 unpack()
