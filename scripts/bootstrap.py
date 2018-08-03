@@ -90,6 +90,8 @@ def run_bootstrap(o):
             t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
             freqs.append(t[0]['REF_FREQUENCY'])
 
+        if len(freqs<4):
+            die('Not enough frequencies to bootstrap. Check your mslist or MS naming scheme')
 
         # sort to work in frequency order
 
