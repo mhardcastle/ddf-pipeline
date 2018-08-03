@@ -10,55 +10,58 @@ from make_mslists import make_list,list_db_update
 import sys
 import os
 
-rootdir='/beegfs/car/mjh'
-os.chdir(rootdir)
+def do_run_pipeline(name):
 
-name=sys.argv[1]
+    rootdir='/beegfs/car/mjh'
+    os.chdir(rootdir)
 
-if name[0]!='P' and name[0]!='L':
-    die('This code should be used only with field or observation names',database=False)
+    if name[0]!='P' and name[0]!='L':
+        die('This code should be used only with field or observation names',database=False)
 
-do_field=(name[0]=='P')
+    do_field=(name[0]=='P')
 
-try:
-    qsubfile=sys.argv[2]
-except:
-    qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
+    try:
+        qsubfile=sys.argv[2]
+    except:
+        qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
 
-try:
-    os.mkdir(name)
-except OSError:
-    warn('Working directory already exists')
+    try:
+        os.mkdir(name)
+    except OSError:
+        warn('Working directory already exists')
 
-report('Downloading data')
-if do_field:
-    success=download_field(name)
-else:
-    success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
-
-if not success:
-    die('Download failed, see earlier errors',database=False)
-
-os.chdir(rootdir+'/'+name)
-    
-report('Unpacking data')
-unpack()
-if do_field:
-    unpack_db_update()
-    
-report('Deleting tar files')
-os.system('rm *.tar.gz')
-
-report('Making ms lists')
-success=make_list()
-if do_field:
-    list_db_update(success)
-
-if success:
-    report('Submit job')
-    os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
+    report('Downloading data')
     if do_field:
-        update_status(name,'Queued')
+        success=download_field(name)
+    else:
+        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
 
-else:
-    die('make_list could not construct the MS list',database=False)
+    if not success:
+        die('Download failed, see earlier errors',database=False)
+
+    os.chdir(rootdir+'/'+name)
+
+    report('Unpacking data')
+    unpack()
+    if do_field:
+        unpack_db_update()
+
+    report('Deleting tar files')
+    os.system('rm *.tar.gz')
+
+    report('Making ms lists')
+    success=make_list()
+    if do_field:
+        list_db_update(success)
+
+    if success:
+        report('Submit job')
+        os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
+        if do_field:
+            update_status(name,'Queued')
+
+    else:
+        die('make_list could not construct the MS list',database=False)
+
+if __name__=='__main__':
+    do_run_pipeline(sys.argv[1])

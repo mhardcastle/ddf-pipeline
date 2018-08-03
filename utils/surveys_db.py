@@ -8,7 +8,7 @@ import datetime
 def get_next():
     # return the name of the top-priority field with appropriate status
     sdb=SurveysDB(readonly=True)
-    sdb.cur.execute('select fields.id as id,sum(integration) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="DI_processed" group by fields.id having s>7 order by fields.priority desc,ra')
+    sdb.cur.execute('select fields.id as id,sum(integration) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="DI_processed" group by fields.id having s>7 order by fields.priority desc,ra desc')
     results=sdb.cur.fetchall()
     sdb.close()
     return results[0]['id']
@@ -108,7 +108,7 @@ class SurveysDB(object):
             #can't use this feature on lofar's version of MariaDB
             #self.cur.execute('set session transaction read only')
         else:
-            self.cur.execute('lock table fields write, observations write')
+            self.cur.execute('lock table fields write, observations write, transients write')
         self.closed=False
 
     def close(self):
@@ -164,6 +164,27 @@ class SurveysDB(object):
     def create_observation(self,id):
         self.cur.execute('insert into observations(id) values (%s)',(id,))
         return self.get_field(id)
+
+    def get_transient(self,id):
+        self.cur.execute('select * from transients where id=%s',(id,))
+        result=self.cur.fetchall()
+        if len(result)==0:
+            return None
+        else:
+            return result[0]
+
+    def set_transient(self,sd):
+        assert not self.readonly
+        id=sd['id'];
+        for k in sd:
+            if k=='id':
+                continue
+            if sd[k] is not None:
+                self.cur.execute('update transients set '+k+'=%s where id=%s',(sd[k],id))
+
+    def create_transient(self,id):
+        self.cur.execute('insert into transients(id) values (%s)',(id,))
+        return self.get_transient(id)
 
 if __name__=='__main__':
     sdb=SurveysDB()
