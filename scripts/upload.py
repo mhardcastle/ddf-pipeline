@@ -42,6 +42,7 @@ def do_upload(name,basedir):
     f+=['image_dirin_SSD_m.npy.ClusterCat.npy']
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
+    f+=myglob('DDS*smoothed*.npz',workdir)
     f+=images('image_full_ampphase_di_m.NS')
     f+=images('image_full_low_m')
     f+=shiftimages('image_full_ampphase_di_m.NS')
@@ -62,7 +63,7 @@ def do_upload(name,basedir):
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
 
-    update_status(name,'Archived')
+    update_status(name,'Archived',workdir=workdir)
         
 if __name__=='__main__':
     import sys
