@@ -7,14 +7,15 @@ from surveys_db import update_status,use_database
 def unpack_db_update():
     update_status(None,'Unpacked')
     
-def unpack():
-    # unpack all the files in current working directory
+def unpack(workdir='.'):
+    # unpack all the files in workdir
     destdir='prefactor/results/'
-    files=glob.glob('*.tar.gz')
+    files=glob.glob(workdir+'/*.tar.gz')
     for f in files:
-        print 'Unpacking',f
-        os.system('tar xf '+f)
-        os.system('mv '+destdir+'* .')
+        fn=os.path.basename(f)
+        print 'Unpacking',fn
+        os.system('cd '+workdir+'; tar xf '+f)
+        os.system('cd '+workdir+'; mv '+destdir+'* .')
 
 if __name__=='__main__':
     unpack()

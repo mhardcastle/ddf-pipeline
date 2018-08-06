@@ -7,10 +7,12 @@ import os
 from surveys_db import SurveysDB,tag_field
 from download import download_dataset
 
-def download_field(fname):
+def download_field(fname,basedir=None):
 
     # check database
-
+    if basedir is None:
+        print 'No basedir supplied, working in current directory...'
+        basedir='.'
     with SurveysDB() as sdb:
         result=sdb.get_field(fname)
         if result is None:
@@ -18,15 +20,14 @@ def download_field(fname):
             sys.exit(1)
         if result['status']!='Not started':
             print 'Field',fname,'has status',result['status']
-            sys.exit(2)
+            return result['status']=='Downloaded'
         # get the ids of the observations
         sdb.cur.execute('select * from observations where field=%s',(fname,))
         obs=sdb.cur.fetchall()
         if len(obs)>0:
             result['status']='Downloading'
-            if not os.path.isdir(fname):
-                os.mkdir(fname)
-            os.chdir(fname)
+            if not os.path.isdir(basedir+'/'+fname):
+                os.mkdir(basedir+'/'+fname)
             tag_field(sdb,result)
             sdb.set_field(result)
         else:
@@ -37,7 +38,7 @@ def download_field(fname):
     overall_success=True
     for o in obs:
         print 'Downloading observation ID L'+str(o['id'])
-        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L'+str(o['id'])+'/')
+        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L'+str(o['id'])+'/',workdir=basedir+'/'+fname)
         if success==False:
             print 'Download failed'
         overall_success=overall_success and success

@@ -35,7 +35,7 @@ jobs=qstat()
 print jobs
 circles=[]
 
-s_colours={'Downloading':'red','Downloaded':'orange','Unpacking':'orange','Ready':'yellow','Queued':'blue','Running':'cyan','Complete':'green','Stopped':'magenta','Failed':'magenta','DI_started':'white'}
+s_colours={'D/L failed':'black','Downloading':'red','Downloaded':'orange','Unpacking':'orange','Ready':'yellow','Queued':'blue','Running':'cyan','Complete':'green','Archived':'darkgreen','Stopped':'magenta','Failed':'magenta','DI_started':'white'}
 sdb=SurveysDB(readonly=True)
 sdb.cur.execute('select * from fields where status!="Not started"')
 fields=sdb.cur.fetchall()

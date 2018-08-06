@@ -9,7 +9,7 @@ import os.path
 from time import sleep
 import sys
 
-def download_dataset(server,root):
+def download_dataset(server,root,workdir='.'):
     page=requests.get(server+root,verify=False)
     print page.status_code
     if page.status_code!=200:
@@ -20,14 +20,14 @@ def download_dataset(server,root):
     files=[]
     urls=[]
     for r in row:
-        if 'title' in r.attrib and 'Download' in r.attrib['title']:
+        if 'title' in r.attrib and 'Download' in r.attrib['title'] and 'GSM' in r.attrib['download']:
             files.append(r.attrib['download'])
             urls.append(r.attrib['href'].replace('../..',''))
-    if len(files)!=25:
+    if len(files)<25:
         print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
         return False
     for f,u in zip(files,urls):
-        if os.path.isfile(f):
+        if os.path.isfile(workdir+'/'+f):
             print 'File',f,'already exists, skipping'
         else:
             print 'Downloading',f
@@ -41,7 +41,7 @@ def download_dataset(server,root):
                     sleep(60)
                 else:
                     break
-            with open(f, 'wb') as out_file:
+            with open(workdir+'/'+f, 'wb') as out_file:
                 shutil.copyfileobj(response.raw, out_file)
             del response
     return True
@@ -54,7 +54,6 @@ if __name__=='__main__':
         os.mkdir(name)
     except OSError:
         pass
-    os.chdir(name)
     
-    status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+    status=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/',workdir='./'+name)
 

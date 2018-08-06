@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Make MS lists, checking for heavily flagged data
 
+import os
 import glob
 import pyrap.tables as pt
 import numpy as np
@@ -16,8 +17,8 @@ def get_timerange(ms):
     t = pt.table(ms +'/OBSERVATION', readonly=True, ack=False)
     return t.getcell('TIME_RANGE',0)
 
-def make_list():
-    g=sorted(glob.glob('*.ms'))
+def make_list(workdir='.'):
+    g=sorted(glob.glob(workdir+'/*.ms'))
     full_mslist=[]
     start_times=[]
     for ms in g:
@@ -25,7 +26,7 @@ def make_list():
         t0,t1=get_timerange(ms)
         print ms,ff
         if ff<0.8:
-            full_mslist.append(ms)
+            full_mslist.append(os.path.basename(ms))
             start_times.append(t0)
     full_mslist = np.array(full_mslist)
             
@@ -46,17 +47,17 @@ def make_list():
         write_full_mslist = np.hstack((write_full_mslist,full_mslist[start_times==start_time]))
         write_mslist = np.hstack((write_mslist,full_mslist[start_times==start_time][2::4]))
 
-    open('big-mslist.txt','w').writelines(ms+'\n' for ms in write_full_mslist)
-    open('mslist.txt','w').writelines(ms+'\n' for ms in write_mslist)
+    open(workdir+'/big-mslist.txt','w').writelines(ms+'\n' for ms in write_full_mslist)
+    open(workdir+'/mslist.txt','w').writelines(ms+'\n' for ms in write_mslist)
     return True
 
-def list_db_update(success):
+def list_db_update(success,workdir=None):
     if success:
-        update_status(None,'Ready')
+        update_status(None,'Ready',workdir=workdir)
     else:
-        update_status(None,'List failed')
+        update_status(None,'List failed',workdir=workdir)
 
 if __name__=='__main__':
-    success=make_list()
+    success=make_list(workdir=os.getcwd())
     if use_database():
         list_db_update(success)

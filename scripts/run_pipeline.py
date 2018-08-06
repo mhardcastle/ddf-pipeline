@@ -5,15 +5,12 @@ from auxcodes import report,warn,die
 from surveys_db import use_database,update_status
 from download import download_dataset
 from download_field import download_field
-from unpack import unpack,unpack_db_update
+from unpack import unpack
 from make_mslists import make_list,list_db_update
 import sys
 import os
 
-def do_run_pipeline(name):
-
-    rootdir='/beegfs/car/mjh'
-    os.chdir(rootdir)
+def do_run_pipeline(name,basedir):
 
     if name[0]!='P' and name[0]!='L':
         die('This code should be used only with field or observation names',database=False)
@@ -25,43 +22,43 @@ def do_run_pipeline(name):
     except:
         qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
 
+
+    workdir=basedir+'/'+name
     try:
-        os.mkdir(name)
+        os.mkdir(workdir)
     except OSError:
         warn('Working directory already exists')
 
     report('Downloading data')
     if do_field:
-        success=download_field(name)
+        success=download_field(name,basedir=basedir)
     else:
-        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/')
+        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+name+'/',basedir=basedir)
 
     if not success:
         die('Download failed, see earlier errors',database=False)
 
-    os.chdir(rootdir+'/'+name)
-
     report('Unpacking data')
-    unpack()
+    unpack(workdir=workdir)
     if do_field:
-        unpack_db_update()
+        update_status(name,'Unpacked',workdir=workdir)
 
     report('Deleting tar files')
-    os.system('rm *.tar.gz')
+    os.system('rm '+workdir+'/*.tar.gz')
 
     report('Making ms lists')
-    success=make_list()
+    success=make_list(workdir=workdir)
     if do_field:
-        list_db_update(success)
+        list_db_update(success,workdir=workdir)
 
     if success:
         report('Submit job')
-        os.system('qsub -N ddfp-'+name+' -v WD='+rootdir+'/'+name+' '+qsubfile)
+        os.system('qsub -N ddfp-'+name+' -v WD='+workdir+' '+qsubfile)
         if do_field:
-            update_status(name,'Queued')
+            update_status(name,'Queued',workdir=workdir)
 
     else:
         die('make_list could not construct the MS list',database=False)
 
 if __name__=='__main__':
-    do_run_pipeline(sys.argv[1])
+    do_run_pipeline(sys.argv[1],'/beegfs/car/mjh')

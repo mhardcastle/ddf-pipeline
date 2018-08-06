@@ -13,35 +13,41 @@ def get_next():
     sdb.close()
     return results[0]['id']
 
-def update_status(name,status,time=None):
+def update_status(name,status,time=None,workdir=None):
     # utility function to just update the status of an observation
     # name can be None (work it out from cwd), or string (field name)
 
     if name is None:
         # work it out
-        id=get_id()
+        id=get_id(workdir=workdir)
     else:
         id=name
         
     sdb=SurveysDB()
     idd=sdb.get_field(id)
     idd['status']=status
-    tag_field(sdb,idd)
+    tag_field(sdb,idd,workdir=workdir)
     if time is not None and idd[time] is None:
         idd[time]=datetime.datetime.now()
     sdb.set_field(idd)
     sdb.close()
 
-def tag_field(sdb,idd):
+def tag_field(sdb,idd,workdir=None):
     # Add location and user tags
     idd['clustername']=get_cluster()
-    idd['location']=os.getcwd()
+    if workdir is None:
+        idd['location']=os.getcwd()
+    else:
+        idd['location']=workdir
     idd['username']=get_user()
     idd['nodename']=sdb.hostname
     
-def get_id():
-    dir=os.getcwd()
-    dname=dir.split('/')[-1]
+def get_id(workdir=None):
+    if workdir is None:
+        dir=os.getcwd()
+    else:
+        dir=workdir
+    dname=os.path.basename(dir)
     return dname
 
 def get_user():
