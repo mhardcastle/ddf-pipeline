@@ -22,7 +22,7 @@ def download_field(fname,basedir=None):
             print 'Field',fname,'has status',result['status']
             return result['status']=='Downloaded'
         # get the ids of the observations
-        sdb.cur.execute('select * from observations where field=%s',(fname,))
+        sdb.cur.execute('select * from observations where field=%s and status="DI_processed"',(fname,))
         obs=sdb.cur.fetchall()
         if len(obs)>0:
             result['status']='Downloading'

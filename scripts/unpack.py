@@ -11,6 +11,9 @@ def unpack(workdir='.'):
     # unpack all the files in workdir
     destdir='prefactor/results/'
     files=glob.glob(workdir+'/*.tar.gz')
+    if len(files)==0:
+        # occasionally they're not compressed??
+        files=glob.glob(workdir+'/*.tar')
     for f in files:
         fn=os.path.basename(f)
         print 'Unpacking',fn
