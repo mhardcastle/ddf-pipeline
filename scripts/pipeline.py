@@ -1395,17 +1395,34 @@ def main(o=None):
         ddf_shift('image_full_ampphase_di_m.NS',facet_offset_file,options=o,catcher=catcher)
     
     if o['do_dynspec']:
+        separator('Dynamic spectra')
         LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
-        g=glob.glob('DynSpecs_*')
-        if len(g)>0:
-            warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
-        else:
-            runcommand="ms2dynspec.py --ms big-mslist.txt --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
+        mslist=[s.strip() for s in open(o['full_mslist']).readlines()]
+    
+        obsids = [os.path.basename(ms).split('_')[0] for ms in mslist]
+        uobsid = set(obsids)
+    
+        for obsid in uobsid:
+            warn('Running ms2dynspec for obsid %s' % obsid)
+            umslist='mslist-%s.txt' % obsid
+            print 'Writing temporary ms list',umslist
+            file=open(umslist,'w')
+            for ms in mslist:
+                if obsid in ms:
+                    file.write(ms+'\n')
+            file.close()
+
+            g=glob.glob('DynSpec*'+obsid+'*')
+            if len(g)>0:
+                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+            else:
+                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(umslist,colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
+                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
     spectral_mslist=None
     if o['spectral_restored']:
         import do_spectral_restored
+        separator('Spectral restored images')
         spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
                                                   CurrentMaskName,
                                                   CurrentBaseDicoModelName,
@@ -1417,12 +1434,14 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
+        separator('Stokes Q and U cubes')
         from do_polcubes import do_polcubes
         do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
         vlow_uvrange=[o['image_uvmin'],1.6]
         do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
 
     if o['stokesv']:
+        separator('Stokes V image')
         ddf_image('image_full_low_stokesV',o['full_mslist'],
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols='AP',stokes='IV',
