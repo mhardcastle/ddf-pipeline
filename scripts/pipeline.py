@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
-Copyright (C) 2017 Martin Hardcastle (mjh@extragalactic.info) and others
+Copyright (C) 2018 Martin Hardcastle (mjh@extragalactic.info) and others
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ import sys,os
 if "PYTHONPATH_FIRST" in os.environ.keys() and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
 import os.path
-from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict,separator
+from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict,separator,MSList
 from parset import option_list
 from options import options,print_options
 from shutil import copyfile,rmtree,move
@@ -1397,20 +1397,17 @@ def main(o=None):
     if o['do_dynspec']:
         separator('Dynamic spectra')
         LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
-        mslist=[s.strip() for s in open(o['full_mslist']).readlines()]
-    
-        obsids = [os.path.basename(ms).split('_')[0] for ms in mslist]
-        uobsid = set(obsids)
+        m=MSList(o['full_mslist'])
+        uobsid = set(m.obsids)
     
         for obsid in uobsid:
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
             print 'Writing temporary ms list',umslist
-            file=open(umslist,'w')
-            for ms in mslist:
-                if obsid in ms:
-                    file.write(ms+'\n')
-            file.close()
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
 
             g=glob.glob('DynSpec*'+obsid+'*')
             if len(g)>0:
@@ -1459,7 +1456,12 @@ def main(o=None):
 
     # Clear caches if option set
     if o['clearcache_end']:
-        full_clearcache(o,extras=spectral_mslist)
+        extras=[]
+        if spectral_mslist is not None:
+            extras+=spectral_mslist
+        if o['polcubes']:
+            extras+=glob.glob('stokes-mslist*.ddfcache')
+        full_clearcache(o,extras=extras)
     
     if use_database():
         update_status(None,'Complete',time='end_date')

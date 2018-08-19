@@ -1,7 +1,7 @@
 import numpy as np
 from pipeline import *
 from pyrap.tables import table
-from auxcodes import getpos
+from auxcodes import getpos,MSList
 from astropy import units as u
 from astropy.coordinates import Angle
 
@@ -49,21 +49,24 @@ def do_polcubes(colname,
 
     o=options
 
-    mslist=o['full_mslist']
-    filenames=[l.strip() for l in open(mslist,'r').readlines()]
-    for i in range(0,len(filenames)):
-        filename = filenames[i]
-        freqs=[]
-        t = pt.table(filename+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-        chanfreqs=t[0]['CHAN_FREQ']
-        for freq in chanfreqs:
-            if freq not in freqs:
-                freqs.append(freq)
-        channels=len(freqs)
-
+    m=MSList(o['full_mslist'])
+    ufreqs=sorted(set(m.freqs))
+    for i,freq in enumerate(ufreqs):
+        print 'Image %i: channel map for frequency %.3f MHz' % (i,freq/1e6)
+        # iterate over frequencies, finding all MS with the same values
+        fmslist=[]
+        for ms,f,chan in zip(m.mss,m.freqs,m.channels):
+            if f==freq:
+                fmslist.append(ms)
+        mslistname='stokes-mslist-%i.txt' % i
+        with open(mslistname,'w') as file:
+            for ms in fmslist:
+                file.write(ms+'\n')
+        channels=len(chan)
+                
         ThisImageName = '%s_QU_Cube%s'%(imageoutname,i)
 
-        ddf_image(ThisImageName,filename,
+        ddf_image(ThisImageName,mslistname,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols='AP',
                   polcubemode=True,

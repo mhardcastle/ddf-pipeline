@@ -23,7 +23,7 @@ basedir='/beegfs/car/mjh'
 while True:
 
     with SurveysDB() as sdb:
-        sdb.cur.execute('select * from fields where status!="Not started" and clustername="%s"' % cluster)
+        sdb.cur.execute('select * from fields where status!="Not started" and clustername="%s" order by priority desc' % cluster)
         result=sdb.cur.fetchall()
 
     d={}

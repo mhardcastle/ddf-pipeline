@@ -260,7 +260,6 @@ def sepn(r1,d1,r2,d2):
     return sepn
 
 def getpos(ms):
-    import pyrap.tables as pt
     t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
     name=t[0]['LOFAR_TARGET']
 
@@ -275,7 +274,28 @@ def getpos(ms):
     return name[0],ra*(180/np.pi),dec*(180/np.pi)
 
 def getposim(image):
+    import pyrap.tables as pt
     hdus=fits.open(image)
     ra=hdus[0].header['CRVAL1']
     dec=hdus[0].header['CRVAL2']
     return ra,dec
+
+class MSList(object):
+    """
+    Class to look at all the MSs in an MS list and store some basic
+    information about them in a data structure
+    """
+    def __init__(self,mslist):
+        """
+        mslist is the MS list filename
+        """
+        import pyrap.tables as pt
+        self.mslist=mslist
+        self.mss=[s.strip() for s in open(mslist).readlines()]
+        self.obsids = [os.path.basename(ms).split('_')[0] for ms in self.mss]
+        self.freqs=[]
+        self.channels=[]
+        for ms in self.mss:
+            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+            self.freqs.append(t[0]['REF_FREQUENCY'])
+            self.channels.append(t[0]['CHAN_FREQ'])

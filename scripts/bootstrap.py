@@ -5,7 +5,7 @@
 
 import os,sys
 import os.path
-from auxcodes import run,warn,die
+from auxcodes import run,warn,die,MSList
 try:
     import bdsf as bdsm
 except ImportError:
@@ -72,23 +72,19 @@ def run_bootstrap(o):
     run('CleanSHM.py',dryrun=o['dryrun'])
 
     # We use the individual ms in mslist.
-    mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    
-    obsids = [os.path.basename(ms).split('_')[0] for ms in mslist]
-    Uobsid = set(obsids)
+    m=MSList(o['mslist'])
+    Uobsid = set(m.obsids)
     
     for obsid in Uobsid:
         
         warn('Running bootstrap for obsid %s' % obsid)
 
-        # Get the frequencies -- need to take this from the MSs
-        
-        omslist = [ms for ms in mslist if obsid in ms]
-
         freqs=[]
-        for ms in omslist:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            freqs.append(t[0]['REF_FREQUENCY'])
+        omslist=[]
+        for ms,ob,f in zip(m.mss,m.obsids,m.freqs):
+            if ob==obsid:
+                omslist.append(ms)
+                freqs.append(f)
 
         if len(freqs)<4:
             die('Not enough frequencies to bootstrap. Check your mslist or MS naming scheme')
@@ -97,8 +93,8 @@ def run_bootstrap(o):
 
         freqs,omslist = (list(x) for x in zip(*sorted(zip(freqs, omslist), key=lambda pair: pair[0])))
 
-        for f,m in zip(freqs,omslist):
-            print m,f
+        for f,ms in zip(freqs,omslist):
+            print ms,f
 
         # generate the sorted input mslist
         with open('temp_mslist.txt','w') as f:
