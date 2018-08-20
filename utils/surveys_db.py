@@ -8,7 +8,7 @@ import datetime
 def get_next():
     # return the name of the top-priority field with appropriate status
     sdb=SurveysDB(readonly=True)
-    sdb.cur.execute('select fields.id as id,sum(integration) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="DI_processed" group by fields.id having s>7 order by fields.priority desc,ra desc')
+    sdb.cur.execute('select fields.id as id,sum(nsb*integration/232) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="DI_processed" group by fields.id having s>7 order by fields.priority desc,ra desc')
     results=sdb.cur.fetchall()
     sdb.close()
     return results[0]['id']

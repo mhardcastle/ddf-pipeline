@@ -1,7 +1,6 @@
 import numpy as np
-from pipeline import *
+from pipeline import ddf_image,ddf_shift
 from pyrap.tables import table
-
 
 def do_spectral_restored(colname,
                          CurrentMaskName,
