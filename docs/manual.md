@@ -105,7 +105,9 @@ installation process is below (assumes that your shell is bash):
 mkdir DDF
 cd DDF
 git clone https://github.com/mhardcastle/ddf-pipeline.git
+cd ddf-pipeline
 git checkout DR1
+cd ..
 ```
 
 2. Run the install script from the cloned repo; this installs KillMS and DDFacet and builds an `init.sh` file that sets up the paths:
