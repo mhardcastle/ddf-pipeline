@@ -26,6 +26,8 @@ def download_dataset(server,root,workdir='.'):
     if len(files)<25:
         print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
         return False
+    else:
+        print 'Downloading',len(files),'distinct files'
     for f,u in zip(files,urls):
         if os.path.isfile(workdir+'/'+f):
             print 'File',f,'already exists, skipping'

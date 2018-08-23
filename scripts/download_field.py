@@ -7,7 +7,7 @@ import os
 from surveys_db import SurveysDB,tag_field
 from download import download_dataset
 
-def download_field(fname,basedir=None):
+def download_field(fname,basedir=None,force=False):
 
     # check database
     if basedir is None:
@@ -20,7 +20,8 @@ def download_field(fname,basedir=None):
             sys.exit(1)
         if result['status']!='Not started':
             print 'Field',fname,'has status',result['status']
-            return result['status']=='Downloaded'
+            if not force:
+                return False
         # get the ids of the observations
         sdb.cur.execute('select * from observations where field=%s and status="DI_processed"',(fname,))
         obs=sdb.cur.fetchall()
@@ -54,6 +55,5 @@ def download_field(fname,basedir=None):
     return overall_success
         
 if __name__=='__main__':
-
-    download_field(sys.argv[1])
+    download_field(sys.argv[1],force=(len(sys.argv)>2))
     
