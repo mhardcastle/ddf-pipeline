@@ -23,23 +23,25 @@ def hextile(image,radius):
     ra_ll,dec_ll=w.wcs_pix2world(0,0,0)
     ra_lr,dec_lr=w.wcs_pix2world(maxx,0,0)
     ra_ul,dec_ul=w.wcs_pix2world(0,maxy,0)
+    c_c=SkyCoord(ra_c*u.degree,dec_c*u.degree,frame='icrs')
     c_ll=SkyCoord(ra_ll*u.degree,dec_ll*u.degree,frame='icrs')
     c_lr=SkyCoord(ra_lr*u.degree,dec_lr*u.degree,frame='icrs')
-    dra,ddec=[v.value for v in c_lr.spherical_offsets_to(c_ll)]
-    nha=dra/hs
+    dra,ddec=[v.value for v in c_c.spherical_offsets_to(c_ll)]
+    nha=dra*2/hs
     print 'Number of hexes across',nha
     c_ul=SkyCoord(ra_ul*u.degree,dec_ul*u.degree,frame='icrs')
-    dra,ddec=[v.value for v in c_ll.spherical_offsets_to(c_ul)]
-    nhu=ddec/hs
+    dra,ddec=[v.value for v in c_c.spherical_offsets_to(c_ul)]
+    nhu=2*ddec/hs
     print 'Number of hexes up',nhu
     nha=int(0.5+nha)
     nhu=int(0.5+nhu)
     for j in range(nhu):
         for i in range(nha):
-            ra_p=ra_lr+(i*hs+(j % 2)*0.5*hs)/ra_factor
-            dec_p=dec_ll+((j+0.25)*hs)
-            c_pos=SkyCoord(ra_p*u.degree,dec_p*u.degree,frame='icrs')
-            pos.append((c_pos.ra.value,c_pos.dec.value))
+            xc=(maxx*i*hs+(j % 2)*0.5)/nha
+            yc=(maxy*(j+0.25))/nhu
+            ra_p,dec_p=w.wcs_pix2world(xc,yc,0)
+            print ra_p,dec_p
+            pos.append((ra_p,dec_p))
     return ra_factor,pos
 
 def plotcircle(ra,dec,xsize,ysize,color):
@@ -51,6 +53,7 @@ if __name__=='__main__':
     import matplotlib.pyplot as plt
     from matplotlib.patches import Ellipse
     ra_factor,pos=hextile('image_ampphase1_di.int.restored.fits',0.5)
+    if ra_factor<0.1: ra_factor=0.5
     for p in pos:
         ra=p[0]
         dec=p[1]
