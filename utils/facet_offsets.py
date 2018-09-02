@@ -2,45 +2,11 @@
 
 from astropy.io import fits
 from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 import numpy as np
 import re
 
-def region_to_poly(inreg):
-    lines=open(inreg).readlines()
-
-    inpoly=False
-    clist=[]
-    coords=[]
-    llist=[]
-    for l in lines:
-        if l[0:4]=='line':
-            if not inpoly:
-                coords=[]
-                inpoly=True
-            bits=l[5:].split(',')
-            ra=float(bits[0])
-            dec=float(bits[1])
-            if ra<-5: ra+=360.0
-            coords.append((ra,dec))
-    #        coords.append((bits[2],bits[3].split(')')[0]))
-        else:
-            if inpoly:
-                clist.append(coords)
-                inpoly=False
-            if l[0:5]=='point':
-                m=re.match(r"point\((.*),(.*)\).*text=\{\[(.*)\]\}",l)
-                if m is None:
-                    raise RuntimeError('Failed to parse region label %s' % l)
-                ra=float(m.group(1))
-                dec=float(m.group(2))
-                if ra<-5: ra+=360.0
-                llist.append((ra,dec,m.group(3)))
-
-    if inpoly:
-        clist.append(coords)
-
-    return clist,llist
-    
 def point_inside_polygon(x,y,poly):
     # code from http://www.ariel.com.au/a/python-point-int-poly.html
     n = len(poly)
@@ -60,42 +26,115 @@ def point_inside_polygon(x,y,poly):
 
     return inside
 
-def which_poly(x,y,plist):
-    for i,poly in enumerate(plist):
-        if point_inside_polygon(x,y,poly):
-            return i
-    return None
+class RegPoly(object):
+    ''' Code for manipulating a region file as a list of polygons '''
+    def coordconv(self,ra,dec):
+        ''' return the original co-ords and the spherical offset
+        The former is useful to convert co-ordinates to a standard form '''
+        c=SkyCoord(ra=ra*u.degree,dec=dec*u.degree,frame='icrs')
+        return (c.ra.value,c.dec.value),[v.value for v in self.cref.spherical_offsets_to(c)]
 
-def assign_labels_to_poly(plist,llist):
-    # labels end up scrambled wrt their polygons, so we unscramble them
-    plabel=[None]*len(plist)
-    for ra,dec,label in llist:
-        i=which_poly(ra,dec,plist)
-        if i is None:
-            raise RuntimeError('Failed to locate a label! (%s)' % label)
+    def __init__(self,inreg,cra,cdec):
+        '''Convert a region to a polygon using a co-ordinate system relative
+        to a specified reference point, ideally the image centre. Use
+        astropy co-ordinates to avoid issues with co-ordinate
+        singularities
+        '''
+        
+        self.inreg=inreg
+        self.cra=cra
+        self.cdec=cdec
+        self.cref=SkyCoord(ra=cra*u.degree, dec=cdec*u.degree,frame='icrs')
+        
+        lines=open(inreg).readlines()
+        inpoly=False
+        clist=[]
+        oclist=[]
+        llist=[]
+        for l in lines:
+            if l[0:4]=='line':
+                if not inpoly:
+                    coords=[]
+                    ocoords=[]
+                    inpoly=True
+                bits=l[5:].split(',')
+                ra=float(bits[0])
+                dec=float(bits[1])
+                result=self.coordconv(ra,dec)
+                ra,dec=result[0]
+                dra,ddec=result[1]
+                ocoords.append((ra,dec))
+                coords.append((dra,ddec))
+            else:
+                if inpoly:
+                    clist.append(coords)
+                    oclist.append(ocoords)
+                    inpoly=False
+                if l[0:5]=='point':
+                    m=re.match(r"point\((.*),(.*)\).*text=\{\[(.*)\]\}",l)
+                    if m is None:
+                        raise RuntimeError('Failed to parse region label %s' % l)
+                    ra=float(m.group(1))
+                    dec=float(m.group(2))
+                    dra,ddec=self.coordconv(ra,dec)[1]
+                    llist.append((dra,ddec,m.group(3)))
+
+        if inpoly:
+            clist.append(coords)
+            oclist.append(ocoords)
+
+        # make the lists
+        self.clist=clist
+        self.oclist=oclist
+        self.llist=llist
+        self.plab=[l[2] for l in llist]
+        self.label_poly()
+        self.labels_to_integers()
+        
+    def label_poly(self):
+        # labels end up scrambled wrt their polygons, so we unscramble them
+        llist=self.llist
+        plabel=[None]*len(llist)
+        for dra,ddec,label in llist:
+            i=self.which_poly(dra,ddec,convert=False)
+            if i is None:
+                raise RuntimeError('Failed to locate a label! (%s)' % label)
+            else:
+                plabel[i]=label
+        self.plabel=plabel
+
+    def which_poly(self,ra,dec,convert=True):
+        if convert:
+            dra,ddec=self.coordconv(ra,dec)[1]
         else:
-            plabel[i]=label
-    return plabel
+            dra=ra
+            ddec=dec
+        for i,poly in enumerate(self.clist):
+            if point_inside_polygon(dra,ddec,poly):
+                return i
+        return None
 
-def labels_to_integers(plab):
-    plab_int=[]
-    for p in plab:
-        m=re.match(r".*_S(.*)",p)
-        if m is None:
-            print 'No match:',p
-        plab_int.append(int(m.group(1)))
-    return plab_int
+    def labels_to_integers(self):
+        plab_int=[]
+        for p in self.plab:
+            m=re.match(r".*_S(.*)",p)
+            if m is None:
+                raise RuntimeError('Label no regexp match: %s' % p)
+            plab_int.append(int(m.group(1)))
+        self.plab_int=plab_int
 
-def add_facet_labels(t,polys,pli):
-    facets=[]
-    for r in t:
-        poly=which_poly(r['RA'],r['DEC'],polys)
-        if poly is not None:
-            facets.append(pli[poly])
-        else:
-            facets.append(-1)
-    t['Facet']=facets
-
+    def add_facet_labels(t):
+        ''' Add integer labels to an astropy table t '''
+        facets=[]
+        for r in t:
+            poly=self.which_poly(r['RA'],r['DEC'])
+            if poly is not None:
+                facets.append(self.pli[poly])
+            else:
+                facets.append(-1)
+        t['Facet']=facets
+        
+        
 def plot_offsets(t,poly,color):
     import matplotlib.pyplot as plt
     basesize=10
@@ -116,18 +155,6 @@ def plot_offsets(t,poly,color):
         x=[pt[0] for pt in p]
         y=[pt[1] for pt in p]
         plt.plot(x,y,color='black',ls=':')
-
-#    lines=open(polyfile).readlines()
-#    i=0
-#    for l in lines:
-#        if l[0:7]=='polygon':
-#            i+=1
-#            ts=t[t['Region']==i]
-#            if len(ts)>0:
-#                bits=l[8:-2].split(', ')
-#                x=[float(b) for b in bits[::2]]
-#                y=[float(b) for b in bits[1::2]]
-#                plt.plot(x,y,color='black',ls=':')
 
     mra=[]
     mdec=[]
@@ -150,24 +177,20 @@ def plot_offsets(t,poly,color):
     plt.text(np.mean(t['RA']),np.mean(t['DEC']),'1 arcsec',color='green')
 
 def label_table(t,regfile):
-    polys,labels=region_to_poly(regfile)
-    plab=assign_labels_to_poly(polys,labels)
-    pli=labels_to_integers(plab)
-
-    add_facet_labels(t,polys,pli)
+    ''' convenience function to label a fits table based on a region file '''
+    r=RegPoly(regfile)
+    r.add_facet_labels(t)
     return t
 
 def do_plot_facet_offsets(t,regfile,savefig=None):
-
+    ''' convenience function to plot offsets '''
     import matplotlib.pyplot as plt
-    polys,labels=region_to_poly(regfile)
-    plab=assign_labels_to_poly(polys,labels)
-    pli=labels_to_integers(plab)
+    r=RegPoly(regfile)
     if isinstance(t,str):
         t=Table.read(t)
     if 'Facet' not in t.columns:
-        add_facet_labels(t,polys,pli)
-    plot_offsets(t,polys,'red')
+        r.add_facet_labels(t)
+    plot_offsets(t,r.clist,'red')
     if savefig is not None:
         plt.savefig(savefig)
 
