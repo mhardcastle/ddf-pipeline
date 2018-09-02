@@ -7,8 +7,11 @@ from download import download_dataset
 from download_field import download_field
 from unpack import unpack
 from make_mslists import make_list,list_db_update
+from average import average
+from auxcodes import MSList
 import sys
 import os
+import glob
 
 def do_run_pipeline(name,basedir):
 
@@ -46,6 +49,23 @@ def do_run_pipeline(name,basedir):
     report('Deleting tar files')
     os.system('rm '+workdir+'/*.tar.gz')
 
+    report('Checking structure')
+    g=glob.glob(workdir+'/*.ms')
+    msl=MSList(None,mss=g)
+    uobsids=set(msl.obsids)
+    for thisobs in uobsids:
+        # check one MS with each ID
+        for m,ch,o in zip(msl.mss,msl.channels,msl.obsids):
+            if o==thisobs:
+                channels=len(ch)
+                print 'MS',m,'has',channels,'channels'
+                if channels>20:
+                    update_status('Averaging',workdir=workdir)
+                    print 'Averaging needed for',thisobs,'!'
+                    average(wildcard=workdir+'/*'+thisobs+'*')
+                    os.system('rm -r '+workdir+'/*'+thisobs+'*pre-cal.ms')
+                break
+    
     report('Making ms lists')
     success=make_list(workdir=workdir)
     if do_field:

@@ -2,9 +2,10 @@
 
 import glob
 import os
+import pyrap.tables as pt
 
-def average():
-    mss=glob.glob('*.pre-cal.ms')
+def average(wildcard='*'):
+    mss=glob.glob(wildcard+'.pre-cal.ms')
     for m in mss:
         print 'Averaging',m
         outms=m.replace('pre-cal.ms','ave.ms')

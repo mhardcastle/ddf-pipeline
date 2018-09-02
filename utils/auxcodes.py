@@ -285,13 +285,17 @@ class MSList(object):
     Class to look at all the MSs in an MS list and store some basic
     information about them in a data structure
     """
-    def __init__(self,mslist):
+    def __init__(self,mslist,mss=None):
         """
         mslist is the MS list filename
         """
         import pyrap.tables as pt
-        self.mslist=mslist
-        self.mss=[s.strip() for s in open(mslist).readlines()]
+        if mss is not None:
+            self.mss=mss
+            self.mslist=None
+        else:
+            self.mslist=mslist
+            self.mss=[s.strip() for s in open(mslist).readlines()]
         self.obsids = [os.path.basename(ms).split('_')[0] for ms in self.mss]
         self.freqs=[]
         self.channels=[]
