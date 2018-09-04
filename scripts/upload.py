@@ -29,8 +29,8 @@ def shiftimages(rootname):
     return [rootname+f+'.fits' for f in ['_shift.app.facetRestored','_shift.int.facetRestored']]
 
 def do_upload(name,basedir):
-    if os.environ['DDF_PIPELINE_CLUSTER']=='Herts':
-        target='hardcastle@ssh.strw.leidenuniv.nl:'
+    if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
+        target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
     else:
         target=''
 
