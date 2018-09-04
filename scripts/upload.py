@@ -67,4 +67,4 @@ def do_upload(name,basedir):
         
 if __name__=='__main__':
     import sys
-    do_upload(sys.argv[1],'/beegfs/car/mjh')
+    do_upload(sys.argv[1],sys.argv[2])
