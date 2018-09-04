@@ -40,8 +40,7 @@ def hextile(image,radius):
             xc=(maxx*i*hs+(j % 2)*0.5)/nha
             yc=(maxy*(j+0.25))/nhu
             ra_p,dec_p=w.wcs_pix2world(xc,yc,0)
-            print ra_p,dec_p
-            pos.append((ra_p,dec_p))
+            pos.append((float(ra_p),float(dec_p)))
     return ra_factor,pos
 
 def plotcircle(ra,dec,xsize,ysize,color):
