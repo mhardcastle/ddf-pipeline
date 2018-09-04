@@ -2,9 +2,10 @@
 # Run pipeline download/unpack steps followed by the main job
 
 from auxcodes import report,warn,die
-from surveys_db import use_database,update_status
+from surveys_db import SurveysDB,update_status
 from download import download_dataset
 from download_field import download_field
+from run_job import do_run_job
 from unpack import unpack
 from make_mslists import make_list,list_db_update
 from average import average
@@ -12,6 +13,27 @@ from auxcodes import MSList
 import sys
 import os
 import glob
+
+def make_custom_config(name,workdir,do_field,averaged=False):
+    if do_field:
+        with SurveysDB() as sdb:
+            idd=sdb.get_field(name)
+            lowdec=(idd['decl']<32)
+    else:
+        lowdec=False
+
+    if lowdec:
+        template=os.environ['DDF_DIR']+'/ddf-pipeline/examples/tier1-jul2018-NVSS.cfg'
+    else:
+        template=os.environ['DDF_DIR']+'/ddf-pipeline/examples/tier1-jul2018.cfg'
+
+    lines=open(template).readlines()
+    outfile=open(workdir+'/tier1-config.cfg','w')
+    for l in lines:
+        if 'colname' in lines and averaged:
+            outfile.write('colname=DATA\n')
+        else:
+            outfile.write(l)
 
 def do_run_pipeline(name,basedir):
 
@@ -49,6 +71,7 @@ def do_run_pipeline(name,basedir):
     report('Deleting tar files')
     os.system('rm '+workdir+'/*.tar.gz')
 
+    averaged=False
     report('Checking structure')
     g=glob.glob(workdir+'/*.ms')
     msl=MSList(None,mss=g)
@@ -62,6 +85,7 @@ def do_run_pipeline(name,basedir):
                 if channels>20:
                     update_status('Averaging',workdir=workdir)
                     print 'Averaging needed for',thisobs,'!'
+                    averaged=True
                     average(wildcard=workdir+'/*'+thisobs+'*')
                     os.system('rm -r '+workdir+'/*'+thisobs+'*pre-cal.ms')
                 break
@@ -70,15 +94,15 @@ def do_run_pipeline(name,basedir):
     success=make_list(workdir=workdir)
     if do_field:
         list_db_update(success,workdir=workdir)
-
-    if success:
-        report('Submit job')
-        os.system('qsub -N ddfp-'+name+' -v WD='+workdir+' '+qsubfile)
-        if do_field:
-            update_status(name,'Queued',workdir=workdir)
-
-    else:
+    if not success:
         die('make_list could not construct the MS list',database=False)
+        
+    report('Creating custom config file from template')
+    make_custom_config(name,workdir,do_field,averaged)
+    
+    # now run the job
+    do_run_job(name,basedir=basedir,qsubfile=None,do_field=do_field)
+
 
 if __name__=='__main__':
     do_run_pipeline(sys.argv[1],'/beegfs/car/mjh')
