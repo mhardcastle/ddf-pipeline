@@ -37,8 +37,8 @@ def hextile(image,radius):
     nhu=int(0.5+nhu)
     for j in range(nhu):
         for i in range(nha):
-            xc=(maxx*i*hs+(j % 2)*0.5)/nha
-            yc=(maxy*(j+0.25))/nhu
+            xc=(1.0*maxx*(i+(j % 2)*0.5))/nha
+            yc=(maxy*(j+0.5))/nhu
             ra_p,dec_p=w.wcs_pix2world(xc,yc,0)
             pos.append((float(ra_p),float(dec_p)))
     return ra_factor,pos
@@ -49,8 +49,10 @@ def plotcircle(ra,dec,xsize,ysize,color):
     plt.scatter(ra,dec)
 
 if __name__=='__main__':
+    import os
     import matplotlib.pyplot as plt
     from matplotlib.patches import Ellipse
+    from astropy.table import Table
     ra_factor,pos=hextile('image_ampphase1_di.int.restored.fits',0.5)
     if ra_factor<0.1: ra_factor=0.5
     for p in pos:
@@ -60,5 +62,8 @@ if __name__=='__main__':
     plt.gca().invert_xaxis()
     plt.xlabel('RA')
     plt.ylabel('Dec')
-
+    catfile='image_full_ampphase_di_m.NS.offset_cat.fits'
+    if os.path.isfile(catfile):
+        t=Table.read(catfile)
+        plt.scatter(t['RA'],t['DEC'],alpha=0.1,marker='.')
     plt.show()

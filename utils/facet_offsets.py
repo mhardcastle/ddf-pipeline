@@ -48,9 +48,12 @@ class RegPoly(object):
         
         lines=open(inreg).readlines()
         inpoly=False
+        # clist and llist are in the offset co-ordinates
+        # oclist and ollist are in original ra/dec co-ordinates, e.g. for plotting, but after standard form conversion
         clist=[]
         oclist=[]
         llist=[]
+        ollist=[]
         for l in lines:
             if l[0:4]=='line':
                 if not inpoly:
@@ -76,17 +79,31 @@ class RegPoly(object):
                         raise RuntimeError('Failed to parse region label %s' % l)
                     ra=float(m.group(1))
                     dec=float(m.group(2))
-                    dra,ddec=self.coordconv(ra,dec)[1]
+                    result=self.coordconv(ra,dec)
+                    ra,dec=result[0]
+                    dra,ddec=result[1]
+                    ollist.append((ra,dec,m.group(3)))
                     llist.append((dra,ddec,m.group(3)))
 
         if inpoly:
             clist.append(coords)
             oclist.append(ocoords)
 
+        bbox=[]
+        for poly in clist:
+            a=np.array(poly)
+            xmin=np.min(a[:,0])
+            xmax=np.max(a[:,0])
+            ymin=np.min(a[:,1])
+            ymax=np.max(a[:,1])
+            bbox.append([xmin,xmax,ymin,ymax])
+        self.bbox=np.array(bbox)
+            
         # make the lists
         self.clist=clist
         self.oclist=oclist
         self.llist=llist
+        self.ollist=ollist
         self.plab=[l[2] for l in llist]
         self.label_poly()
         self.labels_to_integers()
@@ -109,7 +126,10 @@ class RegPoly(object):
         else:
             dra=ra
             ddec=dec
+        check=((dra>=self.bbox[:,0]) & (dra<=self.bbox[:,1]) & (ddec>=self.bbox[:,2]) & (ddec<=self.bbox[:,3]))
         for i,poly in enumerate(self.clist):
+            if not check[i]:
+                continue
             if point_inside_polygon(dra,ddec,poly):
                 return i
         return None
@@ -123,17 +143,19 @@ class RegPoly(object):
             plab_int.append(int(m.group(1)))
         self.plab_int=plab_int
 
-    def add_facet_labels(t):
+    def add_facet_labels(self,t):
         ''' Add integer labels to an astropy table t '''
         facets=[]
-        for r in t:
-            poly=self.which_poly(r['RA'],r['DEC'])
+        dra,ddec=self.coordconv(np.array(t['RA']),np.array(t['DEC']))[1] # strip units
+        
+        for i in range(len(t)):
+            poly=self.which_poly(dra[i],ddec[i],convert=False)
             if poly is not None:
-                facets.append(self.pli[poly])
+                facets.append(self.plab_int[poly])
             else:
                 facets.append(-1)
         t['Facet']=facets
-        
+        return t
         
 def plot_offsets(t,poly,color):
     import matplotlib.pyplot as plt
@@ -176,9 +198,9 @@ def plot_offsets(t,poly,color):
     plt.quiver(np.mean(t['RA']),np.mean(t['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
     plt.text(np.mean(t['RA']),np.mean(t['DEC']),'1 arcsec',color='green')
 
-def label_table(t,regfile):
+def label_table(t,regfile,cra,cdec):
     ''' convenience function to label a fits table based on a region file '''
-    r=RegPoly(regfile)
+    r=RegPoly(regfile,cra,cdec)
     r.add_facet_labels(t)
     return t
 
