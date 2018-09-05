@@ -7,7 +7,7 @@ from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
 import signal
-from facet_offsets import region_to_poly,assign_labels_to_poly,labels_to_integers
+from facet_offsets import RegPoly
 import pyregion
 from surveys_db import use_database,update_status
 
@@ -189,16 +189,15 @@ def polylist_to_string(poly):
     return polystring
 
 def convert_regionfile_to_poly(inregfile):
-    polys,labels=region_to_poly(inregfile)
-    plab=assign_labels_to_poly(polys,labels)
-    pli=labels_to_integers(plab)
+    cra,cdec=get_centpos()
+    r=RegPoly(inregfile,cra,cdec)
     polystringlist = []
-    for p in sorted(list(set(pli))):
+    for p in sorted(list(set(r.plab_int))):
         polylist = []
-        for i,poly in enumerate(polys):
-            if pli[i]==p:
+        for i,poly in enumerate(r.oclist):
+            if r.plab_int[i]==p:
                 polylist.append(poly)
-        # now polylist contains all the polygons in this set
+        # now polylist contains all the polygons in this direction, in order
         polystring = 'fk5;'
         for poly in polylist:
             polystring += polylist_to_string(poly)+';'
@@ -213,6 +212,7 @@ def get_rms_map(infilename,ds9region,outfilename):
     map=hdu[0].data
 
     for direction,ds9region in enumerate(polylist):
+        print direction,ds9region
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
         rmsval = get_rms_array(hdu[0].data[0][0][np.where(manualmask == True)])
@@ -233,6 +233,7 @@ def get_rms_map2(infilename,ds9region,outfilename):
     map=hdu[0].data
 
     for direction,ds9region in enumerate(polylist):
+        print direction,ds9region
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
         rmsval = np.mean(hdu[0].data[0][0][np.where(manualmask == True)])
@@ -279,6 +280,9 @@ def getposim(image):
     ra=hdus[0].header['CRVAL1']
     dec=hdus[0].header['CRVAL2']
     return ra,dec
+
+def get_centpos():
+    return getposim('image_dirin_SSD_init.dirty.fits')
 
 class MSList(object):
     """

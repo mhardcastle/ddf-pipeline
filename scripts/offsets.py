@@ -12,7 +12,7 @@
 
 import matplotlib
 matplotlib.use('Agg')
-from auxcodes import report,run,warn,die
+from auxcodes import report,run,warn,die,get_centpos
 from quality_pipeline import sepn
 import requests
 import os
@@ -23,7 +23,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 import sys
 from scipy.special import gammaln
-from facet_offsets import label_table,region_to_poly,assign_labels_to_poly, labels_to_integers, which_poly
+from facet_offsets import RegPoly
 from astropy.io import fits
 from astropy.wcs import WCS
 import pickle
@@ -50,9 +50,12 @@ class Offsets(object):
             self.read_regfile(imroot+'.tessel.reg')
 
     def read_regfile(self,regfile):
-        self.polys,self.labels=region_to_poly(regfile)
-        self.plab=assign_labels_to_poly(self.polys,self.labels)
-        self.pli=labels_to_integers(self.plab)
+        cra,cdec=get_centpos()
+        self.r=RegPoly(regfile,cra,cdec)
+        self.polys=self.r.oclist
+        self.labels=self.r.ollist
+        self.plab=self.r.plab
+        self.pli=self.r.plab_int
 
     def find_offsets(self,tf,ot,sep=1.0):
         self.dral=[]
@@ -306,10 +309,9 @@ class Offsets(object):
             bits=[b.strip() for b in l.split(',')]
             rar=float(bits[2])
             ra=rar/degtorad
-            if ra<-5: ra+=360.0
             decr=float(bits[3])
             dec=decr/degtorad
-            number=which_poly(ra,dec,self.polys)
+            number=self.r.which_poly(ra,dec)
             #print 'Direction',pli[number]
             direction=self.pli[number]
             print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,self.decr[direction,2]/cellsize
@@ -330,15 +332,19 @@ class Offsets(object):
         # this would be faster with use of e.g. PIL
         for y in range(yd):
             print '.',
-            for x in range(xd):
-                ra,dec,_,_=w.wcs_pix2world(x,y,0,0,0)
-                number=which_poly(ra,dec,self.polys)
+            sys.stdout.flush()
+            xv=np.array(range(xd))
+            yv=y*np.ones_like(xv)
+            ra,dec,_,_=w.wcs_pix2world(xv,yv,0,0,0)
+            dra,ddec=self.r.coordconv(ra,dec)[1]
+            for i,x in enumerate(xv):
+                number=self.r.which_poly(dra[i],ddec[i],convert=False)
                 if number is not None:
                     direction=self.pli[number]
                     rmap[0,0,y,x]=np.sqrt(self.rae[direction,2]**2.0+self.dece[direction,2]**2.0)
+        print
         hdus[0].data=rmap
         hdus.writeto(outname,clobber=True)
-        print
 
     def save(self,filename):
         f = file(filename, 'wb')
@@ -413,9 +419,11 @@ def do_offsets(o):
     lofar=lofar[filter]
     print len(lofar),'LOFAR sources after filtering'
     regfile=image_root+'.tessel.reg'
-    lofar_l=label_table(lofar,regfile)
-
+    cra,cdec=get_centpos()
+    report('Set up structure')
     oo=Offsets(method,n=o['ndir'],imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
+    report('Label table')
+    lofar_l=oo.r.add_facet_labels(lofar)
     report('Finding offsets')
     oo.find_offsets(lofar_l,data)
     report('Fitting offsets')
