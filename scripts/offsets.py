@@ -23,7 +23,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 import sys
 from scipy.special import gammaln
-from facet_offsets import RegPoly,label_table
+from facet_offsets import RegPoly
 from astropy.io import fits
 from astropy.wcs import WCS
 import pickle

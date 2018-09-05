@@ -198,6 +198,12 @@ def plot_offsets(t,poly,color):
     plt.quiver(np.mean(t['RA']),np.mean(t['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
     plt.text(np.mean(t['RA']),np.mean(t['DEC']),'1 arcsec',color='green')
 
+def label_table(t,regfile,cra,cdec):
+    ''' convenience function to label a fits table based on a region file '''
+    r=RegPoly(regfile,cra,cdec)
+    r.add_facet_labels(t)
+    return t
+
 def do_plot_facet_offsets(t,regfile,savefig=None):
     ''' convenience function to plot offsets '''
     import matplotlib.pyplot as plt
