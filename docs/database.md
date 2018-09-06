@@ -23,7 +23,7 @@ from surveys_db import SurveysDB
 
 with SurveysDB() as sdb:
     result=sdb.get_field('P35Hetdex10')
-	print result
+    print result
 ```
 
 The SurveysDB class does the work of setting up an ssh tunnel (if run

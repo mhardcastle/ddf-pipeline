@@ -13,6 +13,7 @@ def download_field(fname,basedir=None,force=False):
     if basedir is None:
         print 'No basedir supplied, working in current directory...'
         basedir='.'
+    workdir=basedir+'/'+fname
     with SurveysDB() as sdb:
         result=sdb.get_field(fname)
         if result is None:
@@ -27,8 +28,8 @@ def download_field(fname,basedir=None,force=False):
         obs=sdb.cur.fetchall()
         if len(obs)>0:
             result['status']='Downloading'
-            if not os.path.isdir(basedir+'/'+fname):
-                os.mkdir(basedir+'/'+fname)
+            if not os.path.isdir(workdir):
+                os.mkdir(workdir)
             tag_field(sdb,result)
             sdb.set_field(result)
         else:
@@ -39,7 +40,7 @@ def download_field(fname,basedir=None,force=False):
     overall_success=True
     for o in obs:
         print 'Downloading observation ID L'+str(o['id'])
-        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L'+str(o['id'])+'/',workdir=basedir+'/'+fname)
+        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L'+str(o['id'])+'/',workdir=workdir)
         if success==False:
             print 'Download failed'
         overall_success=overall_success and success
@@ -47,9 +48,10 @@ def download_field(fname,basedir=None,force=False):
     with SurveysDB() as sdb:
         if overall_success:
             result['status']='Downloaded'
-            tag_field(sdb,result)
+            tag_field(sdb,result,workdir=workdir)
         else:
             result['status']='D/L failed'
+            tag_field(sdb,result,workdir=workdir)
         sdb.set_field(result)
 
     return overall_success
