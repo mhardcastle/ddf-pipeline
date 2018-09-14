@@ -30,7 +30,7 @@ def make_custom_config(name,workdir,do_field,averaged=False):
     lines=open(template).readlines()
     outfile=open(workdir+'/tier1-config.cfg','w')
     for l in lines:
-        if 'colname' in lines and averaged:
+        if 'colname' in l and averaged:
             outfile.write('colname=DATA\n')
         else:
             outfile.write(l)
@@ -83,7 +83,7 @@ def do_run_pipeline(name,basedir):
                 channels=len(ch)
                 print 'MS',m,'has',channels,'channels'
                 if channels>20:
-                    update_status('Averaging',workdir=workdir)
+                    update_status(name,'Averaging',workdir=workdir)
                     print 'Averaging needed for',thisobs,'!'
                     averaged=True
                     average(wildcard=workdir+'/*'+thisobs+'*')
