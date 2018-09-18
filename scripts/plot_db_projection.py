@@ -83,11 +83,11 @@ for line in infile:
 infile.close()
 
 ra_r,dec_r=cc(ravals,decvals)
-plt.scatter(ra_r,dec_r,marker='o',color='blue',alpha=0.2,zorder=5,edgecolors='none',s=50,label='DR2')
+plt.scatter(ra_r,dec_r,marker='o',color='blue',alpha=0.2,zorder=-5,edgecolors='none',s=50,label='DR2')
     
 _,r=plot_select(results,lambda r:r['status'] in ['Archived','Complete'],label='Complete',color='green')
 _,r=plot_select(r,lambda r:r['status'] in ['Running'],label='Running',color='cyan')
-_,r=plot_select(r,lambda r:r['status'] in ['Downloading','Unpacking','Ready','Queued','Unpacked'],label='In progress',color='yellow')
+_,r=plot_select(r,lambda r:r['status'] in ['Downloaded','Downloading','Unpacking','Averaging','Ready','Queued','Unpacked'],label='In progress',color='yellow')
 _,r=plot_select(r,lambda r:r['status'] in ['Failed','List failed','D/L failed'],label='Failed',color='red')
 
 _,r=plot_select(r,lambda r:r['ostatus']=='DI_processed' and r['s']>7,label='Ready',color='black')
@@ -111,5 +111,5 @@ plt.ylabel('Decl.')
 plt.grid(True)
 plt.legend(loc=4)
 plt.tight_layout()
-plt.savefig('Tier1-dbstatus.png',dpi=250)
+#plt.savefig('Tier1-dbstatus.png',dpi=250)
 plt.show()
