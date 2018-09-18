@@ -462,7 +462,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
     return outsols
 
-    
+def compress_fits(filename,q):
+    command='fpack -q %i %s' % (q,filename)
+    run(command,dryrun=o['dryrun'])
     
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
@@ -647,7 +649,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     nt_step=np.max([1,nt_step])
 
     SNR=np.sqrt(nt_step*nch_step)*M/S
-    warn('Using (dt,df)=(%i,%i) for CubiCal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
+    warn('Using (dt,df)=(%i,%i) for self-cal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
     
     return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
     
@@ -1434,9 +1436,31 @@ def main(o=None):
         separator('Stokes Q and U cubes')
         from do_polcubes import do_polcubes
         do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+        cthreads=[]
+        flist=[]
+        if o['compress_polcubes']:
+            for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']:
+                if os.path.isfile(cubefile+'.fz'):
+                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                else:
+                    report('Starting compression thread for '+cubefile)
+                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                    thread.start()
+                    cthreads.append(thread)
+                    flist.append(cubefile)
         vlow_uvrange=[o['image_uvmin'],1.6]
         do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
-
+        if o['compress_polcubes']:
+            for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']:
+                if os.path.isfile(cubefile+'.fz'):
+                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                else:
+                    report('Starting compression thread for '+cubefile)
+                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                    thread.start()
+                    cthreads.append(thread)
+                    flist.append(cubefile)
+        
     if o['stokesv']:
         separator('Stokes V image')
         ddf_image('image_full_low_stokesV',o['full_mslist'],
@@ -1450,6 +1474,15 @@ def main(o=None):
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher)
 
+    if o['polcubes'] and o['compress_polcubes']:
+        # cthreads and flist exist
+        for thread in cthreads:
+            if thread.isAlive():
+                warn('Waiting for a compression thread to finish')
+                thread.join()
+        if o['delete_compressed']:
+            for f in flist:
+                os.remove(f)
 
     separator('Write summary and tidy up')
     summary(o)
