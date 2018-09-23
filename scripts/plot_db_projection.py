@@ -10,6 +10,8 @@ fontsize=16 # adjust to taste
 from matplotlib import rc
 rc('font',**{'family':'serif','serif':['Times'],'size':fontsize})
 rc('text', usetex=True)
+import sys
+import datetime
 
 org=180
 
@@ -111,5 +113,8 @@ plt.ylabel('Decl.')
 plt.grid(True)
 plt.legend(loc=4)
 plt.tight_layout()
-#plt.savefig('Tier1-dbstatus.png',dpi=250)
-plt.show()
+plt.title('DR2 processing status at '+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),loc='right')
+if len(sys.argv)>1:
+    plt.savefig(sys.argv[1],dpi=250)
+else:
+    plt.show()

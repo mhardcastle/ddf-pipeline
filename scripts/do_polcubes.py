@@ -4,6 +4,7 @@ from pyrap.tables import table
 from auxcodes import getpos,MSList
 from astropy import units as u
 from astropy.coordinates import Angle
+import os
 
 # Utility functions for making the cube
 
@@ -80,7 +81,7 @@ def do_polcubes(colname,
                   catcher=catcher)
 
     outfile='%s_QU.cube.dirty.fits'%imageoutname
-    if os.path.isfile(outfile):
+    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
         warn('Uncorrected cube file already exists, not making it')
     else:
         report('Making uncorrected cube')
@@ -88,7 +89,7 @@ def do_polcubes(colname,
         make_cube(freqs,hdus,outfile)
 
     outfile='%s_QU.cube.dirty.corr.fits'%imageoutname
-    if os.path.isfile(outfile):
+    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
         warn('Corrected cube file already exists, not making it')
     else:
         freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)

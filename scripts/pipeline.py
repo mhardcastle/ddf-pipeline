@@ -1493,7 +1493,7 @@ def main(o=None):
         if spectral_mslist is not None:
             extras+=spectral_mslist
         if o['polcubes']:
-            extras+=glob.glob('stokes-mslist*.ddfcache')
+            extras+=glob.glob('stokes-mslist*.txt')
         full_clearcache(o,extras=extras)
     
     if use_database():
