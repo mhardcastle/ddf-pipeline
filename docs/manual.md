@@ -76,13 +76,12 @@ will need:
 * Polygon
 * pyephem
 * pyFFTW
-* pyfits
 * SharedArray
 * deap
 * py-cpuinfo
-* futures (for CubiCal)
 * sshtunnel (for database code)
 * MySQLdb (for database code)
+* cfitsio fpack (only if compression required: fpack must be on PATH)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
@@ -93,8 +92,9 @@ prerequisites KillMS, DDFacet and SkyModel directly from the Github
 repositories, so that you can easily get updates with `git pull`.
 
 This process checks out the stable 'DR1' branch of ddf-pipeline and
-associated code. The DR2 branch is under active development and is not
-suitable for end users.
+associated code. The DR2 branch is under active development and you
+will need to obtain the appropriate versions of the KillMS/DDFacet
+codes from the developers.
 
 The
 installation process is below (assumes that your shell is bash):
@@ -132,6 +132,8 @@ ddf-pipeline provides the following directory structure:
 * misc: miscellaneous useful files
 
 ## what it does
+
+NB this describes the DR1 pipeline.
 
 In normal use ddf-pipeline will go through four rounds of imaging and
 three rounds of self-calibration. The steps are as follows:
@@ -273,6 +275,10 @@ absorb unmodelled extended structure. We currently use `uvmin=1.5`
 which does a better job of preserving large-scale extended flux at the
 cost of some additional structure in the large-scale noise. Most other
 options should be left at their default settings.
+
+### [compression]
+
+Controls the compression of some final images.
 
 ## running the code
 
