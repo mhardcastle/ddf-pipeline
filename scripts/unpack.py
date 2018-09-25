@@ -14,11 +14,19 @@ def unpack(workdir='.'):
     if len(files)==0:
         # occasionally they're not compressed??
         files=glob.glob(workdir+'/*.tar')
+    if len(files)==0:
+        raise RuntimeError('Cannot find files to unpack')
     for f in files:
         fn=os.path.basename(f)
         print 'Unpacking',fn
         os.system('cd '+workdir+'; tar xf '+f)
-        os.system('cd '+workdir+'; mv '+destdir+'* .')
+        if os.path.isdir(workdir+'/prefactor'):
+            os.system('cd '+workdir+'; mv prefactor/results/*.ms .')
+        elif os.path.isdir(workdir+'/scratch'):
+            os.system('cd '+workdir+'; mv scratch/*/*/*/Output/*.ms .')
+        else:
+            raise RuntimeError('Cannot find unpacked ms files')
+            
 
 if __name__=='__main__':
     unpack()

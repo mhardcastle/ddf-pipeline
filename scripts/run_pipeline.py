@@ -64,12 +64,18 @@ def do_run_pipeline(name,basedir):
         die('Download failed, see earlier errors',database=False)
 
     report('Unpacking data')
-    unpack(workdir=workdir)
+    try:
+        unpack(workdir=workdir)
+    except RuntimeError:
+        if do_field:
+            update_status(name,'List failed',workdir=workdir)
+        raise
     if do_field:
         update_status(name,'Unpacked',workdir=workdir)
 
     report('Deleting tar files')
     os.system('rm '+workdir+'/*.tar.gz')
+    os.system('rm '+workdir+'/*.tar')
 
     averaged=False
     report('Checking structure')

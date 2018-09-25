@@ -58,7 +58,7 @@ while True:
         download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
         download_thread.start()
 
-    if d['Complete']>0 and upload_thread is None:
+    if 'Complete' in d and upload_thread is None:
         for r in result:
             if r['status']=='Complete':
                 upload_name=r['id']
