@@ -50,7 +50,9 @@ def summary(o):
         from DDFacet.DDF import report_version as ddf_version
         f.write('DDF version was '+ddf_version()+'\n')
         from killMS.Other.logo import report_version as killms_version
-        f.write('killMS version was '+killms_version()+'\n\n')
+        f.write('killMS version was '+killms_version()+'\n')
+        from DynSpecMS import dynspecms_version
+        f.write('DynSpecMS version was '+dynspecms_version.version()+'\n\n')
         f.write('Options dictionary was as follows:\n')
         for k in o:
             f.write("%-20s : %s\n" % (k,str(o[k])))
