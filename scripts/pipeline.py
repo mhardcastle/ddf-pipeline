@@ -1127,6 +1127,10 @@ def main(o=None):
     else:
         colname=o['colname']
 
+    separator("Make Mask")
+    CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
+
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1247,6 +1251,10 @@ def main(o=None):
         warn('User specified exit after image_ampphase.')
         stop(2)
 
+    separator("MakeMask")
+    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
+            
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
                                     o['full_mslist'],'DDS3_full',
@@ -1334,10 +1342,6 @@ def main(o=None):
         warn('User specified exit after full low.')
         stop(2)
 
-    separator("MakeMask")
-    CurrentMaskName=make_mask('image_full_ampphase_di_m.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel('image_full_ampphase_di_m.DicoModel',CurrentMaskName,'image_full_ampphase_di_m_masked.DicoModel',catcher=catcher)
-            
     # before starting the final image, run the download thread if needed
     if o['method'] is not None:
         separator('Offset image downloads')

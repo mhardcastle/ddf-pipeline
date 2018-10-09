@@ -421,7 +421,9 @@ def do_offsets(o):
     regfile=image_root+'.tessel.reg'
     cra,cdec=get_centpos()
     report('Set up structure')
-    oo=Offsets(method,n=o['ndir'],imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
+
+    NDir=np.load("image_dirin_SSD_m.npy.ClusterCat.npy").shape[0]
+    oo=Offsets(method,n=NDir,imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
     report('Label table')
     lofar_l=oo.r.add_facet_labels(lofar)
     report('Finding offsets')

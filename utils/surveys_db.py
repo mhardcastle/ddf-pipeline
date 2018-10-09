@@ -83,6 +83,11 @@ class SurveysDB(object):
         except:
             self.ssh_user=None
         
+        try:
+            self.ssh_key=cfg[2].rstrip()
+        except:
+            self.ssh_key="id_rsa"
+
         # read only use
         self.readonly=readonly
 
@@ -100,9 +105,10 @@ class SurveysDB(object):
             if self.usetunnel:
                 self.tunnel=sshtunnel.SSHTunnelForwarder('lofar.herts.ac.uk',
                                                          ssh_username=self.ssh_user,
-                                                         ssh_pkey=home+'/.ssh/id_rsa',
+                                                         ssh_pkey=home+'/.ssh/%s'%self.ssh_key,
                                                          remote_bind_address=('127.0.0.1',3306),
                                                          local_bind_address=('127.0.0.1',))
+
                 self.tunnel.start()
                 localport=self.tunnel.local_bind_port
                 self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport)
