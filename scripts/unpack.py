@@ -24,6 +24,9 @@ def unpack(workdir='.'):
             os.system('cd '+workdir+'; mv prefactor/results/*.ms .')
         elif os.path.isdir(workdir+'/scratch'):
             os.system('cd '+workdir+'; mv scratch/*/*/*/Output/*.ms .')
+        elif len(glob.glob('*.ms'))>0:
+            # they can appear in the root directory!
+            pass
         else:
             raise RuntimeError('Cannot find unpacked ms files')
             

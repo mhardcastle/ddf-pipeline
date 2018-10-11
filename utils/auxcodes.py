@@ -65,6 +65,7 @@ def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
     else:
         ys,xs=data.shape
         subim=data[ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+    subim=subim[~np.isnan(subim)]
     oldrms=1
     for i in range(niter):
         rms=np.std(subim)
