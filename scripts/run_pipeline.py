@@ -18,11 +18,11 @@ def make_custom_config(name,workdir,do_field,averaged=False):
     if do_field:
         with SurveysDB() as sdb:
             idd=sdb.get_field(name)
-            lowdec=(idd['decl']<32)
+            no_wenss=((idd['decl']<32) | (idd['decl']>72))
     else:
-        lowdec=False
+        no_wenss=False
 
-    if lowdec:
+    if no_wenss:
         template=os.environ['DDF_DIR']+'/ddf-pipeline/examples/tier1-jul2018-NVSS.cfg'
     else:
         template=os.environ['DDF_DIR']+'/ddf-pipeline/examples/tier1-jul2018.cfg'
