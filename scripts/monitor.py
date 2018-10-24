@@ -2,7 +2,7 @@
 
 # Code to run continuously and keep an eye on the state of the queue
 # Download new files if needed
-# Eventually, archive using the archive script
+# archive using the upload script
 
 from time import sleep
 import datetime
@@ -10,7 +10,8 @@ from surveys_db import SurveysDB,get_next
 import os
 import threading
 from run_pipeline import do_run_pipeline
-from upload import do_upload
+from upload import do_upload,do_upload_compressed
+import glob
 
 queuelimit=10
 cluster=os.environ['DDF_PIPELINE_CLUSTER']
@@ -66,7 +67,16 @@ while True:
                 upload_thread=threading.Thread(target=do_upload, args=(upload_name,basedir))
                 upload_thread.start()
                 break
-        
+
+    if upload_thread is None:
+        for r in result:
+            if r['archive_version']==0 and len(glob.glob(basedir+'/'+r['id']+'/*.archive'))>0:
+                upload_name=r['id']
+                print 'We need to upload the archived MSs for %s' % upload_name
+                upload_thread=threading.Thread(target=do_upload_compressed, args=(upload_name,basedir))
+                upload_thread.start()
+                break
+            
     print '\n\n-----------------------------------------------\n\n'
         
     sleep(300)

@@ -8,7 +8,7 @@ from subprocess import call
 import os
 import glob
 from time import sleep
-from surveys_db import update_status
+from surveys_db import SurveysDB,tag_field
 
 def myglob(g,workdir):
     f=glob.glob(workdir+'/'+g)
@@ -28,11 +28,38 @@ def images(rootname):
 def shiftimages(rootname):
     return [rootname+f+'.fits' for f in ['_shift.app.facetRestored','_shift.int.facetRestored']]
 
-def do_upload(name,basedir):
+def do_rsync(name,basedir,f):
+    workdir=basedir+'/'+name
+
     if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
         target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
     else:
         target=''
+
+    while True:
+        s='cd '+workdir+'; rsync -avz --progress --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        print 'Running command:',s
+        retval=call(s,shell=True)
+        if retval==0:
+            break
+        print 'Non-zero return value',retval
+        if retval!=30:
+            raise RuntimeError('rsync failed unexpectedly')
+        sleep(10)
+
+
+def do_upload_compressed(name,basedir):
+    workdir=basedir+'/'+name
+    f=myglob('*.archive',workdir)
+
+    do_rsync(name,basedir,f)
+    with SurveysDB() as sdb:
+        idd=sdb.get_field(name)
+        idd['archive_version']=1
+        sdb.set_field(idd)
+    
+        
+def do_upload(name,basedir):
 
     workdir=basedir+'/'+name
 
@@ -51,20 +78,17 @@ def do_upload(name,basedir):
     f+=myglob('image_full_low_stokesV.dirty.*',workdir)
     f+=myglob('image_full_low_QU.cube.*',workdir)
     f+=myglob('image_full_vlow_QU.cube.*',workdir)
+    f+=myglob('*.archive',workdir)
 
-    while True:
-        s='cd '+workdir+'; rsync -avz --progress --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
-        print 'Running command:',s
-        retval=call(s,shell=True)
-        if retval==0:
-            break
-        print 'Non-zero return value',retval
-        if retval!=30:
-            raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
-
-    update_status(name,'Archived',workdir=workdir)
-        
+    do_rsync(name,basedir,f)
+    compressed_done=(len(myglob('*.archive',workdir))>0)
+    with SurveysDB() as sdb:
+        idd=sdb.get_field(name)
+        idd['status']='Archived'
+        idd['archive_version']=1 if compressed_done else 0
+        tag_field(sdb,idd,workdir=workdir)
+        sdb.set_field(idd)
+    
 if __name__=='__main__':
     import sys
     do_upload(sys.argv[1],sys.argv[2])
