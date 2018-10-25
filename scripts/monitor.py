@@ -70,7 +70,7 @@ while True:
 
     if upload_thread is None:
         for r in result:
-            if r['archive_version']==0 and len(glob.glob(basedir+'/'+r['id']+'/*.archive'))>0:
+            if r['archive_version']<2 and len(glob.glob(basedir+'/'+r['id']+'/*.archive'))>0:
                 upload_name=r['id']
                 print 'We need to upload the archived MSs for %s' % upload_name
                 upload_thread=threading.Thread(target=do_upload_compressed, args=(upload_name,basedir))

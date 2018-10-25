@@ -14,10 +14,10 @@ def myglob(g,workdir):
     f=glob.glob(workdir+'/'+g)
     return [os.path.basename(file) for file in f]
 
-def images(rootname):
+def images(rootname,workdir):
     l=[rootname+'.'+f+'.fits' for f in ['app.restored','int.restored','int.model','int.residual']]
     n=1
-    while os.path.isfile(rootname+'.mask%02i.fits' % n):
+    while os.path.isfile(workdir+'/'+rootname+'.mask%02i.fits' % n):
         n+=1
     if n>1:
         l.append(rootname+'.mask%02i.fits' % (n-1))
@@ -51,11 +51,13 @@ def do_rsync(name,basedir,f):
 def do_upload_compressed(name,basedir):
     workdir=basedir+'/'+name
     f=myglob('*.archive',workdir)
+    f+=images('image_full_ampphase_di_m.NS',workdir)
+    f+=images('image_full_low_m',workdir)
 
     do_rsync(name,basedir,f)
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
-        idd['archive_version']=1
+        idd['archive_version']=2
         sdb.set_field(idd)
     
         
@@ -70,8 +72,8 @@ def do_upload(name,basedir):
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
-    f+=images('image_full_ampphase_di_m.NS')
-    f+=images('image_full_low_m')
+    f+=images('image_full_ampphase_di_m.NS',workdir)
+    f+=images('image_full_low_m',workdir)
     f+=shiftimages('image_full_ampphase_di_m.NS')
     for i in range(3):
         f+=shiftimages('image_full_ampphase_di_m.NS_Band%i' %i)
@@ -85,7 +87,7 @@ def do_upload(name,basedir):
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
         idd['status']='Archived'
-        idd['archive_version']=1 if compressed_done else 0
+        idd['archive_version']=2 if compressed_done else 0
         tag_field(sdb,idd,workdir=workdir)
         sdb.set_field(idd)
     
