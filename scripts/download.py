@@ -62,8 +62,6 @@ def download_dataset(server,root,workdir='.'):
                 else:
                     break
 
-                #with open(workdir+'/'+f, 'wb') as out_file:
-                #shutil.copyfileobj(response.raw, out_file)
             del response
     return True
     
