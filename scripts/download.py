@@ -57,8 +57,8 @@ def download_dataset(server,root,workdir='.'):
                             if chunk:
                                 fd.write(chunk)
                 except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
-                            print 'Connection error! sleeping 30 seconds before retry...'
-                            sleep(30) # back to the connection
+                    print 'Connection error! sleeping 30 seconds before retry...'
+                    sleep(30) # back to the connection
                 else:
                     break
 
