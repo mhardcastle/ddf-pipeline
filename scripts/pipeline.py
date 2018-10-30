@@ -1491,7 +1491,8 @@ def main(o=None):
                 os.remove(f)
 
     if o['compress_ms']:
-        os.system('archivems.sh')
+        separator('Compressing MS for archive')
+        os.system('archivems.sh .')
                 
     separator('Write summary and tidy up')
     summary(o)

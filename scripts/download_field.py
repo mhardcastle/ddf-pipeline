@@ -19,7 +19,7 @@ def download_field(fname,basedir=None,force=False):
         if result is None:
             print 'Field',fname,'does not exist in the database'
             sys.exit(1)
-        if result['status']!='Not started':
+        if result['status']!='Not started' and result['status']!='D/L failed':
             print 'Field',fname,'has status',result['status']
             if not force:
                 return False

@@ -9,5 +9,5 @@
 eval /usr/bin/modulecmd bash load gcc-6.4
 source /soft/lofar-071018/init.sh
 
-cd $1
+cd ${1-.}
 python $DDF_DIR/ddf-pipeline/scripts/archivems.py

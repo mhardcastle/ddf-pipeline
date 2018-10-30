@@ -35,16 +35,35 @@ def download_dataset(server,root,workdir='.'):
             print 'Downloading',f
             url=server+u
             print url
+            filename=workdir+'/'+f
             while True:
+                connected=False
+                while not connected:
+                    try:
+                        print 'Opening connection'
+                        response = requests.get(url, stream=True,verify=False,timeout=60)
+                        if response.status_code!=200:
+                            print response.headers
+                            raise RuntimeError('Code was %i' % response.status_code)
+                    except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+                        print 'Connection error! sleeping 30 seconds before retry...'
+                        sleep(30)
+                    else:
+                        connected=True
                 try:
-                    response = requests.get(url, stream=True,verify=False,timeout=300)
+                    print 'Downloading'
+                    with open(filename, 'wb') as fd:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                fd.write(chunk)
                 except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
-                    print 'Connection error! sleeping 60 seconds before retry...'
-                    sleep(60)
+                            print 'Connection error! sleeping 30 seconds before retry...'
+                            sleep(30) # back to the connection
                 else:
                     break
-            with open(workdir+'/'+f, 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
+
+                #with open(workdir+'/'+f, 'wb') as out_file:
+                #shutil.copyfileobj(response.raw, out_file)
             del response
     return True
     
