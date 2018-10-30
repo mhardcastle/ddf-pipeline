@@ -1402,27 +1402,6 @@ def main(o=None):
         # apply the offsets
         ddf_shift('image_full_ampphase_di_m.NS',facet_offset_file,options=o,catcher=catcher)
     
-    if o['do_dynspec']:
-        separator('Dynamic spectra')
-        LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
-        m=MSList(o['full_mslist'])
-        uobsid = set(m.obsids)
-    
-        for obsid in uobsid:
-            warn('Running ms2dynspec for obsid %s' % obsid)
-            umslist='mslist-%s.txt' % obsid
-            print 'Writing temporary ms list',umslist
-            with open(umslist,'w') as file:
-                for ms,ob in zip(m.mss,m.obsids):
-                    if ob==obsid:
-                        file.write(ms+'\n')
-
-            g=glob.glob('DynSpec*'+obsid+'*')
-            if len(g)>0:
-                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
-            else:
-                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(umslist,colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
-                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
     spectral_mslist=None
     if o['spectral_restored']:
@@ -1489,6 +1468,30 @@ def main(o=None):
         if o['delete_compressed']:
             for f in flist:
                 os.remove(f)
+
+    if o['do_dynspec']:
+        separator('Dynamic spectra')
+        LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
+        m=MSList(o['full_mslist'])
+        uobsid = set(m.obsids)
+    
+        for obsid in uobsid:
+            LastImageI="image_full_ampphase_di_m.NS.app.restored.fits"
+            LastImageV="image_full_low_stokesV.dirty.fits"
+            warn('Running ms2dynspec for obsid %s' % obsid)
+            umslist='mslist-%s.txt' % obsid
+            print 'Writing temporary ms list',umslist
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
+
+            g=glob.glob('DynSpec*'+obsid+'*')
+            if len(g)>0:
+                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+            else:
+                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s"%(umslist,colname,CurrentDDkMSSolName,LastImageI,LastImageV,o['nobar'],o["SolsDir"])
+                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
 
     separator('Write summary and tidy up')
     summary(o)
