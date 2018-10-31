@@ -10,9 +10,11 @@ from time import sleep
 import sys
 
 def download_dataset(server,root,workdir='.'):
+    print server+root
     page=requests.get(server+root,verify=False)
     print page.status_code
     if page.status_code!=200:
+        print page.headers
         return False
     print page.headers['content-type']
     tree=html.fromstring(page.text)
