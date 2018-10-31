@@ -19,7 +19,9 @@ def unpack(workdir='.'):
     for f in files:
         fn=os.path.basename(f)
         print 'Unpacking',fn
-        os.system('cd '+workdir+'; tar xf '+f)
+        result=os.system('cd '+workdir+'; tar xf '+f)
+        if result!=0:
+            raise RuntimeError('Untar failed')
         if os.path.isdir(workdir+'/prefactor'):
             os.system('cd '+workdir+'; mv prefactor/results/*.ms .')
         elif os.path.isdir(workdir+'/scratch'):

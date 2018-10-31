@@ -1490,6 +1490,10 @@ def main(o=None):
             for f in flist:
                 os.remove(f)
 
+    if o['compress_ms']:
+        separator('Compressing MS for archive')
+        os.system('archivems.sh .')
+                
     separator('Write summary and tidy up')
     summary(o)
 

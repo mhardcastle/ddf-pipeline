@@ -23,14 +23,13 @@ def update_status(name,status,time=None,workdir=None):
     else:
         id=name
         
-    sdb=SurveysDB()
-    idd=sdb.get_field(id)
-    idd['status']=status
-    tag_field(sdb,idd,workdir=workdir)
-    if time is not None and idd[time] is None:
-        idd[time]=datetime.datetime.now()
-    sdb.set_field(idd)
-    sdb.close()
+    with SurveysDB() as sdb:
+        idd=sdb.get_field(id)
+        idd['status']=status
+        tag_field(sdb,idd,workdir=workdir)
+        if time is not None and idd[time] is None:
+            idd[time]=datetime.datetime.now()
+        sdb.set_field(idd)
 
 def tag_field(sdb,idd,workdir=None):
     # Add location and user tags
