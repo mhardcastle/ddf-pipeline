@@ -377,7 +377,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
-                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None):
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
+                SkipSmooth=False,PreApplySols=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -422,6 +423,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
             
+            if PreApplySols:
+                runcommand+=' --PreApplySols=[%s]'%PreApplySols
+
                 
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
@@ -443,7 +447,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
                 
                 
-                
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
@@ -457,8 +460,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
     if MergeSmooth:
-        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs)
-
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,SkipSmooth=SkipSmooth)
+        
 
 
 
@@ -531,7 +534,7 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
@@ -565,9 +568,12 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
             run('MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time),dryrun=dryrun)
+            
         checkname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+        elif SkipSmooth:
+            warn('Skipping smoothing Solutions file')
         else:
             run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=%s'%(ddsols,start_time,ddsols,start_time,o['smoothingtype']),dryrun=dryrun)
 
@@ -589,8 +595,16 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 	            warn('Symlink ' + symsolname + ' already exists, recreating')
                     os.unlink(symsolname)
 
-                os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
-        outname = ddsols + '_smoothed'
+                if not SkipSmooth:
+                    os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
+                else:
+                    os.symlink(os.path.abspath('%s_%s_merged.npz'%(ddsols,start_time)),symsolname)
+                    
+                    
+        if SkipSmooth:
+            outname = ddsols + '_merged'
+        else:
+            outname = ddsols + '_smoothed'
 
     return outname
 
@@ -1271,7 +1285,23 @@ def main(o=None):
                                     MergeSmooth=o['smoothing'],
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
+    CurrentDDkMSSolName_FastSmoothed=CurrentDDkMSSolName
+    
+    CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
+                                    o['full_mslist'],'DDS3_full_slow',
+                                    colname=colname,
+                                    SolverType="CohJones",
+                                    clusterfile=ClusterFile,
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    uvrange=[o['uvmin_very_slow'],1000.],
+                                    wtuv=o['wtuv'],
+                                    robust=o['solutions_robust'],
+                                    SkipSmooth=True,
+                                    dt=o['dt_very_slow'],catcher=catcher,
+                                    PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
+    CurrentDDkMSSolName=[CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName]
+    
     if o['low_psf_arcsec'] is not None:
         # low-res image requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
