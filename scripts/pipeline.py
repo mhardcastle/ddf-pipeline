@@ -1290,7 +1290,7 @@ def main(o=None):
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
                                     o['full_mslist'],'DDS3_full_slow',
                                     colname=colname,
-                                    SolverType="KAFCA",
+                                    SolverType="CohJones",
                                     clusterfile=ClusterFile,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     uvrange=[o['uvmin_very_slow'],1000.],
