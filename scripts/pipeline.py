@@ -1296,11 +1296,11 @@ def main(o=None):
                                     uvrange=[o['uvmin_very_slow'],1000.],
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
-                                    SkipSmooth=True,
+                                    SkipSmooth=True,MergeSmooth=True,
                                     dt=o['dt_very_slow'],catcher=catcher,
                                     PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
-    CurrentDDkMSSolName=[CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName]
+    CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
     
     if o['low_psf_arcsec'] is not None:
         # low-res image requested
