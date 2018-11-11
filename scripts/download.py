@@ -11,7 +11,16 @@ import sys
 
 def download_dataset(server,root,workdir='.'):
     print server+root
-    page=requests.get(server+root,verify=False)
+    while True:
+        try:
+            print 'Downloading index page',server+root
+            page=requests.get(server+root,verify=False,timeout=60)
+        except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+            print 'Connection error! sleeping 30 seconds before retry...'
+            sleep(30)
+        else:
+            break
+    
     print page.status_code
     if page.status_code!=200:
         print page.headers
@@ -38,7 +47,8 @@ def download_dataset(server,root,workdir='.'):
             url=server+u
             print url
             filename=workdir+'/'+f
-            while True:
+            downloaded=False
+            while not downloaded:
                 connected=False
                 while not connected:
                     try:
@@ -47,6 +57,7 @@ def download_dataset(server,root,workdir='.'):
                         if response.status_code!=200:
                             print response.headers
                             raise RuntimeError('Code was %i' % response.status_code)
+                        esize=long(response.headers['Content-Length'])
                     except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
                         print 'Connection error! sleeping 30 seconds before retry...'
                         sleep(30)
@@ -58,13 +69,20 @@ def download_dataset(server,root,workdir='.'):
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
                                 fd.write(chunk)
+                    fsize=os.path.getsize(filename)
+                    if esize!=fsize:
+                        print 'Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize)
+                    else:
+                        print 'Download successful'
+                        downloaded=True
+                        
                 except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
                     print 'Connection error! sleeping 30 seconds before retry...'
                     sleep(30) # back to the connection
-                else:
-                    break
+
 
             del response
+            
     return True
     
 if __name__=='__main__':

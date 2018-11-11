@@ -27,6 +27,7 @@ def unpack(workdir='.'):
         elif os.path.isdir(workdir+'/scratch'):
             os.system('cd '+workdir+'; mv scratch/*/*/*/Output/*.ms .')
             os.system('cd '+workdir+'; mv scratch/*/*/Output/*.ms .')
+            os.system('cd '+workdir+'; mv scratch/*/Output/*.ms .')
         elif len(glob.glob(workdir+'/*.ms'))>0:
             # they can appear in the root directory!
             pass

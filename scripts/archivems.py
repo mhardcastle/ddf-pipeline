@@ -79,7 +79,7 @@ for ms in msfiles:
       msout = dirname + '/' + ms + '.archive'
     else:
       msout = ms + '.archive' # write ms in current working directory
-    
+
     cmd  = 'NDPPP msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
     cmd += 'msout.storagemanager=dysco msout=' + msout  + ' steps=[] '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '

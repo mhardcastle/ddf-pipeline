@@ -11,7 +11,10 @@ def get_next():
     sdb.cur.execute('select fields.id as id,sum(nsb*integration/232) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) where fields.status="Not started" and observations.status="DI_processed" and (gal_b>10 or gal_b<-10) group by fields.id having s>7 order by fields.priority desc,ra desc')
     results=sdb.cur.fetchall()
     sdb.close()
-    return results[0]['id']
+    if len(results)>0:
+        return results[0]['id']
+    else:
+        return None
 
 def update_status(name,status,time=None,workdir=None):
     # utility function to just update the status of an observation

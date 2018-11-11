@@ -53,11 +53,12 @@ while True:
         print 'Upload thread seems to have terminated'
         upload_thread=None
 
-    if 'Queued' in d and d['Queued']<queuelimit and download_thread is None:
+    if ('Queued' not in d or d['Queued']<queuelimit) and download_thread is None:
         download_name=get_next()
-        print 'We need to download a new file (%s)!' % download_name
-        download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
-        download_thread.start()
+        if download_name is not None:
+            print 'We need to download a new file (%s)!' % download_name
+            download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
+            download_thread.start()
 
     if 'Complete' in d and upload_thread is None:
         for r in result:
