@@ -589,7 +589,10 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         
         for i in range(0,len(full_sollist)):
             if start_times[i] == start_time:
-		symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+		if not SkipSmooth:
+                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+                else:
+                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
                 # always overwrite the symlink to allow the dataset to move -- costs nothing
                 if os.path.islink(symsolname):
 	            warn('Symlink ' + symsolname + ' already exists, recreating')
@@ -1348,8 +1351,8 @@ def main(o=None):
             report('Making the full-bw extended source mask')
             make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
             report('Make_extended_mask returns')
-            extmask='full-mask-low.fits'
-            make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        extmask='full-mask-low.fits'
+        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
