@@ -1298,14 +1298,14 @@ def main(o=None):
     CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
                                     o['full_mslist'],'DDS3_full_slow',
                                     colname=colname,
-                                    SolverType="CohJones",
+                                    SolverType="KAFCA",
                                     clusterfile=ClusterFile,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     uvrange=[o['uvmin_very_slow'],1000.],
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
                                     SkipSmooth=True,MergeSmooth=True,
-                                    SigmaFilterOutliers=5.,
+                                    #SigmaFilterOutliers=5.,
                                     dt=o['dt_very_slow'],catcher=catcher,
                                     PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
