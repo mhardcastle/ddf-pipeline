@@ -1451,33 +1451,36 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
-        separator('Stokes Q and U cubes')
         from do_polcubes import do_polcubes
-        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+        separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
-        if o['compress_polcubes']:
-            for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']:
-                if os.path.isfile(cubefile+'.fz'):
-                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
-                else:
-                    report('Starting compression thread for '+cubefile)
-                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
-                    thread.start()
-                    cthreads.append(thread)
-                    flist.append(cubefile)
-        vlow_uvrange=[o['image_uvmin'],1.6]
-        do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
-        if o['compress_polcubes']:
-            for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']:
-                if os.path.isfile(cubefile+'.fz'):
-                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
-                else:
-                    report('Starting compression thread for '+cubefile)
-                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
-                    thread.start()
-                    cthreads.append(thread)
-                    flist.append(cubefile)
+        if o['restart'] and o['compress_polcubes'] and o['delete_compressed'] and os.path.isfile('image_full_low_QU.cube.dirty.corr.fits.fz'):
+            warn('Compressed QU cube product exists, not making new images')
+        else:
+            do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            if o['compress_polcubes']:
+                for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']:
+                    if os.path.isfile(cubefile+'.fz'):
+                        warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                    else:
+                        report('Starting compression thread for '+cubefile)
+                        thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                        thread.start()
+                        cthreads.append(thread)
+                        flist.append(cubefile)
+            vlow_uvrange=[o['image_uvmin'],1.6]
+            do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
+            if o['compress_polcubes']:
+                for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']:
+                    if os.path.isfile(cubefile+'.fz'):
+                        warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                    else:
+                        report('Starting compression thread for '+cubefile)
+                        thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                        thread.start()
+                        cthreads.append(thread)
+                        flist.append(cubefile)
         
     if o['stokesv']:
         separator('Stokes V image')
