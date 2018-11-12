@@ -378,7 +378,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
-                SkipSmooth=False,PreApplySols=None):
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -460,7 +460,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
     if MergeSmooth:
-        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,SkipSmooth=SkipSmooth)
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers)
         
 
 
@@ -534,7 +535,7 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
@@ -567,7 +568,10 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
-            run('MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time),dryrun=dryrun)
+            ss='MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time)
+            if SigmaFilterOutliers:
+                ss+=" --SigmaFilterOutliers %f"%SigmaFilterOutliers
+            run(ss,dryrun=dryrun)
             
         checkname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
@@ -578,6 +582,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=%s'%(ddsols,start_time,ddsols,start_time,o['smoothingtype']),dryrun=dryrun)
 
         smoothoutname='%s_%s_smoothed.npz'%(ddsols,start_time)
+
         if InterpToMSListFreqs:
             interp_outname="%s_%s_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
@@ -1300,6 +1305,7 @@ def main(o=None):
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
                                     SkipSmooth=True,MergeSmooth=True,
+                                    SigmaFilterOutliers=5.,
                                     dt=o['dt_very_slow'],catcher=catcher,
                                     PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
