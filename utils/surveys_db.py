@@ -1,9 +1,14 @@
 import sshtunnel
 import socket
-import MySQLdb as mdb
-import MySQLdb.cursors as mdbcursors
 import os
 import datetime
+try:
+    import MySQLdb as mdb
+    import MySQLdb.cursors as mdbcursors
+except ImportError:
+    import pymysql as mdb
+    import pymysql.cursors as mdbcursors
+
 
 def get_next():
     # return the name of the top-priority field with appropriate status
