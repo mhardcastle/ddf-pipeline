@@ -1513,13 +1513,13 @@ def main(o=None):
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
-        LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
+        LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
         m=MSList(o['full_mslist'])
         uobsid = set(m.obsids)
     
         for obsid in uobsid:
-            LastImageI="image_full_ampphase_di_m.NS.app.restored.fits"
-            LastImageV="image_full_low_stokesV.dirty.fits"
+            LastImageI="image_full_ampphase_di_m.NS.int.restored.fits"
+            LastImageV="image_full_low_stokesV.dirty.corr.fits"
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
             print 'Writing temporary ms list',umslist
@@ -1532,7 +1532,7 @@ def main(o=None):
             if len(g)>0:
                 warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
             else:
-                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s"%(umslist,colname,CurrentDDkMSSolName,LastImageI,LastImageV,o['nobar'],o["SolsDir"])
+                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1"%(umslist,colname,CurrentDDkMSSolName,LastImageI,LastImageV,o['nobar'],o["SolsDir"])
                 run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
 
     separator('Write summary and tidy up')
