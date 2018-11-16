@@ -842,65 +842,6 @@ def subtractOuterSquare(o):
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
             catcher=catcher)
 
-    '''
-    uvrange=[o['image_uvmin'],o['uvmax']]
-    killms_uvrange=[0,1000]
-    if o['solutions_uvmin'] is not None:
-        killms_uvrange[0]=o['solutions_uvmin']
-
-
-    if o['catch_signal']:
-        catcher=Catcher()
-    else:
-        catcher=None
-
-    ddf_image('wide_image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=wide_uvrange,catcher=catcher,imsize=NPixLarge)
-    external_mask='wide_external_mask.fits'
-    make_external_mask(external_mask,'wide_image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-
-    # Deep SSD clean with this external mask and automasking
-    ddf_image('wide_image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',majorcycles=4,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,imsize=NPixLarge)
-
-    # make a mask from the final image
-    make_mask('wide_image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
-    mask_dicomodel('wide_image_dirin_SSD.DicoModel','wide_image_dirin_SSD.app.restored.fits.mask.fits','wide_image_dirin_SSD_masked.DicoModel',catcher=catcher)
-
-    # cluster to get facets
-    if not os.path.exists('wide_image_dirin_SSD.Norm.fits'):
-        os.symlink('wide_image_dirin_SSD_init.Norm.fits','wide_image_dirin_SSD.Norm.fits')
-    if not os.path.exists('wide_image_dirin_SSD.dirty.fits'):
-        os.symlink('wide_image_dirin_SSD_init.dirty.fits','wide_image_dirin_SSD.dirty.fits')
-    if make_model('wide_image_dirin_SSD.app.restored.fits.mask.fits','wide_image_dirin_SSD',catcher=catcher):
-        # if this step runs, clear the cache to remove facet info
-        clearcache(o['mslist'],o)
-
-    #if o['auto_uvmin']:
-    #    killms_uvrange[0]=optimize_uvmin('wide_image_dirin_SSD',o['mslist'],colname)
-
-    killms_data('wide_image_dirin_SSD',o['full_mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=6,uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
-
-    # predict outside the central rectangle
-    FileHasPredicted='wide_image_phase1_predict.HasPredicted'
-    if o['restart'] and os.path.isfile(FileHasPredicted):
-        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
-    else:
-        ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
-                  cleanmode='SSD',majorcycles=3,automask=True,automask_threshold=o['thresholds'][1],
-                  ddsols='wide_killms_p1',
-                  applysols='AP',#normalization=o['normalize'][0],
-                  peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
-                  MachineMode="Predict",NpixMaskSquare=NPixSmall,dicomodel_base='wide_image_dirin_SSD_masked')
-        os.system("touch %s"%FileHasPredicted)
-
-
-    # subtract predicted visibilities
-    FileHasSubtracted='wide_image_phase1_predict.HasSubtracted'
-    if o['restart'] and os.path.isfile(FileHasSubtracted):
-        warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
-    else:
-        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
-        os.system("touch %s"%FileHasSubtracted)
-    '''
 
 def main(o=None):
     if o is None:
