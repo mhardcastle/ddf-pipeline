@@ -180,7 +180,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
-        runcommand += " --Output-Mode=%s --Predict-ColName %s"%PredictSettings
+        if len(PredictSettings) == 2:
+            runcommand += " --Output-Mode=%s --Predict-ColName %s"%PredictSettings
+        elif len(PredictSettings) == 3:
+            runcommand += " --Output-Mode=%s --Predict-ColName %s --Predict-MaskSquare [0,%i]"%PredictSettings
+        else:
+            raise RuntimeError('PredictSettings has the wrong dimensions %s '%PredictSettings)
 
     if beamsize_minor is not None:
         runcommand += ' --Output-RestoringBeam %f,%f,%f'%(beamsize,beamsize_minor,beamsize_pa)
@@ -709,6 +714,194 @@ def cubical_data(mslist,
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
         
 
+def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
+    from pyrap.tables import table
+    f=file(mslist)
+    mslist=f.readlines()
+    mslist=[msname.replace("\n","") for msname in mslist]
+    for msname in mslist:
+        report('Subtracting: %s = %s - %s'%(out_colname,colname_a,colname_b))
+        t=table(msname,readonly=False)
+        d=t.getcol(colname_a)
+        p=t.getcol(colname_b)
+        d-=p
+        if out_colname not in t.colnames():
+            report('Adding column %s in %s'%(out_colname,msname))
+            desc=t.getcoldesc(colname_a)
+            desc["name"]=out_colname
+            desc['comment']=desc['comment'].replace(" ","_")
+            t.addcols(desc)
+        t.putcol(out_colname,d)
+        t.close()
+    
+
+def subtractOuterSquare(o):
+    
+    wide_imsize=o['wide_imsize']
+    NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
+    colname=o['colname']
+
+
+    wide_uvrange=[o['image_uvmin'],2.5*206.0/o['wide_psf_arcsec']]
+    
+    killms_uvrange=[0,1000]
+    if o['solutions_uvmin'] is not None:
+        killms_uvrange[0]=o['solutions_uvmin']
+
+
+    if o['catch_signal']:
+        catcher=Catcher()
+    else:
+        catcher=None
+    
+    
+    #if o['wide_psf_arcsec'] is not None:
+    # wide-res image requested
+    #if o['wide_imsize'] is not None:
+        #wide_imsize=o['wide_imsize'] # allow over-ride
+    #else:
+        #wide_imsize=o['imsize']*o['cellsize']/o['wide_cell']
+    extmask=None
+
+    ddf_image('image_full_wide',o['mslist'],
+                cleanmask=extmask,
+                cleanmode='SSD',
+                AllowNegativeInitHMP=True,
+                majorcycles=2,robust=o['wide_robust'],
+                colname=colname,use_dicomodel=False,
+                uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
+                imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
+                apply_weights=False,
+                smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],
+                catcher=catcher)
+
+
+    external_mask='wide_external_mask.fits'
+    make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
+    
+    make_mask('image_full_wide.app.restored.fits',3.0,external_mask=external_mask,catcher=catcher)
+    
+    ddf_image('image_full_wide_im',o['mslist'],
+            cleanmask='image_full_wide.app.restored.fits.mask.fits',
+            cleanmode='SSD',
+            AllowNegativeInitHMP=True,
+            majorcycles=1,robust=o['wide_robust'],
+            uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
+            imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
+            apply_weights=False,
+            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,
+            reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
+            catcher=catcher)
+
+
+    # predict outside the central rectangle
+    
+    NpixMaskSquare = np.floor(o['imsize'] * o['cellsize'] / o['wide_cell'])
+    
+    FileHasPredicted='image_full_wide_predict.HasPredicted'
+    if o['restart'] and os.path.isfile(FileHasPredicted):
+        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
+    else:
+        ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
+            cleanmask='image_full_wide.app.restored.fits.mask.fits',
+                  #cleanmode='SSD',majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
+                  #ddsols='wide_killms_p1',
+                  #applysols='AP',#normalization=o['normalize'][0],
+                  peakfactor=0.001,
+                  apply_weights=False,
+                  #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
+                  beamsize=o['wide_psf_arcsec'],
+                  imsize=o['wide_imsize'],cellsize=o['wide_cell'],
+                  use_dicomodel=True,catcher=catcher,
+                  PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),
+                  dicomodel_base='image_full_wide_im')
+        os.system("touch %s"%FileHasPredicted)
+
+
+
+    # subtract predicted visibilities
+    FileHasSubtracted='image_full_wide_predict.HasSubtracted'
+    if o['restart'] and os.path.isfile(FileHasSubtracted):
+        warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
+    else:
+        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+        os.system("touch %s"%FileHasSubtracted)
+
+
+    ## test subtracted...
+    ## sanity check
+    ddf_image('image_full_wide_im_sub',o['mslist'],
+            cleanmask='image_full_wide.app.restored.fits.mask.fits',
+            cleanmode='SSD',
+            AllowNegativeInitHMP=True,
+            majorcycles=1,robust=o['wide_robust'],
+            uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
+            imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
+            apply_weights=False,
+            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',
+            reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
+            catcher=catcher)
+
+    '''
+    uvrange=[o['image_uvmin'],o['uvmax']]
+    killms_uvrange=[0,1000]
+    if o['solutions_uvmin'] is not None:
+        killms_uvrange[0]=o['solutions_uvmin']
+
+
+    if o['catch_signal']:
+        catcher=Catcher()
+    else:
+        catcher=None
+
+    ddf_image('wide_image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,apply_weights=o['apply_weights'][0],uvrange=wide_uvrange,catcher=catcher,imsize=NPixLarge)
+    external_mask='wide_external_mask.fits'
+    make_external_mask(external_mask,'wide_image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+
+    # Deep SSD clean with this external mask and automasking
+    ddf_image('wide_image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',majorcycles=4,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,peakfactor=0.05,colname=colname,clusterfile=None,automask=True,automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher,imsize=NPixLarge)
+
+    # make a mask from the final image
+    make_mask('wide_image_dirin_SSD.app.restored.fits',o['thresholds'][0],external_mask=external_mask,catcher=catcher)
+    mask_dicomodel('wide_image_dirin_SSD.DicoModel','wide_image_dirin_SSD.app.restored.fits.mask.fits','wide_image_dirin_SSD_masked.DicoModel',catcher=catcher)
+
+    # cluster to get facets
+    if not os.path.exists('wide_image_dirin_SSD.Norm.fits'):
+        os.symlink('wide_image_dirin_SSD_init.Norm.fits','wide_image_dirin_SSD.Norm.fits')
+    if not os.path.exists('wide_image_dirin_SSD.dirty.fits'):
+        os.symlink('wide_image_dirin_SSD_init.dirty.fits','wide_image_dirin_SSD.dirty.fits')
+    if make_model('wide_image_dirin_SSD.app.restored.fits.mask.fits','wide_image_dirin_SSD',catcher=catcher):
+        # if this step runs, clear the cache to remove facet info
+        clearcache(o['mslist'],o)
+
+    #if o['auto_uvmin']:
+    #    killms_uvrange[0]=optimize_uvmin('wide_image_dirin_SSD',o['mslist'],colname)
+
+    killms_data('wide_image_dirin_SSD',o['full_mslist'],'wide_killms_p1',colname=colname,dicomodel='wide_image_dirin_SSD_masked.DicoModel',clusterfile='wide_image_dirin_SSD.npy.ClusterCat.npy',niterkf=6,uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],catcher=catcher)
+
+    # predict outside the central rectangle
+    FileHasPredicted='wide_image_phase1_predict.HasPredicted'
+    if o['restart'] and os.path.isfile(FileHasPredicted):
+        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
+    else:
+        ddf_image('wide_image_phase1_predict',o['full_mslist'],colname=colname,robust=o['image_robust'],imsize=NPixLarge,
+                  cleanmode='SSD',majorcycles=3,automask=True,automask_threshold=o['thresholds'][1],
+                  ddsols='wide_killms_p1',
+                  applysols='AP',#normalization=o['normalize'][0],
+                  peakfactor=0.01,apply_weights=o['apply_weights'][1],uvrange=uvrange,use_dicomodel=True,catcher=catcher,
+                  MachineMode="Predict",NpixMaskSquare=NPixSmall,dicomodel_base='wide_image_dirin_SSD_masked')
+        os.system("touch %s"%FileHasPredicted)
+
+
+    # subtract predicted visibilities
+    FileHasSubtracted='wide_image_phase1_predict.HasSubtracted'
+    if o['restart'] and os.path.isfile(FileHasSubtracted):
+        warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
+    else:
+        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+        os.system("touch %s"%FileHasSubtracted)
+    '''
+
 def main(o=None):
     if o is None:
         o=MyPickle.Load("ddf-pipeline.last")
@@ -808,6 +1001,17 @@ def main(o=None):
             die('Redofrom option not supported')
         else:
             do_archive(o,alist)
+
+    # ##########################################################
+    # subtract outer square
+    if o['do_wide']:
+        subtractOuterSquare(o)
+        colname="DATA_SUB"
+        #ReduceFactor=o['fact_reduce_field']
+        #NPixSmall=int(o['imsize']/float(ReduceFactor))
+        #o['imsize']=NPixSmall
+        #o['ndir']=int(o['ndir']/float(ReduceFactor))
+
 
     # ##########################################################
     # Initial dirty image to allow an external (TGSS) mask to be made
