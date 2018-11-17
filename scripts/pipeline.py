@@ -1461,7 +1461,7 @@ def main(o=None):
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
-        if o['restart'] and o['compress_polcubes'] and o['delete_compressed'] and os.path.isfile('image_full_low_QU.cube.dirty.corr.fits.fz'):
+        if o['restart'] and os.path.isfile('image_full_low_QU.cube.dirty.corr.fits.fz'):
             warn('Compressed QU cube product exists, not making new images')
         else:
             do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
