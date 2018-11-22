@@ -62,7 +62,7 @@ while True:
 
     if 'Complete' in d and upload_thread is None:
         for r in result:
-            if r['status']=='Complete':
+            if r['status']=='Complete' and r['archive_version']<3:
                 upload_name=r['id']
                 print 'We need to upload a new file (%s)!' % upload_name
                 upload_thread=threading.Thread(target=do_upload, args=(upload_name,basedir))
