@@ -107,6 +107,19 @@ def mask_region(infilename,ds9region,outfilename):
 
     return
 
+def mask_except_region(infilename,ds9region,outfilename):
+
+    hdu=fits.open(infilename)
+    hduflat = flatten(hdu)
+    map=hdu[0].data
+
+    r = pyregion.open(ds9region)
+    manualmask = r.get_mask(hdu=hduflat)
+    hdu[0].data[0][0][np.where(manualmask == False)] = 0.0
+    hdu.writeto(outfilename,overwrite=True)
+
+    return
+
 def flatten(f):
     """ Flatten a fits file so that it becomes a 2D image. Return new header and data """
 
@@ -247,6 +260,7 @@ obsid       = args['prefixname']
 dopredict   = True
 dosubtract  = True
 doconcat    = True
+dokmscal     = True
 doflagafter = args['aoflaggerafter']
 amplmax     = args['maxamplitude']  # flag data with amplitues above this number
 takeoutbeam = False # not supported by NDPPP #args['takeoutbeam']
@@ -256,6 +270,7 @@ aoflagger   = args['aoflaggerbefore']
 dysco       = args['nodysco']
 split       = args['split']  # ouput seperate ms for DDF pipeline
 
+colname = 'DATA_SUB'
 
 #print doflagafter, takeoutbeam, aoflagger, dysco, split
 
@@ -315,22 +330,39 @@ if dosubtract:
             d=t.getcol(args['column'])
 
 
-            if 'DATA_SUB' not in colnames:
+            if colname not in colnames:
                # Append new column containing all sources
                desc = t.getcoldesc(args['column'])
-               desc['name']='DATA_SUB'
+               desc['name']= colname
                t.addcols(desc)
-            print 'Writing DATA_SUB'
-            t.putcol('DATA_SUB',d-f)
+            print 'Writing %s'%colname
+            t.putcol(colname,d-f)
         else:
             print 'Warning, ', msfile, ' does not contain PREDICT_SUB and/or ' + args['column'] +', skipping.....'
         
         t.close()
 
     addextraweights(msfiles)
+
+if dokmscal:
+  outmask_target = 'inregionmask.fits'
+  outdico_target =   'image_full_ampphase_di_m_TAR.NS.DicoModel'
+
+  mask_except_region(fullmask,boxfile,outmask_target)
     
- 
- 
+  os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask_target,indico,outdico_target))
+
+  os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=image_dirin_SSD_m.npy.ClusterCat.npy --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=[0.100000,1000.000000] --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_TAR'")
+  
+  for ms in msfiles:
+
+
+
+    os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName Predict_DDT --dt 0.536871 --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --PolMode Scalar --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --ApplyToDir 0 --dt 1.0 --NChanSols 1'%(ms))
+  colname="DATA_SUB_CORRECTED"
+
+
+
 # can manually update mslist for other selection 
 #msfiles   = ascii.read('big-mslist.txt',data_start=0)
 #msfiles   = list(msfiles[:][msfiles.colnames[0]]) # convert to normal list of strings
@@ -343,7 +375,7 @@ if doconcat:
     #remove ms from the list where column DATA_SUB does not exist (to prevent NDPPP crash)
     for msnumber, ms in enumerate(msfiles):
       if os.path.isdir(ms):
-        if mscolexist(ms,'DATA_SUB'):
+        if mscolexist(ms,colname):
           msfilesconcat.append(ms)
         else:
           msfilesconcat.append('missing' + str(msnumber))
@@ -363,7 +395,7 @@ if doconcat:
         cmd += 'steps=[phaseshift,applybeam,average] '
       else: 
         cmd += 'steps=[phaseshift,average] '   
-    cmd += 'msin.datacolumn=DATA_SUB msin.missingdata=True '
+    cmd += 'msin.datacolumn=%s msin.missingdata=True '%colname
     if dysco:
       cmd += 'msout.storagemanager=dysco '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT '  
@@ -392,7 +424,7 @@ if doconcat:
         cmd += 'steps=[phaseshift,applybeam,average] '
       else: 
         cmd += 'steps=[phaseshift,average] '   
-    cmd += 'msin.datacolumn=DATA_SUB msin.missingdata=True '
+    cmd += 'msin.datacolumn=%s msin.missingdata=True '%colname
     if dysco:
       cmd += 'msout.storagemanager=dysco '
  
