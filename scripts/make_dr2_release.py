@@ -57,7 +57,7 @@ while True:
 
     if not skip_construct:
         separator('Preparing release directory')
-        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits']
+        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits']
 
         os.chdir(workdir+'/fields')
         for r in result:
@@ -88,31 +88,7 @@ while True:
 
     separator('Write web page')
 
-    outfile=open('/home/mjh/lofar-surveys/templates/dr2.html','w')
-    outfile.write('''{% extends "layout.html" %}
-{% set active_page = "dr2" %}
-{% block content %}
-<div class="title">
-          <h2>DR2: internal data release</h2>
-                </div>
-</div>
-<div id="page" class="container">
-<div class="content">
-<p>This page gives preliminary internal access to the second internal
-  data release (DR2). You can preview the images through a HIPS viewer and download full-quality DR2 mosaics and catalogues or pipeline products for individual fields. Later you will be able to search for images by co-ordinates.</p>
-<h3>HIPS previewer</h3>
-<ul>
-<li><a href="http://lofar.strw.leidenuniv.nl/LoTSS_DR2_high_hips">High-resolution preview</a> (best viewed in the Aladin app rather than a web browser)</li>
-<li><a href="http://lofar.strw.leidenuniv.nl/LoTSS_DR2_low_hips">Low-resolution preview</a></li>
-</ul>
-<h3>Mosaics</h3><br>
-<table id="table_id" class="display">
-<thead>
-<tr><th>Field name</th><th>RA</th><th>Dec</th><th>Full-res mosaic</th><th>Full-res rms map</th><th>Full-res residual</th><th>Low-res mosaic</th><th>Catalogue</th></tr>
-</thead>
-<tbody>
-''')
-
+    outfile=open('/home/mjh/lofar-surveys/templates/dr2-mosaics.html','w')
     for r in result:
         id=r['id']
         if os.path.isdir(workdir+'/mosaics/'+id):
@@ -123,44 +99,29 @@ while True:
             low=root+'low-mosaic-blanked.fits'
             cat=root+'mosaic.cat.fits'
             outfile.write('<tr><td>%s</td><td>%.3f</td><td>%.3f</td><td><a href=\"%s\">Download</a></td><td><a href=\"%s\">Download</a></td><td><a href=\"%s\">Download</a></td><td><a href=\"%s\">Download</a></td><td><a href=\"%s\">Download</a></td></tr>\n' % (id,r['ra'],r['decl'],f,rms,resid,low,cat))
+    outfile.close()
+    
+    outfile=open('/home/mjh/lofar-surveys/templates/dr2-fields.html','w')
 
-    outfile.write('''</tbody></table>
-    <h3>Fields</h3><br>
-    <table id="field_id" class="display">
-    <thead>
-    <tr><th>Field name</th><th>RA</th><th>Dec</th><th>Completed</th><th>Full-res image</th><th>Low-res image</th><th>Band images</th><th>Stokes V</th><th>Stokes QU</th></tr>
-    </thead>
-    <tbody>
-    ''')
     for r in result:
         id=r['id']
         lroot='downloads/DR2/fields/'+id+'/'
         if os.path.isdir(workdir+'/fields/'+id):
             fint=link('image_full_ampphase_di_m.NS_shift.int.facetRestored.fits',id,lroot,'True',workdir+'/fields/')
-            fapp=link('image_full_ampphase_di_m.NS_shift.int.facetRestored.fits',id,lroot,'App',workdir+'/fields/')
+            fapp=link('image_full_ampphase_di_m.NS_shift.app.facetRestored.fits',id,lroot,'App',workdir+'/fields/')
             lowint=link('image_full_low_m.int.restored.fits',id,lroot,'True',workdir+'/fields/')
             lowapp=link('image_full_low_m.app.restored.fits',id,lroot,'App',workdir+'/fields/')
             band=[]
             for i in range(3):
                 band.append(link('image_full_ampphase_di_m.NS_Band%i_shift.int.facetRestored.fits' % i,id,lroot,'%i' %i, workdir+'/fields/'))
             stokesv=link('image_full_low_stokesV.dirty.fits',id,lroot,'Download',workdir+'/fields/')
-            stokesqu=link('image_full_low_QU.cube.dirty.corr.fits.fz',id,lroot,'Low',workdir+'/fields/')
-            stokesquvlow=link('image_full_vlow_QU.cube.dirty.corr.fits.fz',id,lroot,'Vlow',workdir+'/fields/')
+            stokesqu=link('image_full_low_QU.cube.dirty.corr.fits.fz',id,lroot,'Low true',workdir+'/fields/')
+            stokesquvlow=link('image_full_vlow_QU.cube.dirty.corr.fits.fz',id,lroot,'Vlow true',workdir+'/fields/')
+            stokesqu_app=link('image_full_low_QU.cube.dirty.fits.fz',id,lroot,'Low app',workdir+'/fields/')
+            stokesquvlow_app=link('image_full_vlow_QU.cube.dirty.fits.fz',id,lroot,'Vlow app',workdir+'/fields/')
 
-            outfile.write('<tr><td>%s</td><td>%.3f</td><td>%.3f</td><td>%s</td><td>%s, %s</td><td>%s, %s</td><td>%s, %s, %s</td><td>%s</td><td>%s, %s</td></tr>\n' % (id,r['ra'],r['decl'],r['end_date'],fint,fapp,lowint,lowapp,band[0],band[1],band[2],stokesv,stokesqu,stokesquvlow))
+            outfile.write('<tr><td>%s</td><td>%.3f</td><td>%.3f</td><td>%s</td><td>%s, %s</td><td>%s, %s</td><td>%s, %s, %s</td><td>%s</td><td>%s, %s, %s, %s</td></tr>\n' % (id,r['ra'],r['decl'],r['end_date'],fint,fapp,lowint,lowapp,band[0],band[1],band[2],stokesv,stokesqu,stokesquvlow,stokesqu_app,stokesquvlow_app))
 
-    outfile.write('''<script>
-$(document).ready( function () { 
-$('#field_id').DataTable();                                                 
-} );                                                                            
-</script>
-''')
-    outfile.write('''</tbody></table>
-</div>
-</div>
-{% endblock %}
-
-''')
     outfile.close()
     separator('Sleeping')
     
