@@ -13,7 +13,7 @@ def get_next():
     sdb.close()
     return results[0]['id']
 
-def update_status(name,status,time=None,workdir=None):
+def update_status(name,status,time=None,workdir=None,av=None):
     # utility function to just update the status of an observation
     # name can be None (work it out from cwd), or string (field name)
 
@@ -29,6 +29,8 @@ def update_status(name,status,time=None,workdir=None):
     tag_field(sdb,idd,workdir=workdir)
     if time is not None and idd[time] is None:
         idd[time]=datetime.datetime.now()
+    if av is not None:
+        idd['archive_version']=av
     sdb.set_field(idd)
     sdb.close()
 

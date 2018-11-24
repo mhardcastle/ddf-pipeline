@@ -1293,25 +1293,28 @@ def main(o=None):
                                     MergeSmooth=o['smoothing'],
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
-    CurrentDDkMSSolName_FastSmoothed=CurrentDDkMSSolName
-    
-    CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
-                                    o['full_mslist'],'DDS3_full_slow',
-                                    colname=colname,
-                                    SolverType="KAFCA",
-                                    clusterfile=ClusterFile,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    uvrange=[o['uvmin_very_slow'],1000.],
-                                    wtuv=o['wtuv'],
-                                    robust=o['solutions_robust'],
-                                    SkipSmooth=True,MergeSmooth=True,
-                                    #SigmaFilterOutliers=5.,
-                                    dt=o['dt_very_slow'],catcher=catcher,
-                                    PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
+    if o['do_very_slow']:
+        separator("Very slow amplitude smooth (full mslist)")
+        CurrentDDkMSSolName_FastSmoothed=CurrentDDkMSSolName
 
-    CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
+        CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
+                                        o['full_mslist'],'DDS3_full_slow',
+                                        colname=colname,
+                                        SolverType="KAFCA",
+                                        clusterfile=ClusterFile,
+                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        uvrange=[o['uvmin_very_slow'],1000.],
+                                        wtuv=o['wtuv'],
+                                        robust=o['solutions_robust'],
+                                        SkipSmooth=True,MergeSmooth=True,
+                                        SigmaFilterOutliers=o['sigma_clip'],
+                                        dt=o['dt_very_slow'],catcher=catcher,
+                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
+
+        CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
     
     if o['low_psf_arcsec'] is not None:
+        separator("Low-resolution image")
         # low-res image requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
         if o['low_imsize'] is not None:
@@ -1548,7 +1551,7 @@ def main(o=None):
         full_clearcache(o,extras=extras)
     
     if use_database():
-        update_status(None,'Complete',time='end_date')
+        update_status(None,'Complete',time='end_date',av=3)
         
     return
 
