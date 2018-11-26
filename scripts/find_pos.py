@@ -29,8 +29,14 @@ def find_pos(ra,dec,name=None,offset=4):
 if __name__=='__main__':
     
     if len(sys.argv)==3:
-        ra=float(sys.argv[1])
-        dec=float(sys.argv[2])
+        try:
+            ra=float(sys.argv[1])
+            dec=float(sys.argv[2])
+        except ValueError:
+            c = SkyCoord(sys.argv[1],sys.argv[2], frame='icrs',unit=(u.hourangle, u.deg))
+            ra=float(c.ra.degree)
+            dec=float(c.dec.degree)
+            print ra,dec
         find_pos(ra,dec)
     elif len(sys.argv)==2:
         s=sys.argv[1][4:]

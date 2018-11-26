@@ -1516,6 +1516,12 @@ def main(o=None):
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
+
+        if o['bright_threshold'] is not None and o['method'] is not None:
+            warn('Finding bright sources from offsets list')
+            from find_bright_offset_sources import find_bright
+            find_bright(cutoff=o['bright_threshold'])
+        
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
         m=MSList(o['full_mslist'])
         uobsid = set(m.obsids)
@@ -1536,6 +1542,8 @@ def main(o=None):
                 warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
             else:
                 runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1"%(umslist,colname,CurrentDDkMSSolName,LastImageI,LastImageV,o['nobar'],o["SolsDir"])
+                if o['bright_threshold'] is not None:
+                    runcommand+=' --srclist brightlist.csv'
                 run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
 
     separator('Write summary and tidy up')
@@ -1551,7 +1559,7 @@ def main(o=None):
         full_clearcache(o,extras=extras)
     
     if use_database():
-        update_status(None,'Complete',time='end_date',av=3)
+        update_status(None,'Complete',time='end_date',av=4)
         
     return
 
