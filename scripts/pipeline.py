@@ -1144,7 +1144,12 @@ def main(o=None):
         summary(o)
         stop(3)
         
-    separator("DD calibration of full mslist")
+    # #########################################################################
+    # ###############                  BIG MSLIST               ###############
+    # #########################################################################
+
+    # check full mslist imaging weights
+    check_imaging_weight(o['full_mslist'])
 
     if o['bootstrap']:
         colname='SCALED_DATA'
@@ -1155,6 +1160,7 @@ def main(o=None):
     CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
 
+    separator("DI calibration of full mslist")
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1182,15 +1188,6 @@ def main(o=None):
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'],rootname='bootstrap',rmsfacet=o['rmsfacet'])
         external_mask='external_mask_ext.fits'
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
-
-
-    # #########################################################################
-    # ###############                  BIG MSLIST               ###############
-    # #########################################################################
-
-
-    # check full mslist imaging weights
-    check_imaging_weight(o['full_mslist'])
         
     # Compute the DD predict
     colname=o['colname']
