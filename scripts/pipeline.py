@@ -40,7 +40,7 @@ import threading
 from archive_old_solutions import do_archive
 from remove_bootstrap import remove_columns
 from killMS.Other import MyPickle
-from surveys_db import use_database,update_status
+from surveys_db import use_database,update_status,SurveysDB
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -729,7 +729,35 @@ def cubical_data(mslist,
             runcommand+=" --ReinitWeights 1"
             
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+
+def ingest_dynspec(obsid='*'):
+    report('Ingesting dynamic spectra (%s) into the database' % obsid)
+    with SurveysDB() as sdb:
+        sdb.cur.execute('lock table spectra write')
+        field=os.path.basename(os.getcwd())
+        g=glob.glob('DynSpecs_'+obsid)
+        for f in g:
+            if '.tgz' in f:
+                continue
+            bits=f.split('_')
+            obsid=bits[1]
+            catalogue=np.load(f+'/Catalog.npy')
+            # match filenames to names
+            fd={}
+            for r in catalogue:
+                fd[r['Name']]=''
+            gf=glob.glob(f+'/TARGET/*.fits')+glob.glob(f+'/OFF/*.fits')
+            for ff in gf:
+                hdu=fits.open(ff)
+                name=hdu[0].header['NAME']
+                assert(name in fd)
+                fd[name]=ff
+                hdu.close()
+            sdb.cur.execute('delete from spectra where obsid="%s"' % obsid)
+            for i,r in enumerate(catalogue):
+                sdb.cur.execute('insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), r['Name'], r['Type'], field, obsid, fd[r['Name']], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV']))
         
+    
 
 def main(o=None):
     if o is None:
@@ -1542,7 +1570,9 @@ def main(o=None):
                 if o['bright_threshold'] is not None:
                     runcommand+=' --srclist brightlist.csv'
                 run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
-
+                if use_database():
+                    ingest_dynspec(obsid)
+                
     separator('Write summary and tidy up')
     summary(o)
 
