@@ -210,11 +210,16 @@ def mscolexist(ms, colname):
 
 
 
-
+usehighres = True
 # Use MakeMask to remove sources within the cluster from the mask.
-fullmask    = 'image_full_ampphase_di_m.NS.mask01.fits'
-indico      = 'image_full_ampphase_di_m.NS.DicoModel'
-outdico     = 'image_full_ampphase_di_m_SUB.NS.DicoModel'
+if usehighres == True:
+  fullmask    = 'image_full_ampphase_di_m.NS.mask01.fits'
+  indico      = 'image_full_ampphase_di_m.NS.DicoModel'
+  outdico     = 'image_full_ampphase_di_m_SUB.NS.DicoModel'
+else:
+  fullmask    = 'image_full_low_m.mask01.fits'
+  indico      = 'image_full_low_m.DicoModel'
+  outdico     = 'image_full_low_m_SUB.DicoModel'
 
 parser = argparse.ArgumentParser(description='Keep soures insize box region, subtract everything else and create new ms')
 parser.add_argument('-b','--boxfile', help='boxfile, required argument', required=True, type=str)
@@ -283,8 +288,15 @@ fieldname = t.getcol('LOFAR_TARGET')['array'][0]
 t.close()
 
 msoutconcat   = fieldname + '_' + obsid + '.dysco.sub.shift.avg.weights.ms.archive'
-phasecenter = '[' + getregionboxcenter(boxfile) + ']'
-print phasecenter
+if boxfile != 'fullfield':
+  phasecenter = '[' + getregionboxcenter(boxfile) + ']'
+  dophaseshift = True
+  print phasecenter
+else:
+  dophaseshift = False
+  dokmscal = False
+
+
 
 outmask = 'cutoutmask.fits' #boxfile.split('.reg')[0] + 'mask' # just a name, can be anything
 
@@ -310,12 +322,15 @@ if dopredict:
     
     os.system('rm -f ' + outdico)  # clean up
     os.system('rm -f ' + outmask)
-    mask_region(fullmask,boxfile,outmask)
-    
+    if boxfile != 'fullfield':
+      mask_region(fullmask,boxfile,outmask)
+    else:
+      outmask = fullmask
     os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
-
-    os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=image_dirin_SSD_m.npy.ClusterCat.npy --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=[0.100000,1000.000000] --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
-
+    if usehighres == True:
+      os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=image_dirin_SSD_m.npy.ClusterCat.npy --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=[0.100000,1000.000000] --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
+    else:
+      os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=image_dirin_SSD_m.npy.ClusterCat.npy --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.2500000 --Image-NPix=6000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 4.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=[0.100000,1000.000000] --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
 
 # Subtract the columns
 if dosubtract:
@@ -356,9 +371,10 @@ if dokmscal:
   
   for ms in msfiles:
 
+    #os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName Predict_DDT --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --PolMode Scalar --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --ApplyToDir 0 --dt 1.0 --NChanSols 1'%(ms))
 
+    os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --dt 1.0 --NChanSols 1'%(ms))
 
-    os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName Predict_DDT --dt 0.536871 --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --PolMode Scalar --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --ApplyToDir 0 --dt 1.0 --NChanSols 1'%(ms))
   colname="DATA_SUB_CORRECTED"
 
 
@@ -395,12 +411,17 @@ if doconcat:
         cmd += 'steps=[phaseshift,applybeam,average] '
       else: 
         cmd += 'steps=[phaseshift,average] '   
+
+    if not dophaseshift:
+      cmd = cmd.replace('phaseshift,','')
+
     cmd += 'msin.datacolumn=%s msin.missingdata=True '%colname
     if dysco:
       cmd += 'msout.storagemanager=dysco '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT '  
     cmd += 'msout=' + msoutconcat + ' '
-    cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
+    if dophaseshift:
+      cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
     cmd += 'aoflagger.type=aoflagger '
     cmd += 'average.type=averager '
     cmd += 'average.timestep=' + str(timestepavg) + ' average.freqstep=' + str(freqstepavg) + ' ' 
@@ -427,10 +448,13 @@ if doconcat:
     cmd += 'msin.datacolumn=%s msin.missingdata=True '%colname
     if dysco:
       cmd += 'msout.storagemanager=dysco '
+    if not dophaseshift:
+      cmd = cmd.replace('phaseshift,','')
  
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
     cmd += 'msout=' + msoutconcat + '.tmpweight ' 
-    cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
+    if dophaseshift:
+      cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
     cmd += 'aoflagger.type=aoflagger '
     cmd += 'average.type=averager '
     cmd += 'average.timestep=' + str(timestepavg) + ' average.freqstep=' + str(freqstepavg) + ' ' 
