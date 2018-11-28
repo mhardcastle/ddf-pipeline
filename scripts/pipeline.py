@@ -40,7 +40,7 @@ import threading
 from archive_old_solutions import do_archive
 from remove_bootstrap import remove_columns
 from killMS.Other import MyPickle
-from surveys_db import use_database,update_status
+from surveys_db import use_database,update_status,SurveysDB
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -382,7 +382,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
-                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None):
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -427,6 +428,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
             
+            if PreApplySols:
+                runcommand+=' --PreApplySols=[%s]'%PreApplySols
+
                 
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
@@ -448,7 +452,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
                 
                 
-                
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
             run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
@@ -462,8 +465,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             run(runcommand,dryrun=o['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
     if MergeSmooth:
-        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs)
-
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers)
+        
 
 
 
@@ -536,7 +540,7 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
@@ -569,14 +573,21 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
-            run('MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time),dryrun=dryrun)
+            ss='MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time)
+            if SigmaFilterOutliers:
+                ss+=" --SigmaFilterOutliers %f"%SigmaFilterOutliers
+            run(ss,dryrun=dryrun)
+            
         checkname='%s_%s_smoothed.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+        elif SkipSmooth:
+            warn('Skipping smoothing Solutions file')
         else:
             run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=%s'%(ddsols,start_time,ddsols,start_time,o['smoothingtype']),dryrun=dryrun)
 
         smoothoutname='%s_%s_smoothed.npz'%(ddsols,start_time)
+
         if InterpToMSListFreqs:
             interp_outname="%s_%s_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
@@ -588,14 +599,25 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         
         for i in range(0,len(full_sollist)):
             if start_times[i] == start_time:
-		symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+		if not SkipSmooth:
+                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+                else:
+                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
                 # always overwrite the symlink to allow the dataset to move -- costs nothing
                 if os.path.islink(symsolname):
 	            warn('Symlink ' + symsolname + ' already exists, recreating')
                     os.unlink(symsolname)
 
-                os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
-        outname = ddsols + '_smoothed'
+                if not SkipSmooth:
+                    os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
+                else:
+                    os.symlink(os.path.abspath('%s_%s_merged.npz'%(ddsols,start_time)),symsolname)
+                    
+                    
+        if SkipSmooth:
+            outname = ddsols + '_merged'
+        else:
+            outname = ddsols + '_smoothed'
 
     return outname
 
@@ -712,7 +734,35 @@ def cubical_data(mslist,
             runcommand+=" --ReinitWeights 1"
             
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+
+def ingest_dynspec(obsid='*'):
+    report('Ingesting dynamic spectra (%s) into the database' % obsid)
+    with SurveysDB() as sdb:
+        sdb.cur.execute('lock table spectra write')
+        field=os.path.basename(os.getcwd())
+        g=glob.glob('DynSpecs_'+obsid)
+        for f in g:
+            if '.tgz' in f:
+                continue
+            bits=f.split('_')
+            obsid=bits[1]
+            catalogue=np.load(f+'/Catalog.npy')
+            # match filenames to names
+            fd={}
+            for r in catalogue:
+                fd[r['Name']]=''
+            gf=glob.glob(f+'/TARGET/*.fits')+glob.glob(f+'/OFF/*.fits')
+            for ff in gf:
+                hdu=fits.open(ff)
+                name=hdu[0].header['NAME']
+                assert(name in fd)
+                fd[name]=ff
+                hdu.close()
+            sdb.cur.execute('delete from spectra where obsid="%s"' % obsid)
+            for i,r in enumerate(catalogue):
+                sdb.cur.execute('insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), r['Name'], r['Type'], field, obsid, fd[r['Name']], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV']))
         
+    
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
@@ -1267,7 +1317,12 @@ def main(o=None):
         summary(o)
         stop(3)
         
-    separator("DD calibration of full mslist")
+    # #########################################################################
+    # ###############                  BIG MSLIST               ###############
+    # #########################################################################
+
+    # check full mslist imaging weights
+    check_imaging_weight(o['full_mslist'])
 
     if o['bootstrap']:
         colname='SCALED_DATA'
@@ -1278,6 +1333,7 @@ def main(o=None):
     CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
 
+    separator("DI calibration of full mslist")
     CurrentDDkMSSolName=killms_data('image_ampphase1_di',o['full_mslist'],'DDS2_full',
                                     colname=colname,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1305,15 +1361,6 @@ def main(o=None):
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'],rootname='bootstrap',rmsfacet=o['rmsfacet'])
         external_mask='external_mask_ext.fits'
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
-
-
-    # #########################################################################
-    # ###############                  BIG MSLIST               ###############
-    # #########################################################################
-
-
-    # check full mslist imaging weights
-    check_imaging_weight(o['full_mslist'])
         
     # Compute the DD predict
     colname=o['colname']
@@ -1416,8 +1463,28 @@ def main(o=None):
                                     MergeSmooth=o['smoothing'],
                                     dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
 
+    if o['do_very_slow']:
+        separator("Very slow amplitude smooth (full mslist)")
+        CurrentDDkMSSolName_FastSmoothed=CurrentDDkMSSolName
 
+        CurrentDDkMSSolName=killms_data('image_full_ampphase_di_m',
+                                        o['full_mslist'],'DDS3_full_slow',
+                                        colname=colname,
+                                        SolverType="KAFCA",
+                                        clusterfile=ClusterFile,
+                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        uvrange=[o['uvmin_very_slow'],1000.],
+                                        wtuv=o['wtuv'],
+                                        robust=o['solutions_robust'],
+                                        SkipSmooth=True,MergeSmooth=True,
+                                        SigmaFilterOutliers=o['sigma_clip'],
+                                        dt=o['dt_very_slow'],catcher=catcher,
+                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
+
+        CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
+    
     if o['low_psf_arcsec'] is not None:
+        separator("Low-resolution image")
         # low-res image requested
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
         if o['low_imsize'] is not None:
@@ -1463,8 +1530,8 @@ def main(o=None):
             report('Making the full-bw extended source mask')
             make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
             report('Make_extended_mask returns')
-            extmask='full-mask-low.fits'
-            make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        extmask='full-mask-low.fits'
+        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
@@ -1547,27 +1614,6 @@ def main(o=None):
         # apply the offsets
         ddf_shift('image_full_ampphase_di_m.NS',facet_offset_file,options=o,catcher=catcher)
     
-    if o['do_dynspec']:
-        separator('Dynamic spectra')
-        LastImage="image_full_ampphase_di_m.NS.app.restored.fits"
-        m=MSList(o['full_mslist'])
-        uobsid = set(m.obsids)
-    
-        for obsid in uobsid:
-            warn('Running ms2dynspec for obsid %s' % obsid)
-            umslist='mslist-%s.txt' % obsid
-            print 'Writing temporary ms list',umslist
-            with open(umslist,'w') as file:
-                for ms,ob in zip(m.mss,m.obsids):
-                    if ob==obsid:
-                        file.write(ms+'\n')
-
-            g=glob.glob('DynSpec*'+obsid+'*')
-            if len(g)>0:
-                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
-            else:
-                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --image %s --LogBoring %i --SolsDir %s"%(umslist,colname,CurrentDDkMSSolName,LastImage,o['nobar'],o["SolsDir"])
-                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
             
     spectral_mslist=None
     if o['spectral_restored']:
@@ -1584,33 +1630,36 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
-        separator('Stokes Q and U cubes')
         from do_polcubes import do_polcubes
-        do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+        separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
-        if o['compress_polcubes']:
-            for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']:
-                if os.path.isfile(cubefile+'.fz'):
-                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
-                else:
-                    report('Starting compression thread for '+cubefile)
-                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
-                    thread.start()
-                    cthreads.append(thread)
-                    flist.append(cubefile)
-        vlow_uvrange=[o['image_uvmin'],1.6]
-        do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
-        if o['compress_polcubes']:
-            for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']:
-                if os.path.isfile(cubefile+'.fz'):
-                    warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
-                else:
-                    report('Starting compression thread for '+cubefile)
-                    thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
-                    thread.start()
-                    cthreads.append(thread)
-                    flist.append(cubefile)
+        if o['restart'] and os.path.isfile('image_full_low_QU.cube.dirty.corr.fits.fz'):
+            warn('Compressed QU cube product exists, not making new images')
+        else:
+            do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            if o['compress_polcubes']:
+                for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']:
+                    if os.path.isfile(cubefile+'.fz'):
+                        warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                    else:
+                        report('Starting compression thread for '+cubefile)
+                        thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                        thread.start()
+                        cthreads.append(thread)
+                        flist.append(cubefile)
+            vlow_uvrange=[o['image_uvmin'],1.6]
+            do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
+            if o['compress_polcubes']:
+                for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']:
+                    if os.path.isfile(cubefile+'.fz'):
+                        warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+                    else:
+                        report('Starting compression thread for '+cubefile)
+                        thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                        thread.start()
+                        cthreads.append(thread)
+                        flist.append(cubefile)
         
     if o['stokesv']:
         separator('Stokes V image')
@@ -1635,6 +1684,40 @@ def main(o=None):
             for f in flist:
                 os.remove(f)
 
+    if o['do_dynspec']:
+        separator('Dynamic spectra')
+
+        if o['bright_threshold'] is not None and o['method'] is not None:
+            warn('Finding bright sources from offsets list')
+            from find_bright_offset_sources import find_bright
+            find_bright(cutoff=o['bright_threshold'])
+        
+        LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
+        m=MSList(o['full_mslist'])
+        uobsid = set(m.obsids)
+    
+        for obsid in uobsid:
+            LastImageI="image_full_ampphase_di_m.NS.int.restored.fits"
+            LastImageV="image_full_low_stokesV.dirty.corr.fits"
+            warn('Running ms2dynspec for obsid %s' % obsid)
+            umslist='mslist-%s.txt' % obsid
+            print 'Writing temporary ms list',umslist
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
+
+            g=glob.glob('DynSpec*'+obsid+'*')
+            if len(g)>0:
+                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+            else:
+                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1"%(umslist,colname,CurrentDDkMSSolName,LastImageI,LastImageV,o['nobar'],o["SolsDir"])
+                if o['bright_threshold'] is not None:
+                    runcommand+=' --srclist brightlist.csv'
+                run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
+                if use_database():
+                    ingest_dynspec(obsid)
+
     if o['compress_ms']:
         separator('Compressing MS for archive')
         os.system('archivems.sh .')
@@ -1652,7 +1735,7 @@ def main(o=None):
         full_clearcache(o,extras=extras)
     
     if use_database():
-        update_status(None,'Complete',time='end_date')
+        update_status(None,'Complete',time='end_date',av=4)
         
     return
 
