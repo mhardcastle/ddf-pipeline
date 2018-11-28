@@ -1004,7 +1004,7 @@ def main(o=None):
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
 
 
-    if o['basedicomodel'] is not None:
+    if o['basedicomodel'] is None:
 
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
