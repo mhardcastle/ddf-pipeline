@@ -1343,11 +1343,11 @@ def main(o=None):
             summary(o)
             stop(4)
         if o['baseimagename'] is None:
-            warn('No clusterfile provided, stopping here')
+            warn('No baseimage provided, stopping here')
             summary(o)
             stop(4)
         if o['basemaskname'] is None:
-            warn('No clusterfile provided, stopping here')
+            warn('No mask file provided, stopping here')
             summary(o)
             stop(4)
         CurrentMaskName = o['basemaskname']
