@@ -1350,6 +1350,7 @@ def main(o=None):
             warn('No mask file provided, stopping here')
             summary(o)
             stop(4)
+        ClusterFile=o['clusterfile']
         CurrentMaskName = o['basemaskname']
         CurrentBaseDicoModelName = o['basedicomodel']
         CurrentImageName = o['baseimagename']
