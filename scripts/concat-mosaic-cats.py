@@ -2,7 +2,7 @@
 
 import os,sys
 import glob
-import pyfits
+from astropy.io import fits
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -41,7 +41,7 @@ def find_median_astrometry(astromaps,pointingra,pointingdec):
         ra,dec=getposim('%s/astromap.fits'%astromap)
         if sepn(ra*deg2rad,dec*deg2rad,pointingra,pointingdec)*rad2deg < 0.6:        
             foundpointing = True
-            f = pyfits.open('%s/astromap.fits'%astromap)
+            f = fits.open('%s/astromap.fits'%astromap)
             _,_,ys,xs=f[0].data.shape
             # Use central 20% of the image
             subim=f[0].data[0][0][ys/2-ys/5:ys/2+ys/5,xs/2-xs/5:xs/2+xs/5].flatten()
@@ -56,19 +56,19 @@ def find_median_astrometry(astromaps,pointingra,pointingdec):
 def concat_catalogs(cats,outconcatcat):
     # Use the first catalogue as a dummy and then just update the entries
 
-    f = pyfits.open(cats[0])
+    f = fits.open(cats[0])
 
     nrows = f[1].data.shape[0]
     for cat in cats[1:]:
-        f2 = pyfits.open(cat)
+        f2 = fits.open(cat)
         nrows += f2[1].data.shape[0]
         f2.close()
     print nrows
-    hdu = pyfits.BinTableHDU.from_columns(f[1].columns, nrows=nrows)
+    hdu = fits.BinTableHDU.from_columns(f[1].columns, nrows=nrows)
 
     nrows1 = f[1].data.shape[0]
     for cat in cats[1:]:
-        f2 = pyfits.open(cat)
+        f2 = fits.open(cat)
         nrows2 = nrows1 + f2[1].data.shape[0]
         for colname in f[1].columns.names:
             hdu.data[colname][nrows1:nrows2] = f2[1].data[colname]
@@ -91,7 +91,7 @@ def find_pointing_coords(directories):
     pointingdecs = np.array([])
     for mosaiccat in mosaiccats:
         pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
-        f = pyfits.open(pointing)
+        f = fits.open(pointing)
         pointingras = np.append(pointingras,f[0].header['CRVAL1']*deg2rad)
         pointingdecs = np.append(pointingdecs,f[0].header['CRVAL2']*deg2rad)
         f.close()
@@ -138,12 +138,12 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     
     pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
     if cattype == 'gaus':
-        sourcecat = pyfits.open(mosaiccat)
+        sourcecat = fits.open(mosaiccat)
         mosaiccat = glob.glob(mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS'))[0]
         
-    cat = pyfits.open(mosaiccat)
+    cat = fits.open(mosaiccat)
     
-    f = pyfits.open(pointing)
+    f = fits.open(pointing)
     rapointing = f[0].header['CRVAL1']*deg2rad
     decpointing = f[0].header['CRVAL2']*deg2rad
     f.close()
@@ -231,22 +231,22 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     islid = np.append(islid,cat[1].data[keepindices]['Isl_id'])
     sourcenum = np.append(sourcenum,cat[1].data[keepindices]['Source_id'])
     
-    col1 = pyfits.Column(name='Source_Name',format='24A',unit='',array=sourceids)
-    col2 = pyfits.Column(name='RA',format='f8',unit='deg',array=sourcera)
-    col3 = pyfits.Column(name='E_RA',format='f8',unit='arcsec',array=e_sourcera*deg2arcsec)
-    col4 = pyfits.Column(name='E_RA_tot',format='f8',unit='arcsec',array=e_sourcera_tot*deg2arcsec)
+    col1 = fits.Column(name='Source_Name',format='24A',unit='',array=sourceids)
+    col2 = fits.Column(name='RA',format='f8',unit='deg',array=sourcera)
+    col3 = fits.Column(name='E_RA',format='f8',unit='arcsec',array=e_sourcera*deg2arcsec)
+    col4 = fits.Column(name='E_RA_tot',format='f8',unit='arcsec',array=e_sourcera_tot*deg2arcsec)
     
-    col5 = pyfits.Column(name='DEC',format='f8',unit='deg',array=sourcedec)
-    col6 = pyfits.Column(name='E_DEC',format='f8',unit='arcsec',array=e_sourcedec*deg2arcsec)
-    col7 = pyfits.Column(name='E_DEC_tot',format='f8',unit='arcsec',array=e_sourcedec_tot*deg2arcsec)
+    col5 = fits.Column(name='DEC',format='f8',unit='deg',array=sourcedec)
+    col6 = fits.Column(name='E_DEC',format='f8',unit='arcsec',array=e_sourcedec*deg2arcsec)
+    col7 = fits.Column(name='E_DEC_tot',format='f8',unit='arcsec',array=e_sourcedec_tot*deg2arcsec)
     
-    col8 = pyfits.Column(name='Peak_flux',format='f8',unit='beam-1 mJy',array=speak*1000.0)
-    col9 = pyfits.Column(name='E_Peak_flux',format='f8',unit='beam-1 mJy',array=e_speak*1000.0)
-    col10 = pyfits.Column(name='E_Peak_flux_tot',format='f8',unit='beam-1 mJy',array=e_speak_tot*1000.0)
+    col8 = fits.Column(name='Peak_flux',format='f8',unit='beam-1 mJy',array=speak*1000.0)
+    col9 = fits.Column(name='E_Peak_flux',format='f8',unit='beam-1 mJy',array=e_speak*1000.0)
+    col10 = fits.Column(name='E_Peak_flux_tot',format='f8',unit='beam-1 mJy',array=e_speak_tot*1000.0)
     
-    col11 = pyfits.Column(name='Total_flux',format='f8',unit='mJy',array=sint*1000.0)
-    col12 = pyfits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
-    col13 = pyfits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
+    col11 = fits.Column(name='Total_flux',format='f8',unit='mJy',array=sint*1000.0)
+    col12 = fits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
+    col13 = fits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
     
     #maj[np.where(sourceresolved=='U')] = np.nan
     #e_maj[np.where(sourceresolved=='U')] = np.nan
@@ -255,46 +255,46 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     #pa[np.where(sourceresolved=='U')] = np.nan
     #e_pa[np.where(sourceresolved=='U')] = np.nan
     
-    col14 =  pyfits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
-    col15 =  pyfits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
+    col14 =  fits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
+    col15 =  fits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
     
-    col16 =  pyfits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
-    col17 =  pyfits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
+    col16 =  fits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
+    col17 =  fits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
 
-    col18 =  pyfits.Column(name='DC_Maj',format='f8',unit='arcsec',array=dcmaj*deg2arcsec)
-    col19 =  pyfits.Column(name='E_DC_Maj',format='f8',unit='arcsec',array=e_dcmaj*deg2arcsec)
+    col18 =  fits.Column(name='DC_Maj',format='f8',unit='arcsec',array=dcmaj*deg2arcsec)
+    col19 =  fits.Column(name='E_DC_Maj',format='f8',unit='arcsec',array=e_dcmaj*deg2arcsec)
     
-    col20 =  pyfits.Column(name='DC_Min',format='f8',unit='arcsec',array=dcsmin*deg2arcsec)
-    col21 =  pyfits.Column(name='E_DC_Min',format='f8',unit='arcsec',array=e_dcsmin*deg2arcsec)
+    col20 =  fits.Column(name='DC_Min',format='f8',unit='arcsec',array=dcsmin*deg2arcsec)
+    col21 =  fits.Column(name='E_DC_Min',format='f8',unit='arcsec',array=e_dcsmin*deg2arcsec)
     
-    col22 =  pyfits.Column(name='PA',format='f8',unit='deg',array=pa)
-    col23 =  pyfits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
+    col22 =  fits.Column(name='PA',format='f8',unit='deg',array=pa)
+    col23 =  fits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
 
-    col24 =  pyfits.Column(name='DC_PA',format='f8',unit='deg',array=dcpa)
-    col25 =  pyfits.Column(name='E_DC_PA',format='f8',unit='deg',array=e_dcpa)
+    col24 =  fits.Column(name='DC_PA',format='f8',unit='deg',array=dcpa)
+    col25 =  fits.Column(name='E_DC_PA',format='f8',unit='deg',array=e_dcpa)
 
-    #col20 = pyfits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
+    #col20 = fits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
     
-    col26 = pyfits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
-    col27 = pyfits.Column(name='S_Code',format='1A',unit='',array=stype)
+    col26 = fits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
+    col27 = fits.Column(name='S_Code',format='1A',unit='',array=stype)
     
-    col28 = pyfits.Column(name='Mosaic_ID',format='9A',unit='',array=mosaic_identifier)
+    col28 = fits.Column(name='Mosaic_ID',format='9A',unit='',array=mosaic_identifier)
     
-    col29 = pyfits.Column(name='Isl_id',format='I8',unit='',array=islid)
+    col29 = fits.Column(name='Isl_id',format='I8',unit='',array=islid)
 	
     # With unique source names that are matched with source and gaussian catalogs the source_id is not needed.
-    #col24 = pyfits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
+    #col24 = fits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
     
     if cattype == 'gaus':
         gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
-        col30 = pyfits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
+        col30 = fits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
     if cattype == 'srl':    
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29])
+        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29])
     if cattype == 'gaus':
-        cols = pyfits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29,col30])
+        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29,col30])
         
-    tbhdu = pyfits.BinTableHDU.from_columns(cols)
+    tbhdu = fits.BinTableHDU.from_columns(cols)
 
     if cattype == 'gaus':
         regionfile = open('%s.gaus.reg'%outname,'w')
@@ -310,10 +310,10 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
             regionfile.write('box(%s,%s,5.0",5.0",0.0)\n'%(sourcera[i],sourcedec[i]))
     regionfile.close()
 
-    prihdr = pyfits.Header()
+    prihdr = fits.Header()
     prihdr['NAME'] = outname
-    prihdu = pyfits.PrimaryHDU(header=prihdr)
-    tbhdulist = pyfits.HDUList([prihdu, tbhdu])
+    prihdu = fits.PrimaryHDU(header=prihdr)
+    tbhdulist = fits.HDUList([prihdu, tbhdu])
     if cattype == 'srl':
         outcat = outname +'.srl.fits'
     if cattype == 'gaus':
@@ -343,13 +343,13 @@ if __name__=='__main__':
         outname = mosaiccat.split('/')[-2] + 'cat'
         if not os.path.exists(outname +'.srl.fits'):
             pointingsourcenums,srlcat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,None,'srl')
-            pointingsourcenums,gauscat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,pointingsourcenums,'gaus')
+            #pointingsourcenums,gauscat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,pointingsourcenums,'gaus')
         else:
             srlcat = outname +'.srl.fits'
-            gauscat = outname +'.gaus.fits'
+            #gauscat = outname +'.gaus.fits'
             
         srlcatnames.append(srlcat)
-        gauscatnames.append(gauscat)
+        #gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
     concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.srl.fits')
-    concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.gaus.fits')
+    #concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.gaus.fits')

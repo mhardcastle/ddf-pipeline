@@ -10,9 +10,20 @@ from time import sleep
 import sys
 
 def download_dataset(server,root,workdir='.'):
-    page=requests.get(server+root,verify=False)
+    print server+root
+    while True:
+        try:
+            print 'Downloading index page',server+root
+            page=requests.get(server+root,verify=False,timeout=60)
+        except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+            print 'Connection error! sleeping 30 seconds before retry...'
+            sleep(30)
+        else:
+            break
+    
     print page.status_code
     if page.status_code!=200:
+        print page.headers
         return False
     print page.headers['content-type']
     tree=html.fromstring(page.text)
@@ -35,17 +46,43 @@ def download_dataset(server,root,workdir='.'):
             print 'Downloading',f
             url=server+u
             print url
-            while True:
+            filename=workdir+'/'+f
+            downloaded=False
+            while not downloaded:
+                connected=False
+                while not connected:
+                    try:
+                        print 'Opening connection'
+                        response = requests.get(url, stream=True,verify=False,timeout=60)
+                        if response.status_code!=200:
+                            print response.headers
+                            raise RuntimeError('Code was %i' % response.status_code)
+                        esize=long(response.headers['Content-Length'])
+                    except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+                        print 'Connection error! sleeping 30 seconds before retry...'
+                        sleep(30)
+                    else:
+                        connected=True
                 try:
-                    response = requests.get(url, stream=True,verify=False,timeout=300)
+                    print 'Downloading'
+                    with open(filename, 'wb') as fd:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                fd.write(chunk)
+                    fsize=os.path.getsize(filename)
+                    if esize!=fsize:
+                        print 'Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize)
+                    else:
+                        print 'Download successful'
+                        downloaded=True
+                        
                 except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
-                    print 'Connection error! sleeping 60 seconds before retry...'
-                    sleep(60)
-                else:
-                    break
-            with open(workdir+'/'+f, 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
+                    print 'Connection error! sleeping 30 seconds before retry...'
+                    sleep(30) # back to the connection
+
+
             del response
+            
     return True
     
 if __name__=='__main__':

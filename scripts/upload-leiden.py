@@ -93,4 +93,4 @@ def do_upload(name,basedir):
     
 if __name__=='__main__':
     import sys
-    do_upload(sys.argv[1],sys.argv[2])
+    do_upload(sys.argv[1],'/disks/paradata/shimwell/LoTSS-DR2/ongoing-leiden-runs')

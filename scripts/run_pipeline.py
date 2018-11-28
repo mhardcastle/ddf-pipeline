@@ -68,7 +68,7 @@ def do_run_pipeline(name,basedir):
         unpack(workdir=workdir)
     except RuntimeError:
         if do_field:
-            update_status(name,'List failed',workdir=workdir)
+            update_status(name,'Unpack failed',workdir=workdir)
         raise
     if do_field:
         update_status(name,'Unpacked',workdir=workdir)

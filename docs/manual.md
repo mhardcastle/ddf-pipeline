@@ -82,6 +82,7 @@ will need:
 * sshtunnel (for database code)
 * MySQLdb (for database code)
 * cfitsio fpack (only if compression required: fpack must be on PATH)
+* LOFAR software and dysco (for MS compression)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
@@ -278,7 +279,10 @@ options should be left at their default settings.
 
 ### [compression]
 
-Controls the compression of some final images.
+Controls the compression of some final images and measurement sets. If
+`compress_ms` is `True` then the `LOFARSOFT` environment variable must
+point to a script that can be sourced to set up the LOFAR software (to
+ensure that `DPPP` is on the path).
 
 ## running the code
 

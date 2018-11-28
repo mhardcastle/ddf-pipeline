@@ -2,7 +2,7 @@
 
 # Code to run continuously and keep an eye on the state of the queue
 # Download new files if needed
-# Eventually, archive using the archive script
+# archive using the upload script
 
 from time import sleep
 import datetime
@@ -10,7 +10,8 @@ from surveys_db import SurveysDB,get_next
 import os
 import threading
 from run_pipeline import do_run_pipeline
-from upload import do_upload
+from upload import do_upload,do_upload_compressed
+import glob
 
 queuelimit=10
 cluster=os.environ['DDF_PIPELINE_CLUSTER']
@@ -52,21 +53,31 @@ while True:
         print 'Upload thread seems to have terminated'
         upload_thread=None
 
-    if d['Queued']<queuelimit and download_thread is None:
+    if ('Queued' not in d or d['Queued']<queuelimit) and download_thread is None:
         download_name=get_next()
-        print 'We need to download a new file (%s)!' % download_name
-        download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
-        download_thread.start()
+        if download_name is not None:
+            print 'We need to download a new file (%s)!' % download_name
+            download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
+            download_thread.start()
 
     if 'Complete' in d and upload_thread is None:
         for r in result:
-            if r['status']=='Complete':
+            if r['status']=='Complete' and r['archive_version']<3:
                 upload_name=r['id']
                 print 'We need to upload a new file (%s)!' % upload_name
                 upload_thread=threading.Thread(target=do_upload, args=(upload_name,basedir))
                 upload_thread.start()
                 break
-        
+
+    if upload_thread is None:
+        for r in result:
+            if r['archive_version']<2 and len(glob.glob(basedir+'/'+r['id']+'/*.archive'))>0:
+                upload_name=r['id']
+                print 'We need to update the archive version for %s' % upload_name
+                upload_thread=threading.Thread(target=do_upload_compressed, args=(upload_name,basedir))
+                upload_thread.start()
+                break
+            
     print '\n\n-----------------------------------------------\n\n'
         
-    sleep(300)
+    sleep(60)
