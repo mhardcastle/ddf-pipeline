@@ -77,7 +77,8 @@ def do_upload(name,basedir):
     f+=shiftimages('image_full_ampphase_di_m.NS')
     for i in range(3):
         f+=shiftimages('image_full_ampphase_di_m.NS_Band%i' %i)
-    f+=myglob('image_full_low_stokesV.dirty.*',workdir)
+    f+=myglob('image_full_low_stokesV.dirty.fits',workdir)
+    f+=myglob('image_full_low_stokesV.SmoothNorm.fits',workdir)
     f+=myglob('image_full_low_QU.cube.*',workdir)
     f+=myglob('image_full_vlow_QU.cube.*',workdir)
     f+=myglob('*.archive',workdir)
