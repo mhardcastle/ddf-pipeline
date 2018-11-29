@@ -1415,7 +1415,7 @@ def main(o=None):
               robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
-              #AllowNegativeInitHMP=True,
+              AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
               apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
@@ -1437,7 +1437,7 @@ def main(o=None):
                                        automask_threshold=o['thresholds'][2],
                                        normalization=o['normalize'][1],uvrange=uvrange,
                                        apply_weights=o['apply_weights'][2],catcher=catcher,
-                                       #AllowNegativeInitHMP=True,
+                                       AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
 
