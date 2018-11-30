@@ -1354,6 +1354,7 @@ def main(o=None):
         CurrentMaskName = o['basemaskname']
         CurrentBaseDicoModelName = o['basedicomodel']
         CurrentImageName = o['baseimagename']
+	external_mask = CurrentMaskName
 
     separator("DI calibration of full mslist")
     CurrentDDkMSSolName=killms_data(CurrentImageName,o['full_mslist'],'DDS2_full',
