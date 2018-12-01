@@ -199,13 +199,16 @@ def getregionboxcenter(regionfile):
 
 def mscolexist(ms, colname):
     """ Check if a colname exists in the measurement set ms, returns either True or False """
-    t = pt.table(ms,readonly=True)
-    colnames =t.colnames()
-    if colname in colnames: # check if the column is in the list
-      exist = True
+    if os.path.isdir(ms):
+      t = pt.table(ms,readonly=True)
+      colnames =t.colnames()
+      if colname in colnames: # check if the column is in the list
+         exist = True
+      else:
+        exist = False  
+      t.close()
     else:
-      exist = False  
-    t.close()
+      exist = False # ms does not exist  
     return exist
 
 
