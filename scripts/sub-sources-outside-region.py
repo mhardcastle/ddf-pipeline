@@ -20,6 +20,47 @@ def fixsymlinks():
   return
 
 
+def add_dummyms(msfiles):
+    '''
+    Add dummy ms to create a regular freuqency grid when doing a concat with DPPP
+    '''
+
+    freqaxis = []
+    newmslist  = []
+    
+    for ms in msfiles:        
+        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        freq = t.getcol('REF_FREQUENCY')[0]
+        t.close()
+        freqaxis.append(freq)
+    
+    # put everything in order of increasing frequency
+    freqaxis = np.array(freqaxis)
+    idx = np.argsort(freqaxis)
+    
+    freqaxis = freqaxis[np.array(tuple(idx))]
+    sortedmslist = list( msfiles[i] for i in idx )
+    freqspacing = np.diff(freqaxis)
+    minfreqspacing = np.min(np.diff(freqaxis))
+ 
+    # insert dummies in the ms list if needed
+    count = 0
+    newmslist.append(sortedmslist[0]) # always start with the first ms the list
+    for msnumber, ms in enumerate(sortedmslist[1::]): 
+      if int(round(freqspacing[msnumber]/minfreqspacing)) > 1:
+        ndummy = int(round(freqspacing[msnumber]/minfreqspacing)) - 1
+ 
+        for dummy in range(ndummy):
+          newmslist.append('dummy' + str(count) + '.ms')
+          print 'Added dummy:', 'dummy' + str(count) + '.ms' 
+          count = count + 1
+      newmslist.append(ms)
+       
+    print 'Updated ms list with dummies inserted to create a regular frequency grid'
+    print newmslist 
+    return newmslist
+
+
 
 def columnchecker(mslist, colname):
     
@@ -387,7 +428,11 @@ if dokmscal:
 #msfiles   = list(msfiles[:][msfiles.colnames[0]]) # convert to normal list of strings
 
 #msoutconcat   = obsid + '.dysco.sub.shift.avg.weights.ms.set0.archive'
-    
+
+
+# insert dummies for completely missing blocks to create a regular freuqency grid for DPPP
+msfiles = add_dummyms(msfiles)   
+
 if doconcat:    
     msfilesconcat = []
 
