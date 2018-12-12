@@ -397,7 +397,7 @@ if dosubtract:
             print 'Writing %s'%colname
             t.putcol(colname,d-f)
         else:
-            print 'Warning, ', msfile, ' does not contain PREDICT_SUB and/or ' + args['column'] +', skipping.....'
+            print 'Warning, ', ms, ' does not contain PREDICT_SUB and/or ' + args['column'] +', skipping.....'
         
         t.close()
 
