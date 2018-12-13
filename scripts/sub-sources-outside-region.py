@@ -13,12 +13,27 @@ import glob
 
 # NOTE, applybeam NDPPP step does not work on phase-shifted data, do not use it.
 
+def get_solutions_timerange(sols):
+    t = np.load(sols)['BeamTimes']
+    return np.min(t),np.max(t)
 
 def fixsymlinks():
-  # need to make it....
-  os.path.islink('filecheck')
-  return
+    # Code from Tim for fixing symbolic links for DDS3_
+    dds3smoothed = glob.glob('SOLSDIR/*/*killMS.DDS3_full_smoothed*npz')
+    dds3 = glob.glob('SOLSDIR/*/killMS.DDS3_full.sols.npz')
+    for i in range(0,len(dds3smoothed)):
+        symsolname = dds3smoothed[i]
+        solname = dds3[i]
+        ddsols = 'DDS3_full'
+        start_time,t1 = get_solutions_timerange(solname)
+        # Rounding different on different computers which is a pain.
+        start_time = glob.glob('%s_%s*_smoothed.npz'%(ddsols,int(start_time)))[0].split('_')[2]
 
+        if os.path.islink(symsolname):
+            print('Symlink ' + symsolname + ' already exists, recreating')
+            os.unlink(symsolname)
+            os.symlink(os.path.relpath('../../%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)   
+    return
 
 def add_dummyms(msfiles):
     '''
