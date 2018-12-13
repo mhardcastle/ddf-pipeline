@@ -10,7 +10,7 @@ from surveys_db import SurveysDB,get_next
 import os
 import threading
 from run_pipeline import do_run_pipeline
-from upload import do_upload,do_upload_compressed
+from upload import do_upload,do_upload_compressed,do_delete_keep
 import glob
 
 queuelimit=10
@@ -52,23 +52,28 @@ while True:
     if upload_thread is not None and not upload_thread.isAlive():
         print 'Upload thread seems to have terminated'
         upload_thread=None
-
+    '''
     if ('Queued' not in d or d['Queued']<queuelimit) and download_thread is None:
         download_name=get_next()
         if download_name is not None:
             print 'We need to download a new file (%s)!' % download_name
             download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
             download_thread.start()
-
+    '''
     if 'Complete' in d and upload_thread is None:
         for r in result:
-            if r['status']=='Complete' and r['archive_version']<3:
+            if r['status']=='Complete' and r['archive_version']==4:
                 upload_name=r['id']
+                kw={}
                 print 'We need to upload a new file (%s)!' % upload_name
-                upload_thread=threading.Thread(target=do_upload, args=(upload_name,basedir))
+                if os.path.isdir(basedir+'/'+upload_name+'/KEEP'):
+                    # remade directory, remove previous files
+                    do_delete_keep(upload_name,basedir)
+                    kw['skipstokes']=True
+                upload_thread=threading.Thread(target=do_upload, args=(upload_name,basedir),kwargs=kw)
                 upload_thread.start()
                 break
-
+    '''
     if upload_thread is None:
         for r in result:
             if r['archive_version']<2 and len(glob.glob(basedir+'/'+r['id']+'/*.archive'))>0:
@@ -77,7 +82,7 @@ while True:
                 upload_thread=threading.Thread(target=do_upload_compressed, args=(upload_name,basedir))
                 upload_thread.start()
                 break
-            
+    '''        
     print '\n\n-----------------------------------------------\n\n'
         
     sleep(60)

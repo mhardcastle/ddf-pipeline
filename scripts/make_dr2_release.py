@@ -7,12 +7,11 @@ from shutil import copy2
 from subprocess import call
 from time import sleep
 import datetime
+import glob
 
 archive='/disks/paradata/shimwell/LoTSS-DR2/archive/'
 
-def download_file(dir,name):
-    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'+archive
-    s='rsync -avz --progress --timeout=10 '+target+dir+'/'+name+' '+dir
+def do_rsync(s):
     while True:
         retval=call(s,shell=True)
         if retval!=0:
@@ -22,6 +21,12 @@ def download_file(dir,name):
         else:
             print 'Retry on timeout'
     return retval
+   
+
+def download_file(dir,name):
+    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'+archive
+    s='rsync -avz --progress --timeout=10 '+target+dir+'/'+name+' '+dir
+    return do_rsync(s)
 
 def link(name,id,lroot,anchor,wdir):
     if os.path.isfile(wdir+id+'/'+name):
@@ -44,7 +49,8 @@ while True:
         # sync mosaics directory
         separator('Mosaic sync')
         os.chdir(workdir+'/mosaics')
-        os.system("rsync -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/*' .")
+        s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/*' ."
+        do_rsync(s)
 
         # now go through all archived and completed fields and make sure they're in the DR2 directory
 
@@ -57,7 +63,7 @@ while True:
 
     if not skip_construct:
         separator('Preparing release directory')
-        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits']
+        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits','DynSpec*.tgz']
 
         os.chdir(workdir+'/fields')
         for r in result:
@@ -68,20 +74,32 @@ while True:
             tdir=workdir+'/fields/'+id
             if r['clustername']=='Herts':
                 location=r['location']
+                resolved_release=[]
                 for f in releasefiles:
-                    if not os.path.isfile(tdir+'/'+f):
+                    if '*' in f:
+                        resolved_release+=[os.path.basename(g) for g in glob.glob(location+'/'+f)]
+                    else:
+                        resolved_release.append(f)                       
+                                                 
+                if location:
+                    for f in resolved_release:
                         source=location+'/'+f
-                        if os.path.isfile(source):
-                            print 'Need to copy',f,'to',tdir
-                            copy2(source,tdir)
-                        else:
-                            warn('Source file %s does not exist' % source)
+                        if not os.path.isfile(tdir+'/'+f) or (os.path.isfile(source)  and os.path.getmtime(source)>os.path.getmtime(tdir+'/'+f)):
+                            if os.path.isfile(source):
+                                print 'Need to copy',f,'to',tdir
+                                copy2(source,tdir)
+                            else:
+                                warn('Source file %s does not exist' % source)
+                else:
+                    warn('Location for %s does not exist' % id)
             else:
                 # get from archive if necessary
                 if r['status']!='Archived':
                     continue
                 else:
                     for f in releasefiles:
+                        if '*' in f:
+                            continue # can't do this yet
                         if not os.path.isfile(tdir+'/'+f):
                             print 'Need to download',id+'/'+f,'from archive'
                             download_file(id,f)

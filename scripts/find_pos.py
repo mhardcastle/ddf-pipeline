@@ -2,7 +2,7 @@
 
 import sys
 import os
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord,get_icrs_coordinates
 import astropy.units as u
 from surveys_db import SurveysDB
 from auxcodes import sepn
@@ -33,7 +33,10 @@ if __name__=='__main__':
             ra=float(sys.argv[1])
             dec=float(sys.argv[2])
         except ValueError:
-            c = SkyCoord(sys.argv[1],sys.argv[2], frame='icrs',unit=(u.hourangle, u.deg))
+            if sys.argv[1]=='object':
+                c=get_icrs_coordinates(sys.argv[2])
+            else:
+                c = SkyCoord(sys.argv[1],sys.argv[2], frame='icrs',unit=(u.hourangle, u.deg))
             ra=float(c.ra.degree)
             dec=float(c.dec.degree)
             print ra,dec

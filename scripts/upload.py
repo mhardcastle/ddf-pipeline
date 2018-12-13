@@ -47,7 +47,18 @@ def do_rsync(name,basedir,f):
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
 
-
+def do_delete_keep(name,basedir):
+    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl'
+    if not os.path.isdir(basedir+'/'+name+'/KEEP'):
+        raise RuntimeError('KEEP directory does not exist')
+    else:
+        command='cd /disks/paradata/shimwell/LoTSS-DR2/archive/'+name+'; rm -rf summary.txt logs '
+        g=glob.glob(basedir+'/'+name+'/KEEP/*')
+        fl=[os.path.basename(f) for f in g]
+        command+=' '.join(fl)
+        print command
+        os.system('ssh '+target+' "'+command+'"')
+        
 def do_upload_compressed(name,basedir):
     workdir=basedir+'/'+name
     f=myglob('*.archive',workdir)
@@ -61,7 +72,7 @@ def do_upload_compressed(name,basedir):
         sdb.set_field(idd)
     
         
-def do_upload(name,basedir):
+def do_upload(name,basedir,skipstokes=False):
 
     workdir=basedir+'/'+name
 
@@ -72,14 +83,16 @@ def do_upload(name,basedir):
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
+    f+=myglob('DDS*full_slow*.npz',workdir)
     f+=images('image_full_ampphase_di_m.NS',workdir)
     f+=images('image_full_low_m',workdir)
     f+=shiftimages('image_full_ampphase_di_m.NS')
     for i in range(3):
         f+=shiftimages('image_full_ampphase_di_m.NS_Band%i' %i)
-    f+=myglob('image_full_low_stokesV.dirty.*',workdir)
-    f+=myglob('image_full_low_QU.cube.*',workdir)
-    f+=myglob('image_full_vlow_QU.cube.*',workdir)
+    if not skipstokes:
+        f+=myglob('image_full_low_stokesV.dirty.*',workdir)
+        f+=myglob('image_full_low_QU.cube.*',workdir)
+        f+=myglob('image_full_vlow_QU.cube.*',workdir)
     f+=myglob('*.archive',workdir)
 
     do_rsync(name,basedir,f)
@@ -87,7 +100,7 @@ def do_upload(name,basedir):
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
         idd['status']='Archived'
-        idd['archive_version']=2 if compressed_done else 0
+        #idd['archive_version']=4 if compressed_done else 0
         tag_field(sdb,idd,workdir=workdir)
         sdb.set_field(idd)
     
