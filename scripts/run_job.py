@@ -23,7 +23,7 @@ def do_run_job(name,basedir,qsubfile=None,do_field=True,prefix='ddfp'):
 
 def rerun_select():
     with SurveysDB() as sdb:
-        sdb.cur.execute('select * from fields where clustername="Herts" and status="Archived" and priority<10 and archive_version<3 order by priority')
+        sdb.cur.execute('select * from fields where clustername="Herts" and status="Queued" and priority<10 and archive_version<3 order by priority desc')
         results=sdb.cur.fetchall()
     for r in results:
         name=r['id']

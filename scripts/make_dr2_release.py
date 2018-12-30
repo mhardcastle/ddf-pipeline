@@ -63,7 +63,7 @@ while True:
 
     if not skip_construct:
         separator('Preparing release directory')
-        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits','DynSpec*.tgz']
+        releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS.tessel.reg','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits','DynSpec*.tgz']
 
         os.chdir(workdir+'/fields')
         for r in result:

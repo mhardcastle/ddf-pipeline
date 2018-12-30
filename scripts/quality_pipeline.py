@@ -3,6 +3,7 @@
 # Routine to check quality of LOFAR images
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 import os,sys
 import os.path
@@ -14,11 +15,11 @@ try:
     import bdsf as bdsm
 except ImportError:
     import lofar.bdsm as bdsm
-from auxcodes import report,run,get_rms,warn,die,sepn
+from auxcodes import report,run,get_rms,warn,die,sepn,get_centpos
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
-from facet_offsets import do_plot_facet_offsets,label_table
+from facet_offsets import label_table,RegPoly,plot_offsets
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -114,6 +115,18 @@ def crossmatch_image(lofarcat,auxcatname,options=None,catdir='.'):
         t=t[~np.isnan(t[auxcatname+'_separation'])]
         t.write(lofarcat+'_'+auxcatname+'_match.fits')
         
+def do_plot_facet_offsets(t,regfile,savefig=None):
+    ''' convenience function to plot offsets '''
+    cra,cdec=get_centpos()
+    r=RegPoly(regfile,cra,cdec)
+    if isinstance(t,str):
+        t=Table.read(t)
+    if 'Facet' not in t.columns:
+        r.add_facet_labels(t)
+    plot_offsets(t,r.clist,'red')
+    if savefig is not None:
+        plt.savefig(savefig)
+
 if __name__=='__main__':
     # Main loop
     if len(sys.argv)<2:
@@ -152,10 +165,11 @@ if __name__=='__main__':
     sfind_image(o['catprefix'],o['pbimage'],o['nonpbimage'],o['sfind_pixel_fraction'])
 
     # facet labels -- do this now for generality
+    cra,cdec=get_centpos()
     t=Table.read(o['catprefix'] + '.cat.fits')
     tesselfile=o['catprefix']+'.tessel.reg'
     if 'Facet' not in t.columns:
-        t=label_table(t,tesselfile)
+        t=label_table(t,tesselfile,cra,cdec)
         t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
     # matching with catalogs
