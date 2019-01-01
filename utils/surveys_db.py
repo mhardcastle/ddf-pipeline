@@ -129,7 +129,7 @@ class SurveysDB(object):
             #can't use this feature on lofar's version of MariaDB
             #self.cur.execute('set session transaction read only')
         else:
-            self.cur.execute('lock table fields write, observations write, transients write')
+            self.cur.execute('lock table fields write, observations write, transients write, quality write')
         self.closed=False
 
     def close(self):
@@ -184,7 +184,7 @@ class SurveysDB(object):
 
     def create_observation(self,id):
         self.cur.execute('insert into observations(id) values (%s)',(id,))
-        return self.get_field(id)
+        return self.get_observation(id)
 
     def get_transient(self,id):
         self.cur.execute('select * from transients where id=%s',(id,))
@@ -207,6 +207,28 @@ class SurveysDB(object):
         self.cur.execute('insert into transients(id) values (%s)',(id,))
         return self.get_transient(id)
 
+    def create_quality(self,id):
+        self.cur.execute('delete from quality where id="%s"' % id)
+        self.cur.execute('insert into quality(id) values (%s)',(id,))
+        return self.get_quality(id)
+
+    def get_quality(self,id):
+        self.cur.execute('select * from quality where id=%s',(id,))
+        result=self.cur.fetchall()
+        if len(result)==0:
+            return None
+        else:
+            return result[0]
+
+    def set_quality(self,sd):
+        assert not self.readonly
+        id=sd['id'];
+        for k in sd:
+            if k=='id':
+                continue
+            if sd[k] is not None:
+                self.cur.execute('update quality set '+k+'=%s where id=%s',(sd[k],id))
+    
 if __name__=='__main__':
     sdb=SurveysDB()
     result=sdb.get_field('P35Hetdex10')

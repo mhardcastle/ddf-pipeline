@@ -15,11 +15,13 @@ try:
     import bdsf as bdsm
 except ImportError:
     import lofar.bdsm as bdsm
-from auxcodes import report,run,get_rms,warn,die,sepn,get_centpos
+from auxcodes import report,get_rms,warn,die,sepn,get_centpos
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
 from facet_offsets import label_table,RegPoly,plot_offsets
+from dr_checker import do_dr_checker
+from surveys_db import SurveysDB,get_id,use_database
 
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
@@ -94,7 +96,7 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
     if options['restart'] and os.path.isfile(catprefix +'.cat.fits'):
         warn('File ' + catprefix +'.cat.fits already exists, skipping source finding step')
     else:
-        img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None,**kwargs)
+        img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None,**kwargs)
         img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
         img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
@@ -172,6 +174,8 @@ if __name__=='__main__':
         t=label_table(t,tesselfile,cra,cdec)
         t.write(o['catprefix'] + '.cat.fits',overwrite=True)
 
+    catsources=len(t)
+    
     # matching with catalogs
     for cat in o['list']:
         print 'Doing catalogue',cat
@@ -192,7 +196,9 @@ if __name__=='__main__':
         mddec=np.mean(t['FIRST_dDEC'])
         print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1])
         print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
-
+        first_ra=mdra
+        first_dec=mddec
+        
         report('Plotting per-facet position offsets')
         do_plot_facet_offsets(t,tesselfile,o['catprefix']+'.cat.fits_FIRST_match_filtered_offsets.png')
         t['FIRST_dRA']-=mdra
@@ -202,6 +208,9 @@ if __name__=='__main__':
         report('Plotting flux ratios')
         # Flux ratio plots (only compact sources)
         plot_flux_ratios('%s.cat.fits_FIRST_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_FIRST_match_filtered_fluxerrors.png'%o['catprefix'],options=o)
+    else:
+        first_ra=None
+        first_dec=None
     
     report('Plotting flux scale comparison')
     # Flux scale comparison plots
@@ -211,13 +220,38 @@ if __name__=='__main__':
         ratios=t['Total_flux']/(t['TGSS_Total_flux']/o['TGSS_fluxfactor'])
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
         print 'Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+        tgss_scale=np.median(ratios)
+    else:
+        tgss_scale=None
     if 'NVSS' in o['list']:
         t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
         t=t[t['Total_flux']>10e-3]
         ratios=t['Total_flux']/t['NVSS_Total_flux']
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
         print 'Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+        nvss_scale=np.median(ratios)
+    else:
+        nvss_scale=None
     # Noise estimate
     hdu=fits.open(o['pbimage'])
     imagenoise = get_rms(hdu)
-    print 'An estimate of the image noise is %.3f muJy/beam' % (imagenoise*1E6)
+    rms=imagenoise*1e6
+    print 'An estimate of the image noise is %.3f muJy/beam' % rms
+    drs=do_dr_checker(o['catprefix']+'.cat.fits',o['pbimage'],verbose=False)
+    dr=np.median(drs)
+    print 'Median dynamic range is',dr
+    
+    print rms,dr,catsources,first_ra,first_dec,tgss_scale,nvss_scale
+
+    if use_database():
+        id=get_id()
+        with SurveysDB() as sdb:
+            result=sdb.create_quality(id)
+            result['rms']=rms
+            result['dr']=dr
+            result['catsources']=catsources
+            result['first_ra']=first_ra
+            result['first_dec']=first_dec
+            result['tgss_scale']=tgss_scale
+            result['nvss_scale']=nvss_scale
+            sdb.set_quality(result)
