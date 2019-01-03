@@ -6,7 +6,7 @@ from surveys_db import SurveysDB
 from shutil import copy2
 from subprocess import call
 from time import sleep
-import datetime
+from datetime import datetime
 import glob
 
 archive='/disks/paradata/shimwell/LoTSS-DR2/archive/'
@@ -38,7 +38,7 @@ def link(name,id,lroot,anchor,wdir):
 workdir='/data/lofar/DR2'
 skip_construct=False
 while True:
-    print(datetime.datetime.now())
+    print(datetime.now())
     print
 
     # make status plot
@@ -94,13 +94,16 @@ while True:
                     warn('Location for %s does not exist' % id)
             else:
                 # get from archive if necessary
-                if r['status']!='Archived':
+                if r['status']!='Archived' or r['archive_version']<4:
                     continue
                 else:
+                    ctime=datetime(2018,11,1)
                     for f in releasefiles:
                         if '*' in f:
-                            continue # can't do this yet
-                        if not os.path.isfile(tdir+'/'+f):
+                            g=glob.glob(tdir+'/'+f)
+                            if len(g)==0:
+                                download_file(id,f)
+                        if not os.path.isfile(tdir+'/'+f) or datetime.fromtimestamp(os.path.getmtime(tdir+'/'+f))<ctime:
                             print 'Need to download',id+'/'+f,'from archive'
                             download_file(id,f)
 
