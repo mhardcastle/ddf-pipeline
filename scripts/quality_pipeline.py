@@ -108,14 +108,19 @@ def crossmatch_image(lofarcat,auxcatname,options=None,catdir='.'):
     if options is None:
         options = o
     auxcat = options[auxcatname]
-    if options['restart'] and os.path.isfile(lofarcat + '_' + auxcatname + '_match.fits'):
-        warn('File ' + lofarcat + '_' + auxcatname + '_match.fits already exists, skipping source matching step')
+    crossmatchname=lofarcat + '_' + auxcatname + '_match.fits'
+    if options['restart'] and os.path.isfile(crossmatchname):
+        warn('File ' + crossmatchname+ ' already exists, skipping source matching step')
+        t=Table.read(crossmatchname)
+        matches=len(t)
+        del(t)
     else:
         t=Table.read(lofarcat)
         tab=Table.read(catdir+'/'+auxcat)
-        match_catalogues(t,tab,o[auxcatname+'_matchrad'],auxcatname)
+        matches=match_catalogues(t,tab,o[auxcatname+'_matchrad'],auxcatname)
         t=t[~np.isnan(t[auxcatname+'_separation'])]
         t.write(lofarcat+'_'+auxcatname+'_match.fits')
+    return matches
         
 def do_plot_facet_offsets(t,regfile,savefig=None):
     ''' convenience function to plot offsets '''
@@ -177,12 +182,16 @@ if __name__=='__main__':
     catsources=len(t)
     
     # matching with catalogs
+    removelist=[]
     for cat in o['list']:
         print 'Doing catalogue',cat
-        crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir'])
-        filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
-
-    # Filter catalogs (only keep isolated compact sources within 3deg of pointing centre)
+        if crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir']):
+            filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
+        else:
+            print 'No matches, abandoning catalogue'
+            removelist.append(cat)
+    for cat in removelist:
+        o['list'].remove(cat)
 
     # Astrometric plots
     if 'FIRST' in o['list']:
