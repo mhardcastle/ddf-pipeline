@@ -22,7 +22,7 @@ import sys,os
 if "PYTHONPATH_FIRST" in os.environ.keys() and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
 import os.path
-from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict,separator,MSList
+from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
 from parset import option_list
 from options import options,print_options
 from shutil import copyfile,rmtree,move

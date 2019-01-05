@@ -1,4 +1,4 @@
-import pylab
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
@@ -52,47 +52,47 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
     fitsimage.close()
     radialseps = sepn(scat['RA']*deg2rad,scat['DEC']*deg2rad,fieldra*deg2rad,fielddec*deg2rad)*rad2deg
 
-    pylab.plot(np.sort(scat['Total_flux']),np.sort(scat['Total_flux'])*np.median(np.array(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'])/np.array(scat['Total_flux'])),'r--')
-    pylab.plot(scat['Total_flux'],scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'],'ko')
-    pylab.xlabel('Integrated LOFAR flux (Jy)')
-    pylab.ylabel('Integrated '+auxcatname+' flux (Jy)')
-    pylab.xlim(xmin=0.01,xmax=0.5)
-    pylab.ylim(ymin=0.01,ymax=0.5)
-    pylab.semilogx()
-    pylab.semilogy()
+    plt.plot(np.sort(scat['Total_flux']),np.sort(scat['Total_flux'])*np.median(np.array(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'])/np.array(scat['Total_flux'])),'r--')
+    plt.plot(scat['Total_flux'],scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor'],'ko')
+    plt.xlabel('Integrated LOFAR flux (Jy)')
+    plt.ylabel('Integrated '+auxcatname+' flux (Jy)')
+    plt.xlim(xmin=0.01,xmax=0.5)
+    plt.ylim(ymin=0.01,ymax=0.5)
+    plt.semilogx()
+    plt.semilogy()
     equality = np.arange(0,10,0.01)
-    pylab.plot(equality,equality,'k-')
-    pylab.savefig(outname.replace('.png','_integrated.png'))
-    pylab.close('all')
-    pylab.cla()
+    plt.plot(equality,equality,'k-')
+    plt.savefig(outname.replace('.png','_integrated.png'))
+    plt.close('all')
+    plt.cla()
     plt.clf()
     
-    pylab.plot(np.sort(scat['Peak_flux']),np.sort(scat['Peak_flux'])*np.median(np.array(scat[auxcatname+'_Peak_flux']/options['%s_fluxfactor'%auxcatname])/np.array(scat['Peak_flux'])),'r--')
-    pylab.plot(scat['Peak_flux'],scat[auxcatname+'_Peak_flux']/options[auxcatname+'_fluxfactor'],'ko')
-    pylab.xlabel('Peak LOFAR flux (Jy)')
-    pylab.ylabel('Peak '+auxcatname+' flux (Jy)')
-    pylab.xlim(xmin=0.01,xmax=0.5)
-    pylab.ylim(ymin=0.01,ymax=0.5)
-    pylab.semilogx()
-    pylab.semilogy()
+    plt.plot(np.sort(scat['Peak_flux']),np.sort(scat['Peak_flux'])*np.median(np.array(scat[auxcatname+'_Peak_flux']/options['%s_fluxfactor'%auxcatname])/np.array(scat['Peak_flux'])),'r--')
+    plt.plot(scat['Peak_flux'],scat[auxcatname+'_Peak_flux']/options[auxcatname+'_fluxfactor'],'ko')
+    plt.xlabel('Peak LOFAR flux (Jy)')
+    plt.ylabel('Peak '+auxcatname+' flux (Jy)')
+    plt.xlim(xmin=0.01,xmax=0.5)
+    plt.ylim(ymin=0.01,ymax=0.5)
+    plt.semilogx()
+    plt.semilogy()
     equality = np.arange(0,10,0.01)
-    pylab.plot(equality,equality,'k-')
-    pylab.savefig(outname.replace('.png','_peak.png'))
-    pylab.close('all')
-    pylab.cla()
+    plt.plot(equality,equality,'k-')
+    plt.savefig(outname.replace('.png','_peak.png'))
+    plt.close('all')
+    plt.cla()
     plt.clf()
     
-    pylab.plot(radialseps,scat['Total_flux']/(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor']),'bo',alpha=0.4,markersize=3)
+    plt.plot(radialseps,scat['Total_flux']/(scat[auxcatname+'_Total_flux']/options[auxcatname+'_fluxfactor']),'bo',alpha=0.4,markersize=3)
     equality = np.arange(-0.01,10,0.01)
     fractionrange = np.arange(0.99,1.01,0.002)
     for i in fractionrange:
-        pylab.plot(equality,1.0*i+0*equality,'k-')
-    pylab.plot(equality,1.0+0*equality,'k-')
-    pylab.xlabel('Distance from pointing centre (deg)')
-    pylab.ylabel('Integrated LOFAR flux / Integrated '+auxcatname+' flux')
+        plt.plot(equality,1.0*i+0*equality,'k-')
+    plt.plot(equality,1.0+0*equality,'k-')
+    plt.xlabel('Distance from pointing centre (deg)')
+    plt.ylabel('Integrated LOFAR flux / Integrated '+auxcatname+' flux')
     
-    pylab.xlim(xmin=0.0,xmax=2)
-    pylab.ylim(ymin=0.5,ymax=2.0)    
+    plt.xlim(xmin=0.0,xmax=2)
+    plt.ylim(ymin=0.5,ymax=2.0)    
 
     distancerange = np.arange(0,np.max(radialseps)+0.15,0.15)
 
@@ -104,14 +104,14 @@ def plot_flux_errors(catalog,fitsimage,outname,auxcatname,options=None):
             if distancemin < radialseps[j] < distancemax:
                 binvals = np.append(binvals,scat['Total_flux'][j]/(scat[auxcatname+'_Total_flux'][j]/options[auxcatname+'_fluxfactor']))
         midpoint = (distancemin+distancemax)/2.0
-        if len(binvals) > 0.0:
+        if len(binvals) > 0:
             booterrl,booterrh = bootstrap(binvals, 100000, np.mean, 0.05)
             booterrl,booterrh = bootstrap(binvals, 100000, np.median, 0.05)
 #            print booterrl,booterrh, binvals
-            pylab.errorbar(midpoint,np.median(binvals),xerr=(distancemin-distancemax)/2.0,yerr=[[np.median(binvals)-booterrl],[booterrh-np.median(binvals)]],fmt='--o',ecolor='b',color='b',zorder=999999)
-    pylab.savefig(outname.replace('.png','_total_radial.png'))
-    pylab.close('all')
-    pylab.cla()
+            plt.errorbar(midpoint,np.median(binvals),xerr=(distancemin-distancemax)/2.0,yerr=[[np.median(binvals)-booterrl],[booterrh-np.median(binvals)]],fmt='--o',ecolor='b',color='b',zorder=999999)
+    plt.savefig(outname.replace('.png','_total_radial.png'))
+    plt.close('all')
+    plt.cla()
     plt.clf()
 
 
@@ -157,13 +157,15 @@ def plot_flux_ratios(catalog,fitsimage,outname,options=None):
             if distancemin < radialseps[j] < distancemax:
                 binvals = np.append(binvals,fluxratios[j])
         midpoint = (distancemin+distancemax)/2.0
+        print i,binvals
         #bsmear = bandwidth_smearing2(6*arcsec2deg,150E6,midpoint,4*48.8E3)
         #tsmear = time_smearing2(16.0,midpoint,6*arcsec2deg)
         #smids.append(midpoint)
         #svals.append(1.0/(bsmear*tsmear))
-        booterrl,booterrh = bootstrap(binvals, 100000, np.mean, 0.05)
-        booterrl,booterrh = bootstrap(binvals, 100000, np.median, 0.05)
-        axScatter.errorbar(midpoint,np.median(binvals),xerr=(distancemin-distancemax)/2.0,yerr=[[np.median(binvals)-booterrl],[booterrh-np.median(binvals)]],fmt='--o',ecolor='b',color='b',zorder=999999)
+        #booterrl,booterrh = bootstrap(binvals, 100000, np.mean, 0.05)
+        if len(binvals)>0:
+            booterrl,booterrh = bootstrap(binvals, 100000, np.median, 0.05)
+            axScatter.errorbar(midpoint,np.median(binvals),xerr=(distancemin-distancemax)/2.0,yerr=[[np.median(binvals)-booterrl],[booterrh-np.median(binvals)]],fmt='--o',ecolor='b',color='b',zorder=999999)
 
     #axScatter.plot(smids,svals,'k--')
     

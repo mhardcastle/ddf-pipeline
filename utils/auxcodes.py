@@ -136,7 +136,7 @@ def find_imagenoise(workingimage,estnoise):
     #noisepix = np.array(filter(lambda x: abs(x) > 10E-8,noisearray)) # Filter out the edge pixels which have values around 1E-10
     noisepix = np.array(filter(lambda x: abs(x)<50.0*estnoise,noisepix))
     f.close()
-    rms = fit_gaussian_histogram(noisepix,'n')
+    rms = fit_gaussian_histogram(noisepix,False)
     return rms
 
 #------------------------------------------------------------
@@ -157,12 +157,14 @@ def fit_gaussian_histogram(pixelvals,plotting):
     t = np.arange(len(fitnumbers))
     x, flag = scipy.optimize.leastsq(residuals_gaussian, x0, args=(fitnumbers, t))
 
-    if plotting == 'y':
-        pylab.plot(fitnumbers)
-        pylab.plot(t,fitnumbers,t,model_gaussian(t,x))
-        pylab.show()
-        pylab.close()
-        pylab.cla()
+    if plotting:
+        import matplotlib.pyplot as plt
+        
+        plt.plot(fitnumbers)
+        plt.plot(t,fitnumbers,t,model_gaussian(t,x))
+        plt.show()
+        plt.close()
+        plt.cla()
 
     #print 'Sigma is %s'%(x[3]*abs(cellsizes[1]-cellsizes[0]))
     
