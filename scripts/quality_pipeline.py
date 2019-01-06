@@ -124,15 +124,18 @@ def crossmatch_image(lofarcat,auxcatname,options=None,catdir='.'):
         
 def do_plot_facet_offsets(t,regfile,savefig=None):
     ''' convenience function to plot offsets '''
-    cra,cdec=get_centpos()
-    r=RegPoly(regfile,cra,cdec)
-    if isinstance(t,str):
-        t=Table.read(t)
-    if 'Facet' not in t.columns:
-        r.add_facet_labels(t)
-    plot_offsets(t,r.clist,'red')
-    if savefig is not None:
-        plt.savefig(savefig)
+    if savefig is not None and os.path.isfile(savefig):
+        warn('Figure file %s exists, not re-making it' % savefig)
+    else:
+        cra,cdec=get_centpos()
+        r=RegPoly(regfile,cra,cdec)
+        if isinstance(t,str):
+            t=Table.read(t)
+        if 'Facet' not in t.columns:
+            r.add_facet_labels(t)
+        plot_offsets(t,r.clist,'red')
+        if savefig is not None:
+            plt.savefig(savefig)
 
 if __name__=='__main__':
     # Main loop
@@ -249,8 +252,15 @@ if __name__=='__main__':
     drs=do_dr_checker(o['catprefix']+'.cat.fits',o['pbimage'],verbose=False)
     dr=np.median(drs)
     print 'Median dynamic range is',dr
+
+    # fit source counts
+    if o['fit_sourcecounts']:
+        from fit_sourcecounts import do_fit_sourcecounts
+        sc_norm,sc_index,scale=do_fit_sourcecounts(rms=imagenoise)
+    else:
+        sc_norm=sc_index=scale=None
     
-    print rms,dr,catsources,first_ra,first_dec,tgss_scale,nvss_scale
+    print rms,dr,catsources,first_ra,first_dec,tgss_scale,nvss_scale,sc_norm,sc_index,scale
 
     if use_database():
         id=get_id()
@@ -263,4 +273,8 @@ if __name__=='__main__':
             result['first_dec']=first_dec
             result['tgss_scale']=tgss_scale
             result['nvss_scale']=nvss_scale
+            result['sc_norm']=sc_norm
+            result['sc_index']=sc_index
+            result['scale']=scale
+            
             sdb.set_quality(result)
