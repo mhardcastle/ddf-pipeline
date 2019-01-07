@@ -1635,13 +1635,13 @@ def main(o=None):
         cthreads=[]
         flist=[]
         cubefiles=['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']
-        if o['restart'] and os.path.isfile(cubefiles[0]) and os.path.isfile(cubefiles[1]):
+        if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
             do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
-                    if os.path.isfile(cubefile+'.fz'):
+                    if o['restart'] and os.path.isfile(cubefile+'.fz'):
                         warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
                     else:
                         report('Starting compression thread for '+cubefile)
@@ -1650,14 +1650,14 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         cubefiles=['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']
-        if o['restart'] and os.path.isfile(cubefiles[0]) and os.path.isfile(cubefiles[1]):
+        if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed vlow QU cube product exists, not making new images')
         else:
             vlow_uvrange=[o['image_uvmin'],1.6]
             do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
-                    if os.path.isfile(cubefile+'.fz'):
+                    if o['restart'] and os.path.isfile(cubefile+'.fz'):
                         warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
                     else:
                         report('Starting compression thread for '+cubefile)
@@ -1687,6 +1687,7 @@ def main(o=None):
                 thread.join()
         if o['delete_compressed']:
             for f in flist:
+                warn('Deleting compressed file %s' % f)j
                 os.remove(f)
 
     if o['do_dynspec']:
