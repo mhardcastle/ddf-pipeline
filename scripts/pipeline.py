@@ -1687,7 +1687,7 @@ def main(o=None):
                 thread.join()
         if o['delete_compressed']:
             for f in flist:
-                warn('Deleting compressed file %s' % f)j
+                warn('Deleting compressed file %s' % f)
                 os.remove(f)
 
     if o['do_dynspec']:
