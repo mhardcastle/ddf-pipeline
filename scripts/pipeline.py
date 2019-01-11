@@ -854,7 +854,8 @@ def subtractOuterSquare(o):
     else:
         ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-                  #cleanmode='SSD',majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
+                  cleanmode='SSD',
+		  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
                   #ddsols='wide_killms_p1',
                   #applysols='AP',#normalization=o['normalize'][0],
                   peakfactor=0.001,
