@@ -10,6 +10,7 @@ import glob
 from mosaic import make_mosaic
 from astropy.io import fits
 import numpy as np
+from surveys_db import SurveysDB
 import pickle
 try:
     import bdsf as bdsm
@@ -85,21 +86,29 @@ if __name__=='__main__':
 
     # find what we need to put in the mosaic
     mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,mospointingname)
+
     maxsep=np.max(mosseps)
     # now find whether we have got these pointings somewhere!
     mosaicdirs=[]
     missingpointing = False
+    sdb = SurveysDB()
     for p in mosaicpointings:
         print 'Wanting to put pointing %s in mosaic'%p
+        
+        currentdict = sdb.get_field(p)
         for d in args.directories:
             rd=d+'/'+p
+            print rd
             if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
                 mosaicdirs.append(rd)
                 break
         else:
             print 'Pointing',p,'not found'
             missingpointing = True
-            
+        if currentdict['status'] != 'Archieved' and currentdict['archive_version'] != 4:
+            print 'Pointing',p,'not archived with archive_version 4'
+            missingpointing = True
+    sdb.close()
     if not(args.no_check) and missingpointing == True:
         raise RuntimeError('Failed to find a required pointing')
 
