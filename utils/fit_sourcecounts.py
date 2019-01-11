@@ -23,11 +23,11 @@ def lnprior(X):
 def lnpost(X,x,y):
     return lnprior(X)+loglf(x,y,X[0],X[1])
 
-def do_fit_sourcecounts(rms=None,do_plots=False):
+def do_fit_sourcecounts(t=None, rms=None,do_plots=False):
 
     global fluxnorm,ds
-    
-    t=Table.read('image_full_ampphase_di_m.NS.cat.fits')
+    if t is None:
+        t=Table.read('image_full_ampphase_di_m.NS.cat.fits')
     print 'Number of sources in full table is',len(t)
     if rms is None:
         rms=get_rms(fits.open('image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'))
@@ -90,9 +90,9 @@ def do_fit_sourcecounts(rms=None,do_plots=False):
         for i in range(6):
             ncn+=C[i]*lf**i
         print 'for %.3f Jy number count norm should be %f' % (fn,10**ncn)
-        measured_ncn=10**fnorm*(fn**2.5)*3282.8/17.09 # check precise area
-        print 'number count norm is',measured_ncn 
-        scale=(measured_ncn/10**ncn)**(1.0/1.5)
+        measured_ncn=10**fnorm*fluxnorm*(fn**1.5)*3282.8/17.09 # check precise area
+        print 'measured number count norm is',measured_ncn 
+        scale=(measured_ncn/10**ncn)#**(1.0/1.5)
         print 'scaling factor should be',scale
         totfactor*=scale
         print 'total factor is',totfactor
@@ -119,7 +119,28 @@ def do_fit_sourcecounts(rms=None,do_plots=False):
         plt.show()
 
     return fnorm,falpha,totfactor
+
+def pl(a, b, g, size=1):
+    """Power-law gen for pdf(x)\propto x^{g-1} for a<=x<=b"""
+    r = np.random.random(size=size)
+    ag, bg = a**g, b**g
+    return (ag + (bg - ag)*r)**(1./g)
+
+def test_sourcecounts(niter=100,size=13780,rms=1e-4):
+    factors=[]
+    scale=0.7
+    for i in range(niter):
+        print 'Iteration',i
+        fluxes=pl(3*rms,1,-0.753,size=size)
+        print fluxes
+        fluxes+=rms*np.random.normal(size=size)
+        fluxes*=scale
+        t=Table([fluxes],names=('Total_flux',))
+        _,_,totfactor=do_fit_sourcecounts(t=t,rms=rms*scale,do_plots=False)
+        factors.append(totfactor)
+    print np.mean(factors), np.std(factors)
         
 if __name__=='__main__':
-    print do_fit_sourcecounts(do_plots=True)
+    test_sourcecounts()
+    #print do_fit_sourcecounts(do_plots=True)
     
