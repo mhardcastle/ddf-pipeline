@@ -72,6 +72,7 @@ def do_upload(name,basedir):
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
+    f+=myglob('DDS3*merged*.npz',workdir)
     f+=images('image_full_ampphase_di_m.NS',workdir)
     f+=images('image_full_low_m',workdir)
     f+=shiftimages('image_full_ampphase_di_m.NS')
