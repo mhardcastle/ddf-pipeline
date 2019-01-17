@@ -81,7 +81,7 @@ class SurveysDB(object):
     def __exit__(self, type, value, tb):
         self.close()
 
-    def __init__(self,readonly=False):
+    def __init__(self,readonly=False,verbose=False):
 
         # get the config file -- this must exist
         home=os.getenv("HOME")
@@ -99,7 +99,10 @@ class SurveysDB(object):
 
         # read only use
         self.readonly=readonly
+        self.verbose=verbose
 
+        self.tables=['fields','observations','quality','transients','reprocessing']
+        
         # set up an ssh tunnel if not running locally
         self.usetunnel=False
         self.hostname=socket.gethostname()
@@ -129,8 +132,17 @@ class SurveysDB(object):
             #can't use this feature on lofar's version of MariaDB
             #self.cur.execute('set session transaction read only')
         else:
-            self.cur.execute('lock table fields write, observations write, transients write, quality write')
+            command='lock table '
+            for table in self.tables:
+                command+=table+' write, '
+            command=command[:-2]
+            self.cur.execute(command)
         self.closed=False
+
+    def execute(self,*args):
+        if self.verbose:
+            print args
+        self.cur.execute(*args)
 
     def close(self):
         if not self.closed:
@@ -143,95 +155,79 @@ class SurveysDB(object):
     
     def __del__(self):
         self.close()
+
+    def check_table(self,table):
+        if table not in self.tables:
+            table+='s'
+            if table not in self.tables:
+                raise RuntimeError('Unknown table %s requested' % table)
+        return table
+        
+    def db_get(self,table,id):
+        table=self.check_table(table)
+        self.execute('select * from '+table+' where id=%s',(id,))
+        result=self.cur.fetchall()
+        if len(result)==0:
+            return None
+        else:
+            return result[0]
+
+    def db_set(self,table,record):
+        if self.readonly: raise RuntimeError('Write requested in read-only mode')
+        table=self.check_table(table)
+        id=record['id'];
+        for k in record:
+            if k=='id':
+                continue
+            if record[k] is not None:
+                self.execute('update '+table+' set '+k+'=%s where id=%s',(record[k],id))
+
+    def db_create(self,table,id):
+        table=self.check_table(table)
+        if self.readonly: raise RuntimeError('Create requested in read-only mode')
+        self.execute('insert into '+table+'(id) values (%s)',(id,))
+        return self.db_get(table,id)
         
     def get_field(self,id):
-        self.cur.execute('select * from fields where id=%s',(id,))
-        result=self.cur.fetchall()
-        if len(result)==0:
-            return None
-        else:
-            return result[0]
+        return self.db_get('fields',id)
 
     def set_field(self,sd):
-        assert not self.readonly
-        id=sd['id'];
-        for k in sd:
-            if k=='id':
-                continue
-            if sd[k] is not None:
-                self.cur.execute('update fields set '+k+'=%s where id=%s',(sd[k],id))
+        self.db_set('fields',sd)
 
     def create_field(self,id):
-        self.cur.execute('insert into fields(id) values (%s)',(id,))
-        return self.get_field(id)
+        return self.db_create('fields',id)
 
     def get_observation(self,id):
-        self.cur.execute('select * from observations where id=%s',(id,))
-        result=self.cur.fetchall()
-        if len(result)==0:
-            return None
-        else:
-            return result[0]
-
+        return self.db_get('observations',id)
+    
     def set_observation(self,sd):
-        assert not self.readonly
-        id=sd['id'];
-        for k in sd:
-            if k=='id':
-                continue
-            if sd[k] is not None:
-                self.cur.execute('update observations set '+k+'=%s where id=%s',(sd[k],id))
-
+        self.db_set('observations',sd)
+        
     def create_observation(self,id):
-        self.cur.execute('insert into observations(id) values (%s)',(id,))
-        return self.get_observation(id)
+        self.db_create('observations',id)
 
     def get_transient(self,id):
-        self.cur.execute('select * from transients where id=%s',(id,))
-        result=self.cur.fetchall()
-        if len(result)==0:
-            return None
-        else:
-            return result[0]
+        return self.db_get('transients',id)
 
     def set_transient(self,sd):
-        assert not self.readonly
-        id=sd['id'];
-        for k in sd:
-            if k=='id':
-                continue
-            if sd[k] is not None:
-                self.cur.execute('update transients set '+k+'=%s where id=%s',(sd[k],id))
-
+        return self.db_set('transients',sd)
+        
     def create_transient(self,id):
-        self.cur.execute('insert into transients(id) values (%s)',(id,))
-        return self.get_transient(id)
+        return self.db_create('transients',id)
 
     def create_quality(self,id):
         self.cur.execute('delete from quality where id="%s"' % id)
-        self.cur.execute('insert into quality(id) values (%s)',(id,))
-        return self.get_quality(id)
+        return self.db_create('quality',id)
 
     def get_quality(self,id):
-        self.cur.execute('select * from quality where id=%s',(id,))
-        result=self.cur.fetchall()
-        if len(result)==0:
-            return None
-        else:
-            return result[0]
-
+        return self.db_get('quality',id)
+        
     def set_quality(self,sd):
-        assert not self.readonly
-        id=sd['id'];
-        for k in sd:
-            if k=='id':
-                continue
-            if sd[k] is not None:
-                self.cur.execute('update quality set '+k+'=%s where id=%s',(sd[k],id))
+        return self.db_set('quality',sd)
     
 if __name__=='__main__':
-    sdb=SurveysDB()
-    result=sdb.get_field('P35Hetdex10')
+    sdb=SurveysDB(verbose=True)
+    result=sdb.db_get('fields','P35Hetdex10')
     #result['location']='Never Never Land'
     #sdb.set_id(result)
     print result
