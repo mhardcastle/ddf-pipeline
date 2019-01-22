@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pyrap.tables as pt
 import os,sys
 import numpy as np
