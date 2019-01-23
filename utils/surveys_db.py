@@ -21,6 +21,27 @@ def get_next():
     else:
         return None
 
+def get_next_selfcalibration():
+    sdb=SurveysDB(readonly=True)
+    sdb.cur.execute('select reprocessing.id,reprocessing.priority,reprocessing.fields,reprocessing.extract_status from reprocessing where reprocessing.selfcal_status like "%SREADY%" group by reprocessing.priority desc')
+    results=sdb.cur.fetchall()
+    sdb.close()
+    if len(results)>0:
+        return results[0]
+    else:
+        return None
+
+def get_next_extraction():
+    # return the name of the top-priority field with appropriate status
+    sdb=SurveysDB(readonly=True)
+    sdb.cur.execute('select reprocessing.id,reprocessing.priority,reprocessing.fields,reprocessing.extract_status from reprocessing where reprocessing.extract_status like "%EREADY%" group by reprocessing.priority desc')
+    results=sdb.cur.fetchall()
+    sdb.close()
+    if len(results)>0:
+        return results[0]
+    else:
+        return None
+
 def update_status(name,status,time=None,workdir=None,av=None):
     # utility function to just update the status of an observation
     # name can be None (work it out from cwd), or string (field name)
@@ -225,6 +246,16 @@ class SurveysDB(object):
     def set_quality(self,sd):
         return self.db_set('quality',sd)
     
+    def get_reprocessing(self,id):
+        return self.db_get('reprocessing',id)
+    
+    def set_reprocessing(self,sd):
+        self.db_set('reprocessing',sd)
+        
+    def create_reprocessing(self,id):
+        self.db_create('reprocessing',id)
+
+
 if __name__=='__main__':
     sdb=SurveysDB(verbose=True)
     result=sdb.db_get('fields','P35Hetdex10')
