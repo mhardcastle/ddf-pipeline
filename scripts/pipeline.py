@@ -958,7 +958,7 @@ def main(o=None):
         if o['redofrom']=='start':
             pass
         elif o['redofrom']=='dirin':
-            keep+=glob.glob('image_dirin_SSD_init.*') + glob.glob('image_dirin_SSD.*') + glob.glob('MaskDiffuse*') + glob.glob('Noise*.fits')
+            keep+=glob.glob('image_dirin_SSD_init.*') + glob.glob('image_dirin_SSD.*') + glob.glob('image_dirin_SSD_m.*') + glob.glob('MaskDiffuse*') + glob.glob('Noise*.fits')
         else:
             die('Redofrom option not implemented')
             
