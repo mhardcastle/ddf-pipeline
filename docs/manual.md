@@ -374,11 +374,11 @@ default, it will attempt to pick up from where it left off on
 rerun. Normally this is what you want.
 
 The option `[control] redofrom` can be used to start again from after
-a specified step in the pipeline. Available options are start, dirin,
-phase, ampphase, fullow, full. Solutions and, if necessary, bootstrap
-results will be removed before the restart; all old files are moved to
-an `archive_dir` directory. `[control] restart` must be True for this
-to work.
+a specified step in the pipeline. Available options are `start` and
+`dirin`.  `start` will clear all but the input MSs, `dirin` will
+retain the initial direction-independent images.  All old files are
+moved to an `archive_dir` directory. `[control] restart` must be True
+for this to work.
 
 ### signal handling
 

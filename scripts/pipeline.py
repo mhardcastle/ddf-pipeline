@@ -954,46 +954,35 @@ def main(o=None):
         if not os.path.isdir(o['archive_dir']):
             os.mkdir(o['archive_dir'])
 
-        # If redoing from a specified point, move all relevant files somewhere
-        # else, and archive relevant killms solutions
+        # Redofrom as a concept no longer really works because of the
+        # re-use of columns in the DI steps.  Hence the only options
+        # here are 'start', which removes all but the MS and mslist
+        # files, and 'dirin' which retains the first
+        # direction-independent images. Both of these will strip out
+        # all of the extra columns in the MS and (by removing SOLSDIR)
+        # remove all of the solutions.
 
-        # we list the stages and the templates of the files that have to
-        # be removed to restart from after each one
-        stages = [('start', ('image_dirin*','external_mask.fits'), None),
-                  ('dirin', ('*bootstrap*', 'image_phase1*', '*crossmatch*', 'external_mask_ext.fits'), 'p1'),
-                  ('phase', 'image_ampphase1*', 'ap1'),
-                  ('ampphase', ('image_full_low*','full-mask*.fits','external_mask_ext-deep.fits'), 'f_ap1'),
-                  ('fulllow', 'image_full_ampphase1*', None),
-                  ('full', 'image_full_ampphase2*', 'f_ap2'),
-                  ('full2', ('panstarrs-*', 'astromap.fits', 'facet-offset.txt', 'summary.txt'), None)]
-
-        after=False
-        bootstrap_removed=False
-        alist=[]
-        for i,stage in enumerate(stages):
-            sname,files,sols=stage
-            if sname==o['redofrom']:
-                after=True
-            if after:
-                if not isinstance(files,(list,tuple)):
-                    files=(files,)
-                for f in files:
-                    mvglob(f,o['archive_dir'])
-                if sols:
-                    alist.append(sols)
-                if i<2 and not(bootstrap_removed):
-                    warn('Removing bootstrap')
-                    if o['full_mslist'] is not None:
-                        remove_columns(o['full_mslist'])
-                    else:
-                        remove_columns(o['mslist'])
-                    bootstrap_removed=True
-    
-        if not after:
-            die('Redofrom option not supported')
+        report('Removing old files for a redo from '+o['redofrom'])
+        files=glob.glob('*')
+        keep=glob.glob('*.ms')+[o['mslist'],o['full_mslist']]+glob.glob('*.cfg')
+        if o['redofrom']=='start':
+            pass
+        elif o['redofrom']=='dirin':
+            keep+=glob.glob('image_dirin_SSD_init.*') + glob.glob('image_dirin_SSD.*') + glob.glob('MaskDiffuse*') + glob.glob('Noise*.fits')
         else:
-            do_archive(o,alist)
+            die('Redofrom option not implemented')
+            
+        if o['full_mslist'] is not None:
+            run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
+        else:
+            run('remove_columns.py '+o['mslist'],log=None,dryrun=o['dryrun'])
+        for f in files:
+            if f not in keep:
+                mvglob(f,o['archive_dir'])
 
+        if o['logging'] is not None and not os.path.isdir(o['logging']):
+            os.mkdir(o['logging'])
+       
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
