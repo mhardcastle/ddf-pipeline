@@ -37,7 +37,6 @@ from pipeline_version import version
 __version__=version()
 import datetime
 import threading
-from archive_old_solutions import do_archive
 from remove_bootstrap import remove_columns
 from killMS.Other import MyPickle
 from surveys_db import use_database,update_status,SurveysDB
@@ -412,7 +411,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols, o['PowerSmooth'],colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
             if robust is None:
                 runcommand+=' --Weighting Natural'
@@ -940,15 +939,6 @@ def main(o=None):
     if use_database():
         update_status(None,'Running',time='start_date')
     
-    # Check imaging weights -- needed before DDF
-    new=check_imaging_weight(o['mslist'])
-    if o['clearcache'] or new or o['redofrom']:
-        # Clear the cache, we don't know where it's been. If this is a
-        # completely new dataset it is always safe (and required) to
-        # clear the cache -- solves problems where the cache is not
-        # stored per dataset. If we are redoing, cache needs to be removed
-        full_clearcache(o)
-
     if o['redofrom']:
 
         if not os.path.isdir(o['archive_dir']):
@@ -983,6 +973,15 @@ def main(o=None):
         if o['logging'] is not None and not os.path.isdir(o['logging']):
             os.mkdir(o['logging'])
        
+    # Check imaging weights -- needed before DDF
+    new=check_imaging_weight(o['mslist'])
+    if o['clearcache'] or new or o['redofrom']:
+        # Clear the cache, we don't know where it's been. If this is a
+        # completely new dataset it is always safe (and required) to
+        # clear the cache -- solves problems where the cache is not
+        # stored per dataset. If we are redoing, cache needs to be removed
+        full_clearcache(o)
+
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
