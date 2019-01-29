@@ -926,9 +926,6 @@ def main(o=None):
     if o['mslist'] is None:
         die('MS list must be specified')
 
-    if o['logging'] is not None and not os.path.isdir(o['logging']):
-        os.mkdir(o['logging'])
-
     # Set column name for first steps
     colname=o['colname']
 
@@ -954,7 +951,7 @@ def main(o=None):
 
         report('Removing old files for a redo from '+o['redofrom'])
         files=glob.glob('*')
-        keep=glob.glob('*.ms')+[o['mslist'],o['full_mslist']]+glob.glob('*.cfg')
+        keep=glob.glob('*.ms')+[o['mslist'],o['full_mslist'],o['archive_dir']]+glob.glob('*.cfg')
         if o['redofrom']=='start':
             pass
         elif o['redofrom']=='dirin':
@@ -970,8 +967,8 @@ def main(o=None):
             if f not in keep:
                 mvglob(f,o['archive_dir'])
 
-        if o['logging'] is not None and not os.path.isdir(o['logging']):
-            os.mkdir(o['logging'])
+    if o['logging'] is not None and not os.path.isdir(o['logging']):
+        os.mkdir(o['logging'])
        
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
