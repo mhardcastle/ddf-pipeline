@@ -208,7 +208,13 @@ class SurveysDB(object):
         if self.readonly: raise RuntimeError('Create requested in read-only mode')
         self.execute('insert into '+table+'(id) values (%s)',(id,))
         return self.db_get(table,id)
-        
+
+    def db_delete(self,table,id):
+        table=self.check_table(table)
+        if self.readonly: raise RuntimeError('Create requested in read-only mode')
+        self.execute('delete from '+table+' where id=%s',(id,))
+        return None
+    
     def get_field(self,id):
         return self.db_get('fields',id)
 
