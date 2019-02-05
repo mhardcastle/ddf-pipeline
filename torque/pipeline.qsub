@@ -2,11 +2,10 @@
 
 #PBS -m abe
 #PBS -N ddf-pipeline
-#PBS -l nodes=1:ppn=32:lofar
+#PBS -l nodes=1:ppn=32
 #PBS -l walltime=144:00:00
 #PBS -k oe
-#PBS -q lofar
-#PBS -W group_list=lofar
+#PBS -q main
 
 echo ------------------------------------------------------
 echo -n 'Job is running on node '; cat $PBS_NODEFILE

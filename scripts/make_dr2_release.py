@@ -103,9 +103,11 @@ while True:
                             g=glob.glob(tdir+'/'+f)
                             if len(g)==0:
                                 download_file(id,f)
+                        '''
                         if not os.path.isfile(tdir+'/'+f) or datetime.fromtimestamp(os.path.getmtime(tdir+'/'+f))<ctime:
                             print 'Need to download',id+'/'+f,'from archive'
                             download_file(id,f)
+                        '''
 
     separator('Write web page')
 

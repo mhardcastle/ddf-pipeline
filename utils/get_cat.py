@@ -48,12 +48,12 @@ def get_cat(method,retries=100):
                 except requests.exceptions.Timeout:
                     print 'Timeout, retrying!'
                 else:
-                    if 'Warning' not in r.text:
+                    if 'Warning' not in r.text and 'Please' not in r.text:
                         break
                     else:
                         # will go round the loop again
                         print 'Bad response, retry download (%i)' % count
-                        sleep(5)
+                        sleep(5+count*15)
                 count+=1
                 if count>=retries:
                     raise RuntimeError('Number of retries exceeded for download')

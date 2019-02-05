@@ -360,7 +360,11 @@ def merge_cat(rootname,rastr='ra',decstr='dec'):
     g=glob.glob(rootname+'/*.vo')
     tlist=[]
     for f in g:
-        t=Table.read(f)
+        try:
+            t=Table.read(f)
+        except:
+            print 'Error reading table',f
+            raise
         t2=Table()
         t2['ra']=t[rastr]
         t2['dec']=t[decstr]
