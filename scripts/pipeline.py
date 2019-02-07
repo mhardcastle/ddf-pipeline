@@ -1047,6 +1047,9 @@ def main(o=None):
                                        MaxMinorIterInitHMP=10000,
                                        PredictSettings=("Clean","DD_PREDICT"))
 
+    if o['exitafter'] == 'initial':
+        warn('User specified exit after initial image')
+        stop(2)
 
 
     #########################
