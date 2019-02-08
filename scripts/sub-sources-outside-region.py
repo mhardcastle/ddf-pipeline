@@ -247,7 +247,6 @@ def removecolumn(msfile,colname):
      t.close()
      return
 
-
 def getregionboxcenter(regionfile):
     """
     Extract box center of a DS9 box region. 
@@ -274,6 +273,9 @@ def getregionboxcenter(regionfile):
     if np.abs(angle) > 1:
       print 'Only nomrally oriented sqaure boxes are supported, you region is oriented under angle:', angle
       sys.exit()   
+    
+    regioncenter =  ('{:12.8f}'.format(ra) + 'deg,' + '{:12.8f}'.format(dec) + 'deg').replace(' ', '')
+    return regioncenter
 
 
 
@@ -379,6 +381,7 @@ if boxfile != 'fullfield':
     if len(r[:]) > 1:
         composite = True
     else:
+        print boxfile
         phasecenter = '[' + getregionboxcenter(boxfile) + ']'
         print phasecenter
 else:
