@@ -84,7 +84,6 @@ def do_run_subtract(name,basedir,archivedir):
 
         # Run subtract code
         print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
-        sys.exit(0)
         os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(name,workdir,name))
 
         # Archive the results need an rsync code
