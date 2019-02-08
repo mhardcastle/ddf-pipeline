@@ -417,7 +417,7 @@ if dopredict:
 
     os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
 
-    if usehighres == False:
+    if uselowres == False:
         imagenpix = 20000
         robust=-0.5
         imagecell = 1.5
