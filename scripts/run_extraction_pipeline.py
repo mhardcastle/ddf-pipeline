@@ -83,11 +83,12 @@ def do_run_subtract(name,basedir,archivedir):
 
 
         # Run subtract code
+        os.chdir(field)
         print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
         os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(name,workdir,name))
 
-        # Archive the results need an rsync code
-        
+        # Archive the results need an rsync code this is just the *archive file that needs to be archived.
+        #os.sys(cp -r
 
 
         # update the database to give success
