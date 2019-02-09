@@ -65,7 +65,7 @@ def download_dataset(server,root,workdir='.'):
                     else:
                         connected=True
                 try:
-                    print 'Downloading'
+                    print 'Downloading %i bytes' % esize
                     with open(filename, 'wb') as fd:
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
@@ -74,7 +74,7 @@ def download_dataset(server,root,workdir='.'):
                     if esize!=fsize:
                         print 'Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize)
                     else:
-                        print 'Download successful'
+                        print 'Download successful, %i of %i bytes received' % (fsize, esize)
                         downloaded=True
                         
                 except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
