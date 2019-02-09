@@ -42,6 +42,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
     print 'Working on ',name, 'in fields', fields,'which have status',extract_status
     
     for i in range(0,len(fields)):
+        os.chdir(startdir)
         if extract_status[i] != 'EREADY':
             continue
         field = fields[i]
