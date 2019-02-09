@@ -105,4 +105,4 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
 if __name__=='__main__':
     target = get_next_extraction()['id']
     # Takes the targetname, the current directory (the working directory), and the directory that contains the LoTSS-DR2 archive
-    do_run_subtract(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract_test/')
+    do_run_subtract(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract/')
