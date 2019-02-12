@@ -42,6 +42,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
     print 'Working on ',name, 'in fields', fields,'which have status',extract_status
     
     for i in range(0,len(fields)):
+        os.chdir(startdir)
         if extract_status[i] != 'EREADY':
             continue
         field = fields[i]
@@ -49,10 +50,10 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         workdir=basedir+'/'+name
         try:
             os.mkdir(workdir)
-            os.chdir(workdir)
         except OSError:
             warn('Working directory already exists')
-
+        print 'In directory', os.getcwd()
+        os.chdir(workdir)
         # Update status to running here
         extract_status[i] = 'STARTED'
         sdb=SurveysDB()
@@ -66,7 +67,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         
         # WANT TO MAKE THIS INTO A RSYNC SO THAT IT CAN BE DONE OUTSIDE LEIDEN
         os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
-        
+
         # Update status to copied here
         extract_status[i] = 'COPIED'
         sdb=SurveysDB()
@@ -82,6 +83,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
 
 
         # Run subtract code
+        print os.getcwd(), 'working here'
         os.chdir(field)
         print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
         os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
