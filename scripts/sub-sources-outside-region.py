@@ -517,7 +517,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         
         
         # FIRST CONCAT WITH WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT
-        cmd =  'NDPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
+        cmd =  'DPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
         if aoflagger:
             if takeoutbeam:  
                 cmd += 'steps=[phaseshift,aoflagger,applybeam,average] '
@@ -551,7 +551,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
 
         # SECOND CONCAT WITH WEIGHT_SPECTRUM
-        cmd =  'NDPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
+        cmd =  'DPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
         if aoflagger:
             if takeoutbeam:  
                 cmd += 'steps=[phaseshift,aoflagger,applybeam,average] '
@@ -608,7 +608,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         #cmd += 'msin.starttime=12May2015/19:23:22.0 msin.endtime=13May2015/01:43:00.0 '
 
     if doflagafter:
-        cmd = 'NDPPP msin=' + msoutconcat + ' msout=. msin.datacolumn=DATA ' 
+        cmd = 'DPPP msin=' + msoutconcat + ' msout=. msin.datacolumn=DATA ' 
         cmd += 'steps=[aoflagger,preflag] aoflagger.type=aoflagger preflag.type=preflagger '
         cmd += 'preflag.amplmax=' + str(amplmax) + ' '
         os.system(cmd)
@@ -624,7 +624,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         for chan in range(0,nchan,nchanperblock):
             msout = obsid + '_chan' + str(chan) + '-' + str(chan+nchanperblock-1) + '.ms'
 
-            cmd  = 'NDPPP msin=' + msoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
+            cmd  = 'DPPP msin=' + msoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
             if dysco:
                 cmd += 'msout.storagemanager=dysco '
             cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_SOLVE '
