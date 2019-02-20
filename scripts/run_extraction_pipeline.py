@@ -16,6 +16,46 @@ import glob
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import time
+from subprocess import call
+
+def do_rsync_upload(cname,basedir,f):
+    workdir=basedir+'/'+cname
+
+    if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
+        target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
+    else:
+        target=''
+
+    while True:
+        s='cd '+workdir+'; rsync -avz --relative --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract_tmp/'+cname 
+        print 'Running command:',s
+        retval=call(s,shell=True)
+        if retval==0:
+            break
+        print 'Non-zero return value',retval
+        if retval!=30:
+            raise RuntimeError('rsync failed unexpectedly')
+        sleep(10)
+
+def do_rsync_download(cname,basedir,f):
+    workdir=basedir+'/'+cname
+
+    if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
+        target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
+    else:
+        target=''
+
+    while True:
+        s= 'rsync -azvh --timeout=20 --progress '+target+workdir + ' ' + f
+        #'cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        print 'Running command:',s
+        retval=call(s,shell=True)
+        if retval==0:
+            break
+        print 'Non-zero return value',retval
+        if retval!=30:
+            raise RuntimeError('rsync failed unexpectedly')
+        sleep(10)
 
 def create_ds9_region(filename,ra,dec,size):
 
@@ -66,7 +106,9 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         report('Copying data from %s'%inarchivedir)
         
         # WANT TO MAKE THIS INTO A RSYNC SO THAT IT CAN BE DONE OUTSIDE LEIDEN
-        os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
+        #os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
+        do_rsync_download(field,inarchivedir,workdir)
+
 
         # Update status to copied here
         extract_status[i] = 'COPIED'
@@ -89,10 +131,14 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
 
         # Archive the results need an rsync code this is just the *archive file that needs to be archived.
-        os.system('mkdir %s/%s'%(outarchivedir,name))
-        os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))
-        print  ('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
-        os.system('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
+        #os.system('mkdir %s/%s'%(outarchivedir,name))
+        #os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))
+        os.chdir(workdir)
+        f = glob.glob('%s/%s_%s.dysco.sub.shift.avg.weights.ms.archive'%(field,field,name))
+        do_rsync_upload(name,outarchivedir,f)
+
+        #print  ('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
+        #os.system('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
 
 
         # update the database to give success
