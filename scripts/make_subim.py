@@ -12,6 +12,64 @@ import sys
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
 import astropy.units as u
 
+def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
+    """
+    Like flatten, but don't flatten. So just make the appropriate slice
+    """
+    naxis=f[hduid].header['NAXIS']
+    if naxis<=2:
+        raise RuntimeError('Can\'t make cube from this')
+
+    if verbose:
+        print f[hduid].data.shape
+    ds=f[hduid].data.shape[-2:]
+    by,bx=ds
+    xmin=int(x-size)
+    if xmin<0:
+        xmin=0
+    xmax=int(x+size)
+    if xmax>bx:
+        xmax=bx
+    ymin=int(y-size)
+    if ymin<0:
+        ymin=0
+    ymax=int(y+size)
+    if ymax>by:
+        ymax=by
+    
+    if ymax<=ymin or xmax<=xmin:
+        # this can only happen if the required position is not on the map
+        print xmin,xmax,ymin,ymax
+        raise RuntimeError('Failed to make subimage!')
+
+    w = WCS(f[hduid].header)
+    w.wcs.crpix[0]=w.wcs.crpix[0]-xmin
+    w.wcs.crpix[1]=w.wcs.crpix[1]-ymin
+
+    header = w.to_header()
+    slice=[]
+    for i in range(naxis,0,-1):
+        if i==1:
+            slice.append(np.s_[xmin:xmax])
+        elif i==2:
+            slice.append(np.s_[ymin:ymax])
+        else:
+            slice.append(np.s_[:])
+    if verbose:
+        print slice
+
+    hdu=fits.PrimaryHDU(f[hduid].data[slice],header)
+    copy=('EQUINOX','EPOCH','BMAJ','BMIN','BPA')
+    for k in copy:
+        r=f[hduid].header.get(k)
+        if r:
+            hdu.header[k]=r
+    if 'TAN' in hdu.header['CTYPE1']:
+        hdu.header['LATPOLE']=f[hduid].header['CRVAL2']
+    hdulist=fits.HDUList([hdu])
+    return hdulist
+    
+    
 def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
     """ 
     Flatten a fits file so that it becomes a 2D image. Return new header and
@@ -86,7 +144,7 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
     hdulist=fits.HDUList([hdu])
     return hdulist
 
-def extract_subim(filename,ra,dec,size,hduid=0,verbose=True):
+def extract_subim(filename,ra,dec,size,hduid=0,verbose=True,cubemode=False):
     if verbose:
         print 'Opening',filename
     orighdu=fits.open(filename)
@@ -101,12 +159,15 @@ def extract_subim(filename,ra,dec,size,hduid=0,verbose=True):
     imc=lwcs.wcs_world2pix(pvect,0)
     x=imc[0][0]
     y=imc[0][1]
-    hdu=flatten(orighdu,ra,dec,x,y,psize,hduid=hduid,verbose=verbose)
+    if cubemode:
+        hdu=cube_extract(orighdu,ra,dec,x,y,psize,hduid=hduid,verbose=verbose)
+    else:
+        hdu=flatten(orighdu,ra,dec,x,y,psize,hduid=hduid,verbose=verbose)
     return hdu
 
-def extract_and_save(filename,ra,dec,size):
-    hdu=extract_subim(filename,ra,dec,size,verbose=False)
-    hdu.writeto('cutout.fits')
+def extract_and_save(filename,ra,dec,size,outname='cutout.fits',cubemode=False):
+    hdu=extract_subim(filename,ra,dec,size,verbose=False,cubemode=cubemode)
+    hdu.writeto(outname,clobber=True)
 
 
 if __name__=='__main__':

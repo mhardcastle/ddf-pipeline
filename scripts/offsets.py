@@ -391,11 +391,17 @@ def do_offsets(o):
         warn('Merged file exists, reading from disk instead')
         data=Table.read(method+'.fits')
     else:
-        kwargs={}
-        if 'panstarrs' in method:
-            kwargs['rastr']='ramean'
-            kwargs['decstr']='decmean'
-        data=merge_cat(method,**kwargs)
+        if method=='pslocal':
+            data=Table.read(method+'/'+method+'.txt',format='ascii')
+            data['RA'].name='ra'
+            data['DEC'].name='dec'
+            data.write(method+'.fits')
+        else:    
+            kwargs={}
+            if 'panstarrs' in method:
+                kwargs['rastr']='ramean'
+                kwargs['decstr']='decmean'
+            data=merge_cat(method,**kwargs)
 
     if o['mode']=='test':
         image_root+='_shift'

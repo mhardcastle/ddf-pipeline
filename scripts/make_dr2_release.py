@@ -45,6 +45,11 @@ while True:
     separator('Making plot')
     os.system('plot_db_projection.py /home/mjh/lofar-surveys/static/Tier1-dbstatus.png')
 
+    # make JSON file for HIPS
+    separator('Make JSON file')
+    os.chdir('/home/mjh/lofar-surveys/static/lotss_aladin')
+    os.system('python survey_status_mysql.py')
+    
     if not skip_construct:
         # sync mosaics directory
         separator('Mosaic sync')
