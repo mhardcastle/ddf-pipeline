@@ -100,6 +100,8 @@ def get_cat(method,retries=100):
                 pixelfile=PSBASE+'/'+str(pixel)
             else:
                 pixelfile=method+'/'+str(pixel)
+            if not os.path.isfile(pixelfile):
+                raise RuntimeError('Pixel file '+pixelfile+'does not exist')
             os.system('cat '+pixelfile+' >> '+outname)
         
 if __name__=='__main__':

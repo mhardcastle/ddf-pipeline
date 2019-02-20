@@ -2,6 +2,7 @@
 # Generic file download with retry and check for length
 
 import requests
+import os
 
 def download_file(url,filename):
 
