@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import pyrap.tables as pt
+import casacore.tables as pt
 import os,sys
 import numpy as np
 import argparse
@@ -121,6 +121,15 @@ def filechecker():
     raise IOError('image_dirin_SSD_m.npy.ClusterCat.npy does not exist')   
   if not os.path.isdir('SOLSDIR'):
    raise IOError('SOLSDIR directory does not exist')
+
+  solsfiletmp = glob.glob('DDS3_full*smoothed.npz')
+  if len(solsfiletmp) < 1:
+     raise IOError('Cannot find the DDS3_full*smoothed.npz file(s)')
+
+  solsfiletmp = glob.glob('DDS3_full_slow*.npz')
+  if len(solsfiletmp) < 1:
+     raise IOError('Cannot find the DDS3_full_slow*.npz file(s)')
+
   return
 
 def striparchivename():
