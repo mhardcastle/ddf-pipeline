@@ -19,7 +19,8 @@ KSP for reduction of the LoTSS survey (Shimwell et al 2017
 http://adsabs.harvard.edu/abs/2017A%26A...598A.104S).
 
 ddf-pipeline was written by Martin Hardcastle, Tim Shimwell, Cyril
-Tasse and Wendy Williams and will be described by Shimwell et al (in prep).
+Tasse and Wendy Williams and is described by Shimwell et al 2019
+(https://www.aanda.org/articles/aa/full_html/2019/02/aa33559-18/aa33559-18.html).
 Scientific users of ddf-pipeline are requested to cite the relevant
 papers and refer to the ddf-pipeline github.
 
@@ -46,7 +47,7 @@ direct e-mail to the programmers.
 
 For reduction of LOFAR data you will need a Linux machine with at
 least 192 GB of physical RAM. 256 GB RAM and 32 cores works well; this
-will give a full reduction in 3-4 days. Hyperthreading does not give a
+will give a full reduction in 4-5 days. Hyperthreading does not give a
 significant advantage and can be disabled.
 
 Several TB of fast storage attached (ideally) directly to the node are
@@ -68,8 +69,9 @@ will need:
 
 * git (for installation)
 * pyrap
-* pybdsf (possibly from the LOFAR tree)
-* astropy
+* pybdsf (possibly from the LOFAR tree but an up-to-date separate build is recommended)
+* astropy (version compatible with Python 2.7)
+* astropy-healpix (ditto)
 * pyregion
 * emcee
 * reproject (for mosaicing)
