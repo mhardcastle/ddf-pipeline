@@ -249,7 +249,7 @@ if __name__=='__main__':
     imagenoise = get_rms(hdu)
     rms=imagenoise*1e6
     print 'An estimate of the image noise is %.3f muJy/beam' % rms
-    drs=do_dr_checker(o['catprefix']+'.cat.fits',o['pbimage'],verbose=False)
+    drs=do_dr_checker(o['catprefix']+'.cat.fits',o['pbimage'],verbose=False,peak=0.4)
     dr=np.median(drs)
     print 'Median dynamic range is',dr
 

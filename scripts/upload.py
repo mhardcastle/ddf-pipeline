@@ -78,13 +78,15 @@ def do_upload(name,basedir,skipstokes=False):
 
     f=['summary.txt']
     f+=['logs','SOLSDIR']
-    f+=['astromap.fits','panstarrs-fit_state.pickle','facet-offset.txt']
+    f+=['astromap.fits','facet-offset.txt']
+    f+=myglob('*-fit_state.pickle',workdir)
     f+=['image_dirin_SSD_m.npy.ClusterCat.npy']
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
     f+=myglob('DDS*full_slow*.npz',workdir)
     f+=myglob('*crossmatch-results*',workdir)
+    f+=myglob('*crossmatch-*.fits',workdir)
     f+=images('image_full_ampphase_di_m.NS',workdir)
     f+=images('image_full_low_m',workdir)
     f+=shiftimages('image_full_ampphase_di_m.NS')
@@ -101,7 +103,6 @@ def do_upload(name,basedir,skipstokes=False):
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
         idd['status']='Archived'
-        #idd['archive_version']=4 if compressed_done else 0
         tag_field(sdb,idd,workdir=workdir)
         sdb.set_field(idd)
     

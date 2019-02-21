@@ -8,7 +8,7 @@ import numpy as np
 from make_subim import extract_subim
 from crossmatch_utils import select_isolated_sources
 
-def do_dr_checker(tname,imname,peak=0.1,cutout=60,blank=10,verbose=False,write_subims=False):
+def do_dr_checker(tname,imname,peak=0.1,majlimit=0.003,cutout=60,blank=10,verbose=False,write_subims=False):
 
     drlist=[]
     t=Table.read(tname)
@@ -16,7 +16,7 @@ def do_dr_checker(tname,imname,peak=0.1,cutout=60,blank=10,verbose=False,write_s
     filter=(t['Peak_flux']>peak)
     if verbose:
         print np.sum(filter)
-    filter&=(t['DC_Maj']<0.003)
+    filter&=(t['DC_Maj']<majlimit)
     t=t[filter]
     if verbose:
         print len(t)
@@ -34,6 +34,6 @@ def do_dr_checker(tname,imname,peak=0.1,cutout=60,blank=10,verbose=False,write_s
 
 
 if __name__=='__main__':
-    print np.median(do_dr_checker('image_full_ampphase_di_m.NS.cat.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits'))
+    print np.median(do_dr_checker('image_full_ampphase_di_m.NS.cat.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits',peak=0.3,majlimit=0.003,write_subims=True))
     
     
