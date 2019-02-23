@@ -1551,7 +1551,7 @@ def main(o=None):
         report('Checking if optical catalogue download is required')
         from get_cat import get_cat, download_required
         if download_required(o['method']):
-            download_thread = threading.Thread(target=get_cat, args=('panstarrs',))
+            download_thread = threading.Thread(target=get_cat, args=(o['method'],))
             download_thread.start()
         else:
             warn('All data present, skipping download')
