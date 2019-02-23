@@ -335,7 +335,8 @@ else:
 
 if not os.path.isfile(args['mslist']):
     # try to make it
-    os.system('make_mslists.py')
+    from make_mslists import make_list
+    success=make_list(workdir=os.getcwd())
     if not os.path.isfile(args['mslist']):
       raise IOError('File', args['mslist'], 'does not exist and coult not be created')
 
