@@ -23,7 +23,7 @@ def lnprior(X):
 def lnpost(X,x,y):
     return lnprior(X)+loglf(x,y,X[0],X[1])
 
-def do_fit_sourcecounts(t=None, rms=None,do_plots=False):
+def do_fit_sourcecounts(t=None, rms=None,do_plots=False,sfindarea=17.09):
 
     global fluxnorm,ds
     if t is None:
@@ -90,7 +90,7 @@ def do_fit_sourcecounts(t=None, rms=None,do_plots=False):
         for i in range(6):
             ncn+=C[i]*lf**i
         print 'for %.3f Jy number count norm should be %f' % (fn,10**ncn)
-        measured_ncn=10**fnorm*fluxnorm*(fn**1.5)*3282.8/17.09 # check precise area
+        measured_ncn=10**fnorm*fluxnorm*(fn**1.5)*3282.8/sfindarea # check precise area
         print 'measured number count norm is',measured_ncn 
         scale=(measured_ncn/10**ncn)#**(1.0/1.5)
         print 'scaling factor should be',scale
