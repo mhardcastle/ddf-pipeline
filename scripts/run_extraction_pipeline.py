@@ -27,7 +27,7 @@ def do_rsync_upload(cname,basedir,f):
         target=''
 
     while True:
-        s='cd '+workdir+'; rsync -avz --relative --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
+        s= 'rsync -avz --relative --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
         print 'Running command:',s
         retval=call(s,shell=True)
         if retval==0:
@@ -134,8 +134,8 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         #os.system('mkdir %s/%s'%(outarchivedir,name))
         #os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))
         os.chdir(workdir)
-        f = glob.glob('%s/%s_%s.dysco.sub.shift.avg.weights.ms.archive'%(field,field,name))
-        do_rsync_upload(name,outarchivedir,f)
+        f = glob.glob('%s/*.archive'%(field))
+        do_rsync_upload(name,field,f)
 
         #print  ('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
         #os.system('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
