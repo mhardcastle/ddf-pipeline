@@ -150,6 +150,19 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
         sdb.close()
         print 'Updated status to EDONE for',field,name
 
+        # Change permissions
+        print 'Changing permissions to +777 for directory',outarchivedir + name
+        os.system('chmod +777 -R %s/%s'%(outarchivedir,name))
+
+    # update the database to give selfcal status as SREADY
+    selfcal_status = 'SREADY'
+    sdb=SurveysDB()
+    extractdict = sdb.get_reprocessing(name)
+    extractdict['selfcal_status'] = selfcal_status
+    sdb.db_set('reprocessing',extractdict)
+    sdb.close()
+    print 'Updated status to SREADY for',name
+
 if __name__=='__main__':
     target = get_next_extraction()['id']
     # Takes the targetname, the current directory (the working directory), and the directory that contains the LoTSS-DR2 archive
