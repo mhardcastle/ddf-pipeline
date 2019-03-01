@@ -43,7 +43,7 @@ def get_next_extraction():
         return None
 
 def update_status(name,status,time=None,workdir=None,av=None):
-    # utility function to just update the status of an observation
+    # utility function to just update the status of a field
     # name can be None (work it out from cwd), or string (field name)
 
     if name is None:
@@ -54,6 +54,8 @@ def update_status(name,status,time=None,workdir=None,av=None):
         
     with SurveysDB() as sdb:
       idd=sdb.get_field(id)
+      if idd is None:
+          raise RuntimeError('Unable to find database entry for field "%s".' % id)
       idd['status']=status
       tag_field(sdb,idd,workdir=workdir)
       if time is not None and idd[time] is None:
