@@ -129,8 +129,10 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         print os.getcwd(), 'working here'
         os.chdir(field)
         print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
-        os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
-
+        result=os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
+        if result!=0:
+            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+        
         # Archive the results need an rsync code this is just the *archive file that needs to be archived.
         #os.system('mkdir %s/%s'%(outarchivedir,name))
         #os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))

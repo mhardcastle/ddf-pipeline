@@ -53,7 +53,7 @@ def fixsymlinks():
             os.unlink(symsolname)
             os.symlink(os.path.relpath('../../%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
         else:
-            print('Symlink ' + symsolname + ' not yet exists, creating')
+            print('Symlink ' + symsolname + ' does not yet exist, creating')
             os.symlink(os.path.relpath('../../%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
             
     return
@@ -277,10 +277,10 @@ def getregionboxcenter(regionfile):
     boxsizey = r[0].coord_list[3]
     angle = r[0].coord_list[4]
     if boxsizex != boxsizey:
-      print 'Only a sqaure box region supported, you have these sizes:', boxsizex, boxsizey
+      print 'Only a square box region supported, you have these sizes:', boxsizex, boxsizey
       sys.exit()
     if np.abs(angle) > 1:
-      print 'Only nomrally oriented sqaure boxes are supported, you region is oriented under angle:', angle
+      print 'Only normally oriented sqaure boxes are supported, your region is oriented under angle:', angle
       sys.exit()   
     
     regioncenter =  ('{:12.8f}'.format(ra) + 'deg,' + '{:12.8f}'.format(dec) + 'deg').replace(' ', '')
@@ -303,7 +303,7 @@ def mscolexist(ms, colname):
     return exist
 
 
-parser = argparse.ArgumentParser(description='Keep soures insize box region, subtract everything else and create new ms')
+parser = argparse.ArgumentParser(description='Keep soures inside box region, subtract everything else and create new ms')
 parser.add_argument('-b','--boxfile', help='boxfile, required argument', required=True, type=str)
 parser.add_argument('-m','--mslist', help='DR2 mslist file, default=big-mslist.txt', default='big-mslist.txt', type=str)
 parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA', type=str) #DATA_DI_CORRECTED
@@ -338,7 +338,7 @@ if not os.path.isfile(args['mslist']):
     from make_mslists import make_list
     success=make_list(workdir=os.getcwd())
     if not os.path.isfile(args['mslist']):
-      raise IOError('File', args['mslist'], 'does not exist and coult not be created')
+      raise IOError('File', args['mslist'], 'does not exist and could not be created')
 
 boxfile     = args['boxfile']
 ncpu        = args['ncpu']
@@ -367,7 +367,7 @@ filechecker()
 fixsymlinks()
 
 solsfile = glob.glob('DDS3_full*smoothed.npz')
-if len(solsfile) != 1:
+if len(solsfile) < 1:
      print 'Cannot find the correct solution file'
      sys.exit()
 #solsfile = str(solsfile[0])
