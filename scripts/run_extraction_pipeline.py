@@ -84,7 +84,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     
     for i in range(0,len(fields)):
         os.chdir(startdir)
-        if not(extract_status[i] = 'EREADY' or (force and extract_status[i] = 'STARTED')):
+        if not(extract_status[i] == 'EREADY' or (force and extract_status[i] == 'STARTED')):
             continue
         field = fields[i]
 
