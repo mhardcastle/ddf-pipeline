@@ -72,7 +72,7 @@ def create_ds9_region(filename,ra,dec,size):
     return(filename)
 
 
-def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
+def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     startdir = os.getcwd()
     sdb=SurveysDB()
     extractdict = sdb.get_reprocessing(name)
@@ -84,7 +84,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
     
     for i in range(0,len(fields)):
         os.chdir(startdir)
-        if extract_status[i] != 'EREADY':
+        if not(extract_status[i] = 'EREADY' or (force and extract_status[i] = 'STARTED')):
             continue
         field = fields[i]
 
@@ -165,6 +165,14 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir):
     print 'Updated status to SREADY for',name
 
 if __name__=='__main__':
-    target = get_next_extraction()['id']
+
+    if len(sys.argv)==1:
+        target = get_next_extraction()['id']
+        force = False
+    else:
+        force = True
+        target = sys.argv[1]
+
     # Takes the targetname, the current directory (the working directory), and the directory that contains the LoTSS-DR2 archive
-    do_run_subtract(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract/')
+    do_run_subtract(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract/',force=force)
+
