@@ -21,10 +21,10 @@ from subprocess import call
 def do_rsync_upload(cname,basedir,f):
     workdir=basedir+'/'+cname
 
-    if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-        target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
-    else:
-        target=''
+    #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
+    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
+    #else:
+    #    target=''
 
     while True:
         s= 'rsync -avz --relative --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
@@ -40,10 +40,10 @@ def do_rsync_upload(cname,basedir,f):
 def do_rsync_download(cname,basedir,f):
     workdir=basedir+'/'+cname
 
-    if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-        target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
-    else:
-        target=''
+    #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
+    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
+    #else:
+    #    target=''
 
     while True:
 	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" '
