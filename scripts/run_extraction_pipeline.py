@@ -41,7 +41,7 @@ def do_rsync_download(cname,basedir,f):
     workdir=basedir+'/'+cname
 
     #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl:'
+    target='lofararchive@ssh.strw.leidenuniv.nl:'
     #else:
     #    target=''
 
