@@ -153,10 +153,6 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         sdb.close()
         print 'Updated status to EDONE for',field,name
 
-        # Change permissions
-        print 'Changing permissions to +777 for directory',outarchivedir + name
-        os.system('chmod +777 -R %s/%s'%(outarchivedir,name))
-
     # update the database to give selfcal status as SREADY
     selfcal_status = 'SREADY'
     sdb=SurveysDB()
