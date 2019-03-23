@@ -11,6 +11,24 @@ import glob
 
 # NOTE, applybeam NDPPP step does not work on phase-shifted data, do not use it.
 
+def getimsize(image):
+    imsizeddf = None
+    hdul = fits.open(image)
+    his = hdul[0].header['HISTORY']
+    for line in his:
+     if 'Image-NPix' in line:
+       imsizeddf = line
+
+    if imsizeddf == 'None':
+        print 'Could not determine the image size, should have been 20000(?) or 6000(?)'
+        sys.exit()    
+    
+    imsizeddf = np.int(imsizeddf.split('=')[1])
+
+    hdul.close()
+    return imsizeddf
+
+
 def getobsmslist(msfiles, observationnumber):
     obsids = []    
     for ms in msfiles:
@@ -412,6 +430,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
 columnchecker(msfiles, args['column'])
 clustercat = 'image_dirin_SSD_m.npy.ClusterCat.npy'
+imagenpix = getimsize(fullmask)
 
 if dopredict:
     
@@ -431,11 +450,11 @@ if dopredict:
     os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
 
     if uselowres == False:
-        imagenpix = 20000
+        #imagenpix = 20000
         robust=-0.5
         imagecell = 1.5
     else:
-        imagenpix = 6000
+        #imagenpix = 6000
         robust = -0.25
         imagecell = 4.5
     if holesfixed:
