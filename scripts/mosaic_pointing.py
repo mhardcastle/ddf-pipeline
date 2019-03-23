@@ -105,7 +105,7 @@ if __name__=='__main__':
         else:
             print 'Pointing',p,'not found'
             missingpointing = True
-        if currentdict['status'] != 'Archieved' and currentdict['archive_version'] != 4:
+        if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
             print 'Pointing',p,'not archived with archive_version 4'
             missingpointing = True
     sdb.close()

@@ -14,7 +14,7 @@ def separation(ra1,dec1,ra2,dec2):
     # same as sepn but in degrees
     return factor*sepn(ra1/factor,dec1/factor,ra2/factor,dec2/factor)
 
-def find_pos(ra,dec,name=None,offset=4):
+def find_pos(ra,dec,offset=4,name=None,verbose=True):
     raoffset=offset/np.cos(dec/factor)
     minoffset=None
     with SurveysDB() as sdb:
@@ -62,6 +62,6 @@ if __name__=='__main__':
         name=sys.argv[1]
         retval=find_pos(ra,dec,name=name)
     else:
-        print 'Call me with the name of a source OR RA, Dec in degrees OR "object objectname"'
+        print 'Call me with the name of an ILTJ source OR RA, Dec in degrees OR "object objectname"'
     if retval is not None:
         print 'Return value was',retval

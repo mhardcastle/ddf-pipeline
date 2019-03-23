@@ -94,7 +94,7 @@ _,r=plot_select(r,lambda r:r['status'] in ['Failed','List failed','D/L failed'],
 
 _,r=plot_select(r,lambda r:r['ostatus']=='DI_processed' and r['s']>7,label='Ready',color='black')
 
-_,r=plot_select(r,lambda r:r['location']!="Sara",label='Observed (not Sara)',color='red',alpha=1.0,s=5)
+#_,r=plot_select(r,lambda r:r['location']!="Sara",label='Observed (not Sara)',color='red',alpha=1.0,s=5)
 _,r=plot_select(r,lambda r:True,label='Observed',color='black',alpha=0.5,s=5)
 
 
