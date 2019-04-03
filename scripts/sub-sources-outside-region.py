@@ -530,7 +530,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
     obs_mslist    = add_dummyms(obs_mslist)   
 
-
+    currentmsoutconcat = msoutconcat + str(observation)
     if doconcat:    
         msfilesconcat = []
 
@@ -565,7 +565,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         if dysco:
             cmd += 'msout.storagemanager=dysco '
         cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT '  
-        cmd += 'msout=' + msoutconcat + ' '
+        cmd += 'msout=' + currentmsoutconcat + ' '
         if dophaseshift:
             cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
         cmd += 'aoflagger.type=aoflagger '
@@ -598,7 +598,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
             cmd = cmd.replace('phaseshift,','')
  
         cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
-        cmd += 'msout=' + msoutconcat + '.tmpweight ' 
+        cmd += 'msout=' + currentmsoutconcat + '.tmpweight ' 
         if dophaseshift:
             cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
         cmd += 'aoflagger.type=aoflagger '
@@ -610,14 +610,14 @@ for observation in range(number_of_unique_obsids(msfiles)):
         os.system(cmd)
 
         # Make a WEIGHT_SPECTRUM from WEIGHT_SPECTRUM_SOLVE
-        t  = pt.table(msoutconcat, readonly=False)
+        t  = pt.table(currentmsoutconcat, readonly=False)
 
         print 'Adding WEIGHT_SPECTRUM_SOLVE' 
         desc = t.getcoldesc('WEIGHT_SPECTRUM')
         desc['name']='WEIGHT_SPECTRUM_SOLVE'
         t.addcols(desc)
 
-        t2 = pt.table(msoutconcat + '.tmpweight', readonly=True)
+        t2 = pt.table(currentmsoutconcat + '.tmpweight', readonly=True)
         imweights = t2.getcol('WEIGHT_SPECTRUM')
         t.putcol('WEIGHT_SPECTRUM_SOLVE', imweights)
 
@@ -626,7 +626,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         t.close() 
 
         # clean up
-        os.system('rm -rf ' + msoutconcat + '.tmpweight')
+        os.system('rm -rf ' + currentmsoutconcat + '.tmpweight')
 
         print ' '
         print ' '
@@ -637,7 +637,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         #cmd += 'msin.starttime=12May2015/19:23:22.0 msin.endtime=13May2015/01:43:00.0 '
 
     if doflagafter:
-        cmd = 'DPPP msin=' + msoutconcat + ' msout=. msin.datacolumn=DATA ' 
+        cmd = 'DPPP msin=' + currentmsoutconcat + ' msout=. msin.datacolumn=DATA ' 
         cmd += 'steps=[aoflagger,preflag] aoflagger.type=aoflagger preflag.type=preflagger '
         cmd += 'preflag.amplmax=' + str(amplmax) + ' '
         os.system(cmd)
@@ -645,7 +645,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
     if split:
 
         nchanperblock = np.int(20/freqstepavg)
-        t = pt.table(msoutconcat + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(currentmsoutconcat + '/SPECTRAL_WINDOW', readonly=True)
         nchan = t.getcol('NUM_CHAN')[0]
         t.close()
  
@@ -653,7 +653,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         for chan in range(0,nchan,nchanperblock):
             msout = obsid + '_chan' + str(chan) + '-' + str(chan+nchanperblock-1) + '.ms'
 
-            cmd  = 'DPPP msin=' + msoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
+            cmd  = 'DPPP msin=' + currentmsoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
             if dysco:
                 cmd += 'msout.storagemanager=dysco '
             cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_SOLVE '
