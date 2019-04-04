@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+s #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
 from auxcodes import report,warn,die
@@ -137,7 +137,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         #os.system('mkdir %s/%s'%(outarchivedir,name))
         #os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))
         os.chdir(workdir)
-        f = glob.glob('%s/*.archive'%(field))
+        f = glob.glob('%s/*.archive*'%(field))
         do_rsync_upload(name,field,f)
 
         #print  ('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
