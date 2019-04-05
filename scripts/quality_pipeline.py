@@ -188,10 +188,10 @@ if __name__=='__main__':
     removelist=[]
     for cat in o['list']:
         print 'Doing catalogue',cat
-        if crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir']):
+        if crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir'])>10:
             filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
         else:
-            print 'No matches, abandoning catalogue'
+            print 'Insufficient matches, abandoning catalogue'
             removelist.append(cat)
     for cat in removelist:
         o['list'].remove(cat)

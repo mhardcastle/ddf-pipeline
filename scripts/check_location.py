@@ -56,8 +56,3 @@ for d in decs:
             area+=a
 print
 print area,totarea,100.0*area/totarea
-        
-
-
-
-        
