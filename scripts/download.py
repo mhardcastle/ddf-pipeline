@@ -36,8 +36,8 @@ def download_dataset(server,root,workdir='.'):
             # and 'GSM' in r.attrib['download']:
             files.append(r.attrib['download'])
             urls.append(r.attrib['href'].replace('../..',''))
-    if len(files)<25:
-        print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
+    if len(files)<24:
+        print 'There should be >=24 files but there are only %s! Check SARA manually.'%len(files)
         return False
     else:
         print 'Downloading',len(files),'distinct files'
