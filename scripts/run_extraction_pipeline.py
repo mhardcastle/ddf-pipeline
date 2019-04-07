@@ -1,4 +1,4 @@
-s #!/usr/bin/env python
+#!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
 from auxcodes import report,warn,die
