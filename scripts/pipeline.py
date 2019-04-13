@@ -1591,7 +1591,10 @@ def main(o=None):
         # maybe the thread died, check the files are there
         if download_required(o['method']):
             warn('Retrying download for some or all of the catalogue')
-            get_cat(o['method'])
+            try:
+                get_cat(o['method'])
+            except RuntimeError:
+                die('Failed to download catalogue with method '+o['method'])
 
         # we should now have the catalogue, find the offsets
         facet_offset_file='facet-offset.txt'
