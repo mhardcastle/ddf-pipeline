@@ -131,7 +131,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
 
     if catcher: catcher.check()
 
@@ -194,7 +194,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if apply_weights:
         runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
     else:
-        runcommand+=' --Weight-ColName="None"'
+        if not use_weightspectrum:
+            runcommand+=' --Weight-ColName="None"'
+        else:
+            runcommand+=' --Weight-ColName="WEIGHT_SPECTRUM"'
 
     if cubemode:
         # number of channels equals number of distinct freqs in data
@@ -820,7 +823,7 @@ def subtractOuterSquare(o):
                 colname=colname,use_dicomodel=False,
                 uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
                 imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-                apply_weights=False,
+                apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                 smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],
                 catcher=catcher)
 
@@ -837,7 +840,7 @@ def subtractOuterSquare(o):
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,
+            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,
             reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
             catcher=catcher)
@@ -858,7 +861,7 @@ def subtractOuterSquare(o):
                   #ddsols='wide_killms_p1',
                   #applysols='AP',#normalization=o['normalize'][0],
                   peakfactor=0.001,
-                  apply_weights=False,
+                  apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                   #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
                   beamsize=o['wide_psf_arcsec'],
                   imsize=o['wide_imsize'],cellsize=o['wide_cell'],
@@ -887,7 +890,7 @@ def subtractOuterSquare(o):
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,
+            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
             catcher=catcher)
@@ -1008,7 +1011,7 @@ def main(o=None):
     separator("Initial dirty")
     ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
               reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
-              apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
+              apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
 
     separator("External mask")
     external_mask='external_mask.fits'
@@ -1021,7 +1024,7 @@ def main(o=None):
                                        majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                        peakfactor=0.01,rms_factor=3,
                                        colname=colname,clusterfile=None,automask=True,
-                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
                                        uvrange=uvrange,catcher=catcher)
 
     
@@ -1054,7 +1057,7 @@ def main(o=None):
                                        peakfactor=0.001,rms_factor=0,
                                        colname=colname,clusterfile=None,
                                        automask=True,
-                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                       automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=1.,
                                        MaxMinorIterInitHMP=10000,
@@ -1095,7 +1098,7 @@ def main(o=None):
                                        clusterfile=ClusterFile,
                                        automask=True,
                                        automask_threshold=o['thresholds'][0],
-                                       apply_weights=o['apply_weights'][0],
+                                       apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
                                        uvrange=uvrange,catcher=catcher,
                                        RMSFactorInitHMP=1.,
                                        MaxMinorIterInitHMP=10000,
@@ -1206,7 +1209,7 @@ def main(o=None):
                                        ddsols=CurrentDDkMSSolName,applysols='P',majorcycles=2,robust=o['image_robust'],
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
-                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
@@ -1240,7 +1243,7 @@ def main(o=None):
                                        ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
-                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
@@ -1263,7 +1266,7 @@ def main(o=None):
               ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
               colname=colname,peakfactor=0.001,automask=True,
               automask_threshold=o['thresholds'][1],
-              normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+              normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
               use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
@@ -1301,7 +1304,7 @@ def main(o=None):
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
                                        normalization=o['normalize'][0],
-                                       apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
@@ -1370,7 +1373,7 @@ def main(o=None):
     ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-              apply_weights=o['apply_weights'][0],uvrange=uvrange,use_dicomodel=True,
+              apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
@@ -1420,7 +1423,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
@@ -1438,7 +1441,7 @@ def main(o=None):
                                        peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][2],
                                        normalization=o['normalize'][1],uvrange=uvrange,
-                                       apply_weights=o['apply_weights'][2],catcher=catcher,
+                                       apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
@@ -1590,7 +1593,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
               PredictSettings=("Clean","DD_PREDICT"),
               **ddf_kw)
 
