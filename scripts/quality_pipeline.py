@@ -66,7 +66,7 @@ def filter_catalog(singlecat,matchedcat,fitsimage,outname,auxcatname,options=Non
 
         print '%i sources after filtering for 3.0 deg from centre' % len(matchedcat)
 
-        matchedcat=matchedcat[matchedcat['DC_Maj']<10.0]
+        matchedcat=matchedcat[matchedcat['DC_Maj']<10.0] # ERROR!
 
         print '%i sources after filtering for sources over 10arcsec in LOFAR' % len(matchedcat)
 
@@ -237,7 +237,7 @@ if __name__=='__main__':
         tgss_scale=None
     if 'NVSS' in o['list']:
         t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
-        t=t[t['Total_flux']>10e-3]
+        t=t[t['Total_flux']>30e-3]
         ratios=t['Total_flux']/t['NVSS_Total_flux']
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
         print 'Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])

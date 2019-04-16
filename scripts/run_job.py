@@ -7,7 +7,7 @@ import sys
 import os
 import glob
 
-def do_run_job(name,basedir,qsubfile=None,do_field=True,prefix='ddfp'):
+def do_run_job(name,basedir,qsubfile=None,do_field=True,prefix='ddfp',dysco=False):
     config=''
     workdir=basedir+'/'+name
     g=glob.glob(workdir+'/tier1*.cfg')
@@ -16,6 +16,8 @@ def do_run_job(name,basedir,qsubfile=None,do_field=True,prefix='ddfp'):
         config=',CONFIG='+g[0]
     if qsubfile is None:
         qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
+    if dysco:
+        qsubfile=qsubfile.replace('.qsub','-fdr14.qsub')
     report('Submit job')
     os.system('qsub -N '+prefix+'-'+name+' -v WD='+workdir+config+' '+qsubfile)
     if do_field:

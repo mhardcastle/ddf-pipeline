@@ -102,17 +102,15 @@ while True:
                 if r['status']!='Archived' or r['archive_version']<4:
                     continue
                 else:
-                    ctime=datetime(2018,11,1)
                     for f in releasefiles:
                         if '*' in f:
                             g=glob.glob(tdir+'/'+f)
                             if len(g)==0:
                                 download_file(id,f)
-                        '''
-                        if not os.path.isfile(tdir+'/'+f) or datetime.fromtimestamp(os.path.getmtime(tdir+'/'+f))<ctime:
-                            print 'Need to download',id+'/'+f,'from archive'
-                            download_file(id,f)
-                        '''
+                        else:
+                            if not os.path.isfile(tdir+'/'+f):
+                                print 'Need to download',id+'/'+f,'from archive'
+                                download_file(id,f)
 
     separator('Write web page')
 

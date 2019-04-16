@@ -310,7 +310,18 @@ class MSList(object):
         self.obsids = [os.path.basename(ms).split('_')[0] for ms in self.mss]
         self.freqs=[]
         self.channels=[]
+        self.hascorrected=[]
+        self.dysco=[]
         for ms in self.mss:
+            t = pt.table(ms,readonly=True,ack=False)
+            colname='CORRECTED_DATA'
+            try:
+                dummy=t.getcoldesc(colname)
+            except RuntimeError:
+                dummy=None
+            self.hascorrected.append(not(dummy is None))
+            self.dysco.append('Dysco' in t.showstructure())
+            t.close()
             t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
             self.freqs.append(t[0]['REF_FREQUENCY'])
             self.channels.append(t[0]['CHAN_FREQ'])

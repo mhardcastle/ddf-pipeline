@@ -929,6 +929,19 @@ def main(o=None):
     # Set column name for first steps
     colname=o['colname']
 
+    # Check if the column exists in one MS. Important to do this
+    # before we check imaging weights, because that will create empty
+    # versions of e.g. CORRECTED_DATA
+    mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    t = pt.table(mslist[0])
+    try:
+        dummy=t.getcoldesc(colname)
+    except RuntimeError:
+        dummy=None
+    t.close()
+    if dummy is None:
+        die('Dataset does not contain the column "%s"' % colname)
+    
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
 
