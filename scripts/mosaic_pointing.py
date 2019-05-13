@@ -75,6 +75,7 @@ if __name__=='__main__':
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
+    parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     
     args = parser.parse_args()
@@ -92,9 +93,11 @@ if __name__=='__main__':
     mosaicdirs=[]
     missingpointing = False
     sdb = SurveysDB()
+    scales = []
     for p in mosaicpointings:
         print 'Wanting to put pointing %s in mosaic'%p
-        
+        qualitydict = sdb.get_quality(p)
+        scales.append(qualitydict['scale'])
         currentdict = sdb.get_field(p)
         for d in args.directories:
             rd=d+'/'+p
@@ -120,6 +123,8 @@ if __name__=='__main__':
     mos_args.astromap_blank=args.astromap_blank
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
+    if args.do_scaling:
+        mos_args.scale=scales
 
     header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
     
