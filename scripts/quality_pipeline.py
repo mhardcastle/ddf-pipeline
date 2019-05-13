@@ -275,6 +275,6 @@ if __name__=='__main__':
             result['nvss_scale']=nvss_scale
             result['sc_norm']=sc_norm
             result['sc_index']=sc_index
-            result['scale']=scale
+            result['sc_scale']=scale
             
             sdb.set_quality(result)
