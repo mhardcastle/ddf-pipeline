@@ -32,8 +32,7 @@ def download_dataset(server,root,workdir='.'):
     files=[]
     urls=[]
     for r in row:
-        if 'title' in r.attrib and 'Download' in r.attrib['title']:
-            # and 'GSM' in r.attrib['download']:
+        if 'title' in r.attrib and 'Download' in r.attrib['title'] and 'step1' not in r.attrib['download']:
             files.append(r.attrib['download'])
             urls.append(r.attrib['href'].replace('../..',''))
     if len(files)<24:

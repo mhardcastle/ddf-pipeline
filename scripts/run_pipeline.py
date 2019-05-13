@@ -10,6 +10,7 @@ from unpack import unpack
 from make_mslists import make_list,list_db_update
 from average import average
 from auxcodes import MSList
+import numpy as np
 import sys
 import os
 import glob

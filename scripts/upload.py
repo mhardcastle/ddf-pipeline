@@ -37,7 +37,7 @@ def do_rsync(name,basedir,f):
         target=''
 
     while True:
-        s='cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        s='cd '+workdir+'; rsync -avz --progress --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
         print 'Running command:',s
         retval=call(s,shell=True)
         if retval==0:

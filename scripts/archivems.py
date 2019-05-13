@@ -89,6 +89,7 @@ for ms in msfiles:
       print cmd  
       result=os.system(cmd)
       if result!=0:
+          os.system('rm -r '+msout)
           raise RuntimeError('DPPP call failed')
       
       if not args['skipimweights']:
