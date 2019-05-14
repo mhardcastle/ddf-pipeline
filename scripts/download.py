@@ -16,7 +16,7 @@ def download_dataset(server,root,workdir='.'):
         try:
             print 'Downloading index page',server+root
             page=requests.get(server+root,verify=False,timeout=60)
-        except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+        except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ReadTimeout):
             print 'Connection error! sleeping 30 seconds before retry...'
             sleep(30)
         else:

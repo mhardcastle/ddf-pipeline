@@ -17,7 +17,7 @@ def download_file(url,filename):
                     print response.headers
                     raise RuntimeError('Code was %i' % response.status_code)
                 esize=long(response.headers['Content-Length'])
-            except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+            except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ReadTimeout):
                 print 'Connection error! sleeping 30 seconds before retry...'
                 sleep(30)
             else:

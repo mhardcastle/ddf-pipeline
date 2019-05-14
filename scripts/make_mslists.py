@@ -62,6 +62,8 @@ if __name__=='__main__':
     if len(sys.argv)>1:
         force=sys.argv[1]=='force'
         print 'Force is',force
+    else:
+        force=False
     success=make_list(workdir=os.getcwd(),force=force)
     if use_database():
         list_db_update(success)
