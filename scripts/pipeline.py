@@ -59,7 +59,7 @@ def summary(o):
 def stop(v=2):
     if use_database():
         update_status(None,'Stopped')
-        sys.exit(v)
+    sys.exit(v)
             
 def logfilename(s,options=None):
     if options is None:
