@@ -12,6 +12,7 @@ from astropy.io import fits
 import numpy as np
 from surveys_db import SurveysDB
 import pickle
+import os,sys
 try:
     import bdsf as bdsm
 except ImportError:
@@ -92,18 +93,23 @@ if __name__=='__main__':
     # now find whether we have got these pointings somewhere!
     mosaicdirs=[]
     missingpointing = False
-    sdb = SurveysDB()
     scales = []
+    sdb = SurveysDB()
     for p in mosaicpointings:
         print 'Wanting to put pointing %s in mosaic'%p
-        qualitydict = sdb.get_quality(p)
-        scales.append(qualitydict['scale'])
-        currentdict = sdb.get_field(p)
         for d in args.directories:
             rd=d+'/'+p
             print rd
             if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
                 mosaicdirs.append(rd)
+                try:
+                    qualitydict = sdb.get_quality(p)
+                    currentdict = sdb.get_field(p)
+                    print qualitydict
+                    scales.append(qualitydict['scale'])
+                except TypeError:
+                    missingpointing = True
+                    print 'No scaling factor for ',p             
                 break
         else:
             print 'Pointing',p,'not found'
@@ -111,10 +117,10 @@ if __name__=='__main__':
         if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
             print 'Pointing',p,'not archived with archive_version 4'
             missingpointing = True
-    sdb.close()
     if not(args.no_check) and missingpointing == True:
+        sdb.close()
         raise RuntimeError('Failed to find a required pointing')
-
+    sdb.close()
     print 'Mosaicing using directories', mosaicdirs
 
     # now construct the inputs for make_mosaic
@@ -124,6 +130,7 @@ if __name__=='__main__':
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     if args.do_scaling:
+        print 'Applying scales',scales
         mos_args.scale=scales
 
     header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
