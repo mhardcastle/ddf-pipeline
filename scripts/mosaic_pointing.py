@@ -75,6 +75,7 @@ if __name__=='__main__':
     parser.add_argument('--astromap_blank', dest='astromap_blank', default=0.5, help='Acceptable astrometry error in arcsec')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
+    parser.add_argument('--no-highres',dest='no_highres', action='store_true', help='Mosaic low-res images as well')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
@@ -133,18 +134,19 @@ if __name__=='__main__':
         print 'Applying scales',scales
         mos_args.scale=scales
 
-    header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
-    
-    mos_args.header=header
-    print 'Calling make_mosaic'
-    #with open('mosaic-header.pickle','w') as f:
-    #    pickle.dump(header,f)
+    if not(args.no_highres):
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
 
-    make_mosaic(mos_args)
+        mos_args.header=header
+        print 'Calling make_mosaic'
+        #with open('mosaic-header.pickle','w') as f:
+        #    pickle.dump(header,f)
 
-    print 'Blanking the mosaic...'
+        make_mosaic(mos_args)
 
-    blank_mosaic('mosaic.fits',himsize)
+        print 'Blanking the mosaic...'
+
+        blank_mosaic('mosaic.fits',himsize)
 
     if args.do_lowres:
         print 'Making the low-resolution mosaic...'
@@ -166,7 +168,11 @@ if __name__=='__main__':
     print 'Now running PyBDSF to extract sources'
     
     catprefix='mosaic'
-    img = bdsm.process_image('mosaic-blanked.fits', thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None,frequency=restfrq)
+    infile='mosaic-blanked.fits'
+    if args.no_highres:
+        catprefix='low-mosaic'
+        infile='low-mosaic-blanked.fits'
+    img = bdsm.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None,frequency=restfrq)
     img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
     img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
     img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)

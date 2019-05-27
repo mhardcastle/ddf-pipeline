@@ -118,7 +118,7 @@ if __name__=='__main__':
         outfile=open('/home/mjh/lofar-surveys/templates/dr2-mosaics.html','w')
         for r in result:
             id=r['id']
-            if os.path.isdir(workdir+'/mosaics/'+id):
+            if os.path.isdir(workdir+'/mosaics/'+id) and os.path.isfile(workdir+'/mosaics/'+id+'/mosaic-blanked.fits'):
                 root='downloads/DR2/mosaics/'+id+'/'
                 f=root+'mosaic-blanked.fits'
                 rms=root+'mosaic.rms.fits'
