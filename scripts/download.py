@@ -20,8 +20,8 @@ def download_dataset(server,root):
         if 'title' in r.attrib and 'Download' in r.attrib['title']:
             files.append(r.attrib['download'])
             urls.append(r.attrib['href'].replace('../..',''))
-    if len(files)!=25:
-        print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
+    if len(files)<24:
+        print 'There should be >=24 files but there are only %s! Check SARA manually.'%len(files)
         return False
     for f,u in zip(files,urls):
         if os.path.isfile(f):
