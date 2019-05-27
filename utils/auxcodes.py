@@ -215,7 +215,7 @@ def get_rms_map2(infilename,ds9region,outfilename):
 
     run(runcommand,log=None)
 
-    infilename = '%s.rms.fits.fits'%infilename
+    infilename = '%s.rms.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)
