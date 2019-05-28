@@ -20,11 +20,11 @@ import os.path
 def make_mosaic(args):
     if args.scale is not None:
         if len(args.scale) != len(args.directories):
-            die('Scales provided must match directories')
+            die('Scales provided must match directories',database=False)
 
     if args.noise is not None:
         if len(args.noise) != len(args.directories):
-            die('Noises provided must match directories')
+            die('Noises provided must match directories',database=False)
 
     if args.rootname:
         rootname=args.rootname+'-'

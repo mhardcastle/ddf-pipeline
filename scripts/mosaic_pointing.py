@@ -107,10 +107,17 @@ if __name__=='__main__':
                     qualitydict = sdb.get_quality(p)
                     currentdict = sdb.get_field(p)
                     print qualitydict
-                    scales.append(qualitydict['scale'])
+                    scale=qualitydict['scale']
+                    if scale is None:
+                        print 'Missing scaling factor for',p
+                        missingpointing=True
+                        scale=1.0
+                    scales.append(scale)
+
                 except TypeError:
                     missingpointing = True
-                    print 'No scaling factor for ',p             
+                    print 'No scaling factor for ',p
+                    scales.append(1.0)
                 break
         else:
             print 'Pointing',p,'not found'
