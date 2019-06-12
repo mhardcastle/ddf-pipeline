@@ -88,11 +88,11 @@ def do_polcubes(colname,
         freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
         make_cube(freqs,hdus,outfile)
 
-    outfile='%s_QU.cube.dirty.corr.fits'%imageoutname
+    outfile='%s_QU.cube.SmoothNorm.fits'%imageoutname
     if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
         warn('Corrected cube file already exists, not making it')
     else:
-        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
+        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.SmoothNorm.fits'%imageoutname)
         report('Making corrected cube')
         make_cube(freqs,hdus,outfile)
             

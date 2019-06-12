@@ -103,4 +103,7 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'offsets', 'fit', str, 'mcmc', 'Histogram fit method' ),
                 ( 'offsets', 'mode', str, 'normal', 'Mode of operation: normal or test' ),
                 ( 'spectra', 'do_dynspec', bool, True, 'Do dynamic spectra'),
-                ( 'spectra', 'bright_threshold', float, 1.0, 'Threshold for auto-selection of bright sources'))
+                ( 'spectra', 'bright_threshold', float, 1.0, 'Threshold for auto-selection of bright sources'),
+                ( 'inputmodel',  'basedicomodel',str,None,'Input dicomodel for calibration'),
+                ( 'inputmodel',  'basemaskname',str,None,'Input dicomodel for calibration'),
+                ( 'inputmodel',  'baseimagename',str,None,'Input dicomodel for calibration'))
