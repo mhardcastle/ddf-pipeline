@@ -105,5 +105,5 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'spectra', 'do_dynspec', bool, True, 'Do dynamic spectra'),
                 ( 'spectra', 'bright_threshold', float, 1.0, 'Threshold for auto-selection of bright sources'),
                 ( 'inputmodel',  'basedicomodel',str,None,'Input dicomodel for calibration'),
-                ( 'inputmodel',  'basemaskname',str,None,'Input dicomodel for calibration'),
-                ( 'inputmodel',  'baseimagename',str,None,'Input dicomodel for calibration'))
+                ( 'inputmodel',  'basemaskname',str,None,'Input mask for calibration'),
+                ( 'inputmodel',  'baseimagename',str,None,'Input image for calibration'))
