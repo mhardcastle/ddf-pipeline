@@ -1,11 +1,12 @@
 #!/bin/tcsh
 
-#PBS -m abe
-#PBS -N ddf-pipeline
-#PBS -l nodes=1:ppn=32
-#PBS -l walltime=168:00:00
+#PBS -m a
+#PBS -N qual
+#PBS -l nodes=1:ppn=16
+#PBS -l walltime=6:00:00
 #PBS -k oe
 #PBS -q main
+#PBS -W group_list=lofar
 
 echo ------------------------------------------------------
 echo -n 'Job is running on node '; cat $PBS_NODEFILE
@@ -20,4 +21,4 @@ echo ------------------------------------------------------
 echo Working directory is $WD
 
 cd $WD
-bash -c /home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.sh
+bash -c /home/mjh/pipeline-master/ddf-pipeline/torque/quality.sh

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
-Copyright (C) 2018 Martin Hardcastle (mjh@extragalactic.info) and others
+Copyright (C) 2017-2019 Martin Hardcastle (mjh@extragalactic.info) and others
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ import sys,os
 if "PYTHONPATH_FIRST" in os.environ.keys() and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
 import os.path
-from auxcodes import report,run,find_imagenoise,warn,die,Catcher,dotdict,separator,MSList
+from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
 from parset import option_list
 from options import options,print_options
 from shutil import copyfile,rmtree,move
@@ -37,7 +37,6 @@ from pipeline_version import version
 __version__=version()
 import datetime
 import threading
-from archive_old_solutions import do_archive
 from remove_bootstrap import remove_columns
 from killMS.Other import MyPickle
 from surveys_db import use_database,update_status,SurveysDB
@@ -60,7 +59,7 @@ def summary(o):
 def stop(v=2):
     if use_database():
         update_status(None,'Stopped')
-        sys.exit(v)
+    sys.exit(v)
             
 def logfilename(s,options=None):
     if options is None:
@@ -132,7 +131,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
 
     if catcher: catcher.check()
 
@@ -195,7 +194,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if apply_weights:
         runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
     else:
-        runcommand+=' --Weight-ColName="None"'
+        if not use_weightspectrum:
+            runcommand+=' --Weight-ColName="None"'
+        else:
+            runcommand+=' --Weight-ColName="WEIGHT_SPECTRUM"'
 
     if cubemode:
         # number of channels equals number of distinct freqs in data
@@ -412,7 +414,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --PowerSmooth=%f --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols, o['PowerSmooth'],colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
             if robust is None:
                 runcommand+=' --Weighting Natural'
@@ -821,7 +823,7 @@ def subtractOuterSquare(o):
                 colname=colname,use_dicomodel=False,
                 uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
                 imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-                apply_weights=False,
+                apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                 smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],
                 catcher=catcher)
 
@@ -838,7 +840,7 @@ def subtractOuterSquare(o):
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,
+            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,
             reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
             catcher=catcher)
@@ -854,11 +856,12 @@ def subtractOuterSquare(o):
     else:
         ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-                  #cleanmode='SSD',majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
+                  cleanmode='SSD',
+		  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
                   #ddsols='wide_killms_p1',
                   #applysols='AP',#normalization=o['normalize'][0],
                   peakfactor=0.001,
-                  apply_weights=False,
+                  apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                   #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
                   beamsize=o['wide_psf_arcsec'],
                   imsize=o['wide_imsize'],cellsize=o['wide_cell'],
@@ -887,7 +890,7 @@ def subtractOuterSquare(o):
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,
+            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
             catcher=catcher)
@@ -926,12 +929,22 @@ def main(o=None):
     if o['mslist'] is None:
         die('MS list must be specified')
 
-    if o['logging'] is not None and not os.path.isdir(o['logging']):
-        os.mkdir(o['logging'])
-
     # Set column name for first steps
     colname=o['colname']
 
+    # Check if the column exists in one MS. Important to do this
+    # before we check imaging weights, because that will create empty
+    # versions of e.g. CORRECTED_DATA
+    mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    t = pt.table(mslist[0])
+    try:
+        dummy=t.getcoldesc(colname)
+    except RuntimeError:
+        dummy=None
+    t.close()
+    if dummy is None:
+        die('Dataset does not contain the column "%s"' % colname)
+    
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
 
@@ -939,6 +952,40 @@ def main(o=None):
     if use_database():
         update_status(None,'Running',time='start_date')
     
+    if o['redofrom']:
+
+        if not os.path.isdir(o['archive_dir']):
+            os.mkdir(o['archive_dir'])
+
+        # Redofrom as a concept no longer really works because of the
+        # re-use of columns in the DI steps.  Hence the only options
+        # here are 'start', which removes all but the MS and mslist
+        # files, and 'dirin' which retains the first
+        # direction-independent images. Both of these will strip out
+        # all of the extra columns in the MS and (by removing SOLSDIR)
+        # remove all of the solutions.
+
+        report('Removing old files for a redo from '+o['redofrom'])
+        files=glob.glob('*')
+        keep=glob.glob('*.ms')+[o['mslist'],o['full_mslist'],o['archive_dir']]+glob.glob('*.cfg')
+        if o['redofrom']=='start':
+            pass
+        elif o['redofrom']=='dirin':
+            keep+=glob.glob('image_dirin_SSD_init.*') + glob.glob('image_dirin_SSD.*') + glob.glob('image_dirin_SSD_m.*') + glob.glob('MaskDiffuse*') + glob.glob('Noise*.fits')
+        else:
+            die('Redofrom option not implemented')
+            
+        if o['full_mslist'] is not None:
+            run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
+        else:
+            run('remove_columns.py '+o['mslist'],log=None,dryrun=o['dryrun'])
+        for f in files:
+            if f not in keep:
+                mvglob(f,o['archive_dir'])
+
+    if o['logging'] is not None and not os.path.isdir(o['logging']):
+        os.mkdir(o['logging'])
+       
     # Check imaging weights -- needed before DDF
     new=check_imaging_weight(o['mslist'])
     if o['clearcache'] or new or o['redofrom']:
@@ -947,51 +994,6 @@ def main(o=None):
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
         full_clearcache(o)
-
-    if o['redofrom']:
-
-        if not os.path.isdir(o['archive_dir']):
-            os.mkdir(o['archive_dir'])
-
-        # If redoing from a specified point, move all relevant files somewhere
-        # else, and archive relevant killms solutions
-
-        # we list the stages and the templates of the files that have to
-        # be removed to restart from after each one
-        stages = [('start', ('image_dirin*','external_mask.fits'), None),
-                  ('dirin', ('*bootstrap*', 'image_phase1*', '*crossmatch*', 'external_mask_ext.fits'), 'p1'),
-                  ('phase', 'image_ampphase1*', 'ap1'),
-                  ('ampphase', ('image_full_low*','full-mask*.fits','external_mask_ext-deep.fits'), 'f_ap1'),
-                  ('fulllow', 'image_full_ampphase1*', None),
-                  ('full', 'image_full_ampphase2*', 'f_ap2'),
-                  ('full2', ('panstarrs-*', 'astromap.fits', 'facet-offset.txt', 'summary.txt'), None)]
-
-        after=False
-        bootstrap_removed=False
-        alist=[]
-        for i,stage in enumerate(stages):
-            sname,files,sols=stage
-            if sname==o['redofrom']:
-                after=True
-            if after:
-                if not isinstance(files,(list,tuple)):
-                    files=(files,)
-                for f in files:
-                    mvglob(f,o['archive_dir'])
-                if sols:
-                    alist.append(sols)
-                if i<2 and not(bootstrap_removed):
-                    warn('Removing bootstrap')
-                    if o['full_mslist'] is not None:
-                        remove_columns(o['full_mslist'])
-                    else:
-                        remove_columns(o['mslist'])
-                    bootstrap_removed=True
-    
-        if not after:
-            die('Redofrom option not supported')
-        else:
-            do_archive(o,alist)
 
     # ##########################################################
     # subtract outer square
@@ -1003,8 +1005,28 @@ def main(o=None):
         #o['imsize']=NPixSmall
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
 
-
+    # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
+        # ##########################################################
+        # Initial dirty image to allow an external (TGSS) mask to be made
+        separator("Initial dirty")
+        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
+                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
+                  apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
+
+        separator("External mask")
+        external_mask='external_mask.fits'
+        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+
+
+        # Deep SSD clean with this external mask and automasking
+        separator("DI Deconv (externally defined sources)")
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
+                                           majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
+                                           peakfactor=0.01,rms_factor=3,
+                                           colname=colname,clusterfile=None,automask=True,
+                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
+                                           uvrange=uvrange,catcher=catcher)
 
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
@@ -1057,12 +1079,15 @@ def main(o=None):
                                            peakfactor=0.001,rms_factor=0,
                                            colname=colname,clusterfile=None,
                                            automask=True,
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
                                            PredictSettings=("Clean","DD_PREDICT"))
 
+        if o['exitafter'] == 'initial':
+            warn('User specified exit after initial image')
+            stop(2)
 
 
         #########################
@@ -1095,7 +1120,7 @@ def main(o=None):
                                            clusterfile=ClusterFile,
                                            automask=True,
                                            automask_threshold=o['thresholds'][0],
-                                           apply_weights=o['apply_weights'][0],
+                                           apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
@@ -1206,7 +1231,7 @@ def main(o=None):
                                            ddsols=CurrentDDkMSSolName,applysols='P',majorcycles=2,robust=o['image_robust'],
                                            colname=colname,peakfactor=0.001,automask=True,
                                            automask_threshold=o['thresholds'][1],
-                                           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                            use_dicomodel=True,
                                            dicomodel_base=CurrentBaseDicoModelName,
                                            catcher=catcher,
@@ -1240,7 +1265,7 @@ def main(o=None):
                                        ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
-                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
@@ -1263,7 +1288,7 @@ def main(o=None):
                   ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
                   colname=colname,peakfactor=0.001,automask=True,
                   automask_threshold=o['thresholds'][1],
-                  normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                  normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                   use_dicomodel=True,
                   dicomodel_base=CurrentBaseDicoModelName,
                   catcher=catcher,
@@ -1277,7 +1302,6 @@ def main(o=None):
             colname='SCALED_DATA'
         else:
             colname=o['colname']
-
         killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                     #clusterfile=ClusterFile,
@@ -1302,7 +1326,7 @@ def main(o=None):
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
                                        normalization=o['normalize'][0],
-                                       apply_weights=o['apply_weights'][1],uvrange=uvrange,
+                                       apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        catcher=catcher,
@@ -1337,7 +1361,9 @@ def main(o=None):
         CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
         CurrentImageName= 'image_ampphase1_di'
-    else:        
+
+    else:
+        # alternative branch of massive if!
         if o['clusterfile'] is None:
             warn('No clusterfile provided, stopping here')
             summary(o)
@@ -1391,7 +1417,7 @@ def main(o=None):
     ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
               applysols='AP',majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
               automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-              apply_weights=o['apply_weights'][0],uvrange=uvrange,use_dicomodel=True,
+              apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
               catcher=catcher,
               ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
@@ -1441,7 +1467,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher,**ddf_kw)
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
 
     separator("MakeMask")
     CurrentMaskName=make_mask('image_full_ampphase_di.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
@@ -1459,7 +1485,7 @@ def main(o=None):
                                        peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][2],
                                        normalization=o['normalize'][1],uvrange=uvrange,
-                                       apply_weights=o['apply_weights'][2],catcher=catcher,
+                                       apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
@@ -1585,7 +1611,7 @@ def main(o=None):
         report('Checking if optical catalogue download is required')
         from get_cat import get_cat, download_required
         if download_required(o['method']):
-            download_thread = threading.Thread(target=get_cat, args=('panstarrs',))
+            download_thread = threading.Thread(target=get_cat, args=(o['method'],))
             download_thread.start()
         else:
             warn('All data present, skipping download')
@@ -1611,7 +1637,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
               PredictSettings=("Clean","DD_PREDICT"),
               **ddf_kw)
 
@@ -1625,7 +1651,10 @@ def main(o=None):
         # maybe the thread died, check the files are there
         if download_required(o['method']):
             warn('Retrying download for some or all of the catalogue')
-            get_cat(o['method'])
+            try:
+                get_cat(o['method'])
+            except RuntimeError:
+                die('Failed to download catalogue with method '+o['method'])
 
         # we should now have the catalogue, find the offsets
         facet_offset_file='facet-offset.txt'
@@ -1657,13 +1686,14 @@ def main(o=None):
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
-        if o['restart'] and os.path.isfile('image_full_low_QU.cube.dirty.fits.fz'):
-            warn('Compressed QU cube product exists, not making new images')
+        cubefiles=['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']
+        if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
+            warn('Compressed low QU cube product exists, not making new images')
         else:
             do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
-                for cubefile in ['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.SmoothNorm.fits']:
-                    if os.path.isfile(cubefile+'.fz'):
+                for cubefile in cubefiles:
+                    if o['restart'] and os.path.isfile(cubefile+'.fz'):
                         warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
                     else:
                         report('Starting compression thread for '+cubefile)
@@ -1671,11 +1701,15 @@ def main(o=None):
                         thread.start()
                         cthreads.append(thread)
                         flist.append(cubefile)
+        cubefiles=['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']
+        if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
+            warn('Compressed vlow QU cube product exists, not making new images')
+        else:
             vlow_uvrange=[o['image_uvmin'],1.6]
             do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
-                for cubefile in ['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.SmoothNorm.fits']:
-                    if os.path.isfile(cubefile+'.fz'):
+                for cubefile in cubefiles:
+                    if o['restart'] and os.path.isfile(cubefile+'.fz'):
                         warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
                     else:
                         report('Starting compression thread for '+cubefile)
@@ -1705,6 +1739,7 @@ def main(o=None):
                 thread.join()
         if o['delete_compressed']:
             for f in flist:
+                warn('Deleting compressed file %s' % f)
                 os.remove(f)
 
     if o['do_dynspec']:

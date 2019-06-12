@@ -8,6 +8,7 @@ import shutil
 import os.path
 from time import sleep
 import sys
+from download_file import download_file
 
 def download_dataset(server,root,workdir='.'):
     print server+root
@@ -15,7 +16,7 @@ def download_dataset(server,root,workdir='.'):
         try:
             print 'Downloading index page',server+root
             page=requests.get(server+root,verify=False,timeout=60)
-        except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+        except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ReadTimeout):
             print 'Connection error! sleeping 30 seconds before retry...'
             sleep(30)
         else:
@@ -31,11 +32,11 @@ def download_dataset(server,root,workdir='.'):
     files=[]
     urls=[]
     for r in row:
-        if 'title' in r.attrib and 'Download' in r.attrib['title'] and 'GSM' in r.attrib['download']:
+        if 'title' in r.attrib and 'Download' in r.attrib['title'] and 'step1' not in r.attrib['download']:
             files.append(r.attrib['download'])
             urls.append(r.attrib['href'].replace('../..',''))
-    if len(files)<25:
-        print 'There should be 25 files but there are only %s! Check SARA manually.'%len(files)
+    if len(files)<24:
+        print 'There should be >=24 files but there are only %s! Check SARA manually.'%len(files)
         return False
     else:
         print 'Downloading',len(files),'distinct files'
@@ -47,41 +48,7 @@ def download_dataset(server,root,workdir='.'):
             url=server+u
             print url
             filename=workdir+'/'+f
-            downloaded=False
-            while not downloaded:
-                connected=False
-                while not connected:
-                    try:
-                        print 'Opening connection'
-                        response = requests.get(url, stream=True,verify=False,timeout=60)
-                        if response.status_code!=200:
-                            print response.headers
-                            raise RuntimeError('Code was %i' % response.status_code)
-                        esize=long(response.headers['Content-Length'])
-                    except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
-                        print 'Connection error! sleeping 30 seconds before retry...'
-                        sleep(30)
-                    else:
-                        connected=True
-                try:
-                    print 'Downloading'
-                    with open(filename, 'wb') as fd:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:
-                                fd.write(chunk)
-                    fsize=os.path.getsize(filename)
-                    if esize!=fsize:
-                        print 'Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize)
-                    else:
-                        print 'Download successful'
-                        downloaded=True
-                        
-                except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
-                    print 'Connection error! sleeping 30 seconds before retry...'
-                    sleep(30) # back to the connection
-
-
-            del response
+            download_file(url,filename)
             
     return True
     

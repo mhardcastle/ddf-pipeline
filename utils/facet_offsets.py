@@ -204,20 +204,8 @@ def label_table(t,regfile,cra,cdec):
     r.add_facet_labels(t)
     return t
 
-def do_plot_facet_offsets(t,regfile,savefig=None):
-    ''' convenience function to plot offsets '''
-    import matplotlib.pyplot as plt
-    r=RegPoly(regfile)
-    if isinstance(t,str):
-        t=Table.read(t)
-    if 'Facet' not in t.columns:
-        r.add_facet_labels(t)
-    plot_offsets(t,r.clist,'red')
-    if savefig is not None:
-        plt.savefig(savefig)
-
-if __name__=='__main__':
-
-    do_plot_facet_offsets('image_full_ampphase1m.cat.fits_FIRST_match_filtered.fits','image_full_ampphase1m.tessel.reg')
-    plt.show()
+#if __name__=='__main__':
+#
+#    do_plot_facet_offsets('image_full_ampphase1m.cat.fits_FIRST_match_filtered.fits','image_full_ampphase1m.tessel.reg')
+#    plt.show()
 

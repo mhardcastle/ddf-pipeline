@@ -37,7 +37,7 @@ def do_rsync(name,basedir,f):
         target=''
 
     while True:
-        s='cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        s='cd '+workdir+'; rsync -avz --progress --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
         print 'Running command:',s
         retval=call(s,shell=True)
         if retval==0:
@@ -47,7 +47,18 @@ def do_rsync(name,basedir,f):
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
 
-
+def do_delete_keep(name,basedir):
+    target=os.environ['DDF_PIPELINE_LEIDENUSER']+'@ssh.strw.leidenuniv.nl'
+    if not os.path.isdir(basedir+'/'+name+'/KEEP'):
+        raise RuntimeError('KEEP directory does not exist')
+    else:
+        command='cd /disks/paradata/shimwell/LoTSS-DR2/archive/'+name+'; rm -rf summary.txt logs '
+        g=glob.glob(basedir+'/'+name+'/KEEP/*')
+        fl=[os.path.basename(f) for f in g]
+        command+=' '.join(fl)
+        print command
+        os.system('ssh '+target+' "'+command+'"')
+        
 def do_upload_compressed(name,basedir):
     workdir=basedir+'/'+name
     f=myglob('*.archive',workdir)
@@ -61,26 +72,31 @@ def do_upload_compressed(name,basedir):
         sdb.set_field(idd)
     
         
-def do_upload(name,basedir):
+def do_upload(name,basedir,skipstokes=False):
 
     workdir=basedir+'/'+name
 
     f=['summary.txt']
     f+=['logs','SOLSDIR']
-    f+=['astromap.fits','panstarrs-fit_state.pickle','facet-offset.txt']
+    f+=['astromap.fits','facet-offset.txt']
+    f+=myglob('*-fit_state.pickle',workdir)
     f+=['image_dirin_SSD_m.npy.ClusterCat.npy']
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
+    f+=myglob('DDS*full_slow*.npz',workdir)
+    f+=myglob('*crossmatch-results*',workdir)
+    f+=myglob('*crossmatch-*.fits',workdir)
     f+=images('image_full_ampphase_di_m.NS',workdir)
     f+=images('image_full_low_m',workdir)
     f+=shiftimages('image_full_ampphase_di_m.NS')
     for i in range(3):
         f+=shiftimages('image_full_ampphase_di_m.NS_Band%i' %i)
-    f+=myglob('image_full_low_stokesV.dirty.*',workdir)
-    f+=myglob('image_full_low_stokesV.SmoothNorm.fits',workdir)
-    f+=myglob('image_full_low_QU.cube.*',workdir)
-    f+=myglob('image_full_vlow_QU.cube.*',workdir)
+    if not skipstokes:
+        f+=myglob('image_full_low_stokesV.dirty.*',workdir)
+        f+=myglob('image_full_low_stokesV.SmoothNorm.fits',workdir)
+        f+=myglob('image_full_low_QU.cube.*',workdir)
+        f+=myglob('image_full_vlow_QU.cube.*',workdir)
     f+=myglob('*.archive',workdir)
 
     do_rsync(name,basedir,f)
@@ -88,7 +104,6 @@ def do_upload(name,basedir):
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
         idd['status']='Archived'
-        idd['archive_version']=2 if compressed_done else 0
         tag_field(sdb,idd,workdir=workdir)
         sdb.set_field(idd)
     

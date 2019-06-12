@@ -17,7 +17,7 @@ def get_timerange(ms):
     t = pt.table(ms +'/OBSERVATION', readonly=True, ack=False)
     return t.getcell('TIME_RANGE',0)
 
-def make_list(workdir='.'):
+def make_list(workdir='.',force=False):
     g=sorted(glob.glob(workdir+'/*.ms'))
     full_mslist=[]
     start_times=[]
@@ -35,7 +35,7 @@ def make_list(workdir='.'):
 
     if len(full_mslist)<18:
         warn('Too few MS found for normal running: only %i' % len(full_mslist))
-        return False
+        if not force: return False
 
     if len(full_mslist)<24:
         warn('Warning -- only %i ms found' % len(full_mslist))
@@ -58,6 +58,12 @@ def list_db_update(success,workdir=None):
         update_status(None,'List failed',workdir=workdir)
 
 if __name__=='__main__':
-    success=make_list(workdir=os.getcwd())
+    import sys
+    if len(sys.argv)>1:
+        force=sys.argv[1]=='force'
+        print 'Force is',force
+    else:
+        force=False
+    success=make_list(workdir=os.getcwd(),force=force)
     if use_database():
         list_db_update(success)

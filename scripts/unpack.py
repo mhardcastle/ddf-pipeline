@@ -10,13 +10,13 @@ def unpack_db_update():
 def unpack(workdir='.'):
     # unpack all the files in workdir
     destdir='prefactor/results/'
-    files=glob.glob(workdir+'/*.tar.gz')
-    if len(files)==0:
-        # occasionally they're not compressed??
-        files=glob.glob(workdir+'/*.tar')
+    files=glob.glob(workdir+'/*.tar.gz')+glob.glob(workdir+'/*.tar')
     if len(files)==0:
         raise RuntimeError('Cannot find files to unpack')
     for f in files:
+        if 'tokens' in f:
+            print 'Skipping',f
+            continue
         fn=os.path.basename(f)
         print 'Unpacking',fn
         result=os.system('cd '+workdir+'; tar xf '+f)

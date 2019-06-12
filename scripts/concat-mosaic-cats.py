@@ -38,7 +38,10 @@ def find_median_astrometry(astromaps,pointingra,pointingdec):
 
     foundpointing = False
     for astromap in astromaps:
-        ra,dec=getposim('%s/astromap.fits'%astromap)
+        amname='%s/astromap.fits'%astromap
+        if not os.path.isfile(amname):
+            continue
+        ra,dec=getposim(amname)
         if sepn(ra*deg2rad,dec*deg2rad,pointingra,pointingdec)*rad2deg < 0.6:        
             foundpointing = True
             f = fits.open('%s/astromap.fits'%astromap)
@@ -50,7 +53,7 @@ def find_median_astrometry(astromaps,pointingra,pointingdec):
         return np.median(subim)
     else:
         print 'Cant find astrometry near %s, %s'%(pointingra*rad2deg,pointingdec*rad2deg)
-        sys.exit(0)
+        return None
    
 
 def concat_catalogs(cats,outconcatcat):
@@ -153,7 +156,8 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     closepointingindex = np.where(sepn(pointingras,pointingdecs,rapointing,decpointing)*rad2deg < 5.0)
 
     astromed = find_median_astrometry(pointdirectories,rapointing,decpointing)
-
+    if astromed is None:
+        astromed=5.0 # missing data, assume bad e.g. hole
     keepindices = []
     time1 = time.time()
     for i in range(0,numsources):

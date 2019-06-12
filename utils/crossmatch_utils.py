@@ -48,12 +48,14 @@ def match_catalogues(t,tab,radius,label,group=None):
     maxdec=np.max(t['DEC']+rdeg)
     # pre-filter tab, which may be all-sky
     tab=tab[(tab['RA']>minra) & (tab['RA']<maxra) & (tab['DEC']>mindec) & (tab['DEC']<maxdec)]
+    matches=0
     for r in t:
         dist=3600.0*separation(r['RA'],r['DEC'],tab['RA'],tab['DEC'])
         stab=tab[dist<radius]
         df=dist[dist<radius]
         if len(stab)==1:
             # got a unique match
+            matches+=1
             for i in range(len(oldv)):
                 if oldv[i] in stab.colnames:
                     r[label+newv[i]]=stab[0][oldv[i]]
@@ -65,6 +67,8 @@ def match_catalogues(t,tab,radius,label,group=None):
             if group is not None:
                 r['g_count_'+str(group)]+=1
 
+    return matches
+                
 if __name__=='__main__':
     from astropy.table import Table
 

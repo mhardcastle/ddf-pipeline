@@ -11,21 +11,22 @@ rad2deg=180.0/np.pi
 ra=[]
 dec=[]
 id=[]
-#with SurveysDB(readonly=True) as sdb:
-#    sdb.cur.execute('select * from fields where status="Archived" or status="Completed"')
-#    results=sdb.cur.fetchall()
+with SurveysDB(readonly=True) as sdb:
+    sdb.cur.execute('select * from fields where status="Archived" or status="Completed"')
+    results=sdb.cur.fetchall()
 
-#for r in results:
-#    ra.append(r['ra'])
-#    dec.append(r['decl'])
-#    id.append(r['id'])
+for r in results:
+    ra.append(r['ra'])
+    dec.append(r['decl'])
+    id.append(r['id'])
 
+'''
 for l in open('/home/mjh/pipeline-master/ddf-pipeline/misc/DR2-pointings.txt').readlines():
     bits=l.rstrip().split()
     id.append(bits[0])
     ra.append(float(bits[1]))
     dec.append(float(bits[2]))
-
+'''
 
 ra=np.array(ra)*deg2rad
 dec=np.array(dec)*deg2rad
@@ -55,8 +56,3 @@ for d in decs:
             area+=a
 print
 print area,totarea,100.0*area/totarea
-        
-
-
-
-        

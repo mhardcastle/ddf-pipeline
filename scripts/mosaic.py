@@ -20,11 +20,11 @@ import os.path
 def make_mosaic(args):
     if args.scale is not None:
         if len(args.scale) != len(args.directories):
-            die('Scales provided must match directories')
+            die('Scales provided must match directories',database=False)
 
     if args.noise is not None:
         if len(args.noise) != len(args.directories):
-            die('Noises provided must match directories')
+            die('Noises provided must match directories',database=False)
 
     if args.rootname:
         rootname=args.rootname+'-'
@@ -88,15 +88,11 @@ def make_mosaic(args):
         app[i].data[app[i].data<threshold]=0
         # at this point this is the beam factor: we want 1/sigma**2.0, so divide by central noise and square
         if args.noise is not None:
-            if args.scale is not None:
-                app[i].data/=args.noise[i]*args.scale[i]
-            else:
                 app[i].data/=args.noise[i]
 
         app[i].data=app[i].data**2.0
 
-        if args.scale is not None:
-            hdus[i].data*=args.scale[i]
+
 
     if args.shift:
         print 'Finding shifts (NOTE THIS CODE IS OBSOLETE)...'
@@ -261,6 +257,10 @@ def make_mosaic(args):
             hdu = fits.PrimaryHDU(header=header,data=w)
             if args.save: hdu.writeto(outname,clobber=True)
         print 'add to mosaic...'
+        if args.scale is not None:
+            print 'Applying scale %s to %s'%(args.scale[i],name[i])
+            r = r*args.scale[i]
+            w = w/((args.scale[i])**2.0)
         isum+=r*w
         wsum+=w
 

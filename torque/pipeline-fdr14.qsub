@@ -2,7 +2,7 @@
 
 #PBS -m abe
 #PBS -N ddf-pipeline
-#PBS -l nodes=1:ppn=32
+#PBS -l nodes=1:ppn=32:fdr14
 #PBS -l walltime=168:00:00
 #PBS -k oe
 #PBS -q main
@@ -20,4 +20,4 @@ echo ------------------------------------------------------
 echo Working directory is $WD
 
 cd $WD
-bash -c /home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.sh
+bash -c /home/mjh/pipeline-master/ddf-pipeline/torque/pipeline-fdr14.sh

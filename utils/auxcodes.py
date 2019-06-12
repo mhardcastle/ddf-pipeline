@@ -136,7 +136,7 @@ def find_imagenoise(workingimage,estnoise):
     #noisepix = np.array(filter(lambda x: abs(x) > 10E-8,noisearray)) # Filter out the edge pixels which have values around 1E-10
     noisepix = np.array(filter(lambda x: abs(x)<50.0*estnoise,noisepix))
     f.close()
-    rms = fit_gaussian_histogram(noisepix,'n')
+    rms = fit_gaussian_histogram(noisepix,False)
     return rms
 
 #------------------------------------------------------------
@@ -157,12 +157,14 @@ def fit_gaussian_histogram(pixelvals,plotting):
     t = np.arange(len(fitnumbers))
     x, flag = scipy.optimize.leastsq(residuals_gaussian, x0, args=(fitnumbers, t))
 
-    if plotting == 'y':
-        pylab.plot(fitnumbers)
-        pylab.plot(t,fitnumbers,t,model_gaussian(t,x))
-        pylab.show()
-        pylab.close()
-        pylab.cla()
+    if plotting:
+        import matplotlib.pyplot as plt
+        
+        plt.plot(fitnumbers)
+        plt.plot(t,fitnumbers,t,model_gaussian(t,x))
+        plt.show()
+        plt.close()
+        plt.cla()
 
     #print 'Sigma is %s'%(x[3]*abs(cellsizes[1]-cellsizes[0]))
     
@@ -283,7 +285,11 @@ def getposim(image):
     return ra,dec
 
 def get_centpos():
-    return getposim('image_dirin_SSD_init.dirty.fits')
+    checklist=['image_dirin_SSD_init.dirty.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits']
+    for f in checklist:
+        if os.path.isfile(f):
+            return getposim(f)
+    raise RuntimeError('Cannot find image with central RA, DEC in working directory')
 
 class MSList(object):
     """
@@ -304,7 +310,18 @@ class MSList(object):
         self.obsids = [os.path.basename(ms).split('_')[0] for ms in self.mss]
         self.freqs=[]
         self.channels=[]
+        self.hascorrected=[]
+        self.dysco=[]
         for ms in self.mss:
+            t = pt.table(ms,readonly=True,ack=False)
+            colname='CORRECTED_DATA'
+            try:
+                dummy=t.getcoldesc(colname)
+            except RuntimeError:
+                dummy=None
+            self.hascorrected.append(not(dummy is None))
+            self.dysco.append('Dysco' in t.showstructure())
+            t.close()
             t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
             self.freqs.append(t[0]['REF_FREQUENCY'])
             self.channels.append(t[0]['CHAN_FREQ'])

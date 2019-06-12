@@ -6,14 +6,21 @@ import astropy.coordinates as coord
 import astropy.units as u
 import os
 from time import sleep
+from download_file import download_file
 
 CSIZE=0.5
+PSBASE='/data/lofar/panstarrs/healpix'
 
 def tile(file):
     return hextile(file,CSIZE*0.9)
 
 def download_required(method):
+    if method=='pslocal':
+        #pslocal makes the merged file directly
+        return ~os.path.isfile(method+'/'+method+'.txt')
+            
     ra_factor,pos=tile('image_ampphase1.app.restored.fits')
+
     for i,p in enumerate(pos):
         outfile=method+'/'+method+'-'+str(i)+'.vo'
         if not os.path.isfile(outfile):
@@ -28,6 +35,9 @@ def get_cat(method,retries=100):
     except OSError:
         pass
 
+    if method=='pslocal':
+        hplist=[]
+    
     if method=='wise':
         from astroquery.irsa import Irsa
         Irsa.ROW_LIMIT=1000000
@@ -48,12 +58,12 @@ def get_cat(method,retries=100):
                 except requests.exceptions.Timeout:
                     print 'Timeout, retrying!'
                 else:
-                    if 'Warning' not in r.text:
+                    if 'Warning' not in r.text and 'Please' not in r.text:
                         break
                     else:
                         # will go round the loop again
                         print 'Bad response, retry download (%i)' % count
-                        sleep(5)
+                        sleep(5+count*15)
                 count+=1
                 if count>=retries:
                     raise RuntimeError('Number of retries exceeded for download')
@@ -64,8 +74,35 @@ def get_cat(method,retries=100):
         elif method=='wise':
             t=Irsa.query_region(coord.SkyCoord(p[0],p[1],unit=(u.deg,u.deg)), catalog='allwise_p3as_psd', radius='0d30m0s')
             t.write(outfile,format='votable')
+        elif method=='pslocal':
+            from astropy_healpix import HEALPix
+            hp = HEALPix(nside=64)
+            cs = hp.cone_search_lonlat(p[0]*u.deg, p[1]*u.deg, radius=CSIZE*u.deg)
+            hplist += list(cs)
+            if not os.path.isdir(PSBASE):
+                # we don't have a local PS database, so download
+                for pix in cs:
+                    outfile=method+'/'+str(pix)
+                    if not os.path.isfile(outfile):
+                        print 'Downloading healpix pixel',pix
+                        download_file('http://uhhpc.herts.ac.uk/panstarrs-healpix/'+str(pix),outfile)
         else:
             raise NotImplementedError('Method '+method)
+    if method=='pslocal':
+        hplist=list(set(hplist))
+        print 'Found',len(hplist),'unique healpix pixels'
+        outname=method+'/'+method+'.txt'
+        with open(outname,'w') as outfile:
+            outfile.write('# RA DEC ObjID\n')
+        for pixel in hplist:
+            print 'Appending pixel',pixel
+            if os.path.isdir(PSBASE):
+                pixelfile=PSBASE+'/'+str(pixel)
+            else:
+                pixelfile=method+'/'+str(pixel)
+            if not os.path.isfile(pixelfile):
+                raise RuntimeError('Pixel file '+pixelfile+'does not exist')
+            os.system('cat '+pixelfile+' >> '+outname)
         
 if __name__=='__main__':
     import sys

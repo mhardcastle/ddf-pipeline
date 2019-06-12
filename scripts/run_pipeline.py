@@ -10,6 +10,7 @@ from unpack import unpack
 from make_mslists import make_list,list_db_update
 from average import average
 from auxcodes import MSList
+import numpy as np
 import sys
 import os
 import glob
@@ -81,11 +82,15 @@ def do_run_pipeline(name,basedir):
     report('Checking structure')
     g=glob.glob(workdir+'/*.ms')
     msl=MSList(None,mss=g)
+    dysco=np.any(msl.dysco)
     uobsids=set(msl.obsids)
     for thisobs in uobsids:
         # check one MS with each ID
-        for m,ch,o in zip(msl.mss,msl.channels,msl.obsids):
+        for m,ch,o,hc in zip(msl.mss,msl.channels,msl.obsids,msl.hascorrected):
             if o==thisobs:
+                if not(hc):
+                    print 'MS',m,'has no corrected_data column, force use of DATA'
+                    averaged=True
                 channels=len(ch)
                 print 'MS',m,'has',channels,'channels'
                 if channels>20:
@@ -107,7 +112,7 @@ def do_run_pipeline(name,basedir):
     make_custom_config(name,workdir,do_field,averaged)
     
     # now run the job
-    do_run_job(name,basedir=basedir,qsubfile=None,do_field=do_field)
+    do_run_job(name,basedir=basedir,qsubfile=None,do_field=do_field,dysco=dysco)
 
 
 if __name__=='__main__':
