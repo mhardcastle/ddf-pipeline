@@ -1606,7 +1606,7 @@ def main(o=None):
             warn('Deep external mask already exists, skipping creation')
         else:
             report('Make deep external mask')
-            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
+            make_external_mask(external_mask,'image_full_ampphase_di.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
     # ##########################################################
     if o['exitafter'] == 'fulllow':
