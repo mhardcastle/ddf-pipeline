@@ -285,7 +285,7 @@ def getposim(image):
     return ra,dec
 
 def get_centpos():
-    checklist=['image_dirin_SSD_init.dirty.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits']
+    checklist=['image_dirin_SSD_init.dirty.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di.dirty.fits']
     for f in checklist:
         if os.path.isfile(f):
             return getposim(f)

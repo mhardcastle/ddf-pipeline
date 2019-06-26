@@ -1577,7 +1577,15 @@ def main(o=None):
             warn('Full-bw mask exists, not making it')
         else:
             report('Making the full-bw extended source mask')
-            make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
+            if os.path.isfile('image_dirin_SSD.app.restored.fits'):
+                # Normal pipeline run.
+                make_extended_mask('image_full_low_im.app.restored.fits','image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'])
+            elif (not os.path.isfile('image_dirin_SSD.app.restored.fits')) and os.path.isfile('image_full_ampphase_di.app.restored.fits'):
+                # Input model was given.
+                make_extended_mask('image_full_low_im.app.restored.fits','image_full_ampphase_di.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'],ds9region='image_full_ampphase_di_m.tessel.reg')
+            else:
+                # Something may be wrong.
+                die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
         extmask='full-mask-low.fits'
         make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
@@ -1598,7 +1606,7 @@ def main(o=None):
             warn('Deep external mask already exists, skipping creation')
         else:
             report('Make deep external mask')
-            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
+            make_external_mask(external_mask,'image_full_ampphase_di.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
 
     # ##########################################################
     if o['exitafter'] == 'fulllow':
