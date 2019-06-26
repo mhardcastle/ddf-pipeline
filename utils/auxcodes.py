@@ -284,12 +284,19 @@ def getposim(image):
     dec=hdus[0].header['CRVAL2']
     return ra,dec
 
-def get_centpos():
-    checklist=['image_dirin_SSD_init.dirty.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di.dirty.fits']
+def find_fullres_image():
+    checklist=['image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di.dirty.fits','image_ampphase1.app.restored.fits','image_dirin_SSD_init.dirty.fits']
     for f in checklist:
         if os.path.isfile(f):
-            return getposim(f)
-    raise RuntimeError('Cannot find image with central RA, DEC in working directory')
+            return f
+    return None
+
+def get_centpos():
+    f=find_fullres_image()
+    if f is not None:
+        return getposim(f)
+    else:
+        raise RuntimeError('Cannot find image with central RA, DEC in working directory')
 
 class MSList(object):
     """
