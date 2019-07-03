@@ -79,16 +79,20 @@ if __name__=='__main__':
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
+    parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
     
     args = parser.parse_args()
     mospointingname = args.mospointingname
     pointingdict = read_pointingfile()
+    ignorepointings = args.ignorepointings
 
     print 'Now searching for results directories'
     cwd=os.getcwd()
 
     # find what we need to put in the mosaic
     mosaicpointings,mosseps = find_pointings_to_mosaic(pointingdict,mospointingname)
+    if ignorepointings != '':
+        ignorepointings = ignorepointings.split(',')
 
     maxsep=np.max(mosseps)
     # now find whether we have got these pointings somewhere!
@@ -97,6 +101,8 @@ if __name__=='__main__':
     scales = []
     sdb = SurveysDB()
     for p in mosaicpointings:
+        if p in ignorepointings:
+            continue
         print 'Wanting to put pointing %s in mosaic'%p
         for d in args.directories:
             rd=d+'/'+p
