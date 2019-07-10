@@ -336,6 +336,7 @@ parser.add_argument('--aoflaggerafter', help='Do an extra round of AOflagger on 
 parser.add_argument('--maxamplitude', help='flag amplitudes above this number, default=1e6', default=1.e6, type=float)
 #parser.add_argument('--takeoutbeam', help='Correct for the beam on the phase-shifted target data', action='store_true')
 parser.add_argument('--uselowres',help='Use the high resolution mode for subtraction, otherwise use the low resolution', action='store_true')
+parser.add_argument('--noconcat',help='Stop after making the DATA_SUB column', action='store_true')
 
 args = vars(parser.parse_args())
 
@@ -493,8 +494,8 @@ if dosubtract:
 
     addextraweights(msfiles)
 
-if composite:
-  print 'Stopped since you are using a composite DS9 region file'
+if composite or args['noconcat']:
+  print 'Stopped since you are using a composite DS9 region file or you requested the noconcat option'
   sys.exit() 
 
 if dokmscal:
