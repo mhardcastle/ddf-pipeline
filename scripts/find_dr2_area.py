@@ -17,6 +17,7 @@ print 'Dec range is',np.min(dec),np.max(dec)
 hp = HEALPix(nside=1024)
 print hp.npix,'total healpix pixels on sky'
 area=hp.pixel_area.value*3283
+print 'area of one healpix is',area,'sq. deg'
 
 plist=[]
 
