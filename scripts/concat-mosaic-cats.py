@@ -355,5 +355,5 @@ if __name__=='__main__':
         srlcatnames.append(srlcat)
         #gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
-    concat_catalogs(srlcatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.srl.fits')
-    #concat_catalogs(gauscatnames,'LOFAR_HBA_T1_DR1_catalog_v0.95.gaus.fits')
+    concat_catalogs(srlcatnames,'LoTSS_DR2_v0.9.srl.fits')
+    concat_catalogs(gauscatnames,'LoTSS_DR2_v0.9.gaus.fits')
