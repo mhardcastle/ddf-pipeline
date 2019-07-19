@@ -203,19 +203,19 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
 
     sourcera = np.append(sourcera,cat[1].data[keepindices]['RA'])
     e_sourcera = np.append(e_sourcera,cat[1].data[keepindices]['E_RA'])
-    e_sourcera_tot = np.append(e_sourcera_tot,(cat[1].data[keepindices]['E_RA']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) #$ ADD SOME ERROR TO THE SOURCE POSITIONS
+    #e_sourcera_tot = np.append(e_sourcera_tot,(cat[1].data[keepindices]['E_RA']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) #$ ADD SOME ERROR TO THE SOURCE POSITIONS
     
     sourcedec = np.append(sourcedec,cat[1].data[keepindices]['DEC'])
     e_sourcedec = np.append(e_sourcedec,cat[1].data[keepindices]['E_DEC'])
-    e_sourcedec_tot = np.append(e_sourcedec_tot,(cat[1].data[keepindices]['E_DEC']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) # ADD SOME ERROR TO THE SOURCE POSITIONS
+    #e_sourcedec_tot = np.append(e_sourcedec_tot,(cat[1].data[keepindices]['E_DEC']**2.0 + (astromed*arcsec2deg)**2.0)**0.5) # ADD SOME ERROR TO THE SOURCE POSITIONS
     
     sint = np.append(sint,cat[1].data[keepindices]['Total_flux'])
     e_sint =np.append(e_sint,cat[1].data[keepindices]['E_Total_flux'])
-    e_sint_tot =np.append(e_sint_tot,(cat[1].data[keepindices]['E_Total_flux']**2.0 + (cat[1].data[keepindices]['Total_flux']*0.2)**2.0)**0.5)
+    #e_sint_tot =np.append(e_sint_tot,(cat[1].data[keepindices]['E_Total_flux']**2.0 + (cat[1].data[keepindices]['Total_flux']*0.2)**2.0)**0.5)
     
     speak = np.append(speak,cat[1].data[keepindices]['Peak_flux'])
     e_speak =np.append(e_speak,cat[1].data[keepindices]['E_Peak_flux'])
-    e_speak_tot =np.append(e_speak_tot,(cat[1].data[keepindices]['E_Peak_flux']**2.0 + (cat[1].data[keepindices]['Peak_flux']*0.2)**2.0)**0.5)
+    #e_speak_tot =np.append(e_speak_tot,(cat[1].data[keepindices]['E_Peak_flux']**2.0 + (cat[1].data[keepindices]['Peak_flux']*0.2)**2.0)**0.5)
     
     maj = np.append(maj,cat[1].data[keepindices]['Maj'])
     e_maj =np.append(e_maj,cat[1].data[keepindices]['E_Maj'])
@@ -238,19 +238,19 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     col1 = fits.Column(name='Source_Name',format='24A',unit='',array=sourceids)
     col2 = fits.Column(name='RA',format='f8',unit='deg',array=sourcera)
     col3 = fits.Column(name='E_RA',format='f8',unit='arcsec',array=e_sourcera*deg2arcsec)
-    col4 = fits.Column(name='E_RA_tot',format='f8',unit='arcsec',array=e_sourcera_tot*deg2arcsec)
+    #col4 = fits.Column(name='E_RA_tot',format='f8',unit='arcsec',array=e_sourcera_tot*deg2arcsec)
     
-    col5 = fits.Column(name='DEC',format='f8',unit='deg',array=sourcedec)
-    col6 = fits.Column(name='E_DEC',format='f8',unit='arcsec',array=e_sourcedec*deg2arcsec)
-    col7 = fits.Column(name='E_DEC_tot',format='f8',unit='arcsec',array=e_sourcedec_tot*deg2arcsec)
+    col4 = fits.Column(name='DEC',format='f8',unit='deg',array=sourcedec)
+    col5 = fits.Column(name='E_DEC',format='f8',unit='arcsec',array=e_sourcedec*deg2arcsec)
+    #col7 = fits.Column(name='E_DEC_tot',format='f8',unit='arcsec',array=e_sourcedec_tot*deg2arcsec)
     
-    col8 = fits.Column(name='Peak_flux',format='f8',unit='beam-1 mJy',array=speak*1000.0)
-    col9 = fits.Column(name='E_Peak_flux',format='f8',unit='beam-1 mJy',array=e_speak*1000.0)
-    col10 = fits.Column(name='E_Peak_flux_tot',format='f8',unit='beam-1 mJy',array=e_speak_tot*1000.0)
+    col6 = fits.Column(name='Peak_flux',format='f8',unit='beam-1 mJy',array=speak*1000.0)
+    col7 = fits.Column(name='E_Peak_flux',format='f8',unit='beam-1 mJy',array=e_speak*1000.0)
+    #col10 = fits.Column(name='E_Peak_flux_tot',format='f8',unit='beam-1 mJy',array=e_speak_tot*1000.0)
     
-    col11 = fits.Column(name='Total_flux',format='f8',unit='mJy',array=sint*1000.0)
-    col12 = fits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
-    col13 = fits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
+    col8 = fits.Column(name='Total_flux',format='f8',unit='mJy',array=sint*1000.0)
+    col9 = fits.Column(name='E_Total_flux',format='f8',unit='mJy',array=e_sint*1000.0)
+    #col13 = fits.Column(name='E_Total_flux_tot',format='f8',unit='mJy',array=e_sint_tot*1000.0)
     
     #maj[np.where(sourceresolved=='U')] = np.nan
     #e_maj[np.where(sourceresolved=='U')] = np.nan
@@ -259,44 +259,44 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
     #pa[np.where(sourceresolved=='U')] = np.nan
     #e_pa[np.where(sourceresolved=='U')] = np.nan
     
-    col14 =  fits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
-    col15 =  fits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
+    col10 =  fits.Column(name='Maj',format='f8',unit='arcsec',array=maj*deg2arcsec)
+    col11 =  fits.Column(name='E_Maj',format='f8',unit='arcsec',array=e_maj*deg2arcsec)
     
-    col16 =  fits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
-    col17 =  fits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
+    col12 =  fits.Column(name='Min',format='f8',unit='arcsec',array=smin*deg2arcsec)
+    col13 =  fits.Column(name='E_Min',format='f8',unit='arcsec',array=e_smin*deg2arcsec)
 
-    col18 =  fits.Column(name='DC_Maj',format='f8',unit='arcsec',array=dcmaj*deg2arcsec)
-    col19 =  fits.Column(name='E_DC_Maj',format='f8',unit='arcsec',array=e_dcmaj*deg2arcsec)
+    col14 =  fits.Column(name='DC_Maj',format='f8',unit='arcsec',array=dcmaj*deg2arcsec)
+    col15 =  fits.Column(name='E_DC_Maj',format='f8',unit='arcsec',array=e_dcmaj*deg2arcsec)
     
-    col20 =  fits.Column(name='DC_Min',format='f8',unit='arcsec',array=dcsmin*deg2arcsec)
-    col21 =  fits.Column(name='E_DC_Min',format='f8',unit='arcsec',array=e_dcsmin*deg2arcsec)
+    col16 =  fits.Column(name='DC_Min',format='f8',unit='arcsec',array=dcsmin*deg2arcsec)
+    col17 =  fits.Column(name='E_DC_Min',format='f8',unit='arcsec',array=e_dcsmin*deg2arcsec)
     
-    col22 =  fits.Column(name='PA',format='f8',unit='deg',array=pa)
-    col23 =  fits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
+    col18 =  fits.Column(name='PA',format='f8',unit='deg',array=pa)
+    col19 =  fits.Column(name='E_PA',format='f8',unit='deg',array=e_pa)
 
-    col24 =  fits.Column(name='DC_PA',format='f8',unit='deg',array=dcpa)
-    col25 =  fits.Column(name='E_DC_PA',format='f8',unit='deg',array=e_dcpa)
+    col20 =  fits.Column(name='DC_PA',format='f8',unit='deg',array=dcpa)
+    col21 =  fits.Column(name='E_DC_PA',format='f8',unit='deg',array=e_dcpa)
 
     #col20 = fits.Column(name='Resolved',format='1A',unit='',array=sourceresolved)
     
-    col26 = fits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
-    col27 = fits.Column(name='S_Code',format='1A',unit='',array=stype)
+    col22 = fits.Column(name='Isl_rms',format='f8',unit='beam-1 mJy',array=rms_noise*1000.0)
+    col23 = fits.Column(name='S_Code',format='1A',unit='',array=stype)
     
-    col28 = fits.Column(name='Mosaic_ID',format='9A',unit='',array=mosaic_identifier)
+    col24 = fits.Column(name='Mosaic_ID',format='11A',unit='',array=mosaic_identifier)
     
-    col29 = fits.Column(name='Isl_id',format='I8',unit='',array=islid)
+    #col29 = fits.Column(name='Isl_id',format='I8',unit='',array=islid)
 	
     # With unique source names that are matched with source and gaussian catalogs the source_id is not needed.
     #col24 = fits.Column(name='Source_id',format='I8',unit='',array=sourcenum)
     
     if cattype == 'gaus':
         gausid = np.append(gausid,cat[1].data[keepindices]['Gaus_id'])
-        col30 = fits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
+        col25 = fits.Column(name='Gaus_id',format='I8',unit='',array=gausid)
 
     if cattype == 'srl':    
-        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29])
+        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24])
     if cattype == 'gaus':
-        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25,col26,col27,col28,col29,col30])
+        cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11,col12,col13,col14,col15,col16,col17,col18,col19,col20,col21,col22,col23,col24,col25])
         
     tbhdu = fits.BinTableHDU.from_columns(cols)
 
