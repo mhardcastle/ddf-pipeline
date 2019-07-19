@@ -75,8 +75,8 @@ def concat_catalogs(cats,outconcatcat):
         nrows2 = nrows1 + f2[1].data.shape[0]
         for colname in f[1].columns.names:
             hdu.data[colname][nrows1:nrows2] = f2[1].data[colname]
-        f2.close()
         nrows1 += f2[1].data.shape[0]
+        f2.close()
 
     hdu.writeto(outconcatcat)
 
