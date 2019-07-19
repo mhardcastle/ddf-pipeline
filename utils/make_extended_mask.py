@@ -110,7 +110,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
             opix=w.wcs_world2pix(world,0)
             for xv,yv,op in zip(x,y,opix):
                 try:
-                    if mask[int(op[1]),int(op[0])]>0:
+                    if (xv>=0 and yv>=0) and mask[int(op[1]),int(op[0])]>0:
                         maskf[yv,xv]=1
                 except IndexError:
                     # catch wcs mismatches or similar
