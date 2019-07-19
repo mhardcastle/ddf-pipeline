@@ -2,10 +2,12 @@ import numpy as np
 import os
 from astropy_healpix import HEALPix
 from astropy import units as u
+import sys
 
 pos=np.loadtxt(os.environ['DDF_DIR']+'/ddf-pipeline/misc/DR2-pointings.txt',usecols=(1,2))
 
-pos=pos[(pos[:,0]>137) & (pos[:,0]<250)]
+if len(sys.argv)==1:
+    pos=pos[(pos[:,0]>137) & (pos[:,0]<250)]
 
 print 'Number of pointings is',len(pos)
 ra=pos[:,0]
