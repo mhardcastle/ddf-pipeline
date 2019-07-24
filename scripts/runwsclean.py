@@ -111,11 +111,8 @@ def cleanup(mslist):
 
 def flagms_startend(ms, tecsolsfile, tecsolint):
     
-    username = os.getlogin()
-    if username == 'rvweerenold':
-       taql = '/net/lofar1/data1/oonk/rh7_lof_aug2017_trunk/casacore/bin/taql'
-    else:
-       taql = 'taql'
+
+    taql = 'taql'
        
     msout = ms + '.cut'
     
@@ -223,11 +220,6 @@ def removestartendms(ms, starttime=None, endtime=None):
   
     return
 
-#removestartendms('P219+50_PSZ2G084.10+58.72.dysco.sub.shift.avg.weights.ms.archive',endtime='16-Apr-2015/02:14:47.0')
-#removestartendms('P223+50_PSZ2G084.10+58.72.dysco.sub.shift.avg.weights.ms.archive',starttime='24-Feb-2015/22:16:00.0')
-#removestartendms('P223+52_PSZ2G088.98+55.07.dysco.sub.shift.avg.weights.ms.archive',starttime='19-Feb-2015/22:40:00.0')
-#removestartendms('P223+55_PSZ2G096.14+56.24.dysco.sub.shift.avg.weights.ms.archive',starttime='31-Mar-2015/20:11:00.0')
-#removestartendms('P227+53_PSZ2G088.98+55.07.dysco.sub.shift.avg.weights.ms.archive',starttime='19-Feb-2015/22:40:00.0')
 
 
 
@@ -285,11 +277,9 @@ def plotimage(fitsimagename, outplotname, mask=None, rmsnoiseimage=None):
 # PSZ1 try no phase from beamcor
 # run through various uvmin
 
-##rsync -avz --progress --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*ddfcache*" -e ssh rvweeren@lofar.herts.ac.uk:/beegfs/car/mjh/P128+37 .
 
 
 def archive(mslist, outtarname, regionfile, fitsmask, imagename):
-  path = '/disks/ftphome/pub/vanweeren'
   for ms in mslist:
     msout = ms + '.calibrated'
     if os.path.isdir(msout):
@@ -633,13 +623,8 @@ def beamcor(ms):
     losotolofarbeam(H5name, 'phase000', ms, useElementResponse=False, useArrayFactor=True, useChanFreq=True)
     losotolofarbeam(H5name, 'amplitude000', ms, useElementResponse=False, useArrayFactor=True, useChanFreq=True)   
 
-    username = os.getlogin()
-    if username == 'rvweerenold':
-       losoto = '/home/rvweeren/.local/bin/losoto'
-       taql = '/net/lofar1/data1/oonk/rh7_lof_aug2017_trunk/casacore/bin/taql'       
-    else:
-       losoto = 'losoto'
-       taql = 'taql'
+    losoto = 'losoto'
+    taql = 'taql'
 
 
     
@@ -656,13 +641,6 @@ def beamcor(ms):
     print 'DPPP applycal:', cmd
     os.system(cmd)
    
-    #taql = '/net/lofar1/data1/oonk/rh7_lof_aug2017_trunk/casacore/bin/taql'
-    
-    # reset DATA to CORRECTED_DATA
-    #t  = pt.table(ms, readonly=False)
-    #cd = t.getcol('CORRECTED_DATA')
-    #t.putcol('DATA', cd)
-    #t.close()
     
     os.system(taql + " 'update " + ms + " set DATA=CORRECTED_DATA'")
     return
@@ -727,26 +705,23 @@ def getimsize(boxfile, cellsize=1.5):
 
 def smoothsols(parmdb, ms):
     
-    username = os.getlogin()
-    if username == 'rvweerenold':
-       losoto = '/home/rvweeren/.local/bin/losoto'
-    else:
-       losoto = 'losoto'    
+
+    losoto = 'losoto'    
     
     cmdlosoto = losoto + ' ' + parmdb + ' '
     noise = findamplitudenoise(parmdb)
     smooth = False
     if noise >= 0.1:
-      cmdlosoto += create_losoto_mediumsmoothparset(ms, '9') #'/net/rijn/data2/rvweeren/LoTSS_ClusterCAL/losoto_mediansmooth_9x9.parset'
+      cmdlosoto += create_losoto_mediumsmoothparset(ms, '9') 
       smooth = True      
     if noise < 0.1 and noise >= 0.08:
-      cmdlosoto += create_losoto_mediumsmoothparset(ms, '7') #'/net/rijn/data2/rvweeren/LoTSS_ClusterCAL/losoto_mediansmooth_7x7.parset'
+      cmdlosoto += create_losoto_mediumsmoothparset(ms, '7') 
       smooth = True    
     if noise < 0.08 and noise >= 0.07:
-      cmdlosoto += create_losoto_mediumsmoothparset(ms, '5')#'/net/rijn/data2/rvweeren/LoTSS_ClusterCAL/losoto_mediansmooth_5x5.parset'
+      cmdlosoto += create_losoto_mediumsmoothparset(ms, '5')
       smooth = True
     if noise < 0.07 and noise >= 0.04:
-      cmdlosoto += create_losoto_mediumsmoothparset(ms, '3')#'/net/rijn/data2/rvweeren/LoTSS_ClusterCAL/losoto_mediansmooth_3x3.parset'
+      cmdlosoto += create_losoto_mediumsmoothparset(ms, '3')
       smooth = True
     print cmdlosoto
     if smooth:
@@ -1177,12 +1152,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
     #imcol = 'DATA' 
     
     
-    
-    username = os.getlogin()
-    if username == 'rvweerenold':
-       wsclean = '/net/lofar1/data1/rvweeren/software/wsclean-code-2.6oct12/wsclean/build/wsclean'
-    else:
-       wsclean = 'wsclean'
+    wsclean = 'wsclean'
        
        
     cmd = wsclean + ' '
@@ -1268,11 +1238,8 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
     losotoparset_phase = create_losoto_fastphaseparset(ms)
     losotoparset_tecandphase = create_losoto_tecandphaseparset(ms)
 
-    username = os.getlogin()
-    if username == 'rvweerenold':
-       losoto = '/home/rvweeren/.local/bin/losoto'
-    else:
-       losoto = 'losoto'
+
+    losoto = 'losoto'
        
 
     
@@ -1545,11 +1512,7 @@ logging.info('Output file will be:       ' + outtarname)
 
 
 
-username = os.getlogin()
-if username == 'rvweerenold':
-  makemask = '/net/para10/data1/shimwell/software/killmsddf/new-install/DDFacet/SkyModel/MakeMask.py'
-else:
-  makemask = 'MakeMask.py'
+makemask = 'MakeMask.py'
 
 
 
