@@ -17,6 +17,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import time
 from subprocess import call
+from subprocess import check_output
 
 def do_rsync_upload(cname,basedir,f):
     workdir=basedir+'/'+cname
@@ -77,6 +78,8 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     sdb.close()
     fields = extractdict['fields'].split(',')
     selfcal_status = extractdict['selfcal_status']
+    extract_status = extractdict['extract_status'].split(',')
+    
 
     print 'Working on ',name, 'in fields', fields,'current selfcal status',selfcal_status
     
@@ -98,17 +101,39 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     print 'Updated status to STARTED for',name
     time.sleep(2.0)
     
-    
+    print 'Starting rsync'
     fieldstring = ''
-    for field in fields:
+
+    for fieldid, field in enumerate(fields):
+        print field, fields
         # WANT TO MAKE THIS INTO A RSYNC SO THAT IT CAN BE DONE OUTSIDE LEIDEN
         #os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
         observations = glob.glob('%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name))
-        for observation in observations:                     
+
+        sdb=SurveysDB()
+        extractdict = sdb.get_reprocessing(name)
+        sdb.close()
+        extract_status = extractdict['extract_status'].split(',')
+        
+        if extract_status[fieldid] == 'EDONE':
+          cmd = '%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name)
+          observations = check_output('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd, shell=True)
+          print 'ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd
+          observations = observations.split('\n')[:-1] # remove last empty item in this list
+        else:
+          observations = []
+
+        print 'DATA LOCATIONS', observations
+        print 'FIELDS', fields
+        print 'EXTRACT STATUS', extract_status
+
+        for observation in observations:
+            print observation
             report('Copying data from %s'%observation)
+        
             #'+ inarchivedir +'/' + name + '/' + field +'/' + field +'_'+name +'.dysco.sub.shift.avg.weights.ms.archive')
             do_rsync_download(observation.split('/')[-1],inarchivedir +'/'+name + '/'+field +'/',workdir)
-            #do_rsync_download(field +'_'+name +'.dysco.sub.shift.avg.weights.ms.archive',inarchivedir +'/'+name + '/'+field +'/',workdir)
+
             fieldstring += observation.split('/')[-1] + ' '
             #'%s_%s.dysco.sub.shift.avg.weights.ms.archive '%(field,name)
     fieldstring = fieldstring[:-1]
