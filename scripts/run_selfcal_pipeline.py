@@ -106,10 +106,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
 
     for fieldid, field in enumerate(fields):
         print field, fields
-        # WANT TO MAKE THIS INTO A RSYNC SO THAT IT CAN BE DONE OUTSIDE LEIDEN
-        #os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
-        observations = glob.glob('%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name))
-
+    
         sdb=SurveysDB()
         extractdict = sdb.get_reprocessing(name)
         sdb.close()
