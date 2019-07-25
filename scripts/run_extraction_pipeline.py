@@ -27,7 +27,7 @@ def do_rsync_upload(cname,basedir,f):
     #    target=''
 
     while True:
-        s= 'rsync -avz --relative --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
+        s= 'rsync -avz --relative --progress --chmod=ugo+rX --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
         print 'Running command:',s
         retval=call(s,shell=True)
         if retval==0:
