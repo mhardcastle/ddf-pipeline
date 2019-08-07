@@ -63,6 +63,7 @@ parser.add_argument('-m','--mslist', help='DR2 mslist file, default=big-mslist.t
 parser.add_argument('-c','--column', help='Column that is copied from the MS and compressed, default=DATA_DI_CORRECTED', default='DATA_DI_CORRECTED', type=str)
 parser.add_argument('--inmsdir', help='Forces the ouput MS to be in the same directory as the mslist', action='store_true')
 parser.add_argument('--skipimweights', help='Do not copy over IMAGING_WEIGHT column', action='store_true')
+parser.add_argument('--preserve', help='Preserve existing files', action='store_true')
 args = vars(parser.parse_args())
 
 dirname = os.path.dirname(args['mslist'])
@@ -80,7 +81,10 @@ for ms in msfiles:
     else:
       msout = ms + '.archive' # write ms in current working directory
 
-    cmd  = 'rm -r '+msout+'; '
+    if not args['preserve']:
+        cmd  = 'rm -r '+msout+'; '
+    else:
+        cmd = ''
     cmd += 'NDPPP msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
     cmd += 'msout.storagemanager=dysco msout=' + msout  + ' steps=[] '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
@@ -101,6 +105,9 @@ for ms in msfiles:
            tout.putcol('IMAGING_WEIGHT', imw)
            tout.close()
         else:
-           print('Warning: IMAGING_WEIGHT does not exist in input ms', ms)
+           print 'Warning: IMAGING_WEIGHT does not exist in input ms', ms
       
         tin.close()
+    else:
+        print 'Skipping',msout,'as it already exists'
+        
