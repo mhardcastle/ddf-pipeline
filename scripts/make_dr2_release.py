@@ -54,7 +54,7 @@ if __name__=='__main__':
             # sync mosaics directory
             separator('Mosaic sync')
             os.chdir(workdir+'/mosaics')
-            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/*' ."
+            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA13h_field/*' ."
             do_rsync(s)
 
             # now go through all archived and completed fields and make sure they're in the DR2 directory
