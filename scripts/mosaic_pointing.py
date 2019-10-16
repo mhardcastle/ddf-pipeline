@@ -113,7 +113,8 @@ if __name__=='__main__':
                     qualitydict = sdb.get_quality(p)
                     currentdict = sdb.get_field(p)
                     print qualitydict
-                    scale=qualitydict['scale']
+                    #scale=qualitydict['scale']
+                    scale= 1.0/(qualitydict['nvss_scale']/4.2)
                     if scale is None:
                         print 'Missing scaling factor for',p
                         missingpointing=True
