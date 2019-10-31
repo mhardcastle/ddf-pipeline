@@ -95,6 +95,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
             extractdict['extract_status'] = ','.join(extract_status)
             sdb.db_set('reprocessing',extractdict)
             sdb.close()
+            continue
         workdir=basedir+'/'+name
         try:
             os.mkdir(workdir)
