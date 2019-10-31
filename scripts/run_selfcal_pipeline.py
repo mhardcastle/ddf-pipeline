@@ -79,9 +79,17 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     fields = extractdict['fields'].split(',')
     selfcal_status = extractdict['selfcal_status']
     extract_status = extractdict['extract_status'].split(',')
-    
+    bad_pointings = extractdict['bad_pointings'].split(',')
 
-    print 'Working on ',name, 'in fields', fields,'current selfcal status',selfcal_status
+    print 'Populating the selfcal pointings -- a copy of fields but excluding bad_pointings'
+    selfcal_pointings = ''
+    for field in fields:
+        if field not in bad_pointings:
+            selfcal_pointings+= '%s,'%field
+    selfcal_pointings = selfcal_pointings[:-1]
+    
+    
+    print 'Working on ',name, 'in fields', fields,'bad pointings',bad_pointings,'selfcal_pointings',selfcal_pointings,'current selfcal status',selfcal_status
     
   
     workdir=basedir+'/'+name
@@ -96,6 +104,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     sdb=SurveysDB()
     extractdict = sdb.get_reprocessing(name)
     extractdict['selfcal_status'] = selfcal_status
+    extractdict['selfcal_pointings'] = selfcal_pointings
     sdb.db_set('reprocessing',extractdict)
     sdb.close()
     print 'Updated status to STARTED for',name
@@ -112,7 +121,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
         sdb.close()
         extract_status = extractdict['extract_status'].split(',')
         
-        if extract_status[fieldid] == 'EDONE':
+        if extract_status[fieldid] == 'EDONE' and field in selfcal_pointings:
           cmd = '%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name)
           observations = check_output('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd, shell=True)
           print 'ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd
@@ -122,6 +131,8 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
 
         print 'DATA LOCATIONS', observations
         print 'FIELDS', fields
+        print 'SELFCAL_POINTINGS', selfcal_pointings
+        print 'BAD_POINTINGS',bad_pointings
         print 'EXTRACT STATUS', extract_status
 
         for observation in observations:
