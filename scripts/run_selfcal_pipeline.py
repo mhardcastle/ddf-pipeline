@@ -176,7 +176,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
 
     report('Archiving the results to %s'%outarchivedir)
     os.chdir(workdir)
-    f = glob.glob('%s.ds9.tar.gz'%(name))
+    f = glob.glob('%s.ds9.tar.gz'%(name)) + glob.glob('%s_image_9.png'%(name))
     do_rsync_upload(name,outarchivedir,f)
     
 
