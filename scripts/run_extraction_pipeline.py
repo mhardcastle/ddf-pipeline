@@ -79,7 +79,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     sdb.close()
     fields = extractdict['fields'].split(',')
     extract_status = extractdict['extract_status'].split(',')
-
+    bad_pointings = extractdict['bad_pointings'].split(',')
     print 'Working on ',name, 'in fields', fields,'which have status',extract_status
     
     for i in range(0,len(fields)):
@@ -87,7 +87,14 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         if not(extract_status[i] == 'EREADY' or (force and extract_status[i] == 'STARTED')):
             continue
         field = fields[i]
-
+        if field in bad_pointings:
+            print 'Field',field,'in bad pointings -- skipping and setting to BADP'
+            sdb=SurveysDB()
+            extractdict = sdb.get_reprocessing(name)
+            extract_status[i] = 'BADP'
+            extractdict['extract_status'] = ','.join(extract_status)
+            sdb.db_set('reprocessing',extractdict)
+            sdb.close()
         workdir=basedir+'/'+name
         try:
             os.mkdir(workdir)
