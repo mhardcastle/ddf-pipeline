@@ -79,7 +79,10 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     fields = extractdict['fields'].split(',')
     selfcal_status = extractdict['selfcal_status']
     extract_status = extractdict['extract_status'].split(',')
-    bad_pointings = extractdict['bad_pointings'].split(',')
+    try:
+        bad_pointings = extractdict['bad_pointings'].split(',')
+    except AttributeError:
+        bad_pointings = ['']
 
     print 'Populating the selfcal pointings -- a copy of fields but excluding bad_pointings'
     selfcal_pointings = ''

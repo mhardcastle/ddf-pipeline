@@ -79,7 +79,10 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     sdb.close()
     fields = extractdict['fields'].split(',')
     extract_status = extractdict['extract_status'].split(',')
-    bad_pointings = extractdict['bad_pointings'].split(',')
+    try:
+        bad_pointings = extractdict['bad_pointings'].split(',')
+    except AttributeError:
+        bad_pointings = ['']
     print 'Working on ',name, 'in fields', fields,'which have status',extract_status
     
     for i in range(0,len(fields)):
