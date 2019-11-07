@@ -46,8 +46,8 @@ def do_rsync_download(cname,basedir,f):
     #    target=''
 
     while True:
-	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" '
-        s= 'rsync -azvh --timeout=20 --progress '+ excludeinclude + target+workdir + ' ' + f
+	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" '
+        s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
         #'cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
         print 'Running command:',s
         retval=call(s,shell=True)
@@ -79,7 +79,10 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     sdb.close()
     fields = extractdict['fields'].split(',')
     extract_status = extractdict['extract_status'].split(',')
-
+    try:
+        bad_pointings = extractdict['bad_pointings'].split(',')
+    except AttributeError:
+        bad_pointings = ['']
     print 'Working on ',name, 'in fields', fields,'which have status',extract_status
     
     for i in range(0,len(fields)):
@@ -87,7 +90,15 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         if not(extract_status[i] == 'EREADY' or (force and extract_status[i] == 'STARTED')):
             continue
         field = fields[i]
-
+        if field in bad_pointings:
+            print 'Field',field,'in bad pointings -- skipping and setting to BADP'
+            sdb=SurveysDB()
+            extractdict = sdb.get_reprocessing(name)
+            extract_status[i] = 'BADP'
+            extractdict['extract_status'] = ','.join(extract_status)
+            sdb.db_set('reprocessing',extractdict)
+            sdb.close()
+            continue
         workdir=basedir+'/'+name
         try:
             os.mkdir(workdir)
