@@ -70,7 +70,16 @@ def do_upload_compressed(name,basedir):
         idd=sdb.get_field(name)
         idd['archive_version']=2
         sdb.set_field(idd)
-    
+
+def do_upload_vlow(name,basedir):
+    workdir=basedir+'/'+name
+    f=myglob('*.fz',workdir)
+    do_rsync(name,basedir,f)
+    with SurveysDB() as sdb:
+        idd=sdb.get_field(name)
+        idd['vlow_reprocess']="Uploaded"
+        sdb.set_field(idd)
+
         
 def do_upload(name,basedir,skipstokes=False):
 
