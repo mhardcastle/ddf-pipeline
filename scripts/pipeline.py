@@ -28,6 +28,7 @@ from options import options,print_options
 from shutil import copyfile,rmtree,move
 import glob
 import pyrap.tables as pt
+from redo_dppp_di import redo_dppp_di
 from modify_mask import modify_mask
 from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
 from histmsamp import find_uvmin,sumdico
@@ -997,6 +998,9 @@ def main(o=None):
 
     # ##########################################################
     # subtract outer square
+    if o['redo_DI']:
+        redo_dppp_di(o)
+
     if o['do_wide']:
         subtractOuterSquare(o)
         colname="DATA_SUB"
