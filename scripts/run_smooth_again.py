@@ -41,7 +41,7 @@ def do_rsync_download(cname,basedir,f):
             break
         print 'Non-zero return value',retval
         if retval!=30:
-            die('rsync failed unexpectedly')
+            die('rsync failed unexpectedly',cname)
         sleep(10)
         
 def update_status(name,status):
@@ -121,6 +121,7 @@ def compress_fits(filename,q):
 
 def do_download(cname, basedir='.'):
     update_status(cname,'Downloading')
+    os.chdir(basedir)
     do_rsync_download(cname,'/disks/paradata/shimwell/LoTSS-DR2/archive/',os.getcwd())
     os.chdir(cname)
     striparchivename()

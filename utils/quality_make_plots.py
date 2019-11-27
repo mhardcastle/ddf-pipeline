@@ -166,7 +166,7 @@ def plot_flux_ratios(catalog,fitsimage,outname,options=None):
                 if distancemin < radialseps[j] < distancemax:
                     binvals = np.append(binvals,fluxratios[j])
             midpoint = (distancemin+distancemax)/2.0
-            print i,binvals
+            #print i,binvals
             #bsmear = bandwidth_smearing2(6*arcsec2deg,150E6,midpoint,4*48.8E3)
             #tsmear = time_smearing2(16.0,midpoint,6*arcsec2deg)
             #smids.append(midpoint)

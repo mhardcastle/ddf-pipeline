@@ -1,7 +1,7 @@
 from getcpus import getcpus
 
 option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
-                ( 'image', 'pbimage', str, 'image_full_ampphase_di_m.NS_shift.app.facetRestored.fits', 'PB-corrected image to use for source finding' ),
+                ( 'image', 'pbimage', str, 'image_full_ampphase_di_m.NS_shift.int.facetRestored.fits', 'PB-corrected image to use for source finding' ),
                 ( 'image', 'nonpbimage', str, 'image_full_ampphase_di_m.NS_shift.app.facetRestored.fits', 'PB-uncorrected image to use for source finding' ),
                 ( 'image', 'catprefix', str, 'image_full_ampphase_di_m.NS', 'Prefix to use for output catalogues' ),
                 ( 'control', 'sfind_pixel_fraction', float, 1.0, 'Source find over what fraction of the image?' ),

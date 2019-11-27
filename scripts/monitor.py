@@ -12,6 +12,7 @@ import threading
 from run_pipeline import do_run_pipeline
 from upload import do_upload,do_upload_compressed,do_delete_keep
 import glob
+import MySQLdb
 
 queuelimit=10
 cluster=os.environ['DDF_PIPELINE_CLUSTER']
@@ -28,10 +29,15 @@ basedir='/beegfs/car/mjh'
 
 while True:
 
-    with SurveysDB(readonly=True) as sdb:
-        sdb.cur.execute('select * from fields where status!="Not started" and clustername="%s" order by priority desc, end_date' % cluster)
-        result=sdb.cur.fetchall()
-
+    try:
+        with SurveysDB(readonly=True) as sdb:
+            sdb.cur.execute('select * from fields where status!="Not started" and clustername="%s" order by priority desc, end_date' % cluster)
+            result=sdb.cur.fetchall()
+    except MySQLdb.OperationalError as e:
+        print 'Database not available! -- sleeping',e
+        sleep(240)
+        continue
+    
     d={}
     for r in result:
         status=r['status']

@@ -2,6 +2,7 @@ import sshtunnel
 import socket
 import os
 import datetime
+from time import sleep
 try:
     import MySQLdb as mdb
     import MySQLdb.cursors as mdbcursors
@@ -108,6 +109,9 @@ class SurveysDB(object):
 
         # get the config file -- this must exist
         home=os.getenv("HOME")
+        mysql_host=os.getenv('DDF_PIPELINE_MYSQLHOST')
+        if not mysql_host:
+            mysql_host='lofar-server.data'
         cfg=open(home+'/.surveys').readlines()
         self.password=cfg[0].rstrip()
         try:
@@ -124,7 +128,7 @@ class SurveysDB(object):
         self.readonly=readonly
         self.verbose=verbose
 
-        self.tables=['fields','observations','quality','transients','reprocessing']
+        self.tables=['fields','observations','quality','transients','reprocessing','quality_old']
         
         # set up an ssh tunnel if not running locally
         self.usetunnel=False
@@ -133,7 +137,7 @@ class SurveysDB(object):
             self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys')
         else:
             try:
-                dummy=socket.gethostbyname('lofar-server.data')
+                dummy=socket.gethostbyname(mysqlhost)
             except:
                 self.usetunnel=True
 
@@ -148,7 +152,18 @@ class SurveysDB(object):
                 localport=self.tunnel.local_bind_port
                 self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport)
             else:
-                self.con = mdb.connect('lofar-server.data', 'survey_user', self.password, 'surveys')
+                connected=False
+                retry=0
+                while not connected and retry<10:
+                    try:
+                        self.con = mdb.connect(mysqlhost, 'survey_user', self.password, 'surveys')
+                        connected=True
+                    except mdb.OperationalError as e:
+                        print 'Database temporary error! Sleep to retry',e
+                        retry+=1
+                        sleep(20)
+                if not connected:
+                    raise RuntimeError("Cannot connect to database server")
         self.cur = self.con.cursor(cursorclass=mdbcursors.DictCursor)
         if self.readonly:
             pass
@@ -168,13 +183,15 @@ class SurveysDB(object):
         self.cur.execute(*args)
 
     def close(self):
-        if not self.closed:
-            if not self.readonly:
-                self.cur.execute('unlock tables')
-            self.con.close()
-            if self.usetunnel:
-                self.tunnel.stop()
-            self.closed=True # prevent del from trying again
+        # if 'closed' doesn't exist, then we are most likely being called through __del__ due to a failure in the init call. So skip the rest.
+        if hasattr(self,'closed'):
+            if not self.closed:
+                if not self.readonly:
+                    self.cur.execute('unlock tables')
+                self.con.close()
+                if self.usetunnel:
+                    self.tunnel.stop()
+                self.closed=True # prevent del from trying again
     
     def __del__(self):
         self.close()

@@ -99,7 +99,8 @@ if __name__=='__main__':
                                 else:
                                     warn('Source file %s does not exist' % source)
                     else:
-                        warn('Location for %s does not exist' % id)
+                        pass
+                        #warn('Location for %s does not exist' % id)
                 else:
                     # get from archive if necessary
                     if r['status']!='Archived' or r['archive_version']<4:
