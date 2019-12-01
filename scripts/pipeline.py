@@ -28,6 +28,7 @@ from options import options,print_options
 from shutil import copyfile,rmtree,move
 import glob
 import pyrap.tables as pt
+from redo_dppp_di import redo_dppp_di
 from modify_mask import modify_mask
 from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
 from histmsamp import find_uvmin,sumdico
@@ -994,6 +995,11 @@ def main(o=None):
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
         full_clearcache(o)
+
+    # ##########################################################
+    if o['redo_DI']:
+        separator('Redo DI correction')
+        redo_dppp_di(o)
 
     # ##########################################################
     # subtract outer square

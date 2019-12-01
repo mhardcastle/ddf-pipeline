@@ -264,6 +264,7 @@ def sepn(r1,d1,r2,d2):
     return sepn
 
 def getpos(ms):
+    import pyrap.tables as pt
     t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
     name=t[0]['LOFAR_TARGET']
 
