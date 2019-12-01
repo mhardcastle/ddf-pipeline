@@ -997,10 +997,12 @@ def main(o=None):
         full_clearcache(o)
 
     # ##########################################################
-    # subtract outer square
     if o['redo_DI']:
+        separator('Redo DI correction')
         redo_dppp_di(o)
 
+    # ##########################################################
+    # subtract outer square
     if o['do_wide']:
         subtractOuterSquare(o)
         colname="DATA_SUB"
