@@ -9,7 +9,7 @@ from subprocess import call,check_output
 import sys
 
 queued=[]
-qlimit=15
+qlimit=32
 queue=check_output('qstat -a',shell=True).split('\n')
 for l in queue:
     if 'qual-' in l:
@@ -39,7 +39,7 @@ for r in results:
         print 'Not queueing it as it is already queued'
     else:
         if qcount<qlimit:
-            os.system('qsub -l nodes=1:ppn=8 -l pmem=2gb -N qual-%s -v WD=%s ~/pipeline-master/ddf-pipeline/torque/quality.qsub' % (id,dir))
+            os.system('qsub -l nodes=1:ppn=6 -q car -l pmem=1800mb -N qual-%s -v WD=%s ~/pipeline-master/ddf-pipeline/torque/quality.qsub' % (id,dir))
             qcount+=1
         else:
             print 'Skipping as too many jobs already queued'
