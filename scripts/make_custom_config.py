@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import sys
 from surveys_db import SurveysDB
