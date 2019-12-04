@@ -161,7 +161,7 @@ if __name__=='__main__':
         print 'Blanking the mosaic...'
 
         blank_mosaic('mosaic.fits',himsize)
-    sys.exit(0)
+
     if args.do_lowres:
         print 'Making the low-resolution mosaic...'
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
