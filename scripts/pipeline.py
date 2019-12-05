@@ -1706,7 +1706,8 @@ def main(o=None):
 
         # apply the offsets
         ddf_shift(ImageName,facet_offset_file,options=o,catcher=catcher)
-    
+    else:
+        facet_offset_file=None
             
     spectral_mslist=None
     if o['spectral_restored']:
