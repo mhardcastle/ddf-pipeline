@@ -110,7 +110,7 @@ if __name__=='__main__':
             if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
                 mosaicdirs.append(rd)
                 try:
-                    qualitydict = sdb.get_quality_old(p)
+                    qualitydict = sdb.get_quality(p)
                     currentdict = sdb.get_field(p)
                     print qualitydict
                     #scale=qualitydict['scale']
