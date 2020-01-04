@@ -128,7 +128,7 @@ class SurveysDB(object):
         self.readonly=readonly
         self.verbose=verbose
 
-        self.tables=['fields','observations','quality','transients','reprocessing','quality_old']
+        self.tables=['fields','observations','quality','transients','reprocessing']
         
         # set up an ssh tunnel if not running locally
         self.usetunnel=False

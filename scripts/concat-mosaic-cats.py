@@ -83,6 +83,8 @@ def concat_catalogs(cats,outconcatcat):
 def find_pointing_coords(directories):
 
     mosdirectories = args.mosdirectories
+    if len(mosdirectories)==1 and '*' in mosdirectories[0]:
+        mosdirectories=glob.glob(mosdirectories[0])
     mosaiccats = []
     for directory in mosdirectories:
         dircats = glob.glob('%s/*cat.fits'%directory)
@@ -94,6 +96,7 @@ def find_pointing_coords(directories):
     pointingdecs = np.array([])
     for mosaiccat in mosaiccats:
         pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
+        print 'Pointing is',pointing
         f = fits.open(pointing)
         pointingras = np.append(pointingras,f[0].header['CRVAL1']*deg2rad)
         pointingdecs = np.append(pointingdecs,f[0].header['CRVAL2']*deg2rad)
@@ -104,6 +107,8 @@ def find_pointing_coords(directories):
 def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenums,cattype):
 
     pointdirectories = args.pointdirectories
+    if len(pointdirectories)==1 and '*' in pointdirectories[0]:
+        pointdirectories=glob.glob(pointdirectories[0])
 
     sourceids = np.array([])
     sourceresolved = np.array([])
@@ -357,3 +362,5 @@ if __name__=='__main__':
     print 'Concatenating %s files'%len(srlcatnames)
     concat_catalogs(srlcatnames,'LoTSS_DR2_v0.9.srl.fits')
     #concat_catalogs(gauscatnames,'LoTSS_DR2_v0.9.gaus.fits')
+
+# call as e.g. /home/mjh/pipeline-master/ddf-pipeline/scripts/concat-mosaic-cats.py --mosdirectories /data/lofar/DR2/mosaics/*  --pointdirectories /data/lofar/DR2/fields/*
