@@ -13,7 +13,7 @@ def download_file(url,filename):
         while not connected:
             try:
                 print 'Opening connection'
-                response = requests.get(url, stream=True,verify=False,timeout=60)
+                response = requests.get(url, stream=True,verify=True,timeout=60)
                 if response.status_code!=200:
                     print response.headers
                     raise RuntimeError('Code was %i' % response.status_code)
@@ -45,3 +45,8 @@ def download_file(url,filename):
 
 
     del response
+
+if __name__=='__main__':
+    import sys
+    download_file(sys.argv[1],sys.argv[2])
+    

@@ -40,9 +40,14 @@ def download_field(fname,basedir=None,force=False):
     overall_success=True
     for o in obs:
         print 'Downloading observation ID L'+str(o['id'])
-        success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/L'+str(o['id'])+'/',workdir=workdir)
-        if success==False:
-            print 'Download failed'
+        for prefix in ['','prefactor_v1.0/']:
+            success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+prefix+'L'+str(o['id'])+'/',workdir=workdir)
+            if success:
+                break
+            else:
+                print 'URL failed, trying alternative'
+            
+        print 'Download failed'
         overall_success=overall_success and success
 
     with SurveysDB() as sdb:

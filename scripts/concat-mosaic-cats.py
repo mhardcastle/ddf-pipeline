@@ -363,4 +363,4 @@ if __name__=='__main__':
     concat_catalogs(srlcatnames,'LoTSS_DR2_v0.9.srl.fits')
     #concat_catalogs(gauscatnames,'LoTSS_DR2_v0.9.gaus.fits')
 
-# call as e.g. /home/mjh/pipeline-master/ddf-pipeline/scripts/concat-mosaic-cats.py --mosdirectories /data/lofar/DR2/mosaics/*  --pointdirectories /data/lofar/DR2/fields/*
+# call as e.g. /home/mjh/pipeline-master/ddf-pipeline/scripts/concat-mosaic-cats.py --mosdirectories=/data/lofar/DR2/mosaics/*  --pointdirectories=/data/lofar/DR2/fields/*
