@@ -48,7 +48,9 @@ with SurveysDB(readonly=True) as sdb:
     sdb.cur.execute('select fields.id as id,ra,decl,fields.status as status,observations.status as ostatus,observations.location as location,sum(nsb*integration/232) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) group by fields.id having ostatus is not null and ostatus!="Scheduled"')
     #sdb.cur.execute('select * from fields where status!="Not started"')
     results=sdb.cur.fetchall()
-
+    sdb.cur.execute('select ra,decl from fields where dr2>0')
+    dr2_results=sdb.cur.fetchall()
+    
 print len(results),'fields have some observations'
         
 fig = plt.figure(figsize=(16, 8))
@@ -73,16 +75,9 @@ for b in [-10,0,10]:
 #DR2 area
 ravals = []
 decvals = []
-infile = open(os.environ['DDF_DIR']+'/ddf-pipeline/misc/DR2-pointings.txt','r')
-for line in infile:
-    line = line[:-1]
-    line = line.split(' ')
-    while '' in line:
-        line.remove('')
-    pointing = line[0]
-    ravals.append(float(line[1]))
-    decvals.append(float(line[2]))
-infile.close()
+for r in dr2_results:
+    ravals.append(r['ra'])
+    decvals.append(r['decl'])
 
 ra_r,dec_r=cc(ravals,decvals)
 plt.scatter(ra_r,dec_r,marker='o',color='blue',alpha=0.2,zorder=-5,edgecolors='none',s=50,label='DR2')

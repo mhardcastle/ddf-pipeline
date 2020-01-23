@@ -3,15 +3,26 @@ import os
 from astropy_healpix import HEALPix
 from astropy import units as u
 import sys
+from surveys_db import SurveysDB
 
-pos=np.loadtxt(os.environ['DDF_DIR']+'/ddf-pipeline/misc/DR2-pointings.txt',usecols=(1,2))
+#pos=np.loadtxt(os.environ['DDF_DIR']+'/ddf-pipeline/misc/DR2-pointings.txt',usecols=(1,2))
 
-if len(sys.argv)==1:
-    pos=pos[(pos[:,0]>137) & (pos[:,0]<250)]
+#if len(sys.argv)==1:
+#    pos=pos[(pos[:,0]>137) & (pos[:,0]<250)]
 
-print 'Number of pointings is',len(pos)
-ra=pos[:,0]
-dec=pos[:,1]
+with SurveysDB(readonly=True) as sdb:
+    sdb.cur.execute('select ra,decl from fields where dr2>0')
+    result=sdb.cur.fetchall()
+
+print 'Number of pointings is',len(result)
+ra=[]
+dec=[]
+for r in result:
+    ra.append(r['ra'])
+    dec.append(r['decl'])
+
+#ra=pos[:,0]
+#dec=pos[:,1]
 
 print 'RA range is',np.min(ra),np.max(ra)
 print 'Dec range is',np.min(dec),np.max(dec)

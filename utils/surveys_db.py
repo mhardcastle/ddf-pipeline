@@ -112,6 +112,8 @@ class SurveysDB(object):
         mysql_host=os.getenv('DDF_PIPELINE_MYSQLHOST')
         if not mysql_host:
             mysql_host='lofar-server.data'
+        if verbose:
+            print 'MySQL host is',mysql_host
         cfg=open(home+'/.surveys').readlines()
         self.password=cfg[0].rstrip()
         try:
@@ -134,11 +136,15 @@ class SurveysDB(object):
         self.usetunnel=False
         self.hostname=socket.gethostname()
         if self.hostname=='lofar-server':
+            if verbose:
+                print 'Using direct connection to localhost'
             self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys')
         else:
             try:
-                dummy=socket.gethostbyname(mysqlhost)
-            except:
+                dummy=socket.gethostbyname(mysql_host)
+            except socket.gaierror:
+                if verbose:
+                    print 'Cannot find host',mysql_host,'will use tunnel'
                 self.usetunnel=True
 
             if self.usetunnel:
@@ -156,7 +162,7 @@ class SurveysDB(object):
                 retry=0
                 while not connected and retry<10:
                     try:
-                        self.con = mdb.connect(mysqlhost, 'survey_user', self.password, 'surveys')
+                        self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys')
                         connected=True
                     except mdb.OperationalError as e:
                         print 'Database temporary error! Sleep to retry',e

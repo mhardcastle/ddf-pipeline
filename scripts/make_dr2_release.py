@@ -54,16 +54,16 @@ if __name__=='__main__':
             # sync mosaics directory
             separator('Mosaic sync')
             os.chdir(workdir+'/mosaics')
-            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA13h_field/*' ."
+            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' '%s@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA13h_field/*' ." % os.environ['DDF_PIPELINE_LEIDENUSER']
             do_rsync(s)
-            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' 'hardcastle@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA0h_field/*' ."
+            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' '%s@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA0h_field/*' ." % os.environ['DDF_PIPELINE_LEIDENUSER']
             do_rsync(s)
 
             # now go through all archived and completed fields and make sure they're in the DR2 directory
 
 
         with SurveysDB() as sdb:
-            sdb.cur.execute('select * from fields where status="Archived" or status="Complete" order by ra')
+            sdb.cur.execute('select * from fields left join quality on fields.id=quality.id where status="Archived" or status="Complete" order by ra')
             result=sdb.cur.fetchall()
 
         print 'There are',len(result),'complete datasets'
@@ -149,8 +149,11 @@ if __name__=='__main__':
                 stokesquvlow=link('image_full_vlow_QU.cube.dirty.corr.fits.fz',id,lroot,'Vlow true',workdir+'/fields/')
                 stokesqu_app=link('image_full_low_QU.cube.dirty.fits.fz',id,lroot,'Low app',workdir+'/fields/')
                 stokesquvlow_app=link('image_full_vlow_QU.cube.dirty.fits.fz',id,lroot,'Vlow app',workdir+'/fields/')
-
-                outfile.write('<tr><td>%s</td><td>%.3f</td><td>%.3f</td><td>%s</td><td>%s, %s</td><td>%s, %s</td><td>%s, %s, %s</td><td>%s</td><td>%s, %s, %s, %s</td></tr>\n' % (id,r['ra'],r['decl'],r['end_date'],fint,fapp,lowint,lowapp,band[0],band[1],band[2],stokesv,stokesqu,stokesquvlow,stokesqu_app,stokesquvlow_app))
+                if r['nvss_scale'] is None:
+                    scale='&mdash;'
+                else:
+                    scale="%.3f" % (5.9124/r['nvss_scale'])
+                outfile.write('<tr><td>%s</td><td>%.3f</td><td>%.3f</td><td>%s</td><td>%s</td><td>%s, %s</td><td>%s, %s</td><td>%s, %s, %s</td><td>%s</td><td>%s, %s, %s, %s</td></tr>\n' % (id,r['ra'],r['decl'],r['end_date'],scale,fint,fapp,lowint,lowapp,band[0],band[1],band[2],stokesv,stokesqu,stokesquvlow,stokesqu_app,stokesquvlow_app))
 
         outfile.close()
         separator('Quality pipeline')

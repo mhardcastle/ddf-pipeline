@@ -47,7 +47,8 @@ def download_field(fname,basedir=None,force=False):
             else:
                 print 'URL failed, trying alternative'
             
-        print 'Download failed'
+        if not success:
+            print 'Download failed'
         overall_success=overall_success and success
 
     with SurveysDB() as sdb:
