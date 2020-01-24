@@ -35,7 +35,7 @@ def do_rsync_upload(cname,basedir,f):
         print 'Non-zero return value',retval
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
+        time.sleep(10)
 
 def do_rsync_download(cname,basedir,f):
     workdir=basedir+'/'+cname
@@ -56,7 +56,7 @@ def do_rsync_download(cname,basedir,f):
         print 'Non-zero return value',retval
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
+        time.sleep(10)
 
 def create_ds9_region(filename,ra,dec,size):
 
