@@ -80,9 +80,8 @@ def concat_catalogs(cats,outconcatcat):
 
     hdu.writeto(outconcatcat)
 
-def find_pointing_coords(directories):
+def find_pointing_coords(mosdirectories):
 
-    mosdirectories = args.mosdirectories
     if len(mosdirectories)==1 and '*' in mosdirectories[0]:
         mosdirectories=glob.glob(mosdirectories[0])
     mosaiccats = []
@@ -104,9 +103,8 @@ def find_pointing_coords(directories):
         
     return pointingras,pointingdecs,mosaiccats
 
-def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenums,cattype):
+def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,dessourcenums,cattype):
 
-    pointdirectories = args.pointdirectories
     if len(pointdirectories)==1 and '*' in pointdirectories[0]:
         pointdirectories=glob.glob(pointdirectories[0])
 
@@ -331,27 +329,19 @@ def filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,dessourcenum
 
     return sourcenum,outcat
 
-if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='Concatenate ddf-pipeline mosaic directories')
-    parser.add_argument('--mosdirectories', metavar='D', nargs='+',help='mosaic directory name')
-    parser.add_argument('--pointdirectories', metavar='D', nargs='+',help='pointing directory name')
-    args = parser.parse_args()
-
-    pointingras,pointingdecs,mosaiccats = find_pointing_coords(args)
+def do_concat(mosdirectories,pointdirectories):
+    pointingras,pointingdecs,mosaiccats = find_pointing_coords(mosdirectories)
 
     srlcatnames = []
     gauscatnames = []
 
     random.shuffle(mosaiccats)
     
-    # The commented line below gives the ordering of the mosaic cats for the DR1 release that was circulated to the SKSP on 24/07/2017
-    #mosaiccats = ['/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P22Hetdex04/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P8Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P35Hetdex10/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P182+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P187+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P221+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P210+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P178+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P211+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P200+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P218+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P1Hetdex15/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P227+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P213+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P6/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P3Hetdex16/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P38Hetdex07/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P29Hetdex19/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P219+50/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P37Hetdex15/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P27Hetdex09/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P214+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P41Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P34Hetdex06/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P4Hetdex16/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P209+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P16Hetdex13/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P12Hetdex11/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P15Hetdex13/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P30Hetdex06/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P205+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P42Hetdex07/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P21/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P25Hetdex09/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P169+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P219+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P26Hetdex03/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P11Hetdex12/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P19Hetdex17/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P7Hetdex11/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P217+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P164+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P191+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P223+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P196+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P18Hetdex03/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P14Hetdex04/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P10Hetdex/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P206+52/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P33Hetdex08/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P227+53/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P173+55/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P225+47/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P23Hetdex20/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P39Hetdex19/mosaic.cat.fits','/disks/paradata/shimwell/LoTSS-DR1/mosaic-April2017/all-made-maps/mosaics/P206+50/mosaic.cat.fits']
-
     for mosaiccat in mosaiccats:
         print 'Working on %s'%mosaiccat
         outname = mosaiccat.split('/')[-2] + 'cat'
         if not os.path.exists(outname +'.srl.fits'):
-            pointingsourcenums,srlcat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,None,'srl')
+            pointingsourcenums,srlcat = filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,None,'srl')
             #pointingsourcenums,gauscat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,pointingsourcenums,'gaus')
         else:
             srlcat = outname +'.srl.fits'
@@ -360,7 +350,34 @@ if __name__=='__main__':
         srlcatnames.append(srlcat)
         #gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
-    concat_catalogs(srlcatnames,'LoTSS_DR2_v0.9.srl.fits')
+    concat_catalogs(srlcatnames,'LoTSS_DR2_rolling.srl.fits')
     #concat_catalogs(gauscatnames,'LoTSS_DR2_v0.9.gaus.fits')
 
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='Concatenate ddf-pipeline mosaic directories')
+    parser.add_argument('--mosdirectories', metavar='D', nargs='+',help='mosaic directory name')
+    parser.add_argument('--pointdirectories', metavar='D', nargs='+',help='pointing directory name')
+    parser.add_argument('--use-database', help='Use database for DR2 fields', action='store_true')
+    args = parser.parse_args()
+
+    if not args.use_database:
+        do_concat(args.mosdirectories,args.pointdirectories)
+    else:
+        from surveys_db import SurveysDB
+        with SurveysDB(readonly=True) as sdb:
+            sdb.cur.execute('select id from fields where dr2>0 and status="Archived"')
+            res=sdb.cur.fetchall()
+        mosdirectories=[]
+        pointdirectories=[]
+        for r in res:
+            id=r['id']
+            md=args.mosdirectories[0]+'/'+id
+            if os.path.isfile(md+'/mosaic.cat.fits'):
+                pd=args.pointdirectories[0]+'/'+id
+                mosdirectories.append(md)
+                pointdirectories.append(pd)
+        do_concat(mosdirectories,pointdirectories)
+
 # call as e.g. /home/mjh/pipeline-master/ddf-pipeline/scripts/concat-mosaic-cats.py --mosdirectories=/data/lofar/DR2/mosaics/*  --pointdirectories=/data/lofar/DR2/fields/*
+
+# or concat-mosaic-cats.py --mosdirectories=/data/lofar/DR2/mosaics  --pointdirectories=/data/lofar/DR2/fields --use-database
