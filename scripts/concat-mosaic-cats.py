@@ -78,7 +78,7 @@ def concat_catalogs(cats,outconcatcat):
         nrows1 += f2[1].data.shape[0]
         f2.close()
 
-    hdu.writeto(outconcatcat)
+    hdu.writeto(outconcatcat,overwrite=True)
 
 def find_pointing_coords(mosdirectories):
 
@@ -325,7 +325,7 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
         outcat = outname +'.srl.fits'
     if cattype == 'gaus':
         outcat = outname +'.gaus.fits'
-    tbhdulist.writeto(outcat)
+    tbhdulist.writeto(outcat,overwrite=True)
 
     return sourcenum,outcat
 

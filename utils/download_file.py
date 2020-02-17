@@ -39,12 +39,12 @@ def download_file(url,filename):
                 print 'Download successful, %i of %i bytes received' % (fsize, esize)
                 downloaded=True
 
-        except requests.exceptions.ConnectionError,requests.exceptions.Timeout:
+        except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ChunkedEncodingError):
             print 'Connection error! sleeping 30 seconds before retry...'
             sleep(30) # back to the connection
 
-
     del response
+    return downloaded
 
 if __name__=='__main__':
     import sys

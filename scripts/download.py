@@ -51,7 +51,12 @@ def download_dataset(server,root,workdir='.'):
             url=server+u
             print url
             filename=workdir+'/'+f
-            download_file(url,filename)
+            try:
+                result=download_file(url,filename)
+                if not result: return False
+            except Exception as e:
+                print Exception
+                return False
             
     return True
     

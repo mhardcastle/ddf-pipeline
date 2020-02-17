@@ -61,7 +61,6 @@ if __name__=='__main__':
 
             # now go through all archived and completed fields and make sure they're in the DR2 directory
 
-
         with SurveysDB() as sdb:
             sdb.cur.execute('select * from fields left join quality on fields.id=quality.id where status="Archived" or status="Complete" order by ra')
             result=sdb.cur.fetchall()
@@ -120,6 +119,8 @@ if __name__=='__main__':
 
         outfile=open('/home/mjh/lofar-surveys/templates/dr2-mosaics.html','w')
         for r in result:
+            if r['dr2']==0:
+                continue
             id=r['id']
             if os.path.isdir(workdir+'/mosaics/'+id) and os.path.isfile(workdir+'/mosaics/'+id+'/mosaic-blanked.fits'):
                 root='downloads/DR2/mosaics/'+id+'/'

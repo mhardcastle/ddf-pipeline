@@ -520,7 +520,10 @@ def mvglob(path,dest):
         real_dst = os.path.join(dest, _basename(f))
         print 'Target is',real_dst
         if os.path.exists(real_dst):
-            os.remove(real_dst)
+            if os.path.isdir(real_dst):
+                rmtree(real_dst)
+            else:
+                os.remove(real_dst)
         move(f,dest)
 
 def clearcache(mslist,options):
