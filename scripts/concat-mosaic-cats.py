@@ -165,7 +165,7 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
     time1 = time.time()
     for i in range(0,numsources):
         
-        if dessourcenums == None:
+        if dessourcenums == []:
             allsep = sepn(pointingras[closepointingindex],pointingdecs[closepointingindex],cat[1].data['RA'][i]*deg2rad,cat[1].data['DEC'][i]*deg2rad)
             centsep =  sepn(rapointing,decpointing,cat[1].data['RA'][i]*deg2rad,cat[1].data['DEC'][i]*deg2rad)
             if min(allsep) != centsep:
@@ -341,17 +341,19 @@ def do_concat(mosdirectories,pointdirectories):
         print 'Working on %s'%mosaiccat
         outname = mosaiccat.split('/')[-2] + 'cat'
         if not os.path.exists(outname +'.srl.fits'):
-            pointingsourcenums,srlcat = filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,None,'srl')
-            #pointingsourcenums,gauscat = filter_catalogs(args,pointingras,pointingdecs,mosaiccat,outname,pointingsourcenums,'gaus')
+            pointingsourcenums,srlcat = filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,[],'srl')
         else:
-            srlcat = outname +'.srl.fits'
-            #gauscat = outname +'.gaus.fits'
+            srlcat = outname + '.srl.fits'
+        if not os.path.exists(outname +'.gaus.fits'):
+            pointingsourcenums,gauscat = filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,pointingsourcenums,'gaus')
+        else:
+            gauscat = outname +'.gaus.fits'
             
         srlcatnames.append(srlcat)
-        #gauscatnames.append(gauscat)
+        gauscatnames.append(gauscat)
     print 'Concatenating %s files'%len(srlcatnames)
     concat_catalogs(srlcatnames,'LoTSS_DR2_rolling.srl.fits')
-    #concat_catalogs(gauscatnames,'LoTSS_DR2_v0.9.gaus.fits')
+    concat_catalogs(gauscatnames,'LoTSS_DR2_rolling.gaus.fits')
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Concatenate ddf-pipeline mosaic directories')
