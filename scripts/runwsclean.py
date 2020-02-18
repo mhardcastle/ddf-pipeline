@@ -14,13 +14,15 @@ import bdsf
 import pyregion
 import argparse
 import pickle
-import logging
 import aplpy
 
 
 from lofar.stationresponse import stationresponse
 
 
+import logging
+from imp import reload
+reload(logging)
 
 logging.basicConfig(filename='selfcal.log', format='%(levelname)s:%(asctime)s ---- %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.DEBUG)
 
