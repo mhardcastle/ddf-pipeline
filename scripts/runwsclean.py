@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+import logging
+logging.basicConfig(filename='selfcal.log', format='%(levelname)s:%(asctime)s ---- %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.DEBUG)
+
 import matplotlib
 matplotlib.use('Agg')
 import os, sys
@@ -14,15 +18,8 @@ import bdsf
 import pyregion
 import argparse
 import pickle
-import logging
 import aplpy
-
-
 from lofar.stationresponse import stationresponse
-
-
-
-logging.basicConfig(filename='selfcal.log', format='%(levelname)s:%(asctime)s ---- %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.DEBUG)
 
 
 def removenans(parmdb, soltab):
