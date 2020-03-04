@@ -92,6 +92,7 @@ def do_upload(name,basedir,skipstokes=False):
     f+=['image_dirin_SSD_m.npy.ClusterCat.npy']
     f+=myglob('DynSpecs*.tgz',workdir)
     f+=myglob('*.png',workdir)
+    f+=myglob('*mslist*txt',workdir)
     f+=myglob('DDS*smoothed*.npz',workdir)
     f+=myglob('DDS*full_slow*.npz',workdir)
     f+=myglob('*crossmatch-results*',workdir)
