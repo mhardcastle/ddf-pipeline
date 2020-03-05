@@ -9,6 +9,9 @@ from astropy.wcs import WCS
 from astropy.io import ascii
 import glob
 
+#ddf-pipeline
+from auxcodes import run
+
 # NOTE, applybeam NDPPP step does not work on phase-shifted data, do not use it.
 
 def getimsize(image):
@@ -468,7 +471,7 @@ if dopredict:
     else:
       outmask = fullmask
 
-    os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
+    run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
 
     if uselowres == False:
         #imagenpix = 20000
@@ -480,11 +483,11 @@ if dopredict:
         imagecell = 4.5
     if holesfixed:
        print 'Starting DDF for prediction' 
-       os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --DDESolutions-SolsDir=SOLSDIR")
+       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --DDESolutions-SolsDir=SOLSDIR")
 
     else:
        print 'Starting DDF for prediction'  
-       os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=DDS3_full_smoothed --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
+       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=DDS3_full_smoothed --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
 
 
 # Subtract the columns
@@ -524,15 +527,15 @@ if dokmscal:
 
   mask_except_region(fullmask,boxfile,outmask_target)
     
-  os.system("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask_target,indico,outdico_target))
+  run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask_target,indico,outdico_target))
 
-  os.system("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=image_dirin_SSD_m.npy.ClusterCat.npy --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_TAR'")
+  run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_TAR'")
   
   for ms in msfiles:
 
-    #os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName Predict_DDT --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --PolMode Scalar --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --ApplyToDir 0 --dt 1.0 --NChanSols 1'%(ms))
+    #run('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --BaseImageName Predict_DDT --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --PolMode Scalar --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --ApplyToDir 0 --dt 1.0 --NChanSols 1'%(ms))
 
-    os.system('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --dt 1.0 --NChanSols 1'%(ms))
+    run('kMS.py --MSName %s --SolverType KAFCA --PolMode Scalar --NIterKF 6 --CovQ 0.100000 --LambdaKF=0.500000 --NCPU 32 --OutSolsName DIT --PowerSmooth=0.000000 --InCol DATA_SUB --Weighting Natural --UVMinMax=0.100000,1000.000000 --SolsDir=SOLSDIR --SolverType CohJones --SkyModelCol PREDICT_TAR --OutCol DATA_SUB_CORRECTED --dt 1.0 --NChanSols 1'%(ms))
 
   colname="DATA_SUB_CORRECTED"
 
@@ -596,7 +599,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         cmd += 'applybeam.beammode=array_factor ' # do no update weights from beam because in this case we just want IMAGING_WEIGHT
     
         print cmd
-        os.system(cmd)
+        run(cmd)
 
 
 
@@ -628,7 +631,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         cmd += 'applybeam.type=applybeam applybeam.usechannelfreq=True '
         cmd += 'applybeam.beammode=array_factor applybeam.updateweights=True '
         print cmd
-        os.system(cmd)
+        run(cmd)
 
         # Make a WEIGHT_SPECTRUM from WEIGHT_SPECTRUM_SOLVE
         t  = pt.table(currentmsoutconcat, readonly=False)
@@ -661,7 +664,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         cmd = 'DPPP msin=' + currentmsoutconcat + ' msout=. msin.datacolumn=DATA ' 
         cmd += 'steps=[aoflagger,preflag] aoflagger.type=aoflagger preflag.type=preflagger '
         cmd += 'preflag.amplmax=' + str(amplmax) + ' '
-        os.system(cmd)
+        run(cmd)
 
     if split:
 
@@ -681,7 +684,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
             cmd += 'steps=[] ' + 'msin.startchan=' + str(chan) + ' '
             cmd += 'msin.nchan=' + str(nchanperblock) + ' ' + 'msout=' + msout + ' '
             print cmd
-            os.system(cmd)
+            run(cmd)
 
     
     
