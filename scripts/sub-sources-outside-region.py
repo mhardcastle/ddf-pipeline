@@ -357,6 +357,8 @@ parser.add_argument('--maxamplitude', help='flag amplitudes above this number, d
 parser.add_argument('--uselowres',help='Use the high resolution mode for subtraction, otherwise use the low resolution', action='store_true')
 parser.add_argument('--noconcat',help='Stop after making the DATA_SUB column', action='store_true')
 parser.add_argument('--keeplongbaselines', help='Use a Selection-UVRangeKm=[0.100000,5000.000000] instead of the DR2 default', action='store_true')
+parser.add_argument('--nopredict', help='Do not do predict step (for use if repeating last step in case of failure)', action='store_true')
+parser.add_argument('--nosubtract', help='Do not do subtract step (for use if repeating last step in case of failure)', action='store_true')
 
 args = vars(parser.parse_args())
 
@@ -386,8 +388,8 @@ freqstepavg = args['freqavg']
 obsid       = args['prefixname']
 
 
-dopredict   = True
-dosubtract  = True
+dopredict   = not(args['nopredict']) # True
+dosubtract  = not(args['nosubtract']) # True
 doconcat    = True
 dokmscal     = False
 dophaseshift = True
