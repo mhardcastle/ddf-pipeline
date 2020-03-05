@@ -100,13 +100,29 @@ def add_dummyms(msfiles):
     '''
     Add dummy ms to create a regular freuqency grid when doing a concat with DPPP
     '''
-
+    keyname = 'REF_FREQUENCY'
     freqaxis = []
     newmslist  = []
-    
+
+    # Check for wrong REF_FREQUENCY which happens after a DPPP split in frequency
     for ms in msfiles:        
         t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
         freq = t.getcol('REF_FREQUENCY')[0]
+        t.close()
+        freqaxis.append(freq)
+    freqaxis = np.sort( np.array(freqaxis))
+    minfreqspacing = np.min(np.diff(freqaxis))
+    if minfreqspacing == 0.0:
+       keyname = 'CHAN_FREQ' 
+    
+    
+    freqaxis = [] 
+    for ms in msfiles:        
+        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        if keyname == 'CHAN_FREQ':
+          freq = t.getcol(keyname)[0][0]
+        else:
+          freq = t.getcol(keyname)[0]  
         t.close()
         freqaxis.append(freq)
     
