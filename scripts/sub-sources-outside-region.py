@@ -22,14 +22,11 @@ def getimsize(image):
     his = hdul[0].header['HISTORY']
     for line in his:
         if 'Image-NPix' in line:
-            imsizeddf = line
-            imsizeddf = np.int(imsizeddf.split('=')[1])
+            imsizeddf = np.int(line.split('=')[1])
         elif 'Image-Cell' in line:
-            cellddf = line
-            cellddf = np.float(cellddf.split('=')[1])
+            cellddf = np.float(line.split('=')[1])
         elif 'Weight-Robust' in line:
-            robustddf = line
-            robustddf = np.float(robustddf.split('=')[1])
+            robustddf = np.float(line.split('=')[1])
     
 
     if imsizeddf is None:
@@ -42,8 +39,6 @@ def getimsize(image):
         print 'Could not determine the image robust'
         sys.exit(1)    
     
-    imsizeddf = np.int(imsizeddf.split('=')[1])
-
     hdul.close()
     return imsizeddf, robustddf, cellddf
 
