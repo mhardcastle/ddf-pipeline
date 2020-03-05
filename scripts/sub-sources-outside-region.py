@@ -13,20 +13,36 @@ import glob
 
 def getimsize(image):
     imsizeddf = None
+    robustddf = None
+    cellddf = None
     hdul = fits.open(image)
     his = hdul[0].header['HISTORY']
     for line in his:
-     if 'Image-NPix' in line:
-       imsizeddf = line
+        if 'Image-NPix' in line:
+            imsizeddf = line
+            imsizeddf = np.int(imsizeddf.split('=')[1])
+        elif 'Image-Cell' in line:
+            cellddf = line
+            cellddf = np.float(cellddf.split('=')[1])
+        elif 'Weight-Robust' in line:
+            robustddf = line
+            robustddf = np.float(robustddf.split('=')[1])
+    
 
-    if imsizeddf == 'None':
+    if imsizeddf is None:
         print 'Could not determine the image size, should have been 20000(?) or 6000(?)'
-        sys.exit()    
+        sys.exit(1)    
+    if cellddf is None:
+        print 'Could not determine the image cell size'
+        sys.exit(1)    
+    if robustddf is None:
+        print 'Could not determine the image robust'
+        sys.exit(1)    
     
     imsizeddf = np.int(imsizeddf.split('=')[1])
 
     hdul.close()
-    return imsizeddf
+    return imsizeddf, robustddf, cellddf
 
 
 def getobsmslist(msfiles, observationnumber):
@@ -435,7 +451,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
 columnchecker(msfiles, args['column'])
 clustercat = 'image_dirin_SSD_m.npy.ClusterCat.npy'
-imagenpix = getimsize(fullmask)
+imagenpix, robust, imagecell = getimsize(fullmask)
 
 if dopredict:
     
