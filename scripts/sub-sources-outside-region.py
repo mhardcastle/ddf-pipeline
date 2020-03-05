@@ -162,27 +162,31 @@ def columnchecker(mslist, colname):
       t.close()
 
 
-def filechecker():
+def filechecker(clustercat, dicomask, indico, h5sols):
   '''
   Check if files are present to avoid errors to avoid crashes
   '''
-  if not os.path.isfile('image_full_ampphase_di_m.NS.DicoModel'):
-    raise IOError('image_full_ampphase_di_m.NS.DicoModel does not exist')
-  if not os.path.isfile('image_full_ampphase_di_m.NS.mask01.fits'):
-    raise IOError('image_full_ampphase_di_m.NS.mask01.fits does not exist')   
-  if not os.path.isfile('image_dirin_SSD_m.npy.ClusterCat.npy'):
-    raise IOError('image_dirin_SSD_m.npy.ClusterCat.npy does not exist')   
-  if not os.path.isdir('SOLSDIR'):
-   raise IOError('SOLSDIR directory does not exist')
+  if not os.path.isfile(indico):
+    raise IOError(indico + ' does not exist')
+  if not os.path.isfile(dicomask):
+    raise IOError(dicomask + ' does not exist')
+  if not os.path.isfile(clustercat):
+    raise IOError(clustercat + ' does not exist')   
 
-  solsfiletmp = glob.glob('DDS3_full*smoothed.npz')
-  if len(solsfiletmp) < 1:
+  if h5sols == None:
+    if not os.path.isdir('SOLSDIR'):
+     raise IOError('SOLSDIR directory does not exist')
+
+    solsfiletmp = glob.glob('DDS3_full*smoothed.npz')
+    if len(solsfiletmp) < 1:
      raise IOError('Cannot find the DDS3_full*smoothed.npz file(s)')
 
-  solsfiletmp = glob.glob('DDS3_full_slow*.npz')
-  if len(solsfiletmp) < 1:
+    solsfiletmp = glob.glob('DDS3_full_slow*.npz')
+    if len(solsfiletmp) < 1:
      raise IOError('Cannot find the DDS3_full_slow*.npz file(s)')
-
+  else:
+    if not os.path.isfile(h5sols):  
+     raise IOError(h5sols + ' does not exist')  
   return
 
 def striparchivename():
@@ -375,7 +379,14 @@ parser.add_argument('--maxamplitude', help='flag amplitudes above this number, d
 #parser.add_argument('--takeoutbeam', help='Correct for the beam on the phase-shifted target data', action='store_true')
 parser.add_argument('--uselowres',help='Use the high resolution mode for subtraction, otherwise use the low resolution', action='store_true')
 parser.add_argument('--noconcat',help='Stop after making the DATA_SUB column', action='store_true')
+parser.add_argument('--nophaseshift',help='Do not phaseshift', action='store_true')
 parser.add_argument('--keeplongbaselines', help='Use a Selection-UVRangeKm=[0.100000,5000.000000] instead of the DR2 default', action='store_true')
+parser.add_argument('--h5sols', help='HDF5 solution file, default=None', type=str)
+parser.add_argument('--h5solstring', help='HDF5 solution string, default=sol001/phase000', default='sol001/phase000', type=str)
+parser.add_argument('--clustercat', help='Cluster/nodes npy file, default=image_dirin_SSD_m.npy.ClusterCat.npy', default='image_dirin_SSD_m.npy.ClusterCat.npy', type=str)
+parser.add_argument('--chunkhours', help='Data-ChunkHours for DDF.py, default=8.5', default=8.5, type=float)
+parser.add_argument('--dicomask', help='Mask for filtering the Dico model, default=None (automatically determined)', type=str)
+parser.add_argument('--indico', help='Input Dico model, default=None (automatically determined)', type=str)
 parser.add_argument('--nopredict', help='Do not do predict step (for use if repeating last step in case of failure)', action='store_true')
 parser.add_argument('--nosubtract', help='Do not do subtract step (for use if repeating last step in case of failure)', action='store_true')
 
@@ -391,6 +402,11 @@ else:
   fullmask    = 'image_full_low_m.mask01.fits'
   indico      = 'image_full_low_m.DicoModel'
   outdico     = 'image_full_low_m_SUB.DicoModel'
+
+if args['dicomask'] != None:
+  fullmask = args['dicomask']
+if args['indico'] != None:
+  indico = args['indico']
 
 
 if not os.path.isfile(args['mslist']):
@@ -420,6 +436,7 @@ holesfixed = True
 aoflagger   = args['aoflaggerbefore']
 dysco       = args['nodysco']
 split       = args['split']  # ouput seperate ms for DDF pipeline
+clustercat = args['clustercat']   #'image_dirin_SSD_m.npy.ClusterCat.npy'
 
 
 if args['keeplongbaselines']:
@@ -428,14 +445,13 @@ else:
   uvsel = "[0.100000,1000.000000]"   
 
 #print doflagafter, takeoutbeam, aoflagger, dysco, split
-filechecker()
-fixsymlinks()
-
-solsfile = glob.glob('DDS3_full*smoothed.npz')
-if len(solsfile) < 1:
+filechecker(clustercat, fullmask, indico, args['h5sols'])
+if args['h5sols'] == None:
+  fixsymlinks()
+  solsfile = glob.glob('DDS3_full*smoothed.npz')
+  if len(solsfile) < 1:
      print 'Cannot find the correct solution file'
      sys.exit()
-#solsfile = str(solsfile[0])
  
 
 msfiles   = ascii.read(args['mslist'],data_start=0)
@@ -461,6 +477,10 @@ else:
   dophaseshift = False
   composite = False
 
+# do not phase shift because the user asks specifically
+if args['nophaseshift']:
+  dophaseshift = False
+
 colname = 'DATA_SUB'
 
 outmask = 'cutoutmask.fits' # just a name, can be anything
@@ -474,10 +494,23 @@ for observation in range(number_of_unique_obsids(msfiles)):
       sys.exit()
 
 columnchecker(msfiles, args['column'])
-clustercat = 'image_dirin_SSD_m.npy.ClusterCat.npy'
+
 imagenpix, robust, imagecell = getimsize(fullmask)
 
 if dopredict:
+#    if args['keeplongbaselines']:
+#      for ms in msfiles:
+#       cmd =  'DPPP msin="' + str(ms) + '" steps=[] msout.storagemanager=dysco '
+#       cmd += 'msout=. msout.storagemanager.databitrate=4 '  
+#       cmd += 'msout.datacolumn=PREDICT_SUB '
+#       print cmd
+#       os.system(cmd)
+#       cmd =  'DPPP msin="' + str(ms) + '" steps=[] msout.storagemanager=dysco '
+#       cmd += 'msout=. msout.storagemanager.databitrate=4 '  
+#       cmd += 'msout.datacolumn=DATA_SUB '
+#       print cmd
+#       os.system(cmd)       
+    
     
     # Apparently it can be dangerous to remove a column for tiled storagemanagers, comment out!
     #for ms in msfiles:
@@ -494,22 +527,28 @@ if dopredict:
 
     run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
 
-    if uselowres == False:
-        #imagenpix = 20000
-        robust=-0.5
-        imagecell = 1.5
-    else:
-        #imagenpix = 6000
-        robust = -0.25
-        imagecell = 4.5
+    #if uselowres == False:
+        ##imagenpix = 20000
+        #robust=-0.5
+        #imagecell = 1.5
+    #else:
+        ##imagenpix = 6000
+        #robust = -0.25
+        #imagecell = 4.5
     if holesfixed:
        print 'Starting DDF for prediction' 
-       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --DDESolutions-SolsDir=SOLSDIR")
+       if args['h5sols'] != None:
+         run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")  
+       else:
+         run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --DDESolutions-SolsDir=SOLSDIR")
 
     else:
        print 'Starting DDF for prediction'  
        run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=DDS3_full_smoothed --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
 
+
+# clear up ddfcache files to save disk space
+os.system('rm -rf *.ddfcache')
 
 # Subtract the columns
 if dosubtract:
@@ -518,28 +557,53 @@ if dosubtract:
         colnames =t.colnames()
 
         if ('PREDICT_SUB' in colnames) and (args['column'] in colnames):
+          if colname not in colnames:
+              # Append new column containing all sources
+              desc = t.getcoldesc(args['column'])
+              newdesc = pt.makecoldesc(colname, desc)
+              newdmi = t.getdminfo(args['column'])
+              newdmi['NAME'] = 'Dysco' + colname
+              t.addcols(newdesc, newdmi)  
+          
+          for row in range(0,t.nrows(),3000000):
             print 'Reading', 'PREDICT_SUB'
-            f=t.getcol('PREDICT_SUB')
+            f=t.getcol('PREDICT_SUB', startrow=row, nrow=3000000, rowincr=1)
             print 'Reading', args['column']
-            d=t.getcol(args['column'])
+            d=t.getcol(args['column'], startrow=row, nrow=3000000, rowincr=1)              
 
-
-            if colname not in colnames:
-               # Append new column containing all sources
-               desc = t.getcoldesc(args['column'])
-               desc['name']= colname
-               t.addcols(desc)
             print 'Writing %s'%colname
-            t.putcol(colname,d-f)
+            t.putcol(colname,d-f, startrow=row, nrow=3000000, rowincr=1)
         else:
             print 'Warning, ', ms, ' does not contain PREDICT_SUB and/or ' + args['column'] +', skipping.....'
         
         t.close()
+    if not args['noconcat']: 
+     if not args['keeplongbaselines']:
+      addextraweights(msfiles)
 
-    addextraweights(msfiles)
+if composite:
+  print 'Stopped since you are using a composite DS9 region file'
+  sys.exit() 
 
-if composite or args['noconcat']:
-  print 'Stopped since you are using a composite DS9 region file or you requested the noconcat option'
+if args['noconcat']:
+  print 'You requested the noconcat option, phaseshift and average only'
+  for ms in msfiles:
+  
+    msout   = obsid + '_' + ms + '.sub.shift.avg.ms'
+
+    cmd =  'DPPP msin="' + str(ms) + '" msout.writefullresflag=False '
+    if dophaseshift:
+       cmd +=  'steps=[phaseshift,average] '
+       cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
+    else:
+       cmd +=  'steps=[average] ' 
+    cmd += 'average.timestep=' + str(timestepavg) + ' average.freqstep=' + str(freqstepavg) + ' '   
+    cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM msout.storagemanager=dysco '
+    cmd += 'msout=' + msout + ' msout.storagemanager.databitrate=4 msout.storagemanager.weightbitrate=8 '
+    cmd += 'msin.datacolumn=%s '%colname
+    print cmd
+    run(cmd)
+  
   sys.exit() 
 
 if dokmscal:
