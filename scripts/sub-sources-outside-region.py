@@ -189,6 +189,9 @@ def striparchivename():
   mslist = glob.glob('L*_SB*.ms.archive')
   for ms in mslist:
       outname = ms.rstrip('.archive')
+      if os.path.exists(outname):
+          print (ms+' and '+outname+' both exist in the directory, exiting so as not to overwrite anydata')
+          sys.exit(1)
       cmd = 'mv ' + ms + ' ' + outname
       print (cmd)
       os.system(cmd)
