@@ -6,12 +6,12 @@ from __future__ import absolute_import
 from builtins import str
 from auxcodes import report,warn,die
 from surveys_db import *
-from .download import download_dataset
-from .download_field import download_field
-from .run_job import do_run_job
-from .unpack import unpack
-from .make_mslists import make_list,list_db_update
-from .average import average
+from download import download_dataset
+from download_field import download_field
+from run_job import do_run_job
+from unpack import unpack
+from make_mslists import make_list,list_db_update
+from average import average
 from auxcodes import MSList
 import sys
 import os

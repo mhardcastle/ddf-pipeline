@@ -19,7 +19,7 @@ except ImportError:
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
-from .pipeline import ddf_image,make_external_mask
+from pipeline import ddf_image,make_external_mask
 import shutil
 from astropy.io import fits
 

@@ -4,11 +4,11 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-from .find_pos import find_pos
+from find_pos import find_pos
 import sys
 import os
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
-from .make_subim import extract_and_save
+from make_subim import extract_and_save
 import astropy.units as u
 
 objname=sys.argv[1]

@@ -6,10 +6,10 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from builtins import range
-from .do_polcubes import do_polcubes
+from do_polcubes import do_polcubes
 from parset import option_list
 from options import options,print_options
-from .make_mslists import make_list
+from make_mslists import make_list
 from auxcodes import run,warn,report
 import casacore.tables as pt
 import os,sys
@@ -24,7 +24,7 @@ from subprocess import call
 import argparse
 import threading
 from surveys_db import use_database,SurveysDB,get_id
-from .upload import do_upload_vlow
+from upload import do_upload_vlow
 
 def die(error,cname=None):
     update_status(cname,'Failed')

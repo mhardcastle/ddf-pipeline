@@ -1726,7 +1726,7 @@ def main(o=None):
             
     spectral_mslist=None
     if o['spectral_restored']:
-        from . import do_spectral_restored
+        import do_spectral_restored
         separator('Spectral restored images')
         spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
                                                   CurrentMaskName,
@@ -1739,7 +1739,7 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
-        from .do_polcubes import do_polcubes
+        from do_polcubes import do_polcubes
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]

@@ -19,8 +19,7 @@ from builtins import object
 from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
-from auxcodes import report,run,warn,die,get_centpos
-from .quality_pipeline import sepn
+from auxcodes import report,run,warn,die,get_centpos,sepn
 import requests
 import os
 from get_cat import get_cat

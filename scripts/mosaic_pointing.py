@@ -12,7 +12,7 @@ from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic
 import os
 from auxcodes import getpos,getposim,dotdict
 import glob
-from .mosaic import make_mosaic
+from mosaic import make_mosaic
 from astropy.io import fits
 import numpy as np
 from surveys_db import SurveysDB

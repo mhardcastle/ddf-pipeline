@@ -6,14 +6,14 @@ from __future__ import absolute_import
 from builtins import zip
 from auxcodes import report,warn,die
 from surveys_db import SurveysDB,update_status
-from .download import download_dataset
-from .download_field import download_field
-from .run_job import do_run_job
-from .unpack import unpack
-from .make_mslists import make_list,list_db_update
-from .average import average
+from download import download_dataset
+from download_field import download_field
+from run_job import do_run_job
+from unpack import unpack
+from make_mslists import make_list,list_db_update
+from average import average
 from auxcodes import MSList
-from .make_custom_config import make_custom_config
+from make_custom_config import make_custom_config
 import numpy as np
 import sys
 import os

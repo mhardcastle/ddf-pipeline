@@ -4,7 +4,7 @@ from __future__ import division
 from builtins import zip
 from past.utils import old_div
 import numpy as np
-from .pipeline import *
+from pipeline import *
 from pyrap.tables import table
 from auxcodes import getpos,MSList
 from astropy import units as u

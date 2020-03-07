@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from builtins import range
 import numpy as np
-from .pipeline import ddf_image,ddf_shift
+from pipeline import ddf_image,ddf_shift
 from pyrap.tables import table
 
 def do_spectral_restored(colname,
