@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import numpy as np
 from scipy.optimize import leastsq
 import scipy
@@ -13,7 +20,7 @@ from surveys_db import use_database,update_status
 
 # these are small routines used by more than one part of the pipeline
 
-class bcolors:
+class bcolors(object):
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
@@ -24,22 +31,22 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 def separator(s):
-    print
-    print "%s============================== %s =============================%s"%(bcolors.FAIL,s,bcolors.ENDC)
-    print
+    print()
+    print("%s============================== %s =============================%s"%(bcolors.FAIL,s,bcolors.ENDC))
+    print()
 
     
 def die(s,database=True):
-    print bcolors.FAIL+s+bcolors.ENDC
+    print(bcolors.FAIL+s+bcolors.ENDC)
     if database and use_database():
         update_status(None,'Failed')
     raise Exception(s)
 
 def report(s):
-    print bcolors.OKGREEN+s+bcolors.ENDC
+    print(bcolors.OKGREEN+s+bcolors.ENDC)
 
 def warn(s):
-    print bcolors.OKBLUE+s+bcolors.ENDC
+    print(bcolors.OKBLUE+s+bcolors.ENDC)
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False):
     report('Running: '+s)
@@ -61,16 +68,16 @@ def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
     data=hdu[0].data
     if len(data.shape)==4:
         _,_,ys,xs=data.shape
-        subim=data[0,0,ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+        subim=data[0,0,old_div(ys,2)-old_div(boxsize,2):old_div(ys,2)+old_div(boxsize,2),old_div(xs,2)-old_div(boxsize,2):old_div(xs,2)+old_div(boxsize,2)].flatten()
     else:
         ys,xs=data.shape
-        subim=data[ys/2-boxsize/2:ys/2+boxsize/2,xs/2-boxsize/2:xs/2+boxsize/2].flatten()
+        subim=data[old_div(ys,2)-old_div(boxsize,2):old_div(ys,2)+old_div(boxsize,2),old_div(xs,2)-old_div(boxsize,2):old_div(xs,2)+old_div(boxsize,2)].flatten()
     subim=subim[~np.isnan(subim)]
     oldrms=1
     for i in range(niter):
         rms=np.std(subim)
-        if verbose: print len(subim),rms
-        if np.abs(oldrms-rms)/rms < eps:
+        if verbose: print(len(subim),rms)
+        if old_div(np.abs(oldrms-rms),rms) < eps:
             return rms
         subim=subim[np.abs(subim)<5*rms]
         oldrms=rms
@@ -113,13 +120,13 @@ def flatten(f):
     hdu = fits.PrimaryHDU(header=header,data=f[0].data[slice])
     return hdu
 
-class Catcher():
+class Catcher(object):
     def __init__(self):
         self.stop=False
         signal.signal(signal.SIGUSR1, self.handler)
         signal.siginterrupt(signal.SIGUSR1,False) 
     def handler(self,signum,frame):
-        print 'Signal handler called with signal', signum
+        print('Signal handler called with signal', signum)
         self.stop=True
     def check(self):
         if self.stop:
@@ -134,7 +141,7 @@ def find_imagenoise(workingimage,estnoise):
     maxpixel = np.max(noisearray)
     noisearray = np.random.permutation(noisearray)[:10000]
     #noisepix = np.array(filter(lambda x: abs(x) > 10E-8,noisearray)) # Filter out the edge pixels which have values around 1E-10
-    noisepix = np.array(filter(lambda x: abs(x)<50.0*estnoise,noisepix))
+    noisepix = np.array([x for x in noisepix if abs(x)<50.0*estnoise])
     f.close()
     rms = fit_gaussian_histogram(noisepix,False)
     return rms
@@ -142,7 +149,7 @@ def find_imagenoise(workingimage,estnoise):
 #------------------------------------------------------------
 
 def model_gaussian(t, coeffs):
-    return coeffs[0] + coeffs[1] * np.exp( - ((t-coeffs[2])**2.0/(2*coeffs[3]**2)))
+    return coeffs[0] + coeffs[1] * np.exp( - (old_div((t-coeffs[2])**2.0,(2*coeffs[3]**2))))
 
 #------------------------------------------------------------
 def residuals_gaussian(coeffs, y, t):
@@ -152,7 +159,7 @@ def residuals_gaussian(coeffs, y, t):
 def fit_gaussian_histogram(pixelvals,plotting):
 
     fitnumbers,cellsizes = np.histogram(pixelvals,100)
-    sigmaguess = np.std(pixelvals)/(abs(cellsizes[1]-cellsizes[0]))
+    sigmaguess = old_div(np.std(pixelvals),(abs(cellsizes[1]-cellsizes[0])))
     x0 = [0.0,max(fitnumbers),np.where(fitnumbers==max(fitnumbers))[0][0],sigmaguess] #Offset amp, amp, x-offset, sigma
     t = np.arange(len(fitnumbers))
     x, flag = scipy.optimize.leastsq(residuals_gaussian, x0, args=(fitnumbers, t))
@@ -176,12 +183,12 @@ def get_rms_array(subim,size=500000,niter=25,eps=1e-6,verbose=False):
         subim=np.random.choice(subim,size,replace=False)
     for i in range(niter):
         rms=np.std(subim)
-        if verbose: print len(subim),rms
-        if np.abs(oldrms-rms)/rms < eps:
+        if verbose: print(len(subim),rms)
+        if old_div(np.abs(oldrms-rms),rms) < eps:
             return rms
         subim=subim[np.abs(subim)<5*rms]
         oldrms=rms
-    print 'Warning -- failed to converge!',rms,oldrms
+    print('Warning -- failed to converge!',rms,oldrms)
     return rms
 
 def polylist_to_string(poly):
@@ -215,12 +222,12 @@ def get_rms_map(infilename,ds9region,outfilename):
     map=hdu[0].data
 
     for direction,ds9region in enumerate(polylist):
-        print direction,ds9region
+        print(direction,ds9region)
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
         rmsval = get_rms_array(hdu[0].data[0][0][np.where(manualmask == True)])
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
-        print 'RMS = %s for direction %i'%(rmsval,direction)
+        print('RMS = %s for direction %i'%(rmsval,direction))
     hdu.writeto(outfilename,clobber=True)
 
 def get_rms_map2(infilename,ds9region,outfilename):
@@ -236,12 +243,12 @@ def get_rms_map2(infilename,ds9region,outfilename):
     map=hdu[0].data
 
     for direction,ds9region in enumerate(polylist):
-        print direction,ds9region
+        print(direction,ds9region)
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
         rmsval = np.mean(hdu[0].data[0][0][np.where(manualmask == True)])
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
-        print 'RMS = %s for direction %i'%(rmsval,direction)
+        print('RMS = %s for direction %i'%(rmsval,direction))
     hdu.writeto(outfilename,clobber=True)
     
 class dotdict(dict):
@@ -276,7 +283,7 @@ def getpos(ms):
     if (ra<0):
         ra+=2*np.pi;
 
-    return name[0],ra*(180/np.pi),dec*(180/np.pi)
+    return name[0],ra*(old_div(180,np.pi)),dec*(old_div(180,np.pi))
 
 def getposim(image):
     import pyrap.tables as pt

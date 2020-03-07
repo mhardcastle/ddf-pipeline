@@ -2,6 +2,10 @@
 
 # make and optionally plot a histogram of amplitudes of MSs
 
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import pyrap.tables as pt
 import numpy as np
 from astropy.io import fits
@@ -31,25 +35,25 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
     bvl=[]
     avl=[]
     for ms in mss:
-        print 'Doing',ms
+        print('Doing',ms)
         t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
         freq = t[0]['REF_FREQUENCY']
         channels = t[0]['NUM_CHAN']
         chlist=t[0]['CHAN_FREQ']
-        lamb=3e8/freq
+        lamb=old_div(3e8,freq)
         max=100000
-        print 'Frequency is',freq,'Hz','wavelength is',lamb,'m'
+        print('Frequency is',freq,'Hz','wavelength is',lamb,'m')
         t.close()
         t=pt.table(ms, readonly=True, ack=False)
         newt=pt.taql('select UVW,TIME,'+colname+' from $t where FLAG[0,0]=False')
         time=newt.getcol('TIME')
         tuniq=np.unique(time)
-        print 'There are',len(tuniq),'unique times'
+        print('There are',len(tuniq),'unique times')
         if len(tuniq)<=tstep:
-            print 'Too much data flagged, skipping'
+            print('Too much data flagged, skipping')
             continue
         tvals=tuniq[::tstep]
-        print 'Using',len(tvals),'times'
+        print('Using',len(tvals),'times')
         uv=newt.getcol('UVW')/1000.0
 
         data=newt.getcol(colname)[:,:,0::3] # XX, YY
@@ -84,7 +88,7 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
 
     for i in range(len(bins)-1):
         if np.all(histv[i:]<level):
-            print 'Cut at',bins[i],'km'
+            print('Cut at',bins[i],'km')
             uvmin=bins[i]
             break
 
@@ -97,7 +101,7 @@ if __name__=='__main__':
 
     import sys
     level=sumdico(sys.argv[2])
-    print 'Total apparent flux is',level,'Jy'
+    print('Total apparent flux is',level,'Jy')
     listname=sys.argv[1]
     
-    print find_uvmin(listname,level,plot=True)
+    print(find_uvmin(listname,level,plot=True))

@@ -3,6 +3,12 @@
 # Determine scale factors by fitting power laws to data
 # This has to be run as a standalone code since it may use MPI
 
+from __future__ import print_function
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 from scipy.optimize import curve_fit
 from astropy.table import Table
 import numpy as np
@@ -12,10 +18,10 @@ import sys
 
 def pl(freq,norm,alpha):
      normfreq=140e6
-     return norm*(freq/normfreq)**alpha
+     return norm*(old_div(freq,normfreq))**alpha
 
 def chi2(freq,data,errors,norm,alpha):
-    return np.sum(((data-pl(freq,norm,alpha))**2.0)/(2*errors)**2.0)
+    return np.sum(old_div(((data-pl(freq,norm,alpha))**2.0),(2*errors)**2.0))
 
 def lnlike(scale,frequencies,fluxes,errors):
     cs=0
@@ -30,7 +36,7 @@ def lnlike(scale,frequencies,fluxes,errors):
             chi=chi2(frequencies,sf,ef,*popt)
             cs+=chi
         except RuntimeError:
-            print 'Caught maxfev error:',scale
+            print('Caught maxfev error:',scale)
             cs+=1e6
 #        print i,pcov[1],chi
     retval=-0.5*cs-d*np.sum(np.log(scale))
@@ -89,13 +95,13 @@ def run_all(run, name=''):
 
     frequencies,fluxes,errors,smask,data=read_frequencies_fluxes(name+'crossmatch-'+str(run)+'.fits',name=name)
 
-    print 'About to fit to',len(data),'data points'
+    print('About to fit to',len(data),'data points')
 
     ndim=np.sum(smask)
     nwalkers=2*(ndim+1)
     if nwalkers<24:
          nwalkers=24
-    print 'Fitting',ndim,'scale factors'
+    print('Fitting',ndim,'scale factors')
     if run>1:
         oscale=np.load(name+'crossmatch-results-'+str(run-1)+'.npy')[:,0]
         scale=[oscale+np.random.normal(loc=0.0,scale=0.02,size=ndim)
@@ -116,7 +122,7 @@ def run_all(run, name=''):
     errors=np.percentile(samplest,(16,84),axis=1)-means
 
     for i in range(ndim):
-        print i,means[i],errors[0,i],errors[1,i]
+        print(i,means[i],errors[0,i],errors[1,i])
 
     output=np.vstack((means,errors)).T
     np.save(name+'crossmatch-results-'+str(run)+'.npy',output)

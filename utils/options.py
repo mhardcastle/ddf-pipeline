@@ -1,6 +1,11 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # Options for killms pipeline code
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+import configparser
 import os
 import struct
 import re
@@ -38,7 +43,7 @@ def options(optlist,option_list):
     # section names are used in the output dict only if names are not unique
 
     odict = {}
-    config=ConfigParser.SafeConfigParser()
+    config=configparser.SafeConfigParser()
     filenames=[]
     cmdlineset=[]
     if isinstance(optlist,str):
@@ -49,7 +54,7 @@ def options(optlist,option_list):
             optstring=o[2:]
             result=re.match('(\w*)-(\w*)\s*=\s*(.*)',optstring)
             if result is None:
-                print 'Cannot parse option',optstring
+                print('Cannot parse option',optstring)
             else:
                 cmdlineset.append(result.groups())
         else:
@@ -57,7 +62,7 @@ def options(optlist,option_list):
 
     for f in filenames:
         if not os.path.isfile(f):
-            print 'Config file',f,'does not exist!'
+            print('Config file',f,'does not exist!')
             sys.exit(1)
 
     config.read(filenames)
@@ -67,11 +72,11 @@ def options(optlist,option_list):
             if c[0]==section and c[1]==name:
                 break
         else:
-            print 'Option %s-%s does not exist!' % (c[0],c[1])
+            print('Option %s-%s does not exist!' % (c[0],c[1]))
             sys.exit(2)
         try:
             config.add_section(c[0])
-        except ConfigParser.DuplicateSectionError:
+        except configparser.DuplicateSectionError:
             pass
         config.set(c[0],c[1],c[2])
     cased={int: config.getint, float: config.getfloat, bool: config.getboolean, str: config.get, list: lambda x,y: eval(config.get(x,y))}
@@ -84,7 +89,7 @@ def options(optlist,option_list):
         # get result
         try:
             result=cased[otype](section,name)
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        except (configparser.NoSectionError, configparser.NoOptionError):
             result=default
         if count>1:
             odict[section+'_'+name]=result
@@ -110,7 +115,7 @@ def print_options(option_list):
     fstring='%-'+str(klen)+'s = %-'+str(tlen)+'s (default %s)'
     indent=' '*(klen+3)
     for s in sections:
-        print bcolors.OKBLUE+'\n[%s]' % s+bcolors.ENDC
+        print(bcolors.OKBLUE+'\n[%s]' % s+bcolors.ENDC)
         for o in option_list:
             if len(o)==4:
                 (section, name, otype, default)=o
@@ -118,17 +123,17 @@ def print_options(option_list):
             elif len(o)==5:
                 (section, name, otype, default, doc)=o
             else:
-                print 'Oops!',o
+                print('Oops!',o)
                 continue
             if section==s:
                 
-                print bcolors.BOLD+fstring % (name, typename(otype), str(default))+bcolors.ENDC
+                print(bcolors.BOLD+fstring % (name, typename(otype), str(default))+bcolors.ENDC)
                 if doc is not None:
-                    print textwrap.fill(doc,width-1,initial_indent=indent,subsequent_indent=indent)
+                    print(textwrap.fill(doc,width-1,initial_indent=indent,subsequent_indent=indent))
 
 if __name__=='__main__':
     import sys
-    from parset import option_list
+    from .parset import option_list
     config=sys.argv[1:]
-    print options(config,option_list)
+    print(options(config,option_list))
 

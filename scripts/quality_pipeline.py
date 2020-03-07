@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 # Routine to check quality of LOFAR images
+from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -26,7 +29,7 @@ from surveys_db import SurveysDB,get_id,use_database
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
 arcmin2deg=1.0/60
-deg2rad=np.pi/180
+deg2rad=old_div(np.pi,180)
 deg2arcsec = 1.0/arcsec2deg
 rad2deg=180.0/np.pi
 arcmin2rad=arcmin2deg*deg2rad
@@ -61,21 +64,21 @@ def filter_catalog(singlecat,matchedcat,fitsimage,outname,auxcatname,options=Non
         fielddec = fitsimage[0].header['CRVAL2']
         fitsimage.close()
 
-        print 'Originally',len(matchedcat),'sources'
+        print('Originally',len(matchedcat),'sources')
         matchedcat=filter_catalogue(matchedcat,fieldra,fielddec,3.0)
 
-        print '%i sources after filtering for 3.0 deg from centre' % len(matchedcat)
+        print('%i sources after filtering for 3.0 deg from centre' % len(matchedcat))
 
         matchedcat=matchedcat[matchedcat['DC_Maj']<10.0] # ERROR!
 
-        print '%i sources after filtering for sources over 10arcsec in LOFAR' % len(matchedcat)
+        print('%i sources after filtering for sources over 10arcsec in LOFAR' % len(matchedcat))
 
         # not implemented yet!
         #tooextendedsources_aux = np.array(np.where(matchedcat[1].data[options['%s_match_majkey2'%auxcatname]] > options['%s_filtersize'%auxcatname])).flatten()
         #print '%s out of %s sources filtered out as over %sarcsec in %s'%(np.size(tooextendedsources_aux),len(allsources),options['%s_filtersize'%auxcatname],auxcatname)
 
         matchedcat=select_isolated_sources(matchedcat,30.0)
-        print '%i sources after filtering for isolated sources in LOFAR' % len(matchedcat)
+        print('%i sources after filtering for isolated sources in LOFAR' % len(matchedcat))
 
         matchedcat.write(outname)
 
@@ -165,7 +168,7 @@ if __name__=='__main__':
             except:
                 pass
         
-    if "DDF_PIPELINE_CATALOGS" in os.environ.keys():
+    if "DDF_PIPELINE_CATALOGS" in list(os.environ.keys()):
         o['catdir']=os.environ["DDF_PIPELINE_CATALOGS"]
 
     if o['logging'] is not None and not os.path.isdir(o['logging']):
@@ -187,11 +190,11 @@ if __name__=='__main__':
     # matching with catalogs
     removelist=[]
     for cat in o['list']:
-        print 'Doing catalogue',cat
+        print('Doing catalogue',cat)
         if crossmatch_image(o['catprefix'] + '.cat.fits',cat,catdir=o['catdir'])>10:
             filter_catalog(o['catprefix'] + '.cat.fits',o['catprefix']+'.cat.fits_'+cat+'_match.fits',o['pbimage'],o['catprefix']+'.cat.fits_'+cat+'_match_filtered.fits',cat,options=o)
         else:
-            print 'Insufficient matches, abandoning catalogue'
+            print('Insufficient matches, abandoning catalogue')
             removelist.append(cat)
     for cat in removelist:
         o['list'].remove(cat)
@@ -206,8 +209,8 @@ if __name__=='__main__':
         bsdec=np.percentile(bootstrap(t['FIRST_dDEC'],np.mean,10000),(16,84))
         mdra=np.mean(t['FIRST_dRA'])
         mddec=np.mean(t['FIRST_dDEC'])
-        print 'Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1])
-        print 'Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1])
+        print('Mean delta RA is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mdra,bsra[0],bsra[1]))
+        print('Mean delta DEC is %.3f arcsec (1-sigma %.3f -- %.3f arcsec)' % (mddec,bsdec[0],bsdec[1]))
         first_ra=mdra
         first_dec=mddec
         
@@ -229,18 +232,18 @@ if __name__=='__main__':
     if 'TGSS' in o['list']:
         plot_flux_errors('%s.cat.fits_TGSS_match_filtered.fits'%o['catprefix'],o['pbimage'],'%s.cat.fits_TGSS_match_filtered_fluxratio.png'%o['catprefix'],'TGSS',options=o)
         t=Table.read(o['catprefix']+'.cat.fits_TGSS_match_filtered.fits')
-        ratios=t['Total_flux']/(t['TGSS_Total_flux']/o['TGSS_fluxfactor'])
+        ratios=old_div(t['Total_flux'],(old_div(t['TGSS_Total_flux'],o['TGSS_fluxfactor'])))
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
-        print 'Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+        print('Median LOFAR/TGSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1]))
         tgss_scale=np.median(ratios)
     else:
         tgss_scale=None
     if 'NVSS' in o['list']:
         t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
         t=t[t['Total_flux']>30e-3]
-        ratios=t['Total_flux']/t['NVSS_Total_flux']
+        ratios=old_div(t['Total_flux'],t['NVSS_Total_flux'])
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
-        print 'Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1])
+        print('Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1]))
         nvss_scale=np.median(ratios)
     else:
         nvss_scale=None
@@ -248,10 +251,10 @@ if __name__=='__main__':
     hdu=fits.open(o['pbimage'])
     imagenoise = get_rms(hdu)
     rms=imagenoise*1e6
-    print 'An estimate of the image noise is %.3f muJy/beam' % rms
+    print('An estimate of the image noise is %.3f muJy/beam' % rms)
     drs=do_dr_checker(o['catprefix']+'.cat.fits',o['pbimage'],verbose=False,peak=0.4)
     dr=np.median(drs)
-    print 'Median dynamic range is',dr
+    print('Median dynamic range is',dr)
 
     # fit source counts
     if o['fit_sourcecounts']:
@@ -260,7 +263,7 @@ if __name__=='__main__':
     else:
         sc_norm=sc_index=scale=None
     
-    print rms,dr,catsources,first_ra,first_dec,tgss_scale,nvss_scale,sc_norm,sc_index,scale
+    print(rms,dr,catsources,first_ra,first_dec,tgss_scale,nvss_scale,sc_norm,sc_index,scale)
 
     if use_database():
         id=get_id()

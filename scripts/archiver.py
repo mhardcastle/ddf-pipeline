@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+from builtins import object
 import os
 import glob
 
-class Tarfile():
+class Tarfile(object):
     def __init__(self,filename):
         self.filename=filename
         self.append=False
@@ -16,7 +18,7 @@ class Tarfile():
                 continue
             if not os.path.exists(f):
                 continue
-            print 'adding',f
+            print('adding',f)
             command='tar '
             if not self.append:
                 command+='-c'

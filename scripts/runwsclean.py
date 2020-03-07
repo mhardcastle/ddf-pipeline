@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import division
+from builtins import map
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import logging
 logging.basicConfig(filename='selfcal.log', format='%(levelname)s:%(asctime)s ---- %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.DEBUG)
 
@@ -29,8 +35,8 @@ def removenans(parmdb, soltab):
    
    idxnan  = np.where((~np.isfinite(vals))) 
    
-   print idxnan
-   print 'Found some NaNs', vals[idxnan]
+   print(idxnan)
+   print('Found some NaNs', vals[idxnan])
 
    if H5.getSolset('sol000').getSoltab(soltab).getType() == 'phase':
        vals[idxnan] = 0.0
@@ -145,8 +151,8 @@ def flagms_startend(ms, tecsolsfile, tecsolint):
     goodstartid = np.argmax (np.array(goodtimesvec) > 0)
     goodendid   = len(goodtimesvec) - np.argmax (np.array(goodtimesvec[::-1]) > 0)
     
-    print 'First good solutionslot,', goodstartid, ' out of', len(goodtimesvec)
-    print 'Last good solutionslot,', goodendid, ' out of', len(goodtimesvec)    
+    print('First good solutionslot,', goodstartid, ' out of', len(goodtimesvec))
+    print('Last good solutionslot,', goodendid, ' out of', len(goodtimesvec))    
     H5.close()
     
     cmd = taql + " ' select from " + ms + " where TIME in (select distinct TIME from " + ms 
@@ -154,7 +160,7 @@ def flagms_startend(ms, tecsolsfile, tecsolint):
     cmd+= " limit " + str((goodendid-goodstartid)*np.int(tecsolint)) +") giving " 
     cmd+= msout + " as plain'"
     
-    print cmd
+    print(cmd)
     os.system(cmd)
     
     os.system('rm -rf ' + ms)
@@ -180,7 +186,7 @@ def removestartendms(ms, starttime=None, endtime=None):
       cmd+= 'msin.starttime=' + starttime + ' '
     if endtime is not None:  
       cmd+= 'msin.endtime=' + endtime   + ' '   
-    print cmd  
+    print(cmd)  
     os.system(cmd)
     
     cmd = 'DPPP msin=' + ms + ' ' + 'msout.storagemanager=dysco msout=' + ms + '.cuttmp '
@@ -189,14 +195,14 @@ def removestartendms(ms, starttime=None, endtime=None):
       cmd+= 'msin.starttime=' + starttime + ' '
     if endtime is not None:  
       cmd+= 'msin.endtime=' + endtime   + ' '
-    print cmd
+    print(cmd)
     os.system(cmd)    
 
 
     # Make a WEIGHT_SPECTRUM from WEIGHT_SPECTRUM_SOLVE
     t  = pt.table(ms + '.cut' , readonly=False)
 
-    print 'Adding WEIGHT_SPECTRUM_SOLVE' 
+    print('Adding WEIGHT_SPECTRUM_SOLVE') 
     desc = t.getcoldesc('WEIGHT_SPECTRUM')
     desc['name']='WEIGHT_SPECTRUM_SOLVE'
     t.addcols(desc)
@@ -310,7 +316,7 @@ def reweight(mslist, pixsize, imsize, channelsout, niter, robust, multiscale=Fal
 
    for ms in mslist:
           imageout =  'rmsimage' + ms.split('.ms')[0] 
-          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(niter/(len(mslist)**(1./3.))), robust, multiscale=multiscale, predict=False,fitsmask=fitsmask)
+          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(old_div(niter,(len(mslist)**(1./3.)))), robust, multiscale=multiscale, predict=False,fitsmask=fitsmask)
           
           hdulist = fits.open(imageout + '-MFS-image.fits')
           imagenoise = findrms(np.ndarray.flatten(hdulist[0].data))
@@ -356,10 +362,10 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
 
       for ms in mslist:
           imageout =  'solintimage' + ms.split('.ms')[0] 
-          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(niter/2), robust, multiscale=multiscale, predict=False)
+          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(old_div(niter,2)), robust, multiscale=multiscale, predict=False)
           csf = determine_compactsource_flux(imageout + '-MFS-image.fits') 
         
-          nchan_phase, solint_phase, solint_ap = calculate_solintnchan(csf/declf )
+          nchan_phase, solint_phase, solint_ap = calculate_solintnchan(old_div(csf,declf) )
           solint_phase = 2*solint_phase
           nchan_ap = nchan_phase # keep the same
           logging.info('MS, NCHAN, SOLINT_PHASE, SOLINT_AP: ' + str(ms) + ' ' + str(nchan_phase) + ' ' + str (solint_phase) + ' ' + str(solint_ap))
@@ -402,7 +408,7 @@ def create_beamcortemplate(ms):
   cmd += 'ddecal.mode=complexgain ddecal.h5parm=' + H5name  + ' '
   cmd += 'ddecal.solint=10'
 
-  print cmd
+  print(cmd)
   os.system(cmd)
 
   return H5name
@@ -626,7 +632,7 @@ def beamcor(ms):
 
     
     cmdlosoto = losoto + ' ' + H5name + ' ' + parset
-    print cmdlosoto
+    print(cmdlosoto)
     os.system(cmdlosoto)
     
     cmd = 'DPPP numthreads=32 msin=' + ms + ' msin.datacolumn=DATA msout=. '
@@ -635,7 +641,7 @@ def beamcor(ms):
     cmd += 'ac1.parmdb='+H5name + ' ac2.parmdb='+H5name + ' '
     cmd += 'ac1.type=applycal ac2.type=applycal '
     cmd += 'ac1.correction=phase000 ac2.correction=amplitude000 ac2.updateweights=True ' 
-    print 'DPPP applycal:', cmd
+    print('DPPP applycal:', cmd)
     os.system(cmd)
    
     
@@ -656,7 +662,7 @@ def findrms(mIn,maskSup=1e-7):
     for i in range(10):
         ind=np.where(np.abs(m-med)<rmsold*cut)[0]
         rms=np.std(m[ind])
-        if np.abs((rms-rmsold)/rmsold)<diff: break
+        if np.abs(old_div((rms-rmsold),rmsold))<diff: break
         rmsold=rms
     return rms
 
@@ -691,8 +697,8 @@ def getimsize(boxfile, cellsize=1.5):
    """
    r = pyregion.open(boxfile)
    
-   xs = np.ceil((r[0].coord_list[2])*1.6*3600./cellsize)
-   ys = np.ceil((r[0].coord_list[3])*1.6*3600./cellsize)
+   xs = np.ceil(old_div((r[0].coord_list[2])*1.6*3600.,cellsize))
+   ys = np.ceil(old_div((r[0].coord_list[3])*1.6*3600.,cellsize))
 
    imsize = np.ceil(xs) # // Round up decimals to an integer
    if(imsize % 2 == 1): 
@@ -720,7 +726,7 @@ def smoothsols(parmdb, ms):
     if noise < 0.07 and noise >= 0.04:
       cmdlosoto += create_losoto_mediumsmoothparset(ms, '3')
       smooth = True
-    print cmdlosoto
+    print(cmdlosoto)
     if smooth:
        os.system(cmdlosoto)
     return
@@ -736,7 +742,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'ac1.parmdb='+parmdb + ' ac2.parmdb='+parmdb + ' '
       cmd += 'ac1.type=applycal ac2.type=applycal '
       cmd += 'ac1.correction=phase000 ac2.correction=amplitude000 ' 
-      print 'DPPP applycal:', cmd
+      print('DPPP applycal:', cmd)
       os.system(cmd)
 
     # APPLYCAL CASE II
@@ -746,7 +752,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1] msout.storagemanager=dysco '
       cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
       cmd += 'ac1.correction=phase000 '
-      print 'DPPP applycal:', cmd
+      print('DPPP applycal:', cmd)
       os.system(cmd)
     
     # APPLYCAL CASE III  
@@ -758,7 +764,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'ac1.correction=phase000 '
       cmd += 'ac2.parmdb=phaseonly'+parmdb + ' ac2.type=applycal '
       cmd += 'ac2.correction=tec000 '
-      print 'DPPP applycal:', cmd
+      print('DPPP applycal:', cmd)
       os.system(cmd)
 
     # APPLYCAL CASE IV      
@@ -778,7 +784,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
         cmd += 'ac2.parmdb='+parmdb + ' ac2.type=applycal ac2.correction=phase000 '
         cmd += 'ac3.parmdb='+parmdb + ' ac3.type=applycal ac3.correction=amplitude000 '
                     
-      print 'DPPP applycal:', cmd
+      print('DPPP applycal:', cmd)
       os.system(cmd) 
 
     return
@@ -804,19 +810,19 @@ def change_refant(parmdb, soltab):
     #print idx0
 
     refant = ' '    
-    if ((np.float(len(idx0))/np.float(np.size(weights[:,:,0,:,:]))) > 0.5) or ((np.float(len(idxnan))/np.float(np.size(weights[:,:,0,:,:]))) > 0.5):
+    if ((old_div(np.float(len(idx0)),np.float(np.size(weights[:,:,0,:,:])))) > 0.5) or ((old_div(np.float(len(idxnan)),np.float(np.size(weights[:,:,0,:,:])))) > 0.5):
       logging.info('Trying to changing reference anntena')
     
 
       for antennaid,antenna in enumerate(antennas[1::]):
-            print antenna
+            print(antenna)
             idx0    = np.where((weights[:,:,antennaid+1,:,:] == 0.0))[0]
 
             idxnan  = np.where((~np.isfinite(phases[:,:,antennaid+1,:,:])))[0]
             
-            print idx0, idxnan, ((np.float(len(idx0))/np.float(np.size(weights[:,:,antennaid+1,:,:]))))
+            print(idx0, idxnan, ((old_div(np.float(len(idx0)),np.float(np.size(weights[:,:,antennaid+1,:,:]))))))
             
-            if  ((np.float(len(idx0))/np.float(np.size(weights[:,:,antennaid+1,:,:]))) < 0.5) and ((np.float(len(idxnan))/np.float(np.size(weights[:,:,antennaid+1,:,:]))) < 0.5):
+            if  ((old_div(np.float(len(idx0)),np.float(np.size(weights[:,:,antennaid+1,:,:])))) < 0.5) and ((old_div(np.float(len(idxnan)),np.float(np.size(weights[:,:,antennaid+1,:,:])))) < 0.5):
               logging.info('Found new reference anntena,' + str(antenna))
               refant = antenna
               break
@@ -1108,7 +1114,7 @@ def flaghighgamps(parmdb, highampval=10.):
     weights_p = H5.getSolset('sol000').getSoltab('phase000').getValues(weight=True)[0]
     weights_p[idx] = 0.0
     phases[idx] = 0.0
-    print idx
+    print(idx)
     H5.getSolset('sol000').getSoltab('phase000').setValues(weights_p,weight=True)
     H5.getSolset('sol000').getSoltab('phase000').setValues(phases)
     
@@ -1123,7 +1129,7 @@ def removenegativefrommodel(imagenames):
     replace negative pixel values in WSCLEAN model images with zeros
     '''
     for image in imagenames:
-        print 'remove negatives from model: ', image
+        print('remove negatives from model: ', image)
         hdul = fits.open(image)
         data = hdul[0].data
         
@@ -1144,7 +1150,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
       imcol = 'DATA' 
     t.close()
     
-    baselineav = str (2.5e3*60000.*2.*np.pi *np.float(pixsize)/(24.*60.*60*np.float(imsize)) )
+    baselineav = str (old_div(2.5e3*60000.*2.*np.pi *np.float(pixsize),(24.*60.*60*np.float(imsize))) )
     #baselineav = str (5e4*60000.*2.*np.pi *np.float(pixsize)/(24.*60.*60*np.float(imsize)) ) # this would mean 4sec for 20000 px image
     #imcol = 'DATA' 
     
@@ -1167,7 +1173,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
         cmd += '-fits-mask '+ fitsmask + ' '
         #cmd += '-beam-shape 6arcsec 6arcsec 0deg ' 
       else:
-        print 'fitsmask: ', fitsmask, 'does not exist'
+        print('fitsmask: ', fitsmask, 'does not exist')
         sys.exit()
     if uvtaper:
        cmd += '-taper-gaussian 15arcsec '
@@ -1185,7 +1191,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
     
     cmd += '-name ' + imageout + ' -scale ' + pixsize + 'arcsec ' 
 
-    print 'WSCLEAN: ', cmd + '-niter ' + str(niter) + ' ' + msliststring
+    print('WSCLEAN: ', cmd + '-niter ' + str(niter) + ' ' + msliststring)
     logging.info(cmd + '-niter ' + str(niter) + ' ' + msliststring)
     os.system(cmd + '-niter ' + str(niter) + ' ' + msliststring)
 
@@ -1200,12 +1206,12 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
         cmdp += '-pol iquv '
       
       cmdp += '-name ' + imageout + ' -scale ' + pixsize + 'arcsec ' + msliststring
-      print 'PREDICT STEP for continue: ', cmdp
+      print('PREDICT STEP for continue: ', cmdp)
       os.system(cmdp)
        
       # NOW continue cleaning  
-      cmd += '-niter ' + str(niter/5) + ' -multiscale -continue ' + msliststring
-      print 'WSCLEAN continue: ', cmd
+      cmd += '-niter ' + str(old_div(niter,5)) + ' -multiscale -continue ' + msliststring
+      print('WSCLEAN continue: ', cmd)
       os.system(cmd)
 
     # REMOVE nagetive model components, these are artifacts (only for Stokes I)
@@ -1223,7 +1229,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
         cmd += '-pol iquv '
       
       cmd += '-name ' + imageout + ' -scale ' + pixsize + 'arcsec ' + msliststring
-      print 'PREDICT STEP: ', cmd
+      print('PREDICT STEP: ', cmd)
       os.system(cmd)
 
  
@@ -1241,14 +1247,14 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
 
     
     if os.path.isfile(parmdb):
-      print 'H5 file exists  ', parmdb
+      print('H5 file exists  ', parmdb)
       #os.system('rm -f ' + parmdb)
     if os.path.isfile('phaseonly' + parmdb) and preapplyphase == True:
-      print 'H5 file exists  ', 'phaseonly' + parmdb
+      print('H5 file exists  ', 'phaseonly' + parmdb)
       #os.system('rm -f ' + parmdb)
     
     if soltype == 'scalarphase' and preapplyphase == True:
-        print 'Not supported'
+        print('Not supported')
         sys.exit()
     
  
@@ -1305,7 +1311,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
         cmd += 'ddecal.h5parm=phaseonly' + parmdb + ' ' 
         
  
-    print 'DPPP solve:', cmd
+    print('DPPP solve:', cmd)
     os.system(cmd)
     #sys.exit()  
     if preapplyphase: # APPLY FIRST 
@@ -1315,7 +1321,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
           cmd += 'msout.datacolumn=CORRECTED_DATA_PHASE steps=[ac1] '
           cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
           cmd += 'ac1.correction=phase000 '
-          print 'DPPP PRE-APPLY PHASE-ONLY:', cmd
+          print('DPPP PRE-APPLY PHASE-ONLY:', cmd)
           os.system(cmd)
           cmdlosotophase = losoto + ' '
           cmdlosotophase += 'phaseonly' + parmdb + ' ' + losotoparset_phase
@@ -1326,7 +1332,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
           cmd += 'ac1.correction=phase000 '
           cmd += 'ac2.parmdb=phaseonly'+parmdb + ' ac2.type=applycal '
           cmd += 'ac2.correction=tec000 '
-          print 'DPPP PRE-APPLY TECANDPHASE:', cmd
+          print('DPPP PRE-APPLY TECANDPHASE:', cmd)
           os.system(cmd)
           cmdlosotophase = losoto + ' '
           cmdlosotophase += 'phaseonly' + parmdb + ' ' + losotoparset_tecandphase
@@ -1348,7 +1354,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
 
         if uvmin != 0:
            cmd += 'ddecal.uvlambdamin=' + str(uvmin) + ' '
-        print 'DPPP SLOW GAIN solve:', cmd
+        print('DPPP SLOW GAIN solve:', cmd)
         os.system(cmd)
         os.system('cp ' + parmdb + ' ' + parmdb + '.backup')
 
@@ -1448,16 +1454,16 @@ args = vars(parser.parse_args())
 #print args
 
 if which('DPPP') == None:
-  print 'Cannot find DPPP, forgot to source lofarinit.[c]sh?'
+  print('Cannot find DPPP, forgot to source lofarinit.[c]sh?')
   sys.exit()
 
 
 
 if args['boxfile'] == None and args['imsize'] == None:
-  print 'Incomplete input detected, either boxfile or imsize is required'
+  print('Incomplete input detected, either boxfile or imsize is required')
   sys.exit()
 if args['boxfile'] != None and args['imsize'] != None:
-  print 'Wrong input detected, both boxfile and imsize are set'
+  print('Wrong input detected, both boxfile and imsize are set')
   sys.exit()
 
 
@@ -1515,11 +1521,11 @@ makemask = 'MakeMask.py'
 
 for ms in mslist:
   if not os.path.isdir(ms):
-    print ms, ' does not exist'
+    print(ms, ' does not exist')
     sys.exit()
 
 if beamcor and idg:
-  print 'beamcor=True and IDG=True is not possible'
+  print('beamcor=True and IDG=True is not possible')
   sys.exit()
 
 
@@ -1578,7 +1584,7 @@ for i in range(args['start'],args['stop']):
 
   # NORMALIZE GLOBAL GAIN (done in log-space)
   if i >= switchtogaincycle:
-     print 'Doing global gain normalization'  
+     print('Doing global gain normalization')  
      parmdblist = []  
      for msnumber, ms in enumerate(mslist):
        parmdblist.append(ms + parmdb + str(i) + '.h5')  

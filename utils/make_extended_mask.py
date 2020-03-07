@@ -1,7 +1,9 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
 from astropy.io import fits
 from astropy.wcs import WCS
-from auxcodes import get_rms_map,get_rms,get_rms_map2
-from auxcodes import flatten
+from auxcodes import get_rms_map,get_rms,get_rms_map2,flatten
 import scipy.ndimage as nd
 import numpy as np
 import pyregion
@@ -47,7 +49,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     det=hdu[0].data[0,0,:]>rmsthresh*rms
     labels, count = nd.label(det)
 
-    print 'found',count,'islands'
+    print('found',count,'islands')
     #label, counts = np.unique(labels, return_counts=True)
     label=np.unique(labels)
     counts=np.bincount(labels.flatten())
@@ -55,8 +57,8 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     big=(counts>sizethresh) & (counts<maxsize)
     big_regions=label[big]
 
-    print 'Found',len(big_regions)-1,'large islands'
-    if verbose: print counts[big]
+    print('Found',len(big_regions)-1,'large islands')
+    if verbose: print(counts[big])
 
     mask=np.zeros_like(det,dtype=int)
     for l in big_regions:

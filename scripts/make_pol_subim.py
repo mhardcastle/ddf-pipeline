@@ -2,11 +2,13 @@
 # For Vijay: make a polarization sub-image for a source
 # Call with the ILT name or other object name plus a region size in degrees
 
-from find_pos import find_pos
+from __future__ import print_function
+from __future__ import absolute_import
+from .find_pos import find_pos
 import sys
 import os
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
-from make_subim import extract_and_save
+from .make_subim import extract_and_save
 import astropy.units as u
 
 objname=sys.argv[1]
@@ -21,27 +23,27 @@ if 'ILTJ' in objname:
     sc = SkyCoord(coord,unit=(u.hourangle,u.deg))
     ra=sc.ra.value
     dec=sc.dec.value
-    print 'Parsed coordinates to ra=%f, dec=%f' % (ra,dec)
+    print('Parsed coordinates to ra=%f, dec=%f' % (ra,dec))
 else:
     c=get_icrs_coordinates(objname)
     ra=float(c.ra.degree)
     dec=float(c.dec.degree)
-    print 'Coordinate lookup gives ra=%f, dec=%f' % (ra,dec)
+    print('Coordinate lookup gives ra=%f, dec=%f' % (ra,dec))
 
 field=find_pos(ra,dec,offset=2.5)
 
 if field is None:
-    print 'Archived image does not exist'
+    print('Archived image does not exist')
 else:
     wd='/data/lofar/DR2/fields/'+field
     if not os.path.isdir(wd):
-        print 'DR2 directory does not exist'
+        print('DR2 directory does not exist')
     else:
-        print 'Extracting LOW total intensity cutout'
+        print('Extracting LOW total intensity cutout')
         extract_and_save(wd+'/image_full_low_m.int.restored.fits',ra,dec,imsize,outname=objname+'_I.fits')
-        print 'Unpacking the pol cube -- please wait'
+        print('Unpacking the pol cube -- please wait')
         os.system('funpack -O temp_cube.fits '+wd+'/image_full_low_QU.cube.dirty.corr.fits.fz')
-        print 'Extracting QU cube cutout'
+        print('Extracting QU cube cutout')
         extract_and_save('temp_cube.fits',ra,dec,imsize,outname=objname+'_QUcube.fits',cubemode=True)
         os.system('rm temp_cube.fits')
         

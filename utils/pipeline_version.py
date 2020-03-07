@@ -1,3 +1,4 @@
+from __future__ import print_function
 import subprocess
 import os
 
@@ -6,11 +7,11 @@ def version():
     path = os.path.dirname(os.path.abspath(__file__))
     os.chdir(path)
     try:
-        result=subprocess.check_output('git describe --tags', shell=True).rstrip()
+        result=subprocess.check_output('git describe --tags', shell=True,universal_newlines=True).rstrip()
     except:
         result='unknown'
     os.chdir(prevdir)
     return result
 
 if __name__=='__main__':
-    print version()
+    print(version())

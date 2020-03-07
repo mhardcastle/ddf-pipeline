@@ -1,14 +1,19 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 from astropy.table import Table
 from astropy.io import fits
 import numpy as np
 from scipy.special import gammaln
 import emcee
-from auxcodes import get_rms
+from .auxcodes import get_rms
 
 def model(cbins,norm,alpha):
-    return (10**norm)*ds*(cbins/fluxnorm)**(-alpha)
+    return (10**norm)*ds*(old_div(cbins,fluxnorm))**(-alpha)
 
 def loglf(cbins,hist,norm,alpha):
     mu=model(cbins,norm,alpha)
@@ -18,7 +23,7 @@ def loglf(cbins,hist,norm,alpha):
 def lnprior(X):
     if X[0]<0 or X[0]>5 or X[1]<0 or X[1]>4.0:
         return -np.inf
-    return (-(X[1]-1.753)**2.0)/(0.01**2.0)
+    return old_div((-(X[1]-1.753)**2.0),(0.01**2.0))
 
 def lnpost(X,x,y):
     return lnprior(X)+loglf(x,y,X[0],X[1])
@@ -28,16 +33,16 @@ def do_fit_sourcecounts(t=None, rms=None,do_plots=False,sfindarea=17.09):
     global fluxnorm,ds
     if t is None:
         t=Table.read('image_full_ampphase_di_m.NS.cat.fits')
-    print 'Number of sources in full table is',len(t)
+    print('Number of sources in full table is',len(t))
     if rms is None:
         rms=get_rms(fits.open('image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'))
 
     cutoff=rms*20
-    print 'Cutoff will be',cutoff,'Jy'
+    print('Cutoff will be',cutoff,'Jy')
     #cutoff=1e-3
     maxflux=np.max(t['Total_flux'])
     t=t[t['Total_flux']>cutoff]
-    print 'Number of sources after completeness cut is',len(t)
+    print('Number of sources after completeness cut is',len(t))
 
     bins=np.logspace(np.log10(cutoff),np.log10(maxflux)*1.01,20)
     cbins=0.5*(bins[:-1]+bins[1:])
@@ -75,7 +80,7 @@ def do_fit_sourcecounts(t=None, rms=None,do_plots=False,sfindarea=17.09):
     errors=np.percentile(samplest,(16,84),axis=1)-means
 
     for i in range(ndim):
-        print i,means[i],errors[0,i],errors[1,i]
+        print(i,means[i],errors[0,i],errors[1,i])
 
     fnorm=means[0]
     falpha=means[1]
@@ -89,17 +94,17 @@ def do_fit_sourcecounts(t=None, rms=None,do_plots=False,sfindarea=17.09):
         ncn=0
         for i in range(6):
             ncn+=C[i]*lf**i
-        print 'for %.3f Jy number count norm should be %f' % (fn,10**ncn)
-        measured_ncn=10**fnorm*fluxnorm*(fn**1.5)*3282.8/sfindarea # check precise area
-        print 'measured number count norm is',measured_ncn 
-        scale=(measured_ncn/10**ncn)#**(1.0/1.5)
-        print 'scaling factor should be',scale
+        print('for %.3f Jy number count norm should be %f' % (fn,10**ncn))
+        measured_ncn=old_div(10**fnorm*fluxnorm*(fn**1.5)*3282.8,sfindarea) # check precise area
+        print('measured number count norm is',measured_ncn) 
+        scale=(old_div(measured_ncn,10**ncn))#**(1.0/1.5)
+        print('scaling factor should be',scale)
         totfactor*=scale
-        print 'total factor is',totfactor
-        fn=fluxnorm/totfactor
-        print 'New flux norm value is',fn
+        print('total factor is',totfactor)
+        fn=old_div(fluxnorm,totfactor)
+        print('New flux norm value is',fn)
         if abs(scale-1.0)<1e-4:
-            print 'Converged, stopping'
+            print('Converged, stopping')
             break
 
     if do_plots:
@@ -130,15 +135,15 @@ def test_sourcecounts(niter=100,size=13780,rms=1e-4):
     factors=[]
     scale=0.7
     for i in range(niter):
-        print 'Iteration',i
+        print('Iteration',i)
         fluxes=pl(3*rms,1,-0.753,size=size)
-        print fluxes
+        print(fluxes)
         fluxes+=rms*np.random.normal(size=size)
         fluxes*=scale
         t=Table([fluxes],names=('Total_flux',))
         _,_,totfactor=do_fit_sourcecounts(t=t,rms=rms*scale,do_plots=False)
         factors.append(totfactor)
-    print np.mean(factors), np.std(factors)
+    print(np.mean(factors), np.std(factors))
         
 if __name__=='__main__':
     test_sourcecounts()

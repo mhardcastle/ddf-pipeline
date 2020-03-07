@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import sys
 import pyrap.tables as pt
 import numpy as np
@@ -76,7 +79,7 @@ for d in sys.argv[1:]:
                 if os.path.isfile('image_'+ft+'.app.restored.fits'):
                     secondary_status = ft
         circles.append((name,ra,dec,s_colours[status],d_colour))
-        print "%-45s %-15s %8.3f %8.3f %-12s %-10s %s" % (d,name,ra,dec,status,job_status,secondary_status)
+        print("%-45s %-15s %8.3f %8.3f %-12s %-10s %s" % (d,name,ra,dec,status,job_status,secondary_status))
         continue
     # else check for image only
     ims=glob.glob('image_full_ampphase1m_shift.int.facetRestored.fits')
@@ -85,7 +88,7 @@ for d in sys.argv[1:]:
         if name is None:
             name=d.split('/')[-1]
             name=name.split('_')[0]
-        print "%-45s %-15s %8.3f %8.3f %-12s" % (d,name,ra,dec,'final')
+        print("%-45s %-15s %8.3f %8.3f %-12s" % (d,name,ra,dec,'final'))
         circles.append((name,ra,dec,'blue'))
 
 ras=np.array([c[1] for c in circles])
@@ -93,11 +96,11 @@ decs=np.array([c[2] for c in circles])
 rarange=max(ras)-min(ras)
 decrange=max(decs)-min(decs)
 yfigsize=1
-xfigsize=(rarange/decrange)*np.cos(np.mean(decs)*np.pi/180.0)
+xfigsize=(old_div(rarange,decrange))*np.cos(np.mean(decs)*np.pi/180.0)
 maxs=max((xfigsize,yfigsize))
-xfigsize*=18/maxs
-yfigsize*=18/maxs
-print xfigsize,yfigsize
+xfigsize*=old_div(18,maxs)
+yfigsize*=old_div(18,maxs)
+print(xfigsize,yfigsize)
 
 plt.figure(figsize=(xfigsize,yfigsize))
 

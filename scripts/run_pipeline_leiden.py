@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
+from __future__ import absolute_import
 from auxcodes import report,warn,die
 from surveys_db import use_database,update_status
-from download import download_dataset
-from download_field import download_field
-from unpack import unpack,unpack_db_update
-from make_mslists import make_list,list_db_update
+from .download import download_dataset
+from .download_field import download_field
+from .unpack import unpack,unpack_db_update
+from .make_mslists import make_list,list_db_update
 import sys
 import os
 

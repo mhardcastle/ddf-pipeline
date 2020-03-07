@@ -2,12 +2,17 @@
 
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import argparse
 from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic
 import os
 from auxcodes import getpos,getposim,dotdict
 import glob
-from mosaic import make_mosaic
+from .mosaic import make_mosaic
 from astropy.io import fits
 import numpy as np
 from surveys_db import SurveysDB
@@ -25,7 +30,7 @@ def make_header(maxsep,name,ra,dec,cellsize,resolution):
     header=fits.Header()
     size=(maxsep/2.0)*1.15
     cellsize/=3600.0
-    himsize=int(size/cellsize)
+    himsize=int(old_div(size,cellsize))
     header['SIMPLE']=True
     header['BITPIX']=-32
     header['NAXIS']=2
@@ -61,7 +66,7 @@ def make_header(maxsep,name,ra,dec,cellsize,resolution):
 
 def blank_mosaic(imname,himsize):
     hdu=fits.open(imname)
-    x=np.array(range(0,2*himsize))
+    x=np.array(list(range(0,2*himsize)))
     xv, yv = np.meshgrid(x, x)
     xv-=himsize
     yv-=himsize
@@ -86,7 +91,7 @@ if __name__=='__main__':
     pointingdict = read_pointingfile()
     ignorepointings = args.ignorepointings
 
-    print 'Now searching for results directories'
+    print('Now searching for results directories')
     cwd=os.getcwd()
 
     # find what we need to put in the mosaic
@@ -103,40 +108,40 @@ if __name__=='__main__':
     for p in mosaicpointings:
         if p in ignorepointings:
             continue
-        print 'Wanting to put pointing %s in mosaic'%p
+        print('Wanting to put pointing %s in mosaic'%p)
         for d in args.directories:
             rd=d+'/'+p
-            print rd
+            print(rd)
             if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
                 mosaicdirs.append(rd)
                 try:
                     qualitydict = sdb.get_quality(p)
                     currentdict = sdb.get_field(p)
-                    print qualitydict
+                    print(qualitydict)
                     #scale=qualitydict['scale']
                     scale= 1.0/(qualitydict['nvss_scale']/5.9124)
                     if scale is None:
-                        print 'Missing scaling factor for',p
+                        print('Missing scaling factor for',p)
                         missingpointing=True
                         scale=1.0
                     scales.append(scale)
 
                 except TypeError:
                     missingpointing = True
-                    print 'No scaling factor for ',p
+                    print('No scaling factor for ',p)
                     scales.append(1.0)
                 break
         else:
-            print 'Pointing',p,'not found'
+            print('Pointing',p,'not found')
             missingpointing = True
         if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
-            print 'Pointing',p,'not archived with archive_version 4'
+            print('Pointing',p,'not archived with archive_version 4')
             missingpointing = True
     if not(args.no_check) and missingpointing == True:
         sdb.close()
         raise RuntimeError('Failed to find a required pointing')
     sdb.close()
-    print 'Mosaicing using directories', mosaicdirs
+    print('Mosaicing using directories', mosaicdirs)
 
     # now construct the inputs for make_mosaic
 
@@ -145,25 +150,25 @@ if __name__=='__main__':
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     if args.do_scaling:
-        print 'Applying scales',scales
+        print('Applying scales',scales)
         mos_args.scale=scales
 
     if not(args.no_highres):
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
 
         mos_args.header=header
-        print 'Calling make_mosaic'
+        print('Calling make_mosaic')
         #with open('mosaic-header.pickle','w') as f:
         #    pickle.dump(header,f)
 
         make_mosaic(mos_args)
 
-        print 'Blanking the mosaic...'
+        print('Blanking the mosaic...')
 
         blank_mosaic('mosaic.fits',himsize)
 
     if args.do_lowres:
-        print 'Making the low-resolution mosaic...'
+        print('Making the low-resolution mosaic...')
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
         mos_args.header=header
         mos_args.rootname='low'
@@ -175,11 +180,11 @@ if __name__=='__main__':
 
         make_mosaic(mos_args)
 
-        print 'Blanking the mosaic...'
+        print('Blanking the mosaic...')
 
         blank_mosaic('low-mosaic.fits',himsize)
 
-    print 'Now running PyBDSF to extract sources'
+    print('Now running PyBDSF to extract sources')
     
     catprefix='mosaic'
     infile='mosaic-blanked.fits'

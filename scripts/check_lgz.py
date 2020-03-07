@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # Check what needs doing next for RGZ.
 
+from __future__ import print_function
 from surveys_db import SurveysDB
 from astropy.table import Table
 from panoptes_client import Panoptes, Project, SubjectSet, Subject, Workflow
@@ -27,7 +28,7 @@ def create_rgz_input(id):
     filt&=t['Maj']>15
     filt&=t['Peak_flux']>2*t['Isl_rms']
     st=t[filt]
-    print 'LGZ targets',len(st)
+    print('LGZ targets',len(st))
     tdir=target+id
     if not os.path.isdir(tdir):
         os.mkdir(tdir)
@@ -35,9 +36,9 @@ def create_rgz_input(id):
     return len(st)
 
 def download(id):
-    print 'Checking sources in %s for LGZ input' % id
+    print('Checking sources in %s for LGZ input' % id)
     n=create_rgz_input(id)
-    print 'Downloading image files'
+    print('Downloading image files')
     update_status(id,rgz_sources=n,gz_status="Downloading")
     result=os.system('cd %s; python %s/utils/download_image_files_legacy.py %s' % (target+id, lgz, id+'.fits'))
     if result==0:
@@ -48,7 +49,7 @@ def download(id):
     
 
 def make_images(id):
-    print 'Making images for %s' % id
+    print('Making images for %s' % id)
     update_status(id,gz_status="Creating images")
     result=os.system('cd %s; python %s/lgz_create/make_overlays_legacy_cscale.py %s 0 9999' % (target+id, lgz, id+'.fits'))
     if result==0:
@@ -57,7 +58,7 @@ def make_images(id):
         raise RuntimeError('Make images failed!')
 
 def upload_images(id):
-    print 'Create subject set and upload images for',id
+    print('Create subject set and upload images for',id)
     update_status(id,gz_status='Uploading')
     wd=os.getcwd()
     Panoptes.connect(username='mjh22',password=os.environ['PANOPTES_PASSWORD'])
@@ -68,13 +69,13 @@ def upload_images(id):
     subject_set.display_name=id
     subject_set.links.project=project
     subject_set.save()
-    print 'Made subject set'
+    print('Made subject set')
     new_subjects = []
     g=glob.glob('*-manifest.txt')
     for i,f in enumerate(g):
         bits=open(f).readlines()[0].split(',')
         metadata={'subject_id':int(bits[0]),'ra':float(bits[5]),'dec':float(bits[6]),'#size':float(bits[7]),'source_name':bits[4]}
-        print 'Upload doing',bits[4],'%i/%i' % (i,len(g))
+        print('Upload doing',bits[4],'%i/%i' % (i,len(g)))
         subject = Subject()
         subject.links.project = project
         subject.metadata.update(metadata)
@@ -88,7 +89,7 @@ def upload_images(id):
     workflow=Workflow(11973)
     workflow.links.subject_sets.add(subject_set)
     update_status(id,gz_status='In progress')
-    print 'Done!'
+    print('Done!')
     
 if __name__=='__main__':    
     download_thread=None
@@ -113,12 +114,12 @@ if __name__=='__main__':
 
         limit=int(open('/home/mjh/pipeline-master/ddf-pipeline/misc/lgz-limit.txt').readlines()[0].rstrip())
                 
-        print '\n\n-----------------------------------------------\n\n'
-        print 'LGZ status'
+        print('\n\n-----------------------------------------------\n\n')
+        print('LGZ status')
         print(datetime.datetime.now())
-        print
+        print()
         for k in sorted(d.keys()):
-            print "%-20s : %i" % (k,d[k])
+            print("%-20s : %i" % (k,d[k]))
 
         total=0
         tremain=0
@@ -136,28 +137,28 @@ if __name__=='__main__':
                 ftotal+=r['rgz_complete']
                 
                 
-        print 'Total sources in fields in progress',total,'of which',tremain,'are not retired'
-        print 'Non-retired lower limit is',limit
-        print 'Total sources created but not uploaded',ctotal
-        print 'Total sources retired',ftotal
+        print('Total sources in fields in progress',total,'of which',tremain,'are not retired')
+        print('Non-retired lower limit is',limit)
+        print('Total sources created but not uploaded',ctotal)
+        print('Total sources retired',ftotal)
         
         if download_thread is not None:
-            print 'Download thread is running (%s)' % download_name
+            print('Download thread is running (%s)' % download_name)
         if create_thread is not None:
-            print 'Create thread is running (%s)' % create_name
+            print('Create thread is running (%s)' % create_name)
         if upload_thread is not None:
-            print 'Upload thread is running (%s)' % upload_name
+            print('Upload thread is running (%s)' % upload_name)
 
         if download_thread is not None and not download_thread.isAlive():
-            print 'Download thread seems to have terminated'
+            print('Download thread seems to have terminated')
             download_thread=None
 
         if create_thread is not None and not create_thread.isAlive():
-            print 'Create thread seems to have terminated'
+            print('Create thread seems to have terminated')
             create_thread=None
 
         if upload_thread is not None and not upload_thread.isAlive():
-            print 'Upload thread seems to have terminated'
+            print('Upload thread seems to have terminated')
             upload_thread=None
 
             
@@ -165,12 +166,12 @@ if __name__=='__main__':
         for r in results:
             if r['gz_status'] is None:
                 non_running=r['id']
-                print 'First non-running field is',r['id']
+                print('First non-running field is',r['id'])
                 break
 
         if non_running is not None and ctotal<limit and download_thread is None:
             download_name=non_running
-            print 'We need to download a new file (%s)!' % download_name
+            print('We need to download a new file (%s)!' % download_name)
             download_thread=threading.Thread(target=download, args=(download_name,))
             download_thread.start()
 

@@ -2,6 +2,7 @@
 
 #insert a field and priority into the list for processing
 
+from __future__ import print_function
 import sys
 from surveys_db import SurveysDB
 
@@ -15,7 +16,7 @@ priority=int(sys.argv[2])
 sdb=SurveysDB()
 idd=sdb.get_id(id)
 if idd is not None:
-    print 'Field already exists in the database! (Status is %s)' % idd['status']
+    print('Field already exists in the database! (Status is %s)' % idd['status'])
 else:
     idd=sdb.create_id(id)
     idd['status']='Preprocessed'

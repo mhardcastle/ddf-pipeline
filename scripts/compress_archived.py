@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Compress the QU cubes for all archived data
 
 import os
@@ -5,12 +6,12 @@ import glob
 from surveys_db import SurveysDB
 
 def compress_fits(filename,q=4):
-    print 'Compressing and deleting',filename
+    print('Compressing and deleting',filename)
     if not os.path.isfile(filename+'.fz'):
         command='fpack -q %i %s' % (q,filename)
         os.system(command)
     else:
-        print 'Compressed file already exists, skipping'
+        print('Compressed file already exists, skipping')
     os.remove(filename)
     
 from multiprocessing import Pool

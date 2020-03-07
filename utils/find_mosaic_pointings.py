@@ -1,9 +1,14 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os,sys
 import numpy as np
 import argparse
-from auxcodes import sepn
-from surveys_db import SurveysDB
+from .auxcodes import sepn
+from .surveys_db import SurveysDB
 
 deg2rad = np.pi/180.0
 rad2deg = 180.0/np.pi
@@ -35,7 +40,7 @@ def find_pointings_to_mosaic(pointingdict,mospointingname):
 	# For now include the 6 closest pointings plus keep including others until we have all that are within the distance of 1.1 times the 6th closest pointing. At later stage try to take into account e.g. elongation of beam for low declination observations.
 	endmosindex = 7
 	for i in range(7,20):
-		if (sortedseps[i])/(sortedseps[6]) < 1.1:
+		if old_div((sortedseps[i]),(sortedseps[6])) < 1.1:
 			endmosindex = i
 	mosaicpointings = tomospointings[np.where(seps < sortedseps[endmosindex])]
 	mosseps = seps[np.where(seps < sortedseps[endmosindex])]
@@ -57,5 +62,5 @@ if __name__=='__main__':
             printline += (',%s'%mosaicpointings[i])
             printlineseps += (',%s'%mosseps[i])
 
-    print 'Separations: %s'%printlineseps[1:]
-    print 'Pointings: %s'%printline[1:]
+    print('Separations: %s'%printlineseps[1:])
+    print('Pointings: %s'%printline[1:])

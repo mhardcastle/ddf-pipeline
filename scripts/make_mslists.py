@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Make MS lists, checking for heavily flagged data
 
+from __future__ import print_function
 import os
 import glob
 import pyrap.tables as pt
@@ -24,7 +25,7 @@ def make_list(workdir='.',force=False):
     for ms in g:
         ff=check_flagged(ms)
         t0,t1=get_timerange(ms)
-        print ms,ff
+        print(ms,ff)
         if ff<0.8:
             full_mslist.append(os.path.basename(ms))
             start_times.append(t0)
@@ -61,7 +62,7 @@ if __name__=='__main__':
     import sys
     if len(sys.argv)>1:
         force=sys.argv[1]=='force'
-        print 'Force is',force
+        print('Force is',force)
     else:
         force=False
     success=make_list(workdir=os.getcwd(),force=force)

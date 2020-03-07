@@ -1,3 +1,4 @@
+from __future__ import print_function
 # MS archiving script contributed by R. van Weeren
 # LOFAR software must be on path and dysco on LD_LIBRARY_PATH
 
@@ -50,7 +51,7 @@ def make_imaging_weight_column(ms):
         dminfo['NAME'] = 'imagingweight'
         t.addcols(maketabdesc(cd), dminfo)
 
-        print "added column IMAGING_WEIGHT"
+        print("added column IMAGING_WEIGHT")
      
     t.flush()
     t.close()
@@ -90,7 +91,7 @@ for ms in msfiles:
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
 
     if not os.path.isdir(msout):
-      print cmd  
+      print(cmd)  
       result=os.system(cmd)
       if result!=0:
           os.system('rm -r '+msout)
@@ -105,9 +106,9 @@ for ms in msfiles:
            tout.putcol('IMAGING_WEIGHT', imw)
            tout.close()
         else:
-           print 'Warning: IMAGING_WEIGHT does not exist in input ms', ms
+           print('Warning: IMAGING_WEIGHT does not exist in input ms', ms)
       
         tin.close()
     else:
-        print 'Skipping',msout,'as it already exists'
+        print('Skipping',msout,'as it already exists')
         

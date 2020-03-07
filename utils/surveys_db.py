@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 import sshtunnel
 import socket
 import os
@@ -113,7 +115,7 @@ class SurveysDB(object):
         if not mysql_host:
             mysql_host='lofar-server.data'
         if verbose:
-            print 'MySQL host is',mysql_host
+            print('MySQL host is',mysql_host)
         cfg=open(home+'/.surveys').readlines()
         self.password=cfg[0].rstrip()
         try:
@@ -137,14 +139,14 @@ class SurveysDB(object):
         self.hostname=socket.gethostname()
         if self.hostname=='lofar-server':
             if verbose:
-                print 'Using direct connection to localhost'
+                print('Using direct connection to localhost')
             self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys')
         else:
             try:
                 dummy=socket.gethostbyname(mysql_host)
             except socket.gaierror:
                 if verbose:
-                    print 'Cannot find host',mysql_host,'will use tunnel'
+                    print('Cannot find host',mysql_host,'will use tunnel')
                 self.usetunnel=True
 
             if self.usetunnel:
@@ -165,7 +167,7 @@ class SurveysDB(object):
                         self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys')
                         connected=True
                     except mdb.OperationalError as e:
-                        print 'Database temporary error! Sleep to retry',e
+                        print('Database temporary error! Sleep to retry',e)
                         retry+=1
                         sleep(20)
                 if not connected:
@@ -185,7 +187,7 @@ class SurveysDB(object):
 
     def execute(self,*args):
         if self.verbose:
-            print args
+            print(args)
         self.cur.execute(*args)
 
     def close(self):
@@ -292,6 +294,6 @@ if __name__=='__main__':
     result=sdb.db_get('fields','P35Hetdex10')
     #result['location']='Never Never Land'
     #sdb.set_id(result)
-    print result
+    print(result)
     sdb.close()
 

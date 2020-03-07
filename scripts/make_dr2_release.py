@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+from builtins import range
 import os
 from auxcodes import separator,warn
 from surveys_db import SurveysDB
@@ -15,11 +17,11 @@ def do_rsync(s):
     while True:
         retval=call(s,shell=True)
         if retval!=0:
-            print 'Non-zero return value',retval
+            print('Non-zero return value',retval)
         if retval!=30:
             break
         else:
-            print 'Retry on timeout'
+            print('Retry on timeout')
     return retval
    
 
@@ -39,7 +41,7 @@ if __name__=='__main__':
     skip_construct=False
     while True:
         print(datetime.now())
-        print
+        print()
 
         # make status plot
         separator('Making plot')
@@ -63,7 +65,7 @@ if __name__=='__main__':
             sdb.cur.execute('select * from fields left join quality on fields.id=quality.id where status="Archived" or status="Complete" order by ra')
             result=sdb.cur.fetchall()
 
-        print 'There are',len(result),'complete datasets'
+        print('There are',len(result),'complete datasets')
 
         if not skip_construct:
             separator('Preparing release directory')
@@ -72,7 +74,7 @@ if __name__=='__main__':
             os.chdir(workdir+'/fields')
             for r in result:
                 id=r['id']
-                print 'Doing',id
+                print('Doing',id)
                 if not os.path.isdir(id):
                     warn('Directory %s does not exist, making it' % id)
                     os.mkdir(id)
@@ -91,7 +93,7 @@ if __name__=='__main__':
                             source=location+'/'+f
                             if not os.path.isfile(tdir+'/'+f) or (os.path.isfile(source)  and os.path.getmtime(source)>os.path.getmtime(tdir+'/'+f)):
                                 if os.path.isfile(source):
-                                    print 'Need to copy',f,'to',tdir
+                                    print('Need to copy',f,'to',tdir)
                                     copy2(source,tdir)
                                 else:
                                     warn('Source file %s does not exist' % source)
@@ -110,7 +112,7 @@ if __name__=='__main__':
                                     download_file(id,f)
                             else:
                                 if not os.path.isfile(tdir+'/'+f):
-                                    print 'Need to download',id+'/'+f,'from archive'
+                                    print('Need to download',id+'/'+f,'from archive')
                                     download_file(id,f)
 
         separator('Write web page')

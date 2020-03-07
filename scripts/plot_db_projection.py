@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,7 +44,7 @@ def plot_select(r,sf,label,**kwargs):
 
     ra_r,dec_r=cc(ra,dec)
     plt.scatter(ra_r,dec_r,label=label,**kwargs)
-    print "%-20s : %i" % (label,len(r_in))
+    print("%-20s : %i" % (label,len(r_in)))
     return r_in,r_out
     
 with SurveysDB(readonly=True) as sdb:
@@ -51,7 +54,7 @@ with SurveysDB(readonly=True) as sdb:
     sdb.cur.execute('select ra,decl from fields where dr2>0')
     dr2_results=sdb.cur.fetchall()
     
-print len(results),'fields have some observations'
+print(len(results),'fields have some observations')
         
 fig = plt.figure(figsize=(16, 8))
 fig.add_subplot(111, projection='aitoff')

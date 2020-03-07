@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from getcpus import getcpus
 
 option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),

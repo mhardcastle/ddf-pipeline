@@ -10,10 +10,17 @@
 # 4) fit to offset histograms
 # 5) apply shift -- to be done by ddf-pipeline
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
 from auxcodes import report,run,warn,die,get_centpos
-from quality_pipeline import sepn
+from .quality_pipeline import sepn
 import requests
 import os
 from get_cat import get_cat
@@ -36,7 +43,7 @@ degtorad=np.pi/180.0
 import sys
 
 def model(x,norm,sigma,offset,bl,radius=60):
-    return bl*np.sqrt(radius**2.0-x**2.0)/radius+norm*np.exp(-(x-offset)**2.0/(2*sigma**2.0))
+    return old_div(bl*np.sqrt(radius**2.0-x**2.0),radius)+norm*np.exp(old_div(-(x-offset)**2.0,(2*sigma**2.0)))
 
 class Offsets(object):
     def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc'):
@@ -64,7 +71,7 @@ class Offsets(object):
         for f in range(self.n):
             t=tf[tf['Facet']==f]
             if len(t)==0:
-                print 'No sources in facet',f
+                print('No sources in facet',f)
                 self.dral.append(None)
                 self.ddecl.append(None)
                 continue
@@ -74,7 +81,7 @@ class Offsets(object):
             maxdec=np.max(t['DEC'])
             otf=ot[(ot['ra']>=(minra-sep/60.0)) & (ot['ra']<=(maxra+sep/60.0)) &
                    (ot['dec']>=(mindec-sep/60.0)) & (ot['dec']<=(maxdec+sep/60.0))]
-            print 'Facet %2i has %4i LOFAR sources and %6i comparison sources' % (f,len(t),len(otf))
+            print('Facet %2i has %4i LOFAR sources and %6i comparison sources' % (f,len(t),len(otf)))
 
             dral=[]
             ddecl=[]
@@ -191,9 +198,9 @@ class Offsets(object):
         self.rah=[]
         self.dech=[]
         for i in range(self.n):
-            print 'Facet',i
+            print('Facet',i)
             if self.dral[i] is None:
-                print 'Not fitting, no data'
+                print('Not fitting, no data')
                 self.rar.append([0,0,0,0])
                 self.rae.append([100,100,100,100])
                 self.decr.append([0,0,0,0])
@@ -203,7 +210,7 @@ class Offsets(object):
                 h,_=np.histogram(self.dral[i],self.bins)
                 self.rah.append(h)
                 p,perr=fitfn(h)
-                print 'RA Offset is ',p[2],'+/-',perr[2]
+                print('RA Offset is ',p[2],'+/-',perr[2])
                 self.rar.append(p)
                 self.rae.append(perr)
                 h,_=np.histogram(self.ddecl[i],self.bins)
@@ -211,7 +218,7 @@ class Offsets(object):
                 p,perr=fitfn(h)
                 self.decr.append(p)
                 self.dece.append(perr)
-                print 'DEC Offset is ',p[2],'+/-',perr[2]
+                print('DEC Offset is ',p[2],'+/-',perr[2])
         self.rar=np.array(self.rar)
         self.rae=np.array(self.rae)
         self.decr=np.array(self.decr)
@@ -247,7 +254,7 @@ class Offsets(object):
                     plt.plot(c[:,:,i].transpose())
                     plt.ylabel(labels[i])
                     plt.xlabel('Samples')
-                facet=j/2
+                facet=old_div(j,2)
                 chain=j%2
                 plt.suptitle('Facet %i chain %i' % (facet,chain))
                 pdf.savefig()
@@ -267,7 +274,7 @@ class Offsets(object):
         mdec=np.mean(decrange)
         xstrue=(rarange[1]-rarange[0])*np.cos(mdec*np.pi/180.0)
         ystrue=decrange[1]-decrange[0]
-        plt.figure(figsize=(basesize*xstrue/ystrue, basesize))
+        plt.figure(figsize=(old_div(basesize*xstrue,ystrue), basesize))
         plt.xlim(rarange)
         plt.ylim(decrange)
         plt.xlabel('RA')
@@ -291,7 +298,7 @@ class Offsets(object):
                 plt.text(mra[-1],mdec[-1],str(f),color='blue')
                 mdra.append(self.rar[f,2])
                 mddec.append(self.decr[f,2])
-                print f,len(t),mra[-1],mdec[-1],mdra[-1],mddec[-1]
+                print(f,len(t),mra[-1],mdec[-1],mdra[-1],mddec[-1])
 
                 plt.gca().invert_xaxis()
                 plt.quiver(mra,mdec,mdra,mddec,units = 'xy', angles='xy', scale=1.0,color='red')
@@ -308,13 +315,13 @@ class Offsets(object):
         for l in lines:
             bits=[b.strip() for b in l.split(',')]
             rar=float(bits[2])
-            ra=rar/degtorad
+            ra=old_div(rar,degtorad)
             decr=float(bits[3])
-            dec=decr/degtorad
+            dec=old_div(decr,degtorad)
             number=self.r.which_poly(ra,dec)
             #print 'Direction',pli[number]
             direction=self.pli[number]
-            print >>outfile, rar,decr,-self.rar[direction,2]/cellsize,self.decr[direction,2]/cellsize
+            print(rar,decr,old_div(-self.rar[direction,2],cellsize),old_div(self.decr[direction,2],cellsize), file=outfile)
         outfile.close()
 
     def make_astrometry_map(self,outname,factor):
@@ -331,9 +338,9 @@ class Offsets(object):
         rmap=np.ones((1,1,yd,xd))*np.nan
         # this would be faster with use of e.g. PIL
         for y in range(yd):
-            print '.',
+            print('.', end=' ')
             sys.stdout.flush()
-            xv=np.array(range(xd))
+            xv=np.array(list(range(xd)))
             yv=y*np.ones_like(xv)
             ra,dec,_,_=w.wcs_pix2world(xv,yv,0,0,0)
             dra,ddec=self.r.coordconv(ra,dec)[1]
@@ -342,7 +349,7 @@ class Offsets(object):
                 if number is not None:
                     direction=self.pli[number]
                     rmap[0,0,y,x]=np.sqrt(self.rae[direction,2]**2.0+self.dece[direction,2]**2.0)
-        print
+        print()
         hdus[0].data=rmap
         hdus.writeto(outname,clobber=True)
 
@@ -363,7 +370,7 @@ def merge_cat(rootname,rastr='ra',decstr='dec'):
         try:
             t=Table.read(f)
         except:
-            print 'Error reading table',f
+            print('Error reading table',f)
             raise
         t2=Table()
         t2['ra']=t[rastr]
@@ -424,12 +431,12 @@ def do_offsets(o):
         img.write_catalog(outfile=gaulfile,catalog_type='gaul',format='fits',correct_proj='True')
 
     lofar=Table.read(catfile)
-    print len(lofar),'LOFAR sources before filtering'
+    print(len(lofar),'LOFAR sources before filtering')
     filter=(lofar['E_RA']*3600.0)<2.0
     filter&=(lofar['E_DEC']*3600.0)<2.0
     filter&=(lofar['Maj']*3600.0)<10
     lofar=lofar[filter]
-    print len(lofar),'LOFAR sources after filtering'
+    print(len(lofar),'LOFAR sources after filtering')
     regfile=image_root+'.tessel.reg'
     cra,cdec=get_centpos()
     report('Set up structure')

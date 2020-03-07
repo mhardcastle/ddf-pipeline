@@ -1,5 +1,10 @@
+from __future__ import print_function
+from __future__ import division
 # Tools for cross-matching catalogues
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 
 def bootstrap(data,function,iters):
@@ -75,20 +80,20 @@ if __name__=='__main__':
     t=Table.read('image_full_ampphase1m.smooth.int.restored.pybdsm.srl.fits')
     ref_ra=np.mean(t['RA'])
     ref_dec=np.mean(t['DEC'])
-    print 'original length:',len(t)
+    print('original length:',len(t))
     t=filter_catalogue(t,ref_ra,ref_dec,2.5)
-    print 'filter to 2.5 deg:',len(t)
+    print('filter to 2.5 deg:',len(t))
     t=select_isolated_sources(t,30)
-    print 'isolated sources',len(t)
+    print('isolated sources',len(t))
     t=t[t['Total_flux']>8e-3]
     nvss=Table.read('/stri-data/mjh/bootstrap/NVSS.fits')
     nvss=filter_catalogue(nvss,ref_ra,ref_dec,2.5)
-    print 'There are',len(t),'sources and',len(nvss),'NVSS sources'
+    print('There are',len(t),'sources and',len(nvss),'NVSS sources')
     t.write('lofar_in.fits',overwrite=True)
     nvss.write('nvss_in.fits',overwrite=True)
     match_catalogues(t,nvss,10,'NVSS')
     t=t[~np.isnan(t['NVSS_separation'])]
-    ratios=t['Total_flux']/t['NVSS_Total_flux']
-    print 'Median flux ratio:',np.median(ratios)
-    print 'Bootstrap range:',np.percentile(bootstrap(ratios,np.median,1000),(16,84))
+    ratios=old_div(t['Total_flux'],t['NVSS_Total_flux'])
+    print('Median flux ratio:',np.median(ratios))
+    print('Bootstrap range:',np.percentile(bootstrap(ratios,np.median,1000),(16,84)))
     t.write('matched.fits',overwrite=True)

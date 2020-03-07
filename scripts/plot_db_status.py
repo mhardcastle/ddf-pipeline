@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import numpy as np
 import matplotlib.pyplot as plt
 from surveys_db import SurveysDB
@@ -32,7 +35,7 @@ def plotcircle(name,ra,dec,color,pcolor='black'):
     plt.text(ra,dec,name)
 
 jobs=qstat()
-print jobs
+print(jobs)
 circles=[]
 
 s_colours={'D/L failed':'black','List failed':'black','Downloading':'red','Downloaded':'orange','Unpacking':'orange','Unpacked':'orange','Ready':'yellow','Queued':'blue','Running':'cyan','Complete':'green','Archiving':'green','Archived':'olive','Stopped':'magenta','Failed':'magenta','DI_started':'white'}
@@ -61,7 +64,7 @@ for f in fields:
                 job_status = 'other ('+jobs[shortname]+')'
             
     circles.append((shortname,f['ra'],f['decl'],s_colours[status],d_colour))
-    print "%-15s %8.3f %8.3f %-12s %-20s %-10s" % (shortname,f['ra'],f['decl'],status,f['nodename'],job_status)
+    print("%-15s %8.3f %8.3f %-12s %-20s %-10s" % (shortname,f['ra'],f['decl'],status,f['nodename'],job_status))
 
 
 ras=np.array([c[1] for c in circles])
@@ -69,11 +72,11 @@ decs=np.array([c[2] for c in circles])
 rarange=max(ras)-min(ras)
 decrange=max(decs)-min(decs)
 yfigsize=1
-xfigsize=(rarange/decrange)*np.cos(np.mean(decs)*np.pi/180.0)
+xfigsize=(old_div(rarange,decrange))*np.cos(np.mean(decs)*np.pi/180.0)
 maxs=max((xfigsize,yfigsize))
-xfigsize*=16/maxs
-yfigsize*=12/maxs
-print xfigsize,yfigsize
+xfigsize*=old_div(16,maxs)
+yfigsize*=old_div(12,maxs)
+print(xfigsize,yfigsize)
 
 plt.figure(figsize=(xfigsize,yfigsize))
 

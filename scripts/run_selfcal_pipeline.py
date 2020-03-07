@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
 from auxcodes import report,warn,die
 from surveys_db import *
-from download import download_dataset
-from download_field import download_field
-from run_job import do_run_job
-from unpack import unpack
-from make_mslists import make_list,list_db_update
-from average import average
+from .download import download_dataset
+from .download_field import download_field
+from .run_job import do_run_job
+from .unpack import unpack
+from .make_mslists import make_list,list_db_update
+from .average import average
 from auxcodes import MSList
 import sys
 import os
@@ -29,11 +32,11 @@ def do_rsync_upload(cname,basedir,f):
 
     while True:
         s= 'rsync -avz --relative --progress --perms --chmod=ugo+rX --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname +'/selfcal/' 
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
@@ -48,11 +51,11 @@ def do_rsync_download(cname,basedir,f):
 
     while True:
         s= 'rsync -azvh --timeout=20 --progress '+target+workdir + ' ' + f
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
@@ -84,7 +87,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     except AttributeError:
         bad_pointings = ['']
 
-    print 'Populating the selfcal pointings -- a copy of fields but excluding bad_pointings'
+    print('Populating the selfcal pointings -- a copy of fields but excluding bad_pointings')
     selfcal_pointings = ''
     for field in fields:
         if field not in bad_pointings:
@@ -92,7 +95,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     selfcal_pointings = selfcal_pointings[:-1]
     
     
-    print 'Working on ',name, 'in fields', fields,'bad pointings',bad_pointings,'selfcal_pointings',selfcal_pointings,'current selfcal status',selfcal_status
+    print('Working on ',name, 'in fields', fields,'bad pointings',bad_pointings,'selfcal_pointings',selfcal_pointings,'current selfcal status',selfcal_status)
     
   
     workdir=basedir+'/'+name
@@ -100,7 +103,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
         os.mkdir(workdir)
     except OSError:
         warn('Working directory already exists')
-    print 'In directory', os.getcwd()
+    print('In directory', os.getcwd())
     os.chdir(workdir)
     # Update status to running here
     selfcal_status = 'STARTED'
@@ -110,14 +113,14 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     extractdict['selfcal_pointings'] = selfcal_pointings
     sdb.db_set('reprocessing',extractdict)
     sdb.close()
-    print 'Updated status to STARTED for',name
+    print('Updated status to STARTED for',name)
     time.sleep(2.0)
     
-    print 'Starting rsync'
+    print('Starting rsync')
     fieldstring = ''
 
     for fieldid, field in enumerate(fields):
-        print field, fields
+        print(field, fields)
     
         sdb=SurveysDB()
         extractdict = sdb.get_reprocessing(name)
@@ -127,19 +130,19 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
         if extract_status[fieldid] == 'EDONE' and field in selfcal_pointings:
           cmd = '%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name)
           observations = check_output('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd, shell=True)
-          print 'ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd
+          print('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd)
           observations = observations.split('\n')[:-1] # remove last empty item in this list
         else:
           observations = []
 
-        print 'DATA LOCATIONS', observations
-        print 'FIELDS', fields
-        print 'SELFCAL_POINTINGS', selfcal_pointings
-        print 'BAD_POINTINGS',bad_pointings
-        print 'EXTRACT STATUS', extract_status
+        print('DATA LOCATIONS', observations)
+        print('FIELDS', fields)
+        print('SELFCAL_POINTINGS', selfcal_pointings)
+        print('BAD_POINTINGS',bad_pointings)
+        print('EXTRACT STATUS', extract_status)
 
         for observation in observations:
-            print observation
+            print(observation)
             report('Copying data from %s'%observation)
         
             #'+ inarchivedir +'/' + name + '/' + field +'/' + field +'_'+name +'.dysco.sub.shift.avg.weights.ms.archive')
@@ -167,7 +170,7 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     
 
     # Run subtract code
-    print os.getcwd(), 'working here'
+    print(os.getcwd(), 'working here')
     
     
     if uvmin > 0.0:
@@ -190,11 +193,11 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     extractdict['selfcal_status'] = selfcal_status
     sdb.db_set('reprocessing',extractdict)
     sdb.close()
-    print 'Updated status to SDONE for',name
+    print('Updated status to SDONE for',name)
     
 
 if __name__=='__main__':
     target = get_next_selfcalibration()['id']
-    print target
+    print(target)
     # Takes the targetname, the current directory (the working directory), and the directory that contains the LoTSS-DR2 archive
     do_run_selfcal(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract/')

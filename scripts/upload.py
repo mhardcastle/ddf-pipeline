@@ -4,6 +4,8 @@
 
 # version 2 -- simple rsync wrapper with timeout
 
+from __future__ import print_function
+from builtins import range
 from subprocess import call
 import os
 import glob
@@ -38,11 +40,11 @@ def do_rsync(name,basedir,f):
 
     while True:
         s='cd '+workdir+'; rsync -avz --progress --safe-links --perms --chmod=ugo+rX --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         sleep(10)
@@ -56,7 +58,7 @@ def do_delete_keep(name,basedir):
         g=glob.glob(basedir+'/'+name+'/KEEP/*')
         fl=[os.path.basename(f) for f in g]
         command+=' '.join(fl)
-        print command
+        print(command)
         os.system('ssh '+target+' "'+command+'"')
         
 def do_upload_compressed(name,basedir):
