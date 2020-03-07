@@ -140,7 +140,7 @@ class SurveysDB(object):
         if self.hostname=='lofar-server':
             if verbose:
                 print('Using direct connection to localhost')
-            self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys')
+            self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys',cursorclass=mdbcursors.DictCursor)
         else:
             try:
                 dummy=socket.gethostbyname(mysql_host)
@@ -158,13 +158,13 @@ class SurveysDB(object):
 
                 self.tunnel.start()
                 localport=self.tunnel.local_bind_port
-                self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport)
+                self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport, cursorclass=mdbcursors.DictCursor)
             else:
                 connected=False
                 retry=0
                 while not connected and retry<10:
                     try:
-                        self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys')
+                        self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys',cursorclass=mdbcursors.DictCursor)
                         connected=True
                     except mdb.OperationalError as e:
                         print('Database temporary error! Sleep to retry',e)
@@ -172,7 +172,7 @@ class SurveysDB(object):
                         sleep(20)
                 if not connected:
                     raise RuntimeError("Cannot connect to database server")
-        self.cur = self.con.cursor(cursorclass=mdbcursors.DictCursor)
+        self.cur = self.con.cursor()
         if self.readonly:
             pass
             #can't use this feature on lofar's version of MariaDB

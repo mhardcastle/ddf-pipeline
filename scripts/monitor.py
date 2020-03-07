@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Code to run continuously and keep an eye on the state of the queue
 # Download new files if needed
@@ -11,8 +11,8 @@ import datetime
 from surveys_db import SurveysDB,get_next
 import os
 import threading
-from .run_pipeline import do_run_pipeline
-from .upload import do_upload,do_upload_compressed,do_delete_keep
+from run_pipeline import do_run_pipeline
+from upload import do_upload,do_upload_compressed,do_delete_keep
 import glob
 import MySQLdb
 

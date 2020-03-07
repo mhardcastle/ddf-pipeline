@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Call with the ILT name or other object name plus a region size in degrees
 
 from __future__ import print_function

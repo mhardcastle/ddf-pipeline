@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# For Vijay: make a polarization sub-image for a source
+#!/usr/bin/env python
+# Make a polarization sub-image for a source
 # Call with the ILT name or other object name plus a region size in degrees
 
 from __future__ import print_function

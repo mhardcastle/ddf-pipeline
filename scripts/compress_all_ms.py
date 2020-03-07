@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Torque-based script to generate compressed versions of all archived
 # datasets that don't already have .archive files

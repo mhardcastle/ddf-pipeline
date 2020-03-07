@@ -1,7 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Make cutouts of pipeline products
-# Eventually we want to use this for thumbnails etc...
 
 # from git/lotss-catalogue/utils/subim.py
 

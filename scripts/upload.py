@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Upload to archive directory
 # To store on Leiden systems in /disks/paradata/shimwell/LoTSS-DR2/archive
 

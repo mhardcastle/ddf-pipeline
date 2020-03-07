@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Check what needs doing next for RGZ.
 
 from __future__ import print_function

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # download a field by finding all the observations from the database that go with that field
 
@@ -8,7 +8,7 @@ from builtins import str
 import sys
 import os
 from surveys_db import SurveysDB,tag_field
-from .download import download_dataset
+from download import download_dataset
 
 def download_field(fname,basedir=None,force=False):
 
