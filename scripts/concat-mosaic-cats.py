@@ -145,7 +145,13 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
     pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
     if cattype == 'gaus':
         sourcecat = fits.open(mosaiccat)
-        mosaiccat = glob.glob(mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS'))[0]
+        globstring=mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS')
+        files=glob.glob(globstring)
+        if len(files)==0:
+            print 'Globstring was',globstring
+            raise RuntimeError('Failed to find gaul file')
+        else:
+            mosaiccat = files[0]
         
     cat = fits.open(mosaiccat)
     

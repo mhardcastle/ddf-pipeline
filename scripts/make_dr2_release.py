@@ -54,11 +54,9 @@ if __name__=='__main__':
             # sync mosaics directory
             separator('Mosaic sync')
             os.chdir(workdir+'/mosaics')
-            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' '%s@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA13h_field/*' ." % os.environ['DDF_PIPELINE_LEIDENUSER']
-            do_rsync(s)
-            s="rsync --progress --timeout=10 -avz --exclude '*.out' --include 'P*' --include 'mosaic-blanked.fits' --include 'mosaic.cat.fits' --include 'mosaic.resid.fits' --include 'mosaic.rms.fits' --include 'low-mosaic-blanked.fits' --exclude '*' '%s@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/RA0h_field/*' ." % os.environ['DDF_PIPELINE_LEIDENUSER']
-            do_rsync(s)
-
+            for d in ['RA13h_field','RA0h_field']:
+                s="rsync --progress --timeout=10 -avz --exclude 'astroblank-*' --exclude '*.out' --exclude '*.py' --exclude 'background' --exclude '*~' --exclude 'old' --exclude '*.sh' --exclude 'low-mosaic-weights.fits' --exclude 'mosaic.fits' --exclude 'wavelet' --exclude 'model' --exclude 'residual' --exclude 'mosaic.pybdsmmask.fits' --exclude 'mosaic-weights.fits' --exclude 'reproject-*.fits' --exclude 'weight-*.fits' --exclude 'low-reproject-*.fits' --exclude 'low-weight-*.fits' --exclude 'low-mosaic.fits' %s@ssh.strw.leidenuniv.nl:/disks/paradata/shimwell/LoTSS-DR2/mosaics/%s/ ." % (os.environ['DDF_PIPELINE_LEIDENUSER'],d)
+                do_rsync(s)
             # now go through all archived and completed fields and make sure they're in the DR2 directory
 
         with SurveysDB() as sdb:
