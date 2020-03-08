@@ -77,7 +77,7 @@ def modify_mask(infile,outfile,table,radius,fluxlim,save_filtered=None,do_extend
             mask[0,0,Y[rv<radius].astype(int),X[rv<radius].astype(int)]=1
 
     hdu[0].data=(map.astype(int) | mask).astype(np.float32)
-    hdu.writeto(outfile,clobber=True)
+    hdu.writeto(outfile,overwrite=True)
     if save_filtered is not None:
         t.write(save_filtered,overwrite=True)
         

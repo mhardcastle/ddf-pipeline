@@ -316,7 +316,7 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
         report('Make blank external mask')
         hdus=fits.open(templatename)
         hdus[0].data=np.zeros_like(hdus[0].data,dtype=np.int32)
-        hdus.writeto(fname,clobber=True)
+        hdus.writeto(fname,overwrite=True)
         hdus.close()
         if use_tgss and options['tgss'] is not None:
             report('Merging the mask with TGSS catalogue')

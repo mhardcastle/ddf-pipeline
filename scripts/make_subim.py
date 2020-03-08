@@ -170,7 +170,7 @@ def extract_subim(filename,ra,dec,size,hduid=0,verbose=True,cubemode=False):
 
 def extract_and_save(filename,ra,dec,size,outname='cutout.fits',cubemode=False):
     hdu=extract_subim(filename,ra,dec,size,verbose=False,cubemode=cubemode)
-    hdu.writeto(outname,clobber=True)
+    hdu.writeto(outname,overwrite=True)
 
 
 if __name__=='__main__':

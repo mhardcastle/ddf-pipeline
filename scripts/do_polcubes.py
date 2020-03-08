@@ -44,7 +44,7 @@ def make_cube(freqs,hdus,outfile):
     ohdu=hdus[0]
     ohdu[0].data=newdata
     ohdu[0].header['NAXIS4']=np.sum(chans)
-    hdus[0].writeto(outfile,clobber=True)
+    hdus[0].writeto(outfile,overwrite=True)
 
 def do_polcubes(colname,
                 CurrentDDkMSSolName,

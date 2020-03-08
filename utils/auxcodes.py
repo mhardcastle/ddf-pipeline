@@ -228,7 +228,7 @@ def get_rms_map(infilename,ds9region,outfilename):
         rmsval = get_rms_array(hdu[0].data[0][0][np.where(manualmask == True)])
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
-    hdu.writeto(outfilename,clobber=True)
+    hdu.writeto(outfilename,overwrite=True)
 
 def get_rms_map2(infilename,ds9region,outfilename):
 
@@ -249,7 +249,7 @@ def get_rms_map2(infilename,ds9region,outfilename):
         rmsval = np.mean(hdu[0].data[0][0][np.where(manualmask == True)])
         hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
-    hdu.writeto(outfilename,clobber=True)
+    hdu.writeto(outfilename,overwite=True)
     
 class dotdict(dict):
     """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""

@@ -18,7 +18,7 @@ def add_manual_mask(infile,ds9region,outfile):
     manualmask = r.get_mask(hdu=hduflat)
 
     hdu[0].data=(map.astype(int) | manualmask).astype(np.float32)
-    hdu.writeto(outfile,clobber=True)
+    hdu.writeto(outfile,overwrite=True)
 
 def merge_mask(in1,in2,outfile):
     hdu1=fits.open(in1)
@@ -28,7 +28,7 @@ def merge_mask(in1,in2,outfile):
     map2=hdu2[0].data.astype(np.int32)
 
     hdu1[0].data = (map1 | map2).astype(np.float32)
-    hdu1.writeto(outfile,clobber=True)
+    hdu1.writeto(outfile,overwrite=True)
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD_m_c.tessel.reg'):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
