@@ -1048,28 +1048,6 @@ def main(o=None):
                                            colname=colname,clusterfile=None,automask=True,
                                            automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher)
-
-        # ##########################################################
-        # Initial dirty image to allow an external (TGSS) mask to be made
-        separator("Initial dirty")
-        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
-                  apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
-
-        separator("External mask")
-        external_mask='external_mask.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-
-
-        # Deep SSD clean with this external mask and automasking
-        separator("DI Deconv (externally defined sources)")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
-                                           majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
-                                           peakfactor=0.01,rms_factor=3,
-                                           colname=colname,clusterfile=None,automask=True,
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
-                                           uvrange=uvrange,catcher=catcher)
-
     
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
