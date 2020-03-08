@@ -6,7 +6,7 @@ def get_physical_cpus():
 
 def getcpus():
     nodefile=os.getenv('PBS_NODEFILE')
-    if nodefile:
+    if nodefile and os.path.isfile(nodefile):
         lines=len(open(nodefile).readlines())
         return lines
     else:
