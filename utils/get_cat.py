@@ -3,14 +3,14 @@ from __future__ import absolute_import
 # Get an external catalogue by downloading
 
 from builtins import str
-from .hextile import hextile
+from hextile import hextile
 import requests
 import astropy.coordinates as coord
 import astropy.units as u
 import os
 from time import sleep
-from .download_file import download_file
-from .auxcodes import find_fullres_image
+from download_file import download_file
+from auxcodes import find_fullres_image
 
 CSIZE=0.5
 PSBASE='/data/lofar/panstarrs/healpix'

@@ -10,7 +10,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from .auxcodes import flatten
+from auxcodes import flatten
 import numpy as np
 
 def hextile(image,radius):

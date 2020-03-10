@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from builtins import str
 from astropy.table import Table
 import numpy as np
-from .crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
+from crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
 
 def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=''):
 

@@ -10,7 +10,7 @@ from scipy.optimize import curve_fit
 #from astropy.table import Table
 import numpy as np
 import sys
-from .fitting_factors import pl,chi2,read_frequencies_fluxes
+from fitting_factors import pl,chi2,read_frequencies_fluxes
 
 def fitall(scale,frequencies,fluxes,errors,smask):
 
