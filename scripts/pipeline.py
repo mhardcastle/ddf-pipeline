@@ -429,6 +429,25 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         else:
             runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
+            # check for option to stop pdb call and use it if present
+            # we parse the parset to make this general,
+            # it may be useful at some point
+            
+            if 'KILLMS_DIR' in os.environ:
+                parset=os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg'
+                keywords=[]
+                if os.path.isfile(parset):
+                    with open(parset) as infile:
+                        lines=infile.readlines()
+                    for l in lines:
+                        bits=l.split()
+                        if len(bits)>0 and l[0]!='[':
+                            keywords.append(bits[0])
+                    if 'DebugPdb' in keywords:
+                        runcommand+=' --DebugPdb=0'
+                else:
+                    warn('Cannot find killms parset, some features may not work')    
+            
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:

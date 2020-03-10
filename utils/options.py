@@ -7,35 +7,9 @@ standard_library.install_aliases()
 from builtins import str
 import configparser
 import os
-import struct
 import re
 import sys
-
-def _get_terminal_size_linux():
-    ''' From https://gist.github.com/jtriley/1108174 '''
-    def ioctl_GWINSZ(fd):
-        try:
-            import fcntl
-            import termios
-            cr = struct.unpack('hh',
-                               fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-            return cr
-        except:
-            pass
-    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-    if not cr:
-        try:
-            fd = os.open(os.ctermid(), os.O_RDONLY)
-            cr = ioctl_GWINSZ(fd)
-            os.close(fd)
-        except:
-            pass
-    if not cr:
-        try:
-            cr = (os.environ['LINES'], os.environ['COLUMNS'])
-        except:
-            return None
-    return int(cr[1]), int(cr[0])
+from termsize import get_terminal_size_linux
 
 def options(optlist,option_list):
 
@@ -108,7 +82,9 @@ def print_options(option_list):
     # expected to be called if a config file is not specified. Print a
     # list of options
     option_list=sorted(option_list,key=lambda x:x[1])
-    width,height=_get_terminal_size_linux()
+    width,height=get_terminal_size_linux()
+    if width is None:
+        width=80
     sections=sorted(set(x[0] for x in option_list))
     klen=max([len(x[1]) for x in option_list])
     tlen=max([len(typename(x[2])) for x in option_list])

@@ -17,6 +17,7 @@ import signal
 from facet_offsets import RegPoly
 import pyregion
 from surveys_db import use_database,update_status
+from termsize import get_terminal_size_linux
 
 # these are small routines used by more than one part of the pipeline
 
@@ -32,7 +33,14 @@ class bcolors(object):
 
 def separator(s):
     print()
-    print("%s============================== %s =============================%s"%(bcolors.FAIL,s,bcolors.ENDC))
+    width,_=get_terminal_size_linux()
+    if len(s)%2 == 1:
+        s+=' '
+    if width is None:
+        width=80
+    lw=(width-len(s)-2)//2
+    sep='='*lw
+    print("%s%s %s %s%s"%(bcolors.FAIL,sep,s,sep,bcolors.ENDC))
     print()
 
     
