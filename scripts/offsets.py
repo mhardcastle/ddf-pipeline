@@ -353,13 +353,13 @@ class Offsets(object):
         hdus.writeto(outname,clobber=True)
 
     def save(self,filename):
-        f = file(filename, 'wb')
+        f = open(filename, 'wb')
         pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
         f.close()
 
     @staticmethod
     def load(filename):
-        with file(filename, 'rb') as f:
+        with open(filename, 'rb') as f:
             return pickle.load(f)
 
 def merge_cat(rootname,rastr='ra',decstr='dec'):
