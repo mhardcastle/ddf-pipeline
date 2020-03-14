@@ -327,8 +327,8 @@ class Offsets(object):
         # factor tells us how much bigger than cellsize the pixels will be
         hdus=fits.open(self.imroot+'.app.restored.fits')
         _,_,yd,xd=hdus[0].data.shape
-        yd/=factor
-        xd/=factor
+        xd=int(xd/factor)
+        yd=int(yd/factor)
         hdus[0].header['CDELT1']*=factor
         hdus[0].header['CDELT2']*=factor
         hdus[0].header['CRPIX1']/=factor
@@ -339,7 +339,7 @@ class Offsets(object):
         for y in range(yd):
             print('.', end=' ')
             sys.stdout.flush()
-            xv=np.array(list(range(xd)))
+            xv=np.arange(xd)
             yv=y*np.ones_like(xv)
             ra,dec,_,_=w.wcs_pix2world(xv,yv,0,0,0)
             dra,ddec=self.r.coordconv(ra,dec)[1]
@@ -350,7 +350,7 @@ class Offsets(object):
                     rmap[0,0,y,x]=np.sqrt(self.rae[direction,2]**2.0+self.dece[direction,2]**2.0)
         print()
         hdus[0].data=rmap
-        hdus.writeto(outname,clobber=True)
+        hdus.writeto(outname,overwrite=True)
 
     def save(self,filename):
         f = open(filename, 'wb')
