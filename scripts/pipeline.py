@@ -1793,8 +1793,11 @@ def main(o=None):
                 thread.join()
         if o['delete_compressed']:
             for f in flist:
-                warn('Deleting compressed file %s' % f)
-                os.remove(f)
+                if os.path.isfile(f+'.fz'):
+                    warn('Deleting compressed file %s' % f)
+                    os.remove(f)
+                else:
+                    die('compressed files do not exist, compression must have failed')
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
