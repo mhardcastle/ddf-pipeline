@@ -100,7 +100,7 @@ if __name__=='__main__':
     while True:
 
         with SurveysDB(readonly=True) as sdb:
-            sdb.cur.execute('select id,gz_status,weave_priority,rgz_sources,rgz_complete from fields where dr2_final_mosaic=1 and dr2=1 and weave_priority is not NULL order by weave_priority')
+            sdb.cur.execute('select id,gz_status,weave_priority,rgz_sources,rgz_complete from fields where dr2=1 order by weave_priority')
             results=sdb.cur.fetchall()
 
         d={}
