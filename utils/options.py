@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 from future import standard_library
 standard_library.install_aliases()
-from builtins import str
+#from builtins import str
 import configparser
 import os
 import re
@@ -65,6 +65,12 @@ def options(optlist,option_list):
             result=cased[otype](section,name)
         except (configparser.NoSectionError, configparser.NoOptionError):
             result=default
+        # python2 compatibility, force back to str
+        try:
+            if isinstance(result,unicode):
+                result=result.encode("utf-8")
+        except NameError: # unicode type doesn't exist, we are in py3
+            pass
         if count>1:
             odict[section+'_'+name]=result
         else:
@@ -74,7 +80,7 @@ def options(optlist,option_list):
     return odict
 
 def typename(s):
-    return str(s).replace("type '","").replace("'","")
+    return str(s).replace("type '","").replace("class","").replace("'","")
 
 def print_options(option_list):
     import textwrap
@@ -109,7 +115,7 @@ def print_options(option_list):
 
 if __name__=='__main__':
     import sys
-    from .parset import option_list
+    from parset import option_list
     config=sys.argv[1:]
     print(options(config,option_list))
 

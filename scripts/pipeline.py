@@ -385,11 +385,11 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
-            if type(external_mask) is str:
-                merge_mask(fname,external_mask,fname)
-            else:
+            if isinstance(external_mask,list) or isinstance(external_mask,tuple):
                 for mask in external_mask:
                     merge_mask(fname,mask,fname)
+            else:
+                merge_mask(fname,external_mask,fname)
     return fname
             
 
