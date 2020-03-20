@@ -86,7 +86,7 @@ for ms in msfiles:
         cmd  = 'rm -r '+msout+'; '
     else:
         cmd = ''
-    cmd += 'NDPPP msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
+    cmd += 'DPPP msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
     cmd += 'msout.storagemanager=dysco msout=' + msout  + ' steps=[] '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
 
