@@ -17,9 +17,18 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import sys,os
-if "PYTHONPATH_FIRST" in os.environ.keys() and int(os.environ["PYTHONPATH_FIRST"]):
+if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
 import os.path
 from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
@@ -39,7 +48,10 @@ __version__=version()
 import datetime
 import threading
 from remove_bootstrap import remove_columns
-from killMS.Other import MyPickle
+try:
+    from killMS.Other import MyPickle
+except ImportError:
+    MyPickle=None
 from surveys_db import use_database,update_status,SurveysDB
 
 def summary(o):
@@ -96,7 +108,7 @@ def check_imaging_weight(mslist_name):
         try:
             t = pt.table(ms)
         except RuntimeError:
-            print 'Failed to open table',ms,'-- table may be missing or corrupt'
+            print('Failed to open table',ms,'-- table may be missing or corrupt')
             error=True
         else:
             try:
@@ -127,7 +139,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF-shift step')
         if verbose:
-            print 'would have run',runcommand
+            print('would have run',runcommand)
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
@@ -164,7 +176,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir)
+    runcommand = "DDF.py --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
 
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
@@ -280,7 +292,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
-            print 'would have run',runcommand
+            print('would have run',runcommand)
     else:
         if conditional_clearcache:
             clearcache(mslist,options)
@@ -304,7 +316,7 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
         report('Make blank external mask')
         hdus=fits.open(templatename)
         hdus[0].data=np.zeros_like(hdus[0].data,dtype=np.int32)
-        hdus.writeto(fname,clobber=True)
+        hdus.writeto(fname,overwrite=True)
         hdus.close()
         if use_tgss and options['tgss'] is not None:
             report('Merging the mask with TGSS catalogue')
@@ -369,15 +381,15 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeMask step')
         if verbose:
-            print 'Would have run',runcommand
+            print('Would have run',runcommand)
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
-            if type(external_mask) is str:
-                merge_mask(fname,external_mask,fname)
-            else:
+            if isinstance(external_mask,list) or isinstance(external_mask,tuple):
                 for mask in external_mask:
                     merge_mask(fname,mask,fname)
+            else:
+                merge_mask(fname,external_mask,fname)
     return fname
             
 
@@ -417,6 +429,25 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         else:
             runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
+            # check for option to stop pdb call and use it if present
+            # we parse the parset to make this general,
+            # it may be useful at some point
+            
+            if 'KILLMS_DIR' in os.environ:
+                parset=os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg'
+                keywords=[]
+                if os.path.isfile(parset):
+                    with open(parset) as infile:
+                        lines=infile.readlines()
+                    for l in lines:
+                        bits=l.split()
+                        if len(bits)>0 and l[0]!='[':
+                            keywords.append(bits[0])
+                    if 'DebugPdb' in keywords:
+                        runcommand+=' --DebugPdb=0'
+                else:
+                    warn('Cannot find killms parset, some features may not work')    
+            
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -506,7 +537,7 @@ def mask_dicomodel(indico,maskname,outdico,catcher=None):
 def rmtglob(path):
     g=glob.glob(path)
     for f in g:
-        print 'Removing',f
+        print('Removing',f)
         rmtree(f)
 
 def _basename(path):
@@ -515,10 +546,10 @@ def _basename(path):
 def mvglob(path,dest):
     g=glob.glob(path)
     for f in g:
-        print 'Moving',f,'to',dest
+        print('Moving',f,'to',dest)
         # work round shutil non-overwriting behaviour
         real_dst = os.path.join(dest, _basename(f))
-        print 'Target is',real_dst
+        print('Target is',real_dst)
         if os.path.exists(real_dst):
             if os.path.isdir(real_dst):
                 rmtree(real_dst)
@@ -605,13 +636,13 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         
         for i in range(0,len(full_sollist)):
             if start_times[i] == start_time:
-		if not SkipSmooth:
+                if not SkipSmooth:
                     symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
                 else:
                     symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
                 # always overwrite the symlink to allow the dataset to move -- costs nothing
                 if os.path.islink(symsolname):
-	            warn('Symlink ' + symsolname + ' already exists, recreating')
+                    warn('Symlink ' + symsolname + ' already exists, recreating')
                     os.unlink(symsolname)
 
                 if not SkipSmooth:
@@ -639,7 +670,7 @@ def full_clearcache(o,extras=None):
 def subtract_data(mslist,col1,col2):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
-        print 'Subtracting',f
+        print('Subtracting',f)
         t = pt.table(f,readonly=False)
         desc=t.getcoldesc(col1)
         desc['name']='SUBTRACTED_DATA'
@@ -852,7 +883,7 @@ def subtractOuterSquare(o):
 
     # predict outside the central rectangle
     
-    NpixMaskSquare = np.floor(o['imsize'] * o['cellsize'] / o['wide_cell'])
+    NpixMaskSquare = np.floor(o['imsize']*o['cellsize']/o['wide_cell'])
     
     FileHasPredicted='image_full_wide_predict.HasPredicted'
     if o['restart'] and os.path.isfile(FileHasPredicted):
@@ -861,7 +892,7 @@ def subtractOuterSquare(o):
         ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
                   cleanmode='SSD',
-		  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
+                  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
                   #ddsols='wide_killms_p1',
                   #applysols='AP',#normalization=o['normalize'][0],
                   peakfactor=0.001,
@@ -901,10 +932,10 @@ def subtractOuterSquare(o):
 
 
 def main(o=None):
-    if o is None:
+    if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
 
-    if "DDF_PIPELINE_CATALOGS" not in os.environ.keys():
+    if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
         die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
 
     o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
@@ -1036,28 +1067,6 @@ def main(o=None):
                                            colname=colname,clusterfile=None,automask=True,
                                            automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher)
-
-        # ##########################################################
-        # Initial dirty image to allow an external (TGSS) mask to be made
-        separator("Initial dirty")
-        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
-                  apply_weights=o['apply_weights'][0],uvrange=uvrange,catcher=catcher)
-
-        separator("External mask")
-        external_mask='external_mask.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-
-
-        # Deep SSD clean with this external mask and automasking
-        separator("DI Deconv (externally defined sources)")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
-                                           majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
-                                           peakfactor=0.01,rms_factor=3,
-                                           colname=colname,clusterfile=None,automask=True,
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
-                                           uvrange=uvrange,catcher=catcher)
-
     
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
@@ -1234,7 +1243,7 @@ def main(o=None):
 
 
         separator("PhaseOnly deconv")
-        print 'Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName
+        print('Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName)
         CurrentBaseDicoModelName=ddf_image('image_phase1',o['mslist'],
                                            cleanmask=CurrentMaskName,
                                            cleanmode='SSD',
@@ -1394,7 +1403,7 @@ def main(o=None):
         CurrentMaskName = o['basemaskname']
         CurrentBaseDicoModelName = o['basedicomodel']
         CurrentImageName = o['baseimagename']
-	external_mask = CurrentMaskName
+        external_mask = CurrentMaskName
 
     separator("DD calibration of full mslist")
     CurrentDDkMSSolName=killms_data(CurrentImageName,o['full_mslist'],'DDS2_full',
@@ -1574,7 +1583,7 @@ def main(o=None):
                   cleanmask=extmask,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols='AP',
-		  AllowNegativeInitHMP=True,
+                  AllowNegativeInitHMP=True,
                   majorcycles=2,robust=o['low_robust'],
                   colname=colname,use_dicomodel=False,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
@@ -1588,7 +1597,7 @@ def main(o=None):
               cleanmask='image_full_low.app.restored.fits.mask.fits',
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
               applysols='AP',
-	      AllowNegativeInitHMP=True,
+              AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
               uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
@@ -1622,7 +1631,7 @@ def main(o=None):
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
               applysols='AP',
-	      AllowNegativeInitHMP=True,
+              AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
               uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
@@ -1768,7 +1777,7 @@ def main(o=None):
         ddf_image('image_full_low_stokesV',o['full_mslist'],
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols='AP',stokes='IV',
-		  AllowNegativeInitHMP=True,
+                  AllowNegativeInitHMP=True,
                   majorcycles=0,robust=o['low_robust'],
                   colname=colname,use_dicomodel=False,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
@@ -1784,8 +1793,11 @@ def main(o=None):
                 thread.join()
         if o['delete_compressed']:
             for f in flist:
-                warn('Deleting compressed file %s' % f)
-                os.remove(f)
+                if os.path.isfile(f+'.fz'):
+                    warn('Deleting compressed file %s' % f)
+                    os.remove(f)
+                else:
+                    die('compressed files do not exist, compression must have failed')
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
@@ -1805,7 +1817,7 @@ def main(o=None):
             LastImageV="image_full_low_stokesV.dirty.corr.fits"
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
-            print 'Writing temporary ms list',umslist
+            print('Writing temporary ms list',umslist)
             with open(umslist,'w') as file:
                 for ms,ob in zip(m.mss,m.obsids):
                     if ob==obsid:
@@ -1852,6 +1864,7 @@ if __name__=='__main__':
         sys.exit(1)
 
     o=options(sys.argv[1:],option_list)
-    MyPickle.Save(o, "ddf-pipeline.last")
+    if MyPickle is not None:
+        MyPickle.Save(o, "ddf-pipeline.last")
 
     main(o)

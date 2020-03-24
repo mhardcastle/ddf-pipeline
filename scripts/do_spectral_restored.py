@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
 import numpy as np
 from pipeline import ddf_image,ddf_shift
 from pyrap.tables import table
@@ -30,14 +33,14 @@ def do_spectral_restored(colname,
 
     df=np.array(fMS).reshape((-1,1))-CentralFreqs.reshape((1,-1))
     iBandMapping=np.argmin(np.abs(df),axis=1)
-    print df.shape
-    print iBandMapping
+    print(df.shape)
+    print(iBandMapping)
 
-    print
+    print()
     mslistnames=[]
     for iBand in range(CentralFreqs.size):
         ind=np.where(iBandMapping==iBand)[0]
-        print "iBand %i -> %i ms"%(iBand,np.count_nonzero(iBandMapping==iBand))
+        print("iBand %i -> %i ms"%(iBand,np.count_nonzero(iBandMapping==iBand)))
         MSListFileName="mslist_iBand_%i.txt"%iBand
         f=open(MSListFileName,"w")
         for iMSName in ind:

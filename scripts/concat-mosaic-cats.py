@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os,sys
 import glob
 from astropy.io import fits
@@ -24,7 +29,7 @@ import random
 #Define various angle conversion factors
 arcsec2deg=1.0/3600
 arcmin2deg=1.0/60
-deg2rad=np.pi/180
+deg2rad=old_div(np.pi,180)
 deg2arcsec = 1.0/arcsec2deg
 rad2deg=180.0/np.pi
 arcmin2rad=arcmin2deg*deg2rad
@@ -47,12 +52,12 @@ def find_median_astrometry(astromaps,pointingra,pointingdec):
             f = fits.open('%s/astromap.fits'%astromap)
             _,_,ys,xs=f[0].data.shape
             # Use central 20% of the image
-            subim=f[0].data[0][0][ys/2-ys/5:ys/2+ys/5,xs/2-xs/5:xs/2+xs/5].flatten()
+            subim=f[0].data[0][0][old_div(ys,2)-old_div(ys,5):old_div(ys,2)+old_div(ys,5),old_div(xs,2)-old_div(xs,5):old_div(xs,2)+old_div(xs,5)].flatten()
     if foundpointing:
         subim = np.nan_to_num(subim)
         return np.median(subim)
     else:
-        print 'Cant find astrometry near %s, %s'%(pointingra*rad2deg,pointingdec*rad2deg)
+        print('Cant find astrometry near %s, %s'%(pointingra*rad2deg,pointingdec*rad2deg))
         return None
    
 
@@ -66,7 +71,7 @@ def concat_catalogs(cats,outconcatcat):
         f2 = fits.open(cat)
         nrows += f2[1].data.shape[0]
         f2.close()
-    print nrows
+    print(nrows)
     hdu = fits.BinTableHDU.from_columns(f[1].columns, nrows=nrows)
 
     nrows1 = f[1].data.shape[0]
@@ -95,7 +100,7 @@ def find_pointing_coords(mosdirectories):
     pointingdecs = np.array([])
     for mosaiccat in mosaiccats:
         pointing = mosaiccat.replace('.cat.fits','-blanked.fits')
-        print 'Pointing is',pointing
+        print('Pointing is',pointing)
         f = fits.open(pointing)
         pointingras = np.append(pointingras,f[0].header['CRVAL1']*deg2rad)
         pointingdecs = np.append(pointingdecs,f[0].header['CRVAL2']*deg2rad)
@@ -148,7 +153,7 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
         globstring=mosaiccat.replace('mosaic.cat.fits','mosaic-blanked_pybdsm/*/catalogues/mosaic-blanked.pybdsm.gaul.FITS')
         files=glob.glob(globstring)
         if len(files)==0:
-            print 'Globstring was',globstring
+            print('Globstring was',globstring)
             raise RuntimeError('Failed to find gaul file')
         else:
             mosaiccat = files[0]
@@ -198,8 +203,8 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
             mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-2])
         if cattype == 'gaus':
             mosaic_identifier = np.append(mosaic_identifier,mosaiccat.split('/')[-5])
-        fluxratio = cat[1].data['Total_flux'][i]/cat[1].data['Peak_flux'][i]
-        snr  = cat[1].data['Peak_flux'][i]/cat[1].data['Isl_rms'][i]
+        fluxratio = old_div(cat[1].data['Total_flux'][i],cat[1].data['Peak_flux'][i])
+        snr  = old_div(cat[1].data['Peak_flux'][i],cat[1].data['Isl_rms'][i])
 
         # Some equation to figure out if the source is resolved -- leave these dummy values for now.
         if fluxratio > (1.483 + 1000.4/(snr**3.94)):
@@ -208,7 +213,7 @@ def filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,
         else:
             sourceresolved = np.append(sourceresolved,'U')
 
-    print 'Keeping %s sources for %s -- took %s'%(len(keepindices),pointing,time.time()-time1)
+    print('Keeping %s sources for %s -- took %s'%(len(keepindices),pointing,time.time()-time1))
 
     sourcera = np.append(sourcera,cat[1].data[keepindices]['RA'])
     e_sourcera = np.append(e_sourcera,cat[1].data[keepindices]['E_RA'])
@@ -344,7 +349,7 @@ def do_concat(mosdirectories,pointdirectories):
     random.shuffle(mosaiccats)
     
     for mosaiccat in mosaiccats:
-        print 'Working on %s'%mosaiccat
+        print('Working on %s'%mosaiccat)
         outname = mosaiccat.split('/')[-2] + 'cat'
         if not os.path.exists(outname +'.srl.fits'):
             pointingsourcenums,srlcat = filter_catalogs(pointdirectories,pointingras,pointingdecs,mosaiccat,outname,[],'srl')
@@ -357,7 +362,7 @@ def do_concat(mosdirectories,pointdirectories):
             
         srlcatnames.append(srlcat)
         gauscatnames.append(gauscat)
-    print 'Concatenating %s files'%len(srlcatnames)
+    print('Concatenating %s files'%len(srlcatnames))
     concat_catalogs(srlcatnames,'LoTSS_DR2_rolling.srl.fits')
     concat_catalogs(gauscatnames,'LoTSS_DR2_rolling.gaus.fits')
 

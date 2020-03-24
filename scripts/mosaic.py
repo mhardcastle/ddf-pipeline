@@ -4,6 +4,11 @@
 
 # arguments are directories with final images
 
+from __future__ import print_function
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 from pipeline_version import version
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
@@ -58,14 +63,14 @@ def make_mosaic(args):
     app=[]
     astromaps=[]
     wcs=[]
-    print 'Reading files...'
+    print('Reading files...')
     noise=[]
     name=[]
     for d in args.directories:
         name.append(d.split('/')[-1])
         hdu=fits.open(d+'/'+intname)
         if args.find_noise:
-	    print 'Estimating noise for', d+'/' + intname
+	    print('Estimating noise for', d+'/' + intname)
 	    if args.do_lowres:
 	            noise.append(get_rms(hdu,boxsize=1500))
 	    else:
@@ -77,11 +82,11 @@ def make_mosaic(args):
 
     if args.find_noise:
         args.noise=noise
-        print 'Noise values are:'
+        print('Noise values are:')
         for t,n in zip(name,noise):
-            print t,n
+            print(t,n)
 
-    print 'Computing noise/beam factors...'
+    print('Computing noise/beam factors...')
     for i in range(len(app)):
         np.seterr(divide='ignore')
 	app[i].data=np.divide(app[i].data,hdus[i].data)
@@ -95,7 +100,7 @@ def make_mosaic(args):
 
 
     if args.shift:
-        print 'Finding shifts (NOTE THIS CODE IS OBSOLETE)...'
+        print('Finding shifts (NOTE THIS CODE IS OBSOLETE)...')
         # shift according to the FIRST delta ra/dec from quality pipeline
         dras=[]
         ddecs=[]
@@ -103,12 +108,12 @@ def make_mosaic(args):
             t=Table.read(d+'/image_full_ampphase1m.cat.fits_FIRST_match_filtered.fits')
             dras.append(np.mean(t['FIRST_dRA']))
             ddecs.append(np.mean(t['FIRST_dDEC']))
-        print 'Applying shifts:',dras,ddecs
+        print('Applying shifts:',dras,ddecs)
         for i in range(len(app)):
             for hdu in [hdus[i],app[i]]:
                 ra=hdu.header['CRVAL1']
                 dec=hdu.header['CRVAL2']
-                hdu.header['CRVAL1']-=dras[i]/(3600.0*np.cos(np.pi*dec/180.0))
+                hdu.header['CRVAL1']-=old_div(dras[i],(3600.0*np.cos(np.pi*dec/180.0)))
                 hdu.header['CRVAL2']-=ddecs[i]/3600.0
 
     for i in range(len(app)):
@@ -116,15 +121,15 @@ def make_mosaic(args):
 
     # astromap blanking
     if bth:
-        print 'Blanking using astrometry quality maps with threshold',bth,'arcsec'
+        print('Blanking using astrometry quality maps with threshold',bth,'arcsec')
         for i in range(len(app)):
             outname=rootname+'astroblank-'+name[i]+'.fits'
             if args.load and os.path.isfile(outname):
-                print 'Loading previously blanked image'
+                print('Loading previously blanked image')
                 hdu=fits.open(outname)
                 hdus[i].data=hdu[0].data
             else:
-                print 'Blanking image',i
+                print('Blanking image',i)
                 dmaxy,dmaxx=hdus[i].data.shape
                 count=0
                 am=astromaps[i]
@@ -147,7 +152,7 @@ def make_mosaic(args):
                             if ryp>dmaxy: ryp=dmaxy
                             hdus[i].data[ry:ryp,rx:rxp]=np.nan
                             count+=1
-                print '... blanked',count*900.0/3600,'square arcmin'
+                print('... blanked',old_div(count*900.0,3600),'square arcmin')
                 outname=rootname+'astroblank-'+name[i]+'.fits'
                 if args.save: hdus[i].writeto(outname,clobber=True)
             app[i].data[np.isnan(hdus[i].data)]=np.nan
@@ -157,7 +162,7 @@ def make_mosaic(args):
         header=args.header
         xsize=header['NAXIS1']
         ysize=header['NAXIS2']
-        print 'Mosaic using header passed from calling program'
+        print('Mosaic using header passed from calling program')
     except:
         header=None
     if header is None:
@@ -166,15 +171,15 @@ def make_mosaic(args):
                 header=pickle.load(f)
             xsize=header['NAXIS1']
             ysize=header['NAXIS2']
-            print 'Mosaic using loaded header'
+            print('Mosaic using loaded header')
         else:
-            print 'Creating the mosaic header'
+            print('Creating the mosaic header')
             ras=np.array([w.wcs.crval[0] for w in wcs])
             decs=np.array([w.wcs.crval[1] for w in wcs])
 
             mra=np.mean(ras)
             mdec=np.mean(decs)
-            print 'Will make mosaic at',mra,mdec
+            print('Will make mosaic at',mra,mdec)
 
             # we make a reference WCS and use it to find the extent in pixels
             # needed for the combined image
@@ -197,25 +202,25 @@ def make_mosaic(args):
                 aymax=ys.max()
                 del(xs)
                 del(ys)
-                print 'non-zero',axmin,aymin,axmax,aymax
+                print('non-zero',axmin,aymin,axmax,aymax)
                 for x,y in ((axmin,aymin),(axmax,aymin),(axmin,aymax),(axmax,aymax)):
                     ra,dec=[float(f) for f in w.wcs_pix2world(x,y,0)]
                     #print ra,dec
                     nx,ny=[float (f) for f in rwcs.wcs_world2pix(ra,dec,0)]
-                    print nx,ny
+                    print(nx,ny)
                     if nx<xmin: xmin=nx
                     if nx>xmax: xmax=nx
                     if ny<ymin: ymin=ny
                     if ny>ymax: ymax=ny
 
-            print 'co-ord range:', xmin, xmax, ymin, ymax
+            print('co-ord range:', xmin, xmax, ymin, ymax)
 
             xsize=int(xmax-xmin)
             ysize=int(ymax-ymin)
 
             rwcs.wcs.crpix=[-int(xmin)+1,-int(ymin)+1]
-            print 'checking:', rwcs.wcs_world2pix(mra,mdec,0)
-            print rwcs
+            print('checking:', rwcs.wcs_world2pix(mra,mdec,0))
+            print(rwcs)
 
             header=rwcs.to_header()
             header['NAXIS']=2
@@ -228,39 +233,39 @@ def make_mosaic(args):
     isum=np.zeros([ysize,xsize])
     wsum=np.zeros_like(isum)
     mask=np.zeros_like(isum,dtype=np.bool)
-    print 'now making the mosaic'
+    print('now making the mosaic')
     for i in range(len(hdus)):
-        print 'image',i,'(',name[i],')'
+        print('image',i,'(',name[i],')')
         outname=rootname+'reproject-'+name[i]+'.fits'
         if args.load and os.path.exists(outname):
-            print 'loading...'
+            print('loading...')
             hdu=fits.open(outname)
             r=hdu[0].data
         else:
-            print 'reprojecting...'
+            print('reprojecting...')
             r, footprint = reproj(hdus[i], header, hdu_in=0, parallel=False)
             r[np.isnan(r)]=0
             hdu = fits.PrimaryHDU(header=header,data=r)
             if args.save: hdu.writeto(outname,clobber=True)
-        print 'weights',i,'(',name[i],')'
+        print('weights',i,'(',name[i],')')
         outname=rootname+'weight-'+name[i]+'.fits'
         if args.load and os.path.exists(outname):
-            print 'loading...'
+            print('loading...')
             hdu=fits.open(outname)
             w=hdu[0].data
             mask|=(w>0)
         else:
-            print 'reprojecting...'
+            print('reprojecting...')
             w, footprint = reproj(app[i], header, hdu_in=0, parallel=False)
             mask|=~np.isnan(w)
             w[np.isnan(w)]=0
             hdu = fits.PrimaryHDU(header=header,data=w)
             if args.save: hdu.writeto(outname,clobber=True)
-        print 'add to mosaic...'
+        print('add to mosaic...')
         if args.scale is not None:
-            print 'Applying scale %s to %s'%(args.scale[i],name[i])
+            print('Applying scale %s to %s'%(args.scale[i],name[i]))
             r = r*args.scale[i]
-            w = w/((args.scale[i])**2.0)
+            w = old_div(w,((args.scale[i])**2.0))
         isum+=r*w
         wsum+=w
 

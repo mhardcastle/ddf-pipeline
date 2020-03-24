@@ -1,6 +1,11 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 # hexagonal tiling of a fits image with fixed-radius circles
 # return the central position list
 
+from builtins import range
+from past.utils import old_div
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
@@ -16,9 +21,9 @@ def hextile(image,radius):
     hdu=flatten(hdus)
     maxy,maxx=hdu.data.shape
     w=WCS(hdu.header)
-    print 'Hex tiling image'
+    print('Hex tiling image')
     # co-ords of bottom left of image
-    ra_c,dec_c=w.wcs_pix2world(maxx/2,maxy/2,0)
+    ra_c,dec_c=w.wcs_pix2world(old_div(maxx,2),old_div(maxy,2),0)
     ra_factor=np.cos(dec_c*np.pi/180.0)
     ra_ll,dec_ll=w.wcs_pix2world(0,0,0)
     ra_lr,dec_lr=w.wcs_pix2world(maxx,0,0)
@@ -27,18 +32,18 @@ def hextile(image,radius):
     c_ll=SkyCoord(ra_ll*u.degree,dec_ll*u.degree,frame='icrs')
     c_lr=SkyCoord(ra_lr*u.degree,dec_lr*u.degree,frame='icrs')
     dra,ddec=[v.value for v in c_c.spherical_offsets_to(c_ll)]
-    nha=dra*2/hs
-    print 'Number of hexes across',nha
+    nha=old_div(dra*2,hs)
+    print('Number of hexes across',nha)
     c_ul=SkyCoord(ra_ul*u.degree,dec_ul*u.degree,frame='icrs')
     dra,ddec=[v.value for v in c_c.spherical_offsets_to(c_ul)]
-    nhu=2*ddec/hs
-    print 'Number of hexes up',nhu
+    nhu=old_div(2*ddec,hs)
+    print('Number of hexes up',nhu)
     nha=int(0.5+nha)
     nhu=int(0.5+nhu)
     for j in range(nhu):
         for i in range(nha):
-            xc=(1.0*maxx*(i+(j % 2)*0.5))/nha
-            yc=(maxy*(j+0.5))/nhu
+            xc=old_div((1.0*maxx*(i+(j % 2)*0.5)),nha)
+            yc=old_div((maxy*(j+0.5)),nhu)
             ra_p,dec_p=w.wcs_pix2world(xc,yc,0)
             pos.append((float(ra_p),float(dec_p)))
     return ra_factor,pos

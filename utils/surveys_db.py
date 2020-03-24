@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 import sshtunnel
 import socket
 import os
@@ -113,7 +115,7 @@ class SurveysDB(object):
         if not mysql_host:
             mysql_host='lofar-server.data'
         if verbose:
-            print 'MySQL host is',mysql_host
+            print('MySQL host is',mysql_host)
         cfg=open(home+'/.surveys').readlines()
         self.password=cfg[0].rstrip()
         try:
@@ -137,14 +139,14 @@ class SurveysDB(object):
         self.hostname=socket.gethostname()
         if self.hostname=='lofar-server':
             if verbose:
-                print 'Using direct connection to localhost'
-            self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys')
+                print('Using direct connection to localhost')
+            self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys',cursorclass=mdbcursors.DictCursor)
         else:
             try:
                 dummy=socket.gethostbyname(mysql_host)
             except socket.gaierror:
                 if verbose:
-                    print 'Cannot find host',mysql_host,'will use tunnel'
+                    print('Cannot find host',mysql_host,'will use tunnel')
                 self.usetunnel=True
 
             if self.usetunnel:
@@ -156,21 +158,21 @@ class SurveysDB(object):
 
                 self.tunnel.start()
                 localport=self.tunnel.local_bind_port
-                self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport)
+                self.con = mdb.connect('127.0.0.1', 'survey_user', self.password, 'surveys', port=localport, cursorclass=mdbcursors.DictCursor)
             else:
                 connected=False
                 retry=0
                 while not connected and retry<10:
                     try:
-                        self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys')
+                        self.con = mdb.connect(mysql_host, 'survey_user', self.password, 'surveys',cursorclass=mdbcursors.DictCursor)
                         connected=True
                     except mdb.OperationalError as e:
-                        print 'Database temporary error! Sleep to retry',e
+                        print('Database temporary error! Sleep to retry',e)
                         retry+=1
                         sleep(20)
                 if not connected:
                     raise RuntimeError("Cannot connect to database server")
-        self.cur = self.con.cursor(cursorclass=mdbcursors.DictCursor)
+        self.cur = self.con.cursor()
         if self.readonly:
             pass
             #can't use this feature on lofar's version of MariaDB
@@ -185,7 +187,7 @@ class SurveysDB(object):
 
     def execute(self,*args):
         if self.verbose:
-            print args
+            print(args)
         self.cur.execute(*args)
 
     def close(self):
@@ -292,6 +294,6 @@ if __name__=='__main__':
     result=sdb.db_get('fields','P35Hetdex10')
     #result['location']='Never Never Land'
     #sdb.set_id(result)
-    print result
+    print(result)
     sdb.close()
 

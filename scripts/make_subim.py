@@ -1,10 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Make cutouts of pipeline products
-# Eventually we want to use this for thumbnails etc...
 
 # from git/lotss-catalogue/utils/subim.py
 
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
@@ -21,7 +24,7 @@ def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
         raise RuntimeError('Can\'t make cube from this')
 
     if verbose:
-        print f[hduid].data.shape
+        print(f[hduid].data.shape)
     ds=f[hduid].data.shape[-2:]
     by,bx=ds
     xmin=int(x-size)
@@ -39,7 +42,7 @@ def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
     
     if ymax<=ymin or xmax<=xmin:
         # this can only happen if the required position is not on the map
-        print xmin,xmax,ymin,ymax
+        print(xmin,xmax,ymin,ymax)
         raise RuntimeError('Failed to make subimage!')
 
     w = WCS(f[hduid].header)
@@ -56,7 +59,7 @@ def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
         else:
             slice.append(np.s_[:])
     if verbose:
-        print slice
+        print(slice)
 
     hdu=fits.PrimaryHDU(f[hduid].data[slice],header)
     copy=('EQUINOX','EPOCH','BMAJ','BMIN','BPA')
@@ -82,7 +85,7 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
         raise RuntimeError('Can\'t make map from this')
 
     if verbose:
-        print f[hduid].data.shape
+        print(f[hduid].data.shape)
     ds=f[hduid].data.shape[-2:]
     by,bx=ds
     xmin=int(x-size)
@@ -100,7 +103,7 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
     
     if ymax<=ymin or xmax<=xmin:
         # this can only happen if the required position is not on the map
-        print xmin,xmax,ymin,ymax
+        print(xmin,xmax,ymin,ymax)
         raise RuntimeError('Failed to make subimage!')
 
     w = WCS(f[hduid].header)
@@ -131,7 +134,7 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
         else:
             slice.append(0)
     if verbose:
-        print slice
+        print(slice)
 
     hdu=fits.PrimaryHDU(f[hduid].data[slice],header)
     copy=('EQUINOX','EPOCH','BMAJ','BMIN','BPA')
@@ -146,11 +149,11 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
 
 def extract_subim(filename,ra,dec,size,hduid=0,verbose=True,cubemode=False):
     if verbose:
-        print 'Opening',filename
+        print('Opening',filename)
     orighdu=fits.open(filename)
-    psize=int(size/orighdu[hduid].header['CDELT2'])
+    psize=int(old_div(size,orighdu[hduid].header['CDELT2']))
     if verbose:
-        print 'pix size is',psize,size
+        print('pix size is',psize,size)
     ndims=orighdu[hduid].header['NAXIS']
     pvect=np.zeros((1,ndims))
     lwcs=WCS(orighdu[hduid].header)
@@ -167,7 +170,7 @@ def extract_subim(filename,ra,dec,size,hduid=0,verbose=True,cubemode=False):
 
 def extract_and_save(filename,ra,dec,size,outname='cutout.fits',cubemode=False):
     hdu=extract_subim(filename,ra,dec,size,verbose=False,cubemode=cubemode)
-    hdu.writeto(outname,clobber=True)
+    hdu.writeto(outname,overwrite=True)
 
 
 if __name__=='__main__':
@@ -184,7 +187,7 @@ if __name__=='__main__':
                 c = SkyCoord(sys.argv[3],sys.argv[4], frame='icrs',unit=(u.hourangle, u.deg))
             ra=float(c.ra.degree)
             dec=float(c.dec.degree)
-            print ra,dec
+            print(ra,dec)
         extract_and_save(filename,ra,dec,size)
     elif len(sys.argv)==4:
         s=sys.argv[3][4:]
@@ -192,9 +195,9 @@ if __name__=='__main__':
         sc = SkyCoord(coord,unit=(u.hourangle,u.deg))
         ra=sc.ra.value
         dec=sc.dec.value
-        print 'Parsed coordinates to ra=%f, dec=%f' % (ra,dec)
+        print('Parsed coordinates to ra=%f, dec=%f' % (ra,dec))
         name=sys.argv[1]
         extract_and_save(filename,ra,dec,size)
     else:
-        print 'Call: filename size RA DEC _OR_ filename size ILTname.'
+        print('Call: filename size RA DEC _OR_ filename size ILTname.')
 

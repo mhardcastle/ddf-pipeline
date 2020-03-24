@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
 from do_polcubes import do_polcubes
 from parset import option_list
 from options import options,print_options
@@ -35,11 +41,11 @@ def do_rsync_download(cname,basedir,f):
     while True:
 	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" --exclude="*.pickle" --exclude="*.DicoModel" --exclude="*.txt" --exclude="*.png" '
         s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             die('rsync failed unexpectedly',cname)
         sleep(10)
@@ -183,7 +189,7 @@ if __name__=='__main__':
     cname = args['field']
 
     if cname == None:
-      print 'No field specified -- exiting'
+      print('No field specified -- exiting')
       sys.exit(0)
 
     do_download(cname)

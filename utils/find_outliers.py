@@ -2,6 +2,10 @@
 
 # Determine scale factors by fitting polynomials to data
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 from scipy.optimize import curve_fit
 #from astropy.table import Table
 import numpy as np
@@ -32,20 +36,20 @@ def run_all(run, name=''):
     try:
         scale=np.load(name+'crossmatch-results-'+str(run)+'.npy')[:,0]
     except IOError:
-        print 'Can\'t load results file'
+        print('Can\'t load results file')
         return False
-    print scale
+    print(scale)
 
     a=fitall(scale,frequencies,fluxes,errors,smask)
-    print 'Number of sources is',len(data)
-    print 'Mean flux density is',np.mean(a[0])
-    print 'Mean spectral index  is',np.mean(a[1])
-    print 'Median chi^2 is',np.median(a[2])
-    print 'Mean chi^2 is',np.mean(a[2])
-    print 'Max chi^2 is',np.max(a[2])
+    print('Number of sources is',len(data))
+    print('Mean flux density is',np.mean(a[0]))
+    print('Mean spectral index  is',np.mean(a[1]))
+    print('Median chi^2 is',np.median(a[2]))
+    print('Mean chi^2 is',np.mean(a[2]))
+    print('Max chi^2 is',np.max(a[2]))
 
     threshold=100
-    print 'Number of sources rejected',np.sum(a[2]>threshold)
+    print('Number of sources rejected',np.sum(a[2]>threshold))
     filtered=data[a[2]<threshold]
 
     filtered.write(name+'crossmatch-'+str(run+1)+'.fits',overwrite=True)

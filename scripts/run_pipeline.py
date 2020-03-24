@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
 from auxcodes import report,warn,die
 from surveys_db import SurveysDB,update_status
 from download import download_dataset
@@ -69,13 +72,13 @@ def do_run_pipeline(name,basedir):
         for m,ch,o,hc in zip(msl.mss,msl.channels,msl.obsids,msl.hascorrected):
             if o==thisobs:
                 if not(hc):
-                    print 'MS',m,'has no corrected_data column, force use of DATA'
+                    print('MS',m,'has no corrected_data column, force use of DATA')
                     averaged=True
                 channels=len(ch)
-                print 'MS',m,'has',channels,'channels'
+                print('MS',m,'has',channels,'channels')
                 if channels>20:
                     update_status(name,'Averaging',workdir=workdir)
-                    print 'Averaging needed for',thisobs,'!'
+                    print('Averaging needed for',thisobs,'!')
                     averaged=True
                     average(wildcard=workdir+'/*'+thisobs+'*')
                     os.system('rm -r '+workdir+'/*'+thisobs+'*pre-cal.ms')

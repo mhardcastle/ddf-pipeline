@@ -1,5 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import os
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
@@ -24,7 +25,7 @@ def find_pos(ra,dec,offset=4,name=None,verbose=True):
             sdb.cur.execute('select * from observations where field="%s" and status="DI_processed"' % r['id'])
             proc_count=len(sdb.cur.fetchall())
             sep=seps[i]
-            print '%-16s %-16s %2i %2i %8.3f %8.3f %6.3f %s' % (r['id'],r['status'],count,proc_count,r['ra'],r['decl'],sep,r['location'])
+            print('%-16s %-16s %2i %2i %8.3f %8.3f %6.3f %s' % (r['id'],r['status'],count,proc_count,r['ra'],r['decl'],sep,r['location']))
             if r['status']=='Archived':
                 if minoffset is None or sep<minoffset:
                     minoffset=sep
@@ -48,7 +49,7 @@ if __name__=='__main__':
                 c = SkyCoord(sys.argv[1],sys.argv[2], frame='icrs',unit=(u.hourangle, u.deg))
             ra=float(c.ra.degree)
             dec=float(c.dec.degree)
-            print ra,dec
+            print(ra,dec)
         retval=find_pos(ra,dec)
     elif len(sys.argv)==2:
         s=sys.argv[1][4:]
@@ -56,10 +57,10 @@ if __name__=='__main__':
         sc = SkyCoord(coord,unit=(u.hourangle,u.deg))
         ra=sc.ra.value
         dec=sc.dec.value
-        print 'Parsed coordinates to ra=%f, dec=%f' % (ra,dec)
+        print('Parsed coordinates to ra=%f, dec=%f' % (ra,dec))
         name=sys.argv[1]
         retval=find_pos(ra,dec,name=name)
     else:
-        print 'Call me with the name of an ILTJ source OR RA, Dec in degrees OR "object objectname"'
+        print('Call me with the name of an ILTJ source OR RA, Dec in degrees OR "object objectname"')
     if retval is not None:
-        print 'Return value was',retval
+        print('Return value was',retval)

@@ -1,5 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # Get an external catalogue by downloading
 
+from builtins import str
 from hextile import hextile
 import requests
 import astropy.coordinates as coord
@@ -44,26 +47,26 @@ def get_cat(method,retries=100):
         Irsa.ROW_LIMIT=1000000
 
     ra_factor,pos=tile(find_fullres_image())
-    print 'Downloading catalogues for',len(pos),'sky positions'
+    print('Downloading catalogues for',len(pos),'sky positions')
     for i,p in enumerate(pos):
         outfile=method+'/'+method+'-'+str(i)+'.vo'
         if os.path.isfile(outfile):
-            print 'Catalogue at position',p,'already present'
+            print('Catalogue at position',p,'already present')
             continue
-        print 'Downloading at position',p
+        print('Downloading at position',p)
         if method=='panstarrs':
             count=0
             while True:
                 try:
                     r = requests.post('http://archive.stsci.edu/panstarrs/search.php', data = {'ra':p[0],'dec':p[1],'SR':CSIZE,'max_records':100000,'nDetections':">+5",'action':'Search','selectedColumnsCsv':'objid,ramean,decmean'},timeout=300)
                 except requests.exceptions.Timeout:
-                    print 'Timeout, retrying!'
+                    print('Timeout, retrying!')
                 else:
                     if 'Warning' not in r.text and 'Please' not in r.text:
                         break
                     else:
                         # will go round the loop again
-                        print 'Bad response, retry download (%i)' % count
+                        print('Bad response, retry download (%i)' % count)
                         sleep(5+count*15)
                 count+=1
                 if count>=retries:
@@ -85,18 +88,18 @@ def get_cat(method,retries=100):
                 for pix in cs:
                     outfile=method+'/'+str(pix)
                     if not os.path.isfile(outfile):
-                        print 'Downloading healpix pixel',pix
+                        print('Downloading healpix pixel',pix)
                         download_file('http://uhhpc.herts.ac.uk/panstarrs-healpix/'+str(pix),outfile)
         else:
             raise NotImplementedError('Method '+method)
     if method=='pslocal':
         hplist=list(set(hplist))
-        print 'Found',len(hplist),'unique healpix pixels'
+        print('Found',len(hplist),'unique healpix pixels')
         outname=method+'/'+method+'.txt'
         with open(outname,'w') as outfile:
             outfile.write('# RA DEC ObjID\n')
         for pixel in hplist:
-            print 'Appending pixel',pixel
+            print('Appending pixel',pixel)
             if os.path.isdir(PSBASE):
                 pixelfile=PSBASE+'/'+str(pixel)
             else:

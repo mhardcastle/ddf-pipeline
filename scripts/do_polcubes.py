@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import zip
+from past.utils import old_div
 import numpy as np
 from pipeline import *
 from pyrap.tables import table
@@ -28,7 +33,7 @@ def make_cube(freqs,hdus,outfile):
         chans.append(ch)
         
     newdata=np.zeros((np.sum(chans),stokes,y,x),dtype=np.float32)
-    print 'Output file shape is', newdata.shape
+    print('Output file shape is', newdata.shape)
     for i,h in enumerate(hdus):
         if i==0:
             chb=0
@@ -39,7 +44,7 @@ def make_cube(freqs,hdus,outfile):
     ohdu=hdus[0]
     ohdu[0].data=newdata
     ohdu[0].header['NAXIS4']=np.sum(chans)
-    hdus[0].writeto(outfile,clobber=True)
+    hdus[0].writeto(outfile,overwrite=True)
 
 def do_polcubes(colname,
                 CurrentDDkMSSolName,
@@ -53,7 +58,7 @@ def do_polcubes(colname,
     m=MSList(o['full_mslist'])
     ufreqs=sorted(set(m.freqs))
     for i,freq in enumerate(ufreqs):
-        print 'Image %i: channel map for frequency %.3f MHz' % (i,freq/1e6)
+        print('Image %i: channel map for frequency %.3f MHz' % (i,old_div(freq,1e6)))
         # iterate over frequencies, finding all MS with the same values
         fmslist=[]
         for ms,f,chan in zip(m.mss,m.freqs,m.channels):

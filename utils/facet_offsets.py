@@ -1,5 +1,10 @@
+from __future__ import print_function
+from __future__ import division
 # Code to determine what facet a source is in
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from astropy.io import fits
 from astropy.table import Table
 from astropy import units as u
@@ -19,7 +24,7 @@ def point_inside_polygon(x,y,poly):
             if y <= max(p1y,p2y):
                 if x <= max(p1x,p2x):
                     if p1y != p2y:
-                        xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        xinters = old_div((y-p1y)*(p2x-p1x),(p2y-p1y))+p1x
                     if p1x == p2x or x <= xinters:
                         inside = not inside
         p1x,p1y = p2x,p2y
@@ -165,13 +170,13 @@ def plot_offsets(t,poly,color):
     mdec=np.mean(decrange)
     xstrue=(rarange[1]-rarange[0])*np.cos(mdec*np.pi/180.0)
     ystrue=decrange[1]-decrange[0]
-    plt.figure(figsize=(basesize*xstrue/ystrue, basesize))
+    plt.figure(figsize=(old_div(basesize*xstrue,ystrue), basesize))
     plt.xlim(rarange)
     plt.ylim(decrange)
     plt.xlabel('RA')
     plt.ylabel('DEC')
 
-    print np.mean(t['FIRST_dRA']),np.mean(t['FIRST_dDEC'])
+    print(np.mean(t['FIRST_dRA']),np.mean(t['FIRST_dDEC']))
     
     for p in poly:
         x=[pt[0] for pt in p]
@@ -191,7 +196,7 @@ def plot_offsets(t,poly,color):
             mdra.append(np.mean(ts['FIRST_dRA']))
             mddec.append(np.mean(ts['FIRST_dDEC']))
             plt.quiver([mra[-1]]*len(ts),[mdec[-1]]*len(ts),ts['FIRST_dRA'],ts['FIRST_dDEC'],units = 'xy', angles='xy', scale=1.0,color=color,alpha=0.03)
-            print i,len(ts),mra[-1],mdec[-1],mdra[-1],mddec[-1]
+            print(i,len(ts),mra[-1],mdec[-1],mdra[-1],mddec[-1])
 
     plt.gca().invert_xaxis()
     plt.quiver(mra,mdec,mdra,mddec,units = 'xy', angles='xy', scale=1.0,color=color)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #Run job
 
+from __future__ import print_function
 from surveys_db import update_status, SurveysDB
 from auxcodes import report,warn,die
 import sys
@@ -12,7 +13,7 @@ def do_run_job(name,basedir,qsubfile=None,do_field=True,prefix='ddfp',dysco=Fals
     workdir=basedir+'/'+name
     g=glob.glob(workdir+'/tier1*.cfg')
     if len(g)>0:
-        print 'Local config file exists, using that'
+        print('Local config file exists, using that')
         config=',CONFIG='+g[0]
     if qsubfile is None:
         qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
@@ -29,7 +30,7 @@ def rerun_select():
         results=sdb.cur.fetchall()
     for r in results:
         name=r['id']
-        print 'Submitting job for',name
+        print('Submitting job for',name)
         do_run_job(name,'/beegfs/car/mjh',qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/rerun.qsub',prefix='ddfpr')
         
 if __name__=='__main__':

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
 from auxcodes import report,warn,die
 from surveys_db import *
 from download import download_dataset
@@ -28,11 +31,11 @@ def do_rsync_upload(cname,basedir,f):
 
     while True:
         s= 'rsync -avz --relative --progress --perms --chmod=ugo+rX --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname 
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         time.sleep(10)
@@ -49,11 +52,11 @@ def do_rsync_download(cname,basedir,f):
 	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" '
         s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
         #'cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
-        print 'Running command:',s
+        print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
             break
-        print 'Non-zero return value',retval
+        print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         time.sleep(10)
@@ -83,7 +86,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         bad_pointings = extractdict['bad_pointings'].split(',')
     except AttributeError:
         bad_pointings = ['']
-    print 'Working on ',name, 'in fields', fields,'which have status',extract_status
+    print('Working on ',name, 'in fields', fields,'which have status',extract_status)
     
     for i in range(0,len(fields)):
         os.chdir(startdir)
@@ -91,7 +94,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
             continue
         field = fields[i]
         if field in bad_pointings:
-            print 'Field',field,'in bad pointings -- skipping and setting to BADP'
+            print('Field',field,'in bad pointings -- skipping and setting to BADP')
             sdb=SurveysDB()
             extractdict = sdb.get_reprocessing(name)
             extract_status[i] = 'BADP'
@@ -104,7 +107,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
             os.mkdir(workdir)
         except OSError:
             warn('Working directory already exists')
-        print 'In directory', os.getcwd()
+        print('In directory', os.getcwd())
         os.chdir(workdir)
         # Update status to running here
         extract_status[i] = 'STARTED'
@@ -113,7 +116,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         extractdict['extract_status'] = ','.join(extract_status)
         sdb.db_set('reprocessing',extractdict)
         sdb.close()
-        print 'Updated status to STARTED for',field,name
+        print('Updated status to STARTED for',field,name)
         time.sleep(2.0)
         report('Copying data from %s'%inarchivedir)
         
@@ -129,7 +132,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         extractdict['extract_status'] = ','.join(extract_status)
         sdb.db_set('reprocessing',extractdict)
         sdb.close()
-        print 'Updated status to COPIED for',field,name
+        print('Updated status to COPIED for',field,name)
 
 
         # Create boxfile
@@ -137,7 +140,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
 
 
         # Run subtract code
-        print os.getcwd(), 'working here'
+        print(os.getcwd(), 'working here')
         os.chdir(field)
         print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
         result=os.system('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(workdir,name,name))
@@ -162,7 +165,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         extractdict['extract_status'] = ','.join(extract_status)
         sdb.db_set('reprocessing',extractdict)
         sdb.close()
-        print 'Updated status to EDONE for',field,name
+        print('Updated status to EDONE for',field,name)
 
     # update the database to give selfcal status as SREADY
     selfcal_status = 'SREADY'
@@ -171,7 +174,7 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
     extractdict['selfcal_status'] = selfcal_status
     sdb.db_set('reprocessing',extractdict)
     sdb.close()
-    print 'Updated status to SREADY for',name
+    print('Updated status to SREADY for',name)
 
 if __name__=='__main__':
 

@@ -1,9 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Code to run continuously and keep an eye on the state of the queue
 # Download new files if needed
 # archive using the upload script
 
+from __future__ import print_function
+from __future__ import absolute_import
 from time import sleep
 import datetime
 from surveys_db import SurveysDB,get_next
@@ -34,7 +36,7 @@ while True:
             sdb.cur.execute('select * from fields where status!="Not started" and clustername="%s" order by priority desc, end_date' % cluster)
             result=sdb.cur.fetchall()
     except MySQLdb.OperationalError as e:
-        print 'Database not available! -- sleeping',e
+        print('Database not available! -- sleeping',e)
         sleep(240)
         continue
     
@@ -45,23 +47,23 @@ while True:
             d[status]=d[status]+1
         else:
             d[status]=1
-    print '\n\n-----------------------------------------------\n\n'
-    print 'DDF-pipeline status on cluster',cluster
+    print('\n\n-----------------------------------------------\n\n')
+    print('DDF-pipeline status on cluster',cluster)
     print(datetime.datetime.now())
-    print
+    print()
     for k in sorted(d.keys()):
-        print "%-20s : %i" % (k,d[k])
+        print("%-20s : %i" % (k,d[k]))
 
     if len(check_dict)>0:
-        print "%-20s : %i" % ('In check list',len(check_dict))
+        print("%-20s : %i" % ('In check list',len(check_dict)))
     
     if download_thread is not None:
-        print 'Download thread is running (%s)' % download_name
+        print('Download thread is running (%s)' % download_name)
     if upload_thread is not None:
-        print 'Upload thread is running (%s)' % upload_name
+        print('Upload thread is running (%s)' % upload_name)
         
     if download_thread is not None and not download_thread.isAlive():
-        print 'Download thread seems to have terminated'
+        print('Download thread seems to have terminated')
         if download_name in check_dict:
             _,count=check_dict[download_name]
             count+=1
@@ -71,33 +73,33 @@ while True:
         download_thread=None
 
     if upload_thread is not None and not upload_thread.isAlive():
-        print 'Upload thread seems to have terminated'
+        print('Upload thread seems to have terminated')
         upload_thread=None
 
     # do the check for DL failed fields
     for r in result:
         if r['id'] in check_dict:
             if r['status']=='D/L failed':
-                print 'Field',r['id'],'in check_dict failed download!'
+                print('Field',r['id'],'in check_dict failed download!')
                 # check the count and time
                 ttime,count=check_dict[r['id']]
                 dt=datetime.datetime.now()-ttime
                 if dt.total_seconds()>check_interval and count<maxcount:
                     # reset status so it's eligible for retry
-                    print 'Recheck time -- resetting its status'
+                    print('Recheck time -- resetting its status')
                     r['status']='Not started'
                     with SurveysDB() as sdb:
                         sdb.set_field(r)
 
             else:
                 # fields with any other status should be removed from check_dict
-                print 'Removing',r['id'],'from check_dict'
+                print('Removing',r['id'],'from check_dict')
                 del check_dict[r['id']]
     
     if ('Queued' not in d or d['Queued']<queuelimit) and download_thread is None:
         download_name=get_next()
         if download_name is not None:
-            print 'We need to download a new file (%s)!' % download_name
+            print('We need to download a new file (%s)!' % download_name)
             download_thread=threading.Thread(target=do_run_pipeline, args=(download_name,basedir))
             download_thread.start()
     
@@ -107,7 +109,7 @@ while True:
             if r['status']=='Complete' and r['archive_version']==4:
                 upload_name=r['id']
                 kw={}
-                print 'We need to upload a new file (%s)!' % upload_name
+                print('We need to upload a new file (%s)!' % upload_name)
                 if os.path.isdir(basedir+'/'+upload_name+'/KEEP'):
                     # remade directory, remove previous files
                     do_delete_keep(upload_name,basedir)
@@ -125,6 +127,6 @@ while True:
                 upload_thread.start()
                 break
     '''        
-    print '\n\n-----------------------------------------------\n\n'
+    print('\n\n-----------------------------------------------\n\n')
         
     sleep(300)

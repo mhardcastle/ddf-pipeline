@@ -2,6 +2,9 @@
 
 # Make the catalogue needed for the MCMC scaling factor fitting
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
 from astropy.table import Table
 import numpy as np
 from crossmatch_utils import filter_catalogue,select_isolated_sources,match_catalogues
@@ -14,21 +17,21 @@ def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=''):
     # Each catalogue needs RA, DEC, Total_flux and E_Total_flux.
 
     t=Table.read(name,format='ascii.commented_header',header_start=-1)
-    print 'Total table length is',len(t)
+    print('Total table length is',len(t))
     if len(t)==0:
         raise RuntimeError('No sources in table from pybdsm')
     t=filter_catalogue(t,c_ra,c_dec,radius)
-    print 'Filtered within',radius,'degrees:',len(t)
+    print('Filtered within',radius,'degrees:',len(t))
     if len(t)==0:
         raise RuntimeError('No sources in central part of image')
     t=t[t['Total_flux']>0.15]
-    print 'Bright sources:',len(t)
+    print('Bright sources:',len(t))
     if len(t)==0:
         raise RuntimeError('No bright sources for crossmatching')
 
     # Filter for isolated sources
     t=select_isolated_sources(t,100)
-    print 'Remove close neighbours:',len(t)
+    print('Remove close neighbours:',len(t))
     if len(t)==0:
         raise RuntimeError('No sources in table before crossmatching')
 
@@ -38,7 +41,7 @@ def make_catalogue(name,c_ra,c_dec,radius,cats,outnameprefix=''):
         tab=Table.read(n)
         ctab.append(filter_catalogue(tab,c_ra,c_dec,radius))
         groups.append(group)
-        print 'Table',sh,'has',len(ctab[-1]),'entries'
+        print('Table',sh,'has',len(ctab[-1]),'entries')
 
     groups=set(groups)
     # now do cross-matching

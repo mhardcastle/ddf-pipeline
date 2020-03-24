@@ -3,6 +3,12 @@
 # Code to bootstrap the flux density scale using killMS/DDF
 # Should run standalone or as part of the pipeline
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import os,sys
 import os.path
 from auxcodes import run,warn,die,MSList
@@ -37,7 +43,7 @@ def run_bootstrap(o):
     if o['frequencies'] is None or o['catalogues'] is None:
         die('Frequencies and catalogues options must be specified')
 
-    if "DDF_PIPELINE_CATALOGS" not in os.environ.keys():
+    if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
         warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         sys.exit(2)
 
@@ -55,7 +61,7 @@ def run_bootstrap(o):
     if o['radii'] is None:
         o['radii']=[10]*cl
     if o['groups'] is None:
-        o['groups']=range(cl)
+        o['groups']=list(range(cl))
     if (len(o['frequencies'])!=cl or len(o['radii'])!=cl or
         len(o['names'])!=cl or len(o['groups'])!=cl):
         die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
@@ -64,7 +70,7 @@ def run_bootstrap(o):
     if o['low_imsize'] is not None:
         low_imsize=o['low_imsize'] # allow over-ride
     else:
-        low_imsize=o['imsize']*o['cellsize']/o['low_cell']
+        low_imsize=old_div(o['imsize']*o['cellsize'],o['low_cell'])
 
     low_robust=o['low_robust']
 
@@ -94,7 +100,7 @@ def run_bootstrap(o):
         freqs,omslist = (list(x) for x in zip(*sorted(zip(freqs, omslist), key=lambda pair: pair[0])))
 
         for f,ms in zip(freqs,omslist):
-            print ms,f
+            print(ms,f)
 
         # generate the sorted input mslist
         with open('temp_mslist.txt','w') as f:
@@ -150,7 +156,7 @@ def run_bootstrap(o):
             ra*=180.0/np.pi
             dec*=180.0/np.pi
 
-            cats=zip(o['catalogues'],o['names'],o['groups'],o['radii'])
+            cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
             make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl',ra,dec,2.5,cats,outnameprefix=obsid)
     
         freqlist=open(obsid+'frequencies.txt','w')
@@ -211,7 +217,7 @@ def run_bootstrap(o):
                     t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
-                    print frq,factor
+                    print(frq,factor)
                     t=pt.table(ms,readonly=False)
                     desc=t.getcoldesc(o['colname'])
                     desc['name']='SCALED_DATA'

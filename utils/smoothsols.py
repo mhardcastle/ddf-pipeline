@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 import optparse
 import pickle
 import numpy as np
@@ -64,13 +68,13 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
     try:
         window_size = np.abs(np.int(window_size))
         order = np.abs(np.int(order))
-    except ValueError, msg:
+    except ValueError as msg:
         raise ValueError("window_size and order have to be of type int")
     if window_size % 2 != 1 or window_size < 1:
         raise TypeError("window_size size must be a positive odd number")
     if window_size < order + 2:
         raise TypeError("window_size is too small for the polynomials order")
-    order_range = range(order+1)
+    order_range = list(range(order+1))
     half_window = (window_size -1) // 2
     # precompute coefficients
     b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
@@ -109,7 +113,7 @@ def read_options():
 def NormMatrices(G):
     nt,nch,na,_,_=G.shape
 
-    for iChan,it in ItP(range(nch),range(nt)):
+    for iChan,it in ItP(list(range(nch)),list(range(nt))):
         Gt=G[it,iChan,:,:]
         u,s,v=np.linalg.svd(Gt[0])
         # #J0/=np.linalg.det(J0)
@@ -126,13 +130,13 @@ def NormMatrices(G):
     return G
 
 
-class ClassSmooth():
+class ClassSmooth(object):
     def __init__(self,MSName,SolsName,Type="linear",WSize=53,Order=2,PolMode="Full",OutName=None,doplot=False):
 
         SolsName="killMS.%s.sols.npz"%SolsName
         self.FileName="/".join([os.path.abspath(MSName),SolsName])
         self.OutName=OutName
-        print "Smoothing from %s"%self.FileName
+        print("Smoothing from %s"%self.FileName)
         self.DicoFile=dict(np.load(self.FileName))
         self.Sols=self.DicoFile["Sols"]
         self.Sols=self.Sols.view(np.recarray)
@@ -143,7 +147,7 @@ class ClassSmooth():
         self.NormAllDirs()
 
     def NormAllDirs(self):
-        print "  Normalising Jones matrices ...."
+        print("  Normalising Jones matrices ....")
         nt,nch,na,nd,_,_=self.Sols.G.shape
         for iDir in range(nd):
             G=self.Sols.G[:,:,:,iDir,:,:]
@@ -160,13 +164,13 @@ class ClassSmooth():
 
         G1=Sols1.G.reshape((nt0,na,nd,4))
         if self.PolMode=="Full":
-            Pols=range(4)
+            Pols=list(range(4))
 
         Sols1.t0=Sols0.t0
         Sols1.t1=Sols0.t1
 #        Sols1.tm=Sols0.tm
 
-        print "  Smoothing"
+        print("  Smoothing")
         for iDir in range(nd):
             for iAnt in range(na):
                 for ipol in Pols:
@@ -211,7 +215,7 @@ class ClassSmooth():
             Path="/".join(self.FileName.split("/")[0:-1])+"/"
             Name=".".join(FileName.split(".")[1:-2])
             OutName="%skillMS.%s.Smooth.sols.npz"%(Path,Name)
-        print "  Saving smoothed solutions in: %s"%OutName
+        print("  Saving smoothed solutions in: %s"%OutName)
         np.savez(OutName,**self.DicoFile)
 
         
@@ -239,15 +243,15 @@ def main(options=None):
             ll=l.replace("\n","")
             MSName.append(ll)
         lMS=MSName
-        print  "In batch mode, running Smooth on the following MS:"
+        print("In batch mode, running Smooth on the following MS:")
         for MS in lMS:
-            print  "  %s"%MS
+            print("  %s"%MS)
     elif "*" in options.MSName:
         Patern=options.MSName
         lMS=sorted(glob.glob(Patern))
-        print  "In batch mode, running Smooth on the following MS:"
+        print("In batch mode, running Smooth on the following MS:")
         for MS in lMS:
-            print  "  %s"%MS
+            print("  %s"%MS)
     else:
         lMS=[options.MSName]
 

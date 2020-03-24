@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 from reproject import reproject_interp,reproject_exact
 from reproject.utils import parse_input_data, parse_output_projection
 from reproject.interpolation.core_celestial import _reproject_celestial as reproj_interp
@@ -30,7 +32,7 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
-            print '.',
+            print('.', end=' ')
             sys.stdout.flush()
             jmax = min(jmin + blocks[1], array.shape[1])
             shape_out_sub = (imax - imin, jmax - jmin)
@@ -43,7 +45,7 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
             array[imin:imax, jmin:jmax] = array_sub
             footprint[imin:imax, jmin:jmax] = footprint_sub
 
-    print 
+    print() 
     return array, footprint
 
 def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0,
@@ -65,7 +67,7 @@ def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
-            print '.',
+            print('.', end=' ')
             jmax = min(jmin + blocks[1], array.shape[1])
             shape_out_sub = (imax - imin, jmax - jmin)
             wcs_out_sub = wcs_out.deepcopy()
@@ -76,13 +78,13 @@ def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_
                                                             parallel=parallel)
             array[imin:imax, jmin:jmax] = array_sub
             footprint[imin:imax, jmin:jmax] = footprint_sub
-    print
+    print()
     return array, footprint
 
 
 def reproject_worker(a):
     imin,imax,jmin,jmax,array_in,wcs_in,wcs_out_sub,shape_out_sub,order=a
-    print 'worker:',imin,jmin
+    print('worker:',imin,jmin)
     array_sub, footprint_sub = _reproject_celestial(array_in, wcs_in, wcs_out_sub,
                                                     shape_out=shape_out_sub, order=order)
     return imin,imax,jmin,jmax,array_sub,footprint_sub
@@ -104,7 +106,7 @@ def reproject_interp_chunk_2d_multi(input_data, output_projection, shape_out=Non
     footprint = np.zeros(shape_out, dtype=float)
     # Arguments for pool
     args=[] 
-    print 'chunking for pool'
+    print('chunking for pool')
     for imin in range(0, array.shape[0], blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
         for jmin in range(0, array.shape[1], blocks[1]):
@@ -115,7 +117,7 @@ def reproject_interp_chunk_2d_multi(input_data, output_projection, shape_out=Non
             wcs_out_sub.wcs.crpix[1] -= imin
             args.append((imin,imax,jmin,jmax,array_in,wcs_in,wcs_out_sub,shape_out_sub,order))
 
-    print 'pooling'
+    print('pooling')
     p=Pool(16)
     results=p.map(reproject_worker,args)
     for r in results:

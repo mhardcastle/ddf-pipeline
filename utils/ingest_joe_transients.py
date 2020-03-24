@@ -1,4 +1,5 @@
-from surveys_db import SurveysDB
+from __future__ import absolute_import
+from .surveys_db import SurveysDB
 from astropy.table import Table
 
 t=Table.read('/data/lofar/mjh/master_dynspec_target_list.fits')

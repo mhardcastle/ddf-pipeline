@@ -48,13 +48,11 @@ def plot_select(r,sf,label,**kwargs):
     return r_in,r_out
     
 with SurveysDB(readonly=True) as sdb:
-    sdb.cur.execute('select fields.id as id,ra,decl,fields.status as status,observations.status as ostatus,observations.location as location,sum(nsb*integration/232) as s,count(observations.id) as c,fields.priority from fields left join observations on (observations.field=fields.id) group by fields.id having ostatus is not null and ostatus!="Scheduled"')
+    sdb.cur.execute('select * from fields where dr2')
     #sdb.cur.execute('select * from fields where status!="Not started"')
     results=sdb.cur.fetchall()
-    sdb.cur.execute('select ra,decl from fields where dr2>0')
-    dr2_results=sdb.cur.fetchall()
     
-print(len(results),'fields have some observations')
+print(len(results),'fields are in dr2')
         
 fig = plt.figure(figsize=(16, 8))
 fig.add_subplot(111, projection='aitoff')
@@ -78,23 +76,19 @@ for b in [-10,0,10]:
 #DR2 area
 ravals = []
 decvals = []
-for r in dr2_results:
+for r in results:
     ravals.append(r['ra'])
     decvals.append(r['decl'])
 
 ra_r,dec_r=cc(ravals,decvals)
 plt.scatter(ra_r,dec_r,marker='o',color='blue',alpha=0.2,zorder=-5,edgecolors='none',s=50,label='DR2')
-    
-_,r=plot_select(results,lambda r:r['status'] in ['Archived','Complete'],label='Complete',color='green')
-_,r=plot_select(r,lambda r:r['status'] in ['Proprietary'],label='Proprietary',color='magenta')
-_,r=plot_select(r,lambda r:r['status'] in ['Running'],label='Running',color='cyan')
-_,r=plot_select(r,lambda r:r['status'] in ['Downloaded','Downloading','Unpacking','Averaging','Ready','Queued','Unpacked'],label='In progress',color='yellow')
-_,r=plot_select(r,lambda r:r['status'] in ['Failed','List failed','D/L failed'],label='Failed',color='red')
 
-_,r=plot_select(r,lambda r:r['ostatus']=='DI_processed' and r['s']>7,label='Ready',color='black')
-
-#_,r=plot_select(r,lambda r:r['location']!="Sara",label='Observed (not Sara)',color='red',alpha=1.0,s=5)
-_,r=plot_select(r,lambda r:True,label='Observed',color='black',alpha=0.5,s=5)
+_,r=plot_select(results,lambda r:r['dr1']==1,label='Complete (DR1)',color='magenta')
+_,r=plot_select(r,lambda r:r['lgz']==1,label='Complete (internal)',color='orange')
+_,r=plot_select(r,lambda r:r['gz_status']=='Complete',label='Complete',color='green')
+_,r=plot_select(r,lambda r:r['gz_status'] in ['In progress'],label='In progress',color='cyan')
+_,r=plot_select(r,lambda r:r['gz_status'] in ['Created','Downloading'],label='Ready to upload',color='yellow')
+#_,r=plot_select(r,lambda r:r['gz_status'] in ['Failed'],label='Failed',color='red')
 
 
 ax=plt.gca()
@@ -112,7 +106,7 @@ plt.ylabel('Decl.')
 plt.grid(True)
 plt.legend(loc=4)
 plt.tight_layout()
-plt.title('DR2 processing status at '+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),loc='right')
+plt.title('RGZ status at '+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),loc='right')
 if len(sys.argv)>1:
     plt.savefig(sys.argv[1],dpi=250)
 else:

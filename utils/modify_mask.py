@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import division
+from builtins import zip
+from past.utils import old_div
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS
@@ -10,14 +13,14 @@ def ellipse(x,y,xp,yp,major,minor,angle):
     #boundaries defined by the ellipse
     #of center[x,y], diameter d D, and tilted at angle
 
-    cosa=np.cos(angle*np.pi/180)
-    sina=np.sin(angle*np.pi/180)
+    cosa=np.cos(old_div(angle*np.pi,180))
+    sina=np.sin(old_div(angle*np.pi,180))
     dd=(minor/2.0)**2.0
     DD=(major/2.0)**2.0
 
     a=np.power(cosa*(xp-x)+sina*(yp-y),2)
     b=np.power(sina*(xp-x)-cosa*(yp-y),2)
-    return (a/dd)+(b/DD)
+    return (old_div(a,dd))+(old_div(b,DD))
 
 def modify_mask(infile,outfile,table,radius,fluxlim,save_filtered=None,do_extended=False,cellsize=1.5,pointsize=30.0):
     """Take a pre-existing mask file, in infile: find all entries in FITS
@@ -67,14 +70,14 @@ def modify_mask(infile,outfile,table,radius,fluxlim,save_filtered=None,do_extend
         if cymax>ymax: cymax=ymax
         X, Y = np.meshgrid(np.arange(cxmin,cxmax,1.0), np.arange(cymin,cymax,1.0))
         if do_ellipse:
-            ellv=ellipse(xv,yv,X,Y,major/cellsize+radius*2.0,minor/cellsize+radius*2.0,pa)
+            ellv=ellipse(xv,yv,X,Y,old_div(major,cellsize)+radius*2.0,old_div(minor,cellsize)+radius*2.0,pa)
             mask[0,0,Y[ellv<1.0].astype(int),X[ellv<1.0].astype(int)]=1
         else:
             rv=np.sqrt((X+0.5-xv)**2.0+(Y+0.5-yv)**2.0)
             mask[0,0,Y[rv<radius].astype(int),X[rv<radius].astype(int)]=1
 
     hdu[0].data=(map.astype(int) | mask).astype(np.float32)
-    hdu.writeto(outfile,clobber=True)
+    hdu.writeto(outfile,overwrite=True)
     if save_filtered is not None:
         t.write(save_filtered,overwrite=True)
         

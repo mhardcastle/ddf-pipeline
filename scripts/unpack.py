@@ -1,5 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
+from __future__ import print_function
 import glob
 import os
 from surveys_db import update_status,use_database
@@ -15,10 +16,10 @@ def unpack(workdir='.'):
         raise RuntimeError('Cannot find files to unpack')
     for f in files:
         if 'tokens' in f:
-            print 'Skipping',f
+            print('Skipping',f)
             continue
         fn=os.path.basename(f)
-        print 'Unpacking',fn
+        print('Unpacking',fn)
         result=os.system('cd '+workdir+'; tar xf '+f)
         if result!=0:
             raise RuntimeError('Untar failed')
