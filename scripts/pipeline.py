@@ -434,9 +434,15 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             # it may be useful at some point
             
             if 'KILLMS_DIR' in os.environ:
-                parset=os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg'
+                # different versions have different locations for the parset, so check them all
+                parsets=[os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg',os.environ['KILLMS_DIR']+'/killMS/Parset/DefaultParset.cfg']
                 keywords=[]
-                if os.path.isfile(parset):
+                for parset in parsets:
+                    if os.path.isfile(parset):
+                        break
+                else:
+                    parset=None
+                if parset is not None:
                     with open(parset) as infile:
                         lines=infile.readlines()
                     for l in lines:
