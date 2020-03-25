@@ -80,7 +80,7 @@ def options(optlist,option_list):
     return odict
 
 def typename(s):
-    return str(s).replace("type '","").replace("class","").replace("'","")
+    return str(s).replace("type '","").replace("class ","").replace("'","")
 
 def print_options(option_list):
     import textwrap
