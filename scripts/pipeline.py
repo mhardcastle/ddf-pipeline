@@ -787,7 +787,10 @@ def ingest_dynspec(obsid='*'):
             # match filenames to names
             fd={}
             for r in catalogue:
-                fd[r['Name']]=''
+                name=r['Name']
+                if isinstance(name,np.bytes_):
+                    name=name.decode('utf-8')
+                fd[name]=''
             gf=glob.glob(f+'/TARGET/*.fits')+glob.glob(f+'/OFF/*.fits')
             for ff in gf:
                 hdu=fits.open(ff)
@@ -797,7 +800,10 @@ def ingest_dynspec(obsid='*'):
                 hdu.close()
             sdb.cur.execute('delete from spectra where obsid="%s"' % obsid)
             for i,r in enumerate(catalogue):
-                sdb.cur.execute('insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), r['Name'], r['Type'], field, obsid, fd[r['Name']], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV']))
+                name=r['Name']
+                if isinstance(name,np.bytes_):
+                    name=name.decode('utf-8')
+                sdb.cur.execute('insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV']))
         
     
 
