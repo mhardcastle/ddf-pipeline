@@ -10,7 +10,7 @@ from astropy.io import fits
 import numpy as np
 from scipy.special import gammaln
 import emcee
-from .auxcodes import get_rms
+from auxcodes import get_rms
 
 def model(cbins,norm,alpha):
     return (10**norm)*ds*(old_div(cbins,fluxnorm))**(-alpha)

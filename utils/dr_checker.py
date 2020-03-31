@@ -10,7 +10,7 @@ from astropy.table import Table
 from astropy.io import fits
 import numpy as np
 from make_subim import extract_subim
-from .crossmatch_utils import select_isolated_sources
+from crossmatch_utils import select_isolated_sources
 
 def do_dr_checker(tname,imname,peak=0.1,majlimit=0.003,cutout=60,blank=10,verbose=False,write_subims=False):
 

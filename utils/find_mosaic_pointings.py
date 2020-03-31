@@ -7,8 +7,8 @@ from past.utils import old_div
 import os,sys
 import numpy as np
 import argparse
-from .auxcodes import sepn
-from .surveys_db import SurveysDB
+from auxcodes import sepn
+from surveys_db import SurveysDB
 
 deg2rad = np.pi/180.0
 rad2deg = 180.0/np.pi

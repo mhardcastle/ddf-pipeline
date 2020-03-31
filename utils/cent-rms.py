@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import numpy as np
 from astropy.io import fits
-from .auxcodes import get_rms
+from auxcodes import get_rms
 
 if __name__=='__main__':
     import sys

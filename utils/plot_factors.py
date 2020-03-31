@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import matplotlib
-from .fitting_factors import pl,chi2,read_frequencies_fluxes
+from fitting_factors import pl,chi2,read_frequencies_fluxes
 
 def fitall(scale,frequencies,fluxes,errors):
     alpha=[]

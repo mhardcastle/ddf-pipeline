@@ -69,7 +69,7 @@ if __name__=='__main__':
 
         if not skip_construct:
             separator('Preparing release directory')
-            releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS.tessel.reg','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.int.facetRestored.fits','astromap.fits','DynSpec*.tgz']
+            releasefiles=['image_full_low_stokesV.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits.fz','image_full_low_QU.cube.dirty.corr.fits.fz','image_full_vlow_QU.cube.dirty.fits.fz','image_full_low_QU.cube.dirty.fits.fz','image_full_low_m.int.restored.fits','image_full_low_m.app.restored.fits','image_full_ampphase_di_m.NS.tessel.reg','image_full_ampphase_di_m.NS_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.int.facetRestored.fits','image_full_ampphase_di_m.NS_Band0_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band1_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS_Band2_shift.app.facetRestored.fits','astromap.fits','DynSpec*.tgz']
 
             os.chdir(workdir+'/fields')
             for r in result:
@@ -79,7 +79,7 @@ if __name__=='__main__':
                     warn('Directory %s does not exist, making it' % id)
                     os.mkdir(id)
                 tdir=workdir+'/fields/'+id
-                if r['clustername']=='Herts':
+                if r['clustername']=='Herts' and r['location']!="":
                     location=r['location']
                     resolved_release=[]
                     for f in releasefiles:
@@ -97,9 +97,6 @@ if __name__=='__main__':
                                     copy2(source,tdir)
                                 else:
                                     warn('Source file %s does not exist' % source)
-                    else:
-                        pass
-                        #warn('Location for %s does not exist' % id)
                 else:
                     # get from archive if necessary
                     if r['status']!='Archived' or r['archive_version']<4:

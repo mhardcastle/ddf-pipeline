@@ -47,6 +47,9 @@ def make_mosaic(args):
     elif args.use_shifted:
         intname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
         appname='image_full_ampphase_di_m.NS_shift.app.facetRestored.fits'
+    elif args.band is not None:
+        intname='image_full_ampphase_di_m.NS_Band%i_shift.int.facetRestored.fits' % args.band
+        appname='image_full_ampphase_di_m.NS_Band%i_shift.app.facetRestored.fits' % args.band
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
@@ -154,7 +157,7 @@ def make_mosaic(args):
                             count+=1
                 print('... blanked',old_div(count*900.0,3600),'square arcmin')
                 outname=rootname+'astroblank-'+name[i]+'.fits'
-                if args.save: hdus[i].writeto(outname,clobber=True)
+                if args.save: hdus[i].writeto(outname,overwrite=True)
             app[i].data[np.isnan(hdus[i].data)]=np.nan
 
     # If the header is directly passed in, use it
@@ -246,7 +249,7 @@ def make_mosaic(args):
             r, footprint = reproj(hdus[i], header, hdu_in=0, parallel=False)
             r[np.isnan(r)]=0
             hdu = fits.PrimaryHDU(header=header,data=r)
-            if args.save: hdu.writeto(outname,clobber=True)
+            if args.save: hdu.writeto(outname,overwrite=True)
         print('weights',i,'(',name[i],')')
         outname=rootname+'weight-'+name[i]+'.fits'
         if args.load and os.path.exists(outname):
@@ -260,7 +263,7 @@ def make_mosaic(args):
             mask|=~np.isnan(w)
             w[np.isnan(w)]=0
             hdu = fits.PrimaryHDU(header=header,data=w)
-            if args.save: hdu.writeto(outname,clobber=True)
+            if args.save: hdu.writeto(outname,overwrite=True)
         print('add to mosaic...')
         if args.scale is not None:
             print('Applying scale %s to %s'%(args.scale[i],name[i]))
@@ -278,18 +281,31 @@ def make_mosaic(args):
         header['ORIGIN']='ddf-pipeline '+version()
 
         hdu = fits.PrimaryHDU(header=header,data=isum)
-        hdu.writeto(rootname+'mosaic.fits',clobber=True)
+        if args.band is None:
+            if args.do_lowres:
+                mosname='low-mosaic.fits'
+            else:
+                mosname='mosaic.fits'
+        else:
+            mosname='mosaic-%i.fits' % args.band
+        hdu.writeto(rootname+mosname,overwrite=True)
 
         hdu = fits.PrimaryHDU(header=header,data=wsum)
-        hdu.writeto(rootname+'mosaic-weights.fits',clobber=True)
+        hdu.writeto(rootname+mosname.replace('.fits','-weights.fits'),overwrite=True)
 
+    else:
+        mosname=None
 
+    return mosname
+    
+            
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic ddf-pipeline directories')
     parser.add_argument('--directories', metavar='D', nargs='+',
                         help='directory name')
     parser.add_argument('--rootname', dest='rootname', default='', help='Root name for output files, default uses no prefix')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
+    parser.add_argument('--band', dest='band', default=None, help='Band number to mosaic, leave unset for full-bw image')
     parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
     parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
     parser.add_argument('--load', dest='load', action='store_true', help='Load existing intermediate images')

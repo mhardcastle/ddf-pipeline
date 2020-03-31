@@ -10,7 +10,7 @@ from subprocess import call
 import os
 import glob
 from time import sleep
-from surveys_db import SurveysDB,tag_field
+from surveys_db import use_database,SurveysDB,tag_field
 
 def myglob(g,workdir):
     f=glob.glob(workdir+'/'+g)
@@ -31,6 +31,13 @@ def shiftimages(rootname):
     return [rootname+f+'.fits' for f in ['_shift.app.facetRestored','_shift.int.facetRestored']]
 
 def do_rsync(name,basedir,f):
+    other=False
+    if use_database():
+        with SurveysDB(readonly=True) as sdb:
+            idd=sdb.get_field(name)
+        if not (idd['lotss_field']>0) or idd['proprietary_date'] is not None:
+            other=True
+            
     workdir=basedir+'/'+name
 
     if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
@@ -40,6 +47,8 @@ def do_rsync(name,basedir,f):
 
     while True:
         s='cd '+workdir+'; rsync -avz --progress --safe-links --perms --chmod=ugo+rX --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        if other:
+            s=s.replace('archive','archive_other')
         print('Running command:',s)
         retval=call(s,shell=True)
         if retval==0:
@@ -115,7 +124,10 @@ def do_upload(name,basedir,skipstokes=False):
     compressed_done=(len(myglob('*.archive',workdir))>0)
     with SurveysDB() as sdb:
         idd=sdb.get_field(name)
-        idd['status']='Archived'
+        if idd['proprietary_date'] is not None:
+            idd['status']='Proprietary'
+        else:
+            idd['status']='Archived'
         tag_field(sdb,idd,workdir=workdir)
         sdb.set_field(idd)
     

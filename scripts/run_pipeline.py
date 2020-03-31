@@ -19,18 +19,14 @@ import sys
 import os
 import glob
 
-def do_run_pipeline(name,basedir):
+def do_run_pipeline(name,basedir,qsubfile=None,do_field=True):
+    '''
+    set do_field False for the now obsolete behaviour of downloading
+    and imaging a particular observation
 
-    if name[0]!='P' and name[0]!='L':
-        die('This code should be used only with field or observation names',database=False)
-
-    do_field=(name[0]=='P')
-
-    try:
-        qsubfile=sys.argv[2]
-    except:
+    '''
+    if qsubfile is None:
         qsubfile='/home/mjh/pipeline-master/ddf-pipeline/torque/pipeline.qsub'
-
 
     workdir=basedir+'/'+name
     try:
@@ -99,4 +95,9 @@ def do_run_pipeline(name,basedir):
 
 
 if __name__=='__main__':
-    do_run_pipeline(sys.argv[1],'/beegfs/car/mjh')
+            
+    try:
+        qsubfile=sys.argv[2]
+    except:
+        qsubfile=None
+    do_run_pipeline(sys.argv[1],'/beegfs/car/mjh',qsubfile=qsubfile)

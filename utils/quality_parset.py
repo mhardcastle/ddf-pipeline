@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from .getcpus import getcpus
+from getcpus import getcpus
 
 option_list = ( ( 'machine', 'NCPU', int, getcpus() ),
                 ( 'image', 'pbimage', str, 'image_full_ampphase_di_m.NS_shift.int.facetRestored.fits', 'PB-corrected image to use for source finding' ),
