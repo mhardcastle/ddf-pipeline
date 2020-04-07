@@ -6,7 +6,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 from builtins import range
-from past.utils import old_div
 import argparse
 from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic
 import os
@@ -30,7 +29,7 @@ def make_header(maxsep,name,ra,dec,cellsize,resolution):
     header=fits.Header()
     size=(maxsep/2.0)*1.15
     cellsize/=3600.0
-    himsize=int(old_div(size,cellsize))
+    himsize=int(size/cellsize)
     header['SIMPLE']=True
     header['BITPIX']=-32
     header['NAXIS']=2
@@ -167,7 +166,7 @@ if __name__=='__main__':
 
         print('Blanking the mosaic...')
 
-        blank_mosaic('mosaic.fits',himsize)
+        blank_mosaic(mosname,himsize)
 
     if args.do_lowres:
         print('Making the low-resolution mosaic...')

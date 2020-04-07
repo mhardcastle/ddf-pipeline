@@ -8,7 +8,6 @@ from __future__ import print_function
 from __future__ import division
 from builtins import zip
 from builtins import range
-from past.utils import old_div
 from pipeline_version import version
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
@@ -31,11 +30,20 @@ def make_mosaic(args):
         if len(args.noise) != len(args.directories):
             die('Noises provided must match directories',database=False)
 
+    if args.band is not None:
+        band=int(args.band)
+        print('Doing band %i'%band)
+    else:
+        band=None
+            
     if args.rootname:
         rootname=args.rootname+'-'
     else:
         rootname=''
 
+    if band is not None:
+        rootname=('band%i-' % band) + rootname
+                
     if args.exact:
         reproj=reproject_exact
     else:
@@ -44,12 +52,12 @@ def make_mosaic(args):
     if args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
+    elif band is not None:
+        intname='image_full_ampphase_di_m.NS_Band%i_shift.int.facetRestored.fits' % band
+        appname='image_full_ampphase_di_m.NS_Band%i_shift.app.facetRestored.fits' % band
     elif args.use_shifted:
         intname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
         appname='image_full_ampphase_di_m.NS_shift.app.facetRestored.fits'
-    elif args.band is not None:
-        intname='image_full_ampphase_di_m.NS_Band%i_shift.int.facetRestored.fits' % args.band
-        appname='image_full_ampphase_di_m.NS_Band%i_shift.app.facetRestored.fits' % args.band
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
@@ -116,7 +124,7 @@ def make_mosaic(args):
             for hdu in [hdus[i],app[i]]:
                 ra=hdu.header['CRVAL1']
                 dec=hdu.header['CRVAL2']
-                hdu.header['CRVAL1']-=old_div(dras[i],(3600.0*np.cos(np.pi*dec/180.0)))
+                hdu.header['CRVAL1']-=dras[i]/(3600.0*np.cos(np.pi*dec/180.0))
                 hdu.header['CRVAL2']-=ddecs[i]/3600.0
 
     for i in range(len(app)):
@@ -155,8 +163,7 @@ def make_mosaic(args):
                             if ryp>dmaxy: ryp=dmaxy
                             hdus[i].data[ry:ryp,rx:rxp]=np.nan
                             count+=1
-                print('... blanked',old_div(count*900.0,3600),'square arcmin')
-                outname=rootname+'astroblank-'+name[i]+'.fits'
+                print('... blanked',count*900.0/3600,'square arcmin')
                 if args.save: hdus[i].writeto(outname,overwrite=True)
             app[i].data[np.isnan(hdus[i].data)]=np.nan
 
@@ -268,7 +275,7 @@ def make_mosaic(args):
         if args.scale is not None:
             print('Applying scale %s to %s'%(args.scale[i],name[i]))
             r = r*args.scale[i]
-            w = old_div(w,((args.scale[i])**2.0))
+            w /= args.scale[i]**2.0
         isum+=r*w
         wsum+=w
 
@@ -281,13 +288,10 @@ def make_mosaic(args):
         header['ORIGIN']='ddf-pipeline '+version()
 
         hdu = fits.PrimaryHDU(header=header,data=isum)
-        if args.band is None:
-            if args.do_lowres:
-                mosname='low-mosaic.fits'
-            else:
-                mosname='mosaic.fits'
+        if args.do_lowres:
+            mosname='low-mosaic.fits'
         else:
-            mosname='mosaic-%i.fits' % args.band
+            mosname='mosaic.fits'
         hdu.writeto(rootname+mosname,overwrite=True)
 
         hdu = fits.PrimaryHDU(header=header,data=wsum)
@@ -296,7 +300,7 @@ def make_mosaic(args):
     else:
         mosname=None
 
-    return mosname
+    return rootname+mosname
     
             
 if __name__=='__main__':
