@@ -4,6 +4,20 @@ from builtins import range
 import numpy as np
 from pipeline import ddf_image,ddf_shift
 from pyrap.tables import table
+from astropy.io import fits
+import glob
+from auxcodes import warn
+
+def update_frequencies(rootname,freq):
+    g=glob.glob(rootname+'*.fits')
+    for f in g:
+        with fits.open(f) as hdu:
+            if 'CRVAL4' in hdu[0].header:
+                warn('Updating FITS header for %s to freq of %f' % (f,freq))
+                hdu[0].header['CRVAL4']=freq
+                hdu[0].header['RESTFRQ']=freq
+                hdu.writeto(f,overwrite=True)
+            del hdu[0].data
 
 def do_spectral_restored(colname,
                          CurrentMaskName,
@@ -47,6 +61,7 @@ def do_spectral_restored(colname,
             f.write("%s\n"%filenames[iMSName])
         f.close()
         mslistnames.append(MSListFileName)
+        freq=CentralFreqs[iBand]
         
         ThisImageName='image_full_ampphase_di_m.NS_Band%i'%iBand
         
@@ -69,5 +84,7 @@ def do_spectral_restored(colname,
         if o['method'] is not None:
             ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher,dicomodel=CurrentBaseDicoModelName+'.DicoModel')
 
+        update_frequencies(ThisImageName,freq)
+            
     return mslistnames # cache for these can be added to the tidy up
                        # at pipeline end
