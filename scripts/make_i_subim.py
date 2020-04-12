@@ -23,6 +23,10 @@ if 'ILTJ' in objname:
     ra=sc.ra.value
     dec=sc.dec.value
     print('Parsed coordinates to ra=%f, dec=%f' % (ra,dec))
+elif 'pos' in objname:
+    ra=float(sys.argv[3])
+    dec=float(sys.argv[4])
+    objname='pos-%f-%f' % (ra,dec)
 else:
     c=get_icrs_coordinates(objname)
     ra=float(c.ra.degree)
