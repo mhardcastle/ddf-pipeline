@@ -1015,6 +1015,8 @@ def main(o=None):
         report('Removing old files for a redo from '+o['redofrom'])
         files=glob.glob('*')
         keep=glob.glob('*.ms')+[o['mslist'],o['full_mslist'],o['archive_dir']]+glob.glob('*.cfg')
+        if o['clusterfile'] is not None:
+            keep.append(o['clusterfile'])
         if o['redofrom']=='start':
             pass
         elif o['redofrom']=='dirin':

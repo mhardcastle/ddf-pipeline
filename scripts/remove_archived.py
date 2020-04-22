@@ -9,7 +9,7 @@ import sys
 # remove archived data! Yikes!
 
 with SurveysDB() as sdb:
-    sdb.cur.execute('select * from fields where status="Archived" and archive_version=4 and clustername="Herts" and location like "%beegfs%"')
+    sdb.cur.execute('select * from fields where (status="Archived" or status="Proprietary") and archive_version=4 and clustername="Herts" and location like "%beegfs%"')
     results=sdb.cur.fetchall()
 
 dryrun=True
