@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
 import argparse
 import os,sys
 from subprocess import call
@@ -89,11 +92,11 @@ def image_vlow():
     return
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='Add corrupted model to DR2 data')
+    parser = argparse.ArgumentParser(description='Reimage DR2 field at very low resolution')
     parser.add_argument('-f','--field', help='DR2 pointing name', required=True, type=str)
     args = vars(parser.parse_args())
     
-    print args
+    print(args)
 
 
     field = args['field']
