@@ -11,6 +11,7 @@ from astropy.io import fits
 from scipy.signal import convolve2d
 from scipy.ndimage import gaussian_filter
 
+# Simulate a model image from DR2 solutions
 
 def makeGaussian(size, fwhm = 3, center=None):
     """ Make a square gaussian kernel.
@@ -111,12 +112,16 @@ def convolve_model(model,template,outname):
     hdu_template = fits.open(template)
     hdu_model = fits.open(model)
     convfwhm = hdu_template[0].header['BMAJ']/hdu_template[0].header['CDELT1']
+    minindex,maxindex = int(hdu_template[0].header['NAXIS1']*0.1),int(hdu_template[0].header['NAXIS1']*0.9)
     print 'Starting model convolution'
     kernel = makeGaussian(size=35,fwhm=convfwhm,center=None)
     print 'Made convolution kernel'
-    hdu_model[0].data[0,0,:,:] = convolve2d(hdu_model[0].data[0,0,:,:],kernel,mode='same')#,boundary='fill')
+    #hdu_model[0].data[0,0,6000:14000,6000:14000] = convolve2d(hdu_model[0].data[0,0,6000:14000,6000:14000],kernel,mode='same',boundary='fill')
+    hdu_model[0].data[0,0,minindex:maxindex,minindex:maxindex] = convolve2d(hdu_model[0].data[0,0,minindex:maxindex,minindex:maxindex],kernel,mode='same',boundary='fill')
+    #hdu_model[0].data[0,0,:,:] = convolve2d(hdu_model[0].data[0,0,:,:],kernel,mode='same')#,boundary='fill')
     hdu_model.writeto(outname)
     return outname
+
 
 def add_to_map(inmap1,inmap2,outname):
 
