@@ -14,9 +14,9 @@ survey (Shimwell et al 2017
 http://adsabs.harvard.edu/abs/2017A%26A...598A.104S).
 
 ddf-pipeline was written by Martin Hardcastle, Tim Shimwell, Cyril
-Tasse and Wendy Williams and will be described by Shimwell et al (in prep).
+Tasse and Wendy Williams and is described by Shimwell et al (2019 https://ui.adsabs.harvard.edu/abs/2019A%26A...622A...1S/abstract) and Tasse et al (2020 in prep).
 Scientific users of ddf-pipeline are requested to cite the relevant
-papers and refer to the ddf-pipeline github.
+papers and provide a link to the ddf-pipeline github.
 
 ddf-pipeline is licensed under the GPL and is free to use. For full
 documentation and installation instructions
