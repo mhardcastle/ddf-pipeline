@@ -57,9 +57,10 @@ def make_images(id):
     else:
         raise RuntimeError('Make images failed!')
 
-def upload_images(id):
+def upload_images(id,use_database=True):
     print('Create subject set and upload images for',id)
-    update_status(id,gz_status='Uploading')
+    if use_database:
+        update_status(id,gz_status='Uploading')
     wd=os.getcwd()
     Panoptes.connect(username='mjh22',password=os.environ['PANOPTES_PASSWORD'])
     os.chdir(target+id)
@@ -88,7 +89,8 @@ def upload_images(id):
 
     workflow=Workflow(11973)
     workflow.links.subject_sets.add(subject_set)
-    update_status(id,gz_status='In progress')
+    if use_database:
+        update_status(id,gz_status='In progress')
     print('Done!')
     
 if __name__=='__main__':    
