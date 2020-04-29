@@ -70,9 +70,10 @@ while True:
     if 'Downloaded' in d:
         for r in result:
             if r['vlow_image']=='Downloaded':
-                command="qsub -v FIELD=%s -N vlow-%s /home/mjh/pipeline-master/ddf-pipeline/torque/vlow_image.qsub" % (download_name, download_name)
+                field=r['id']
+                command="qsub -v FIELD=%s -N vlow-%s /home/mjh/pipeline-master/ddf-pipeline/torque/vlow_image.qsub" % (field, field)
                 if os.system(command)==0:
-                    update_status(download_name,"Queued")
+                    update_status(field,"Queued")
         
     if 'Uploaded' in d:
         for r in result:

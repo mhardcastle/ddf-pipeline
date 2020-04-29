@@ -100,11 +100,21 @@ def do_rsync_download(cname,basedir,f):
             break
         print('Non-zero return value',retval)
         if retval!=30:
-            die('rsync failed unexpectedly')
+            die('rsync failed unexpectedly',cname)
         sleep(10)
 
 
 def do_download(cname, basedir='.'):
+    # check whether download is needed -- saves rsync
+    os.chdir(basedir+'/'+cname)
+    if os.path.isfile('big-mslist.txt'):
+        files=[l.rstrip() for l in open('big-mslist.txt').readlines()]
+        for f in files:
+            if not os.path.exists(f):
+                break
+        else:
+            return os.getcwd()
+    
     update_status(cname,'Downloading')
     os.chdir(basedir)
     do_rsync_download(cname,'/disks/paradata/shimwell/LoTSS-DR2/archive/',os.getcwd())
@@ -139,7 +149,7 @@ if __name__=='__main__':
     field = args['field']
     
     # Download the appropriate data
-    directory=do_download(field)
+    directory=do_download(field,basedir='/beegfs/car/mjh/vlow')
 
     image_vlow(directory)
     
