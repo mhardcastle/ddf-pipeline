@@ -77,7 +77,7 @@ def striparchivename():
   mslist = glob.glob('L*_SB*.ms.archive')
   for ms in mslist:
       outname = ms.rstrip('.archive')
-      cmd = 'mv ' + ms + ' ' + outname
+      cmd = 'ln -s ' + ms + ' ' + outname
       print (cmd)
       os.system(cmd)
 
@@ -122,7 +122,9 @@ def do_download(cname, basedir='.'):
     return os.getcwd() # return directory where everything has been done
 
         
-def image_vlow(workdir='.'):
+def image_vlow(wd=None):
+    if wd is not None:
+        os.chdir(wd)
     update_status(None,'Running')
     run('DDF.py --Output-Name=image_full_vlow_nocut --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=4.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never' % getcpus())
     vlowmask = make_mask('image_full_vlow_nocut.app.restored.fits',3.0)
@@ -139,5 +141,5 @@ if __name__=='__main__':
     # Download the appropriate data
     directory=do_download(field)
 
-    image_vlow(directory+'/'+field)
+    image_vlow(directory)
     
