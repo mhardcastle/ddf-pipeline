@@ -17,7 +17,7 @@ download_name=None
 tidy_thread=None
 upload_name=None
 basedir='/beegfs/car/mjh/vlow'
-totallimit=50
+totallimit=80
 
 os.chdir(basedir)
 
