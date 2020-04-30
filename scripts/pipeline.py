@@ -125,15 +125,49 @@ def check_imaging_weight(mslist_name):
         raise RuntimeError('One or more tables failed to open')
     return result
 
+def parse_parset(parsets,use_headings=False):
+    keywords={}
+    for parset in parsets:
+        if os.path.isfile(parset):
+            break
+    else:
+        parset=None
+    if parset is not None:
+        with open(parset) as infile:
+            lines=infile.readlines()
+        prefix=''
+        for l in lines:
+            bits=l.split()
+            if use_headings and l[0]=='[':
+                prefix=bits[0][1:-1]+'-'
+            if len(bits)>0 and l[0]!='#' and l[0]!='_' and not(l[0].isspace()) and l[0]!='[':
+                if len(bits)>2:
+                    content=bits[2]
+                    if content[0]=='#':
+                        content=''
+                else:
+                    content=None
+                keywords[prefix+bits[0]]=content
+
+        return keywords
+    
+    else:
+        warn('Cannot find parset, some features may not work')
+        return {}
+
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
     if catcher: catcher.check()
     if options is None:
         options=o # attempt to get global if it exists
 
+    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+        
     cache_dir=find_cache_dir(options)
     if dicomodel is None:
         dicomodel=imagename+'.DicoModel'
     runcommand='DDF.py '+imagename+'.parset --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+dicomodel+' --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
+    if 'Misc-IgnoreDeprecationMarking' in keywords:
+        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
     
     fname=imagename+'_shift.app.facetRestored.fits'
     if options['restart'] and os.path.isfile(fname):
@@ -155,6 +189,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if options is None:
         options=o # attempt to get global if it exists
 
+    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+        
     if HMPsize is None:
         HMPsize=options['HMPsize']
     if do_decorr is None:
@@ -188,6 +224,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
 
+    if 'Misc-IgnoreDeprecationMarking' in keywords:
+        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
     
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
@@ -405,6 +443,12 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
     cache_dir=find_cache_dir(options)
 
+    if 'KILLMS_DIR' in os.environ:
+        # different versions have different locations for the parset, so check them all
+        keywords=parse_parset([os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg',os.environ['KILLMS_DIR']+'/killMS/Parset/DefaultParset.cfg'])
+    else:
+        keywords={}
+    
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
@@ -430,29 +474,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
-            # we parse the parset to make this general,
-            # it may be useful at some point
             
-            if 'KILLMS_DIR' in os.environ:
-                # different versions have different locations for the parset, so check them all
-                parsets=[os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg',os.environ['KILLMS_DIR']+'/killMS/Parset/DefaultParset.cfg']
-                keywords=[]
-                for parset in parsets:
-                    if os.path.isfile(parset):
-                        break
-                else:
-                    parset=None
-                if parset is not None:
-                    with open(parset) as infile:
-                        lines=infile.readlines()
-                    for l in lines:
-                        bits=l.split()
-                        if len(bits)>0 and l[0]!='[':
-                            keywords.append(bits[0])
-                    if 'DebugPdb' in keywords:
-                        runcommand+=' --DebugPdb=0'
-                else:
-                    warn('Cannot find killms parset, some features may not work')    
+            if 'DebugPdb' in keywords:
+                runcommand+=' --DebugPdb=0'
             
             if robust is None:
                 runcommand+=' --Weighting Natural'
