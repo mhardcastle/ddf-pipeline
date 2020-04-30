@@ -226,7 +226,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     if 'Misc-IgnoreDeprecationMarking' in keywords:
         runcommand+=' --Misc-IgnoreDeprecationMarking=1'
-    
+
+    if 'Beam-At' in keywords:
+        runcommand+=' --Beam-At=%s'%options['beam_at']
+        
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
@@ -477,7 +480,10 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
-            
+
+            if 'BeamAt' in keywords:
+                runcommand+=' --BeamAt=%s'%options['beam_at']
+                
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
