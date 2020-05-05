@@ -70,7 +70,7 @@ def blank_mosaic(imname,himsize):
     xv-=himsize
     yv-=himsize
     hdu[0].data[np.sqrt(xv**2.0+yv**2.0)>himsize]=np.nan
-    hdu.writeto(imname.replace('.fits','-blanked.fits'), clobber=True)
+    hdu.writeto(imname.replace('.fits','-blanked.fits'), overwrite=True)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Mosaic LoTSS pointings')
@@ -80,9 +80,12 @@ if __name__=='__main__':
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
     parser.add_argument('--band', dest='band', default=None, help='Band to mosaic for multi-band data')
     parser.add_argument('--no-check',dest='no_check', action='store_true', help='Do not check for missing images')
-    parser.add_argument('--no-highres',dest='no_highres', action='store_true', help='Mosaic low-res images as well')
+    parser.add_argument('--no-highres',dest='no_highres', action='store_true', help='Skip the high-resolution images')
+    parser.add_argument('--no-bdsf',dest='no_bdsf', action='store_true', help='Skip the source extraction')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
+    parser.add_argument('--do-vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
+    parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
     
@@ -91,6 +94,13 @@ if __name__=='__main__':
     pointingdict = read_pointingfile()
     ignorepointings = args.ignorepointings
 
+    if args.do_vlow:
+        fname='image_full_vlow_nocut_m.int.restored.fits'
+        args.no_highres=True
+    else:
+        fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
+        
+    
     print('Now searching for results directories')
     cwd=os.getcwd()
 
@@ -112,7 +122,7 @@ if __name__=='__main__':
         for d in args.directories:
             rd=d+'/'+p
             print(rd)
-            if os.path.isfile(rd+'/image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'):
+            if os.path.isfile(rd+'/'+fname):
                 mosaicdirs.append(rd)
                 try:
                     qualitydict = sdb.get_quality(p)
@@ -159,8 +169,9 @@ if __name__=='__main__':
 
         mos_args.header=header
         print('Calling make_mosaic')
-        #with open('mosaic-header.pickle','w') as f:
-        #    pickle.dump(header,f)
+        if args.save_header:
+            with open('mosaic-header.pickle','w') as f:
+                pickle.dump(header,f)
 
         mosname=make_mosaic(mos_args)
 
@@ -176,8 +187,9 @@ if __name__=='__main__':
         mos_args.do_lowres=True
         mos_args.astromap_blank=False # don't bother with low-res map
 
-        #with open('low-mosaic-header.pickle','w') as f:
-        #    pickle.dump(header,f)
+        if args.save_header:
+            with open('low-mosaic-header.pickle','w') as f:
+                pickle.dump(header,f)
 
         make_mosaic(mos_args)
 
@@ -185,7 +197,25 @@ if __name__=='__main__':
 
         blank_mosaic('low-mosaic.fits',himsize)
 
-    if args.band is None:
+    if args.do_vlow:
+        print('Making the low-resolution mosaic...')
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        mos_args.header=header
+        mos_args.rootname='vlow'
+        mos_args.do_vlow=True
+        mos_args.astromap_blank=False # don't bother with low-res map
+
+        if args.save_header:
+            with open('vlow-mosaic-header.pickle','w') as f:
+                pickle.dump(header,f)
+
+        make_mosaic(mos_args)
+
+        print('Blanking the mosaic...')
+
+        blank_mosaic('vlow-mosaic.fits',himsize)
+
+    if args.band is None and not args.no_bdsf:
         print('Now running PyBDSF to extract sources')
 
         catprefix='mosaic'

@@ -49,7 +49,10 @@ def make_mosaic(args):
     else:
         reproj=reproject_interp_chunk_2d
 
-    if args.do_lowres:
+    if args.do_vlow:
+        intname='image_full_vlow_nocut_m.int.restored.fits'
+        appname='image_full_vlow_nocut_m.app.restored.fits'
+    elif args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
     elif band is not None:
@@ -82,10 +85,12 @@ def make_mosaic(args):
         hdu=fits.open(d+'/'+intname)
         if args.find_noise:
 	    print('Estimating noise for', d+'/' + intname)
-	    if args.do_lowres:
-	            noise.append(get_rms(hdu,boxsize=1500))
+            if args.do_vlow:
+	        noise.append(get_rms(hdu,boxsize=500,niter=50))
+	    elif args.do_lowres:
+	        noise.append(get_rms(hdu,boxsize=1500))
 	    else:
-	            noise.append(get_rms(hdu))
+	        noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
         app.append(flatten(fits.open(d+'/'+appname)))
         if bth:
@@ -320,6 +325,7 @@ if __name__=='__main__':
     parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
+    parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
     parser.add_argument('--astromap_blank',dest='astromap_blank', help='')
     parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')
 
