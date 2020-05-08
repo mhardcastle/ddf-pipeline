@@ -101,6 +101,9 @@ def add_dummyms(msfiles):
     '''
     Add dummy ms to create a regular freuqency grid when doing a concat with DPPP
     '''
+    if len(msfiles) == 1: # there is nothing to do
+        return msfiles
+    
     keyname = 'REF_FREQUENCY'
     freqaxis = []
     newmslist  = []
