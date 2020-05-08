@@ -42,10 +42,13 @@ def filter_outside_extract(ds9region,infilename,catalogue):
 parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
 parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue)')
+parser.add_argument('regionfile', type=str, help='extractionregion')
+
 args = parser.parse_args()
 
 infile = args.fitsimage
 catalogue = args.catalogue
+regionfile = args.regionfile
 
 restfrq=143.65e6 # should work this out from the FITS headers eventually
 
