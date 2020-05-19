@@ -2,6 +2,7 @@
 
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
+from astropy.coordinates import SkyCoord
 from astropy.table import Table
 import argparse
 import os
@@ -15,16 +16,39 @@ try:
 except ImportError:
     import lofar.bdsm as bdsm
 from crossmatch_utils import *
+import pyregion 
+from auxcodes import flatten
+from astropy import wcs
+from astropy.wcs import WCS
+
+def filter_outside_extract(ds9region,infilename,catalogue):
+
+    hdu=fits.open(infilename)
+    hduflat = flatten(hdu)
+    map=hdu[0].data
+    w = WCS(flatten(hdu).header)
+
+    r = pyregion.open(ds9region)
+    manualmask = r.get_mask(hdu=hduflat)
+    inregion = []
+    for element in catalogue:
+	i,j = w.wcs_world2pix(element['RA'],element['DEC'],0)
+	print i,j,manualmask[int(i),int(j)]
+	inregion.append(manualmask[int(i),int(j)])
+    return catalogue[inregion]
 
 # Run bdsm on the image
 
 parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
 parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue)')
+parser.add_argument('regionfile', type=str, help='extractionregion')
+
 args = parser.parse_args()
 
 infile = args.fitsimage
 catalogue = args.catalogue
+regionfile = args.regionfile
 
 restfrq=143.65e6 # should work this out from the FITS headers eventually
 
@@ -50,8 +74,10 @@ lotssdr2=select_isolated_sources(lotssdr2,30)
 print 'isolated sources',len(lotssdr2)
 lotssdr2=lotssdr2[lotssdr2['Total_flux']/lotssdr2['Isl_rms']>20.0]
 print 'snr  more than 20 sources',len(lotssdr2)
-cutout=lotssdr2[lotssdr2['S_Code'] == 'S']
+lotssdr2=lotssdr2[lotssdr2['S_Code'] == 'S']
 print 'S_Code = S sources',len(lotssdr2)
+lotssdr2 = lotssdr2[ lotssdr2['Total_flux']/lotssdr2['Peak_flux'] < 1.25 + 3.1*(lotssdr2['Peak_flux']/lotssdr2['Isl_rms'])**-0.53]
+print 'Compact sources',len(lotssdr2)
 
 # Filter cutout cat
 cutout=Table.read(infile.replace('.fits','cat.srl.fits'))
@@ -66,15 +92,19 @@ cutout=cutout[cutout['Total_flux']/cutout['Isl_rms']>20.0]
 print 'snr  more than 20 sources',len(cutout)
 cutout=cutout[cutout['S_Code'] == 'S']
 print 'S_Code = S sources',len(cutout)
-
+cutout = cutout[ cutout['Total_flux']/cutout['Peak_flux'] < 1.25 + 3.1*(cutout['Peak_flux']/cutout['Isl_rms'])**-0.53]
+print 'Compact sources',len(cutout)
 
 
 # Simply nearest neighbour match
-
 matched = match_catalogues(lotssdr2,cutout,1,'cutout')
-
 lotssdr2=lotssdr2[~np.isnan(lotssdr2['cutout_separation'])]
 print 'After cross match',len(lotssdr2)
+
+# Cut to match extraction region
+lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
+print len(lotssdr2),'region filtered'
+
 ratios=lotssdr2['Total_flux']/lotssdr2['cutout_Total_flux']/1000.0
 lotssdr2.write('matched.fits',overwrite=True)
 

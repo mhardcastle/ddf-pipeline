@@ -5,8 +5,10 @@
 # on path for all the pipeline operations
 
 # parameter is the directory to work in
+# second (optical) parameter is column to archive
 
 source $LOFARSOFT
 
-cd ${1-.}
-python $DDF_DIR/ddf-pipeline/scripts/archivems.py
+dir=${2-DATA_DI_CORRECTED}
+cd ${1}
+python $DDF_DIR/ddf-pipeline/scripts/archivems.py -c ${dir}

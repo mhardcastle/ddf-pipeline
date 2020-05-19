@@ -1874,7 +1874,10 @@ def main(o=None):
 
     if o['compress_ms']:
         separator('Compressing MS for archive')
-        os.system('archivems.sh .')
+        if o['skip_di']:
+            os.system('archivems.sh . '+o['colname'])
+        else:
+            os.system('archivems.sh . DATA_DI_CORRECTED')
                 
     separator('Write summary and tidy up')
     summary(o)
