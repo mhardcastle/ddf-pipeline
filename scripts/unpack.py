@@ -29,6 +29,9 @@ def unpack(workdir='.'):
             os.system('cd '+workdir+'; mv scratch/*/*/*/Output/*.ms .')
             os.system('cd '+workdir+'; mv scratch/*/*/Output/*.ms .')
             os.system('cd '+workdir+'; mv scratch/*/Output/*.ms .')
+        elif os.path.isdir(workdir+'/results'):
+            # prefactor3 can create things in 'results'
+            os.system('cd '+workdir+'; mv results/*.ms .')            
         elif len(glob.glob(workdir+'/*.ms'))>0:
             # they can appear in the root directory!
             pass

@@ -9,7 +9,7 @@ import glob
 from surveys_db import SurveysDB
 
 with SurveysDB() as sdb:
-    sdb.cur.execute('select * from fields where (status="Archived" or status="Complete") and clustername="Herts"')
+    sdb.cur.execute('select * from fields where (status="Archived" or status="Complete" or status="Proprietary") and clustername="Herts"')
     results=sdb.cur.fetchall()
 
 for r in results:

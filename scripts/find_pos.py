@@ -7,34 +7,67 @@ from astropy.coordinates import SkyCoord,get_icrs_coordinates
 import astropy.units as u
 from surveys_db import SurveysDB
 import numpy as np
+from astropy.table import Table
 
-def find_pos(ra,dec,offset=4,name=None,verbose=True):
-    sc=SkyCoord(ra,dec,unit='deg')
-    minoffset=None
-    with SurveysDB() as sdb:
-        sdb.cur.execute('select * from fields')
-        results=sdb.cur.fetchall()
-        ras=[r['ra'] for r in results]
-        decs=[r['decl'] for r in results]
-        fsc=SkyCoord(ras,decs,unit='deg')
-        seps=sc.separation(fsc).value
-        for i,r in enumerate(results):
-            if seps[i]>offset: continue
-            sdb.cur.execute('select * from observations where field="%s"' % r['id'])
-            count=len(sdb.cur.fetchall())
-            sdb.cur.execute('select * from observations where field="%s" and status="DI_processed"' % r['id'])
-            proc_count=len(sdb.cur.fetchall())
-            sep=seps[i]
-            print('%-16s %-16s %2i %2i %8.3f %8.3f %6.3f %s' % (r['id'],r['status'],count,proc_count,r['ra'],r['decl'],sep,r['location']))
+def table_from_dict_list(l):
+    ''' l is a list of dictionaries with identical string keys '''
+    keys=l[0].keys()
+    coldict={}
+    for k in keys:
+        klist=[]
+        for d in l:
+            klist.append(d[k])
+        coldict[k]=klist
+    return Table(coldict)
+
+class Finder(object):
+    def __init__(self):
+        with SurveysDB(readonly=True) as sdb:
+            sdb.cur.execute('select * from fields left join quality on fields.id=quality.id order by fields.id')
+            results=sdb.cur.fetchall()
+            self.t=table_from_dict_list(results)
+            self.t['sc']=SkyCoord(self.t['ra'],self.t['decl'],unit=u.deg)
+            
+    def find(self,ra,dec,offset=4,verbose=False,check_obs=False):
+        if check_obs:
+            sdb=SurveysDB(readonly=True)
+
+        sc=SkyCoord(ra,dec,unit='deg')
+        minoffset=None
+        t=self.t
+        t['sep']=sc.separation(t['sc']).value
+        tdet=t[t['sep']<=offset]
+        for r in tdet:
+            if check_obs:
+                sdb.cur.execute('select * from observations where field="%s"' % r['id'])
+                count=len(sdb.cur.fetchall())
+                sdb.cur.execute('select * from observations where field="%s" and status="DI_processed"' % r['id'])
+                proc_count=len(sdb.cur.fetchall())
+            else:
+                count=-1
+                proc_count=-1
+            if verbose: print('%-16s %-16s %2i %2i %8.3f %8.3f %6.3f %s' % (r['id'],r['status'],count,proc_count,r['ra'],r['decl'],r['sep'],r['location']))
             if r['status']=='Archived':
-                if minoffset is None or sep<minoffset:
-                    minoffset=sep
-                    bestfield=r['id']
-    if minoffset is None:
-        return None
+                if minoffset is None or r['sep']<minoffset:
+                    minoffset=r['sep']
+                    bestfield=r
+        if check_obs:
+            sdb.close()
+            
+        if minoffset is None:
+            return None
+        else:
+            return bestfield
+        
+def find_pos(ra,dec,offset=4,verbose=True):
+    # standalone wrapper
+    f=Finder()
+    result=f.find(ra,dec,offset=offset,verbose=True,check_obs=True)
+    if result is None:
+        return result
     else:
-        return bestfield
-
+        return result['id']
+    
 if __name__=='__main__':
 
     retval=None

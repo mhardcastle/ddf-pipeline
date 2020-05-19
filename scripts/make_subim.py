@@ -168,8 +168,10 @@ def extract_subim(filename,ra,dec,size,hduid=0,verbose=True,cubemode=False):
         hdu=flatten(orighdu,ra,dec,x,y,psize,hduid=hduid,verbose=verbose)
     return hdu
 
-def extract_and_save(filename,ra,dec,size,outname='cutout.fits',cubemode=False):
+def extract_and_save(filename,ra,dec,size,outname='cutout.fits',cubemode=False,scale=None):
     hdu=extract_subim(filename,ra,dec,size,verbose=False,cubemode=cubemode)
+    if scale is not None:
+        hdu[0].data*=scale
     hdu.writeto(outname,overwrite=True)
 
 
