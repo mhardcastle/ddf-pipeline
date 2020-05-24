@@ -480,9 +480,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
-
-            if 'BeamAt' in keywords:
-                runcommand+=' --BeamAt=%s'%options['beam_at']
                 
             if robust is None:
                 runcommand+=' --Weighting Natural'
@@ -505,6 +502,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
                 runcommand+=' --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
+                if 'BeamAt' in keywords:
+                    runcommand+=' --BeamAt=%s'%options['beam_at']
+
                 if clusterfile is not None:
                     runcommand+=' --NodesFile '+clusterfile
                 if dicomodel is not None:
