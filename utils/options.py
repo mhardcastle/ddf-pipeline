@@ -74,7 +74,7 @@ def options(optlist,option_list):
                 result=result.encode("utf-8")
         except NameError: # unicode type doesn't exist, we are in py3
             pass
-        if otype is str and result="None":
+        if otype is str and result=="None":
             result=None
         if count>1:
             odict[section+'_'+name]=result
