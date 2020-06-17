@@ -227,7 +227,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     if 'Misc-IgnoreDeprecationMarking' in keywords:
         runcommand+=' --Misc-IgnoreDeprecationMarking=1'
-    
+
+    if 'Beam-At' in keywords:
+        runcommand+=' --Beam-At=%s'%options['beam_at']
+        
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
@@ -478,7 +481,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
-            
+                
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -500,6 +503,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
                 runcommand+=' --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
+                if 'BeamAt' in keywords:
+                    runcommand+=' --BeamAt=%s'%options['beam_at']
+
                 if clusterfile is not None:
                     runcommand+=' --NodesFile '+clusterfile
                 if dicomodel is not None:
