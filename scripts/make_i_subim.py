@@ -33,7 +33,7 @@ else:
     dec=float(c.dec.degree)
     print('Coordinate lookup gives ra=%f, dec=%f' % (ra,dec))
 
-field=find_pos(ra,dec,offset=2.5)
+field=find_pos(ra,dec,offset=3.5)
 
 if field is None:
     print('Archived image does not exist')
