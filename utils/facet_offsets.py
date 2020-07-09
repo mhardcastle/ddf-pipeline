@@ -109,21 +109,20 @@ class RegPoly(object):
         self.oclist=oclist
         self.llist=llist
         self.ollist=ollist
-        self.plab=[l[2] for l in llist]
         self.label_poly()
         self.labels_to_integers()
         
     def label_poly(self):
         # labels end up scrambled wrt their polygons, so we unscramble them
         llist=self.llist
-        plabel=[None]*len(llist)
+        plab=[None]*len(llist)
         for dra,ddec,label in llist:
             i=self.which_poly(dra,ddec,convert=False)
             if i is None:
                 raise RuntimeError('Failed to locate a label! (%s)' % label)
             else:
-                plabel[i]=label
-        self.plabel=plabel
+                plab[i]=label
+        self.plab=plab
 
     def which_poly(self,ra,dec,convert=True):
         if convert:
