@@ -370,7 +370,7 @@ def mscolexist(ms, colname):
 parser = argparse.ArgumentParser(description='Keep soures inside box region, subtract everything else and create new ms')
 parser.add_argument('-b','--boxfile', help='boxfile, required argument', required=True, type=str)
 parser.add_argument('-m','--mslist', help='DR2 mslist file, default=big-mslist.txt', default='big-mslist.txt', type=str)
-parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA', type=str) #DATA_DI_CORRECTED
+parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA') #DATA_DI_CORRECTED
 parser.add_argument('-f','--freqavg', help='channel averaging, default=4', default=4, type=int)
 parser.add_argument('-t','--timeavg', help='timesample averaging, default=2', default=2, type=int)
 parser.add_argument('-n','--ncpu', help='number of cpu to use, default=34', default=34, type=int)
