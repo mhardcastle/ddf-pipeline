@@ -1150,7 +1150,8 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
       imcol = 'DATA' 
     t.close()
     
-    baselineav = str (old_div(2.5e3*60000.*2.*np.pi *np.float(pixsize),(24.*60.*60*np.float(imsize))) )
+    #baselineav = str (old_div(2.5e3*60000.*2.*np.pi *np.float(pixsize),(24.*60.*60*np.float(imsize))) )
+    baselineav = str (old_div(1.87e3*60000.*2.*np.pi *np.float(1.5),(24.*60.*60*np.float(imsize))) )
     #baselineav = str (5e4*60000.*2.*np.pi *np.float(pixsize)/(24.*60.*60*np.float(imsize)) ) # this would mean 4sec for 20000 px image
     #imcol = 'DATA' 
     
