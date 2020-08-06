@@ -370,11 +370,11 @@ def mscolexist(ms, colname):
 parser = argparse.ArgumentParser(description='Keep soures inside box region, subtract everything else and create new ms')
 parser.add_argument('-b','--boxfile', help='boxfile, required argument', required=True, type=str)
 parser.add_argument('-m','--mslist', help='DR2 mslist file, default=big-mslist.txt', default='big-mslist.txt', type=str)
-parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA', type=str) #DATA_DI_CORRECTED
+parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA') #DATA_DI_CORRECTED
 parser.add_argument('-f','--freqavg', help='channel averaging, default=4', default=4, type=int)
 parser.add_argument('-t','--timeavg', help='timesample averaging, default=2', default=2, type=int)
 parser.add_argument('-n','--ncpu', help='number of cpu to use, default=34', default=34, type=int)
-parser.add_argument('-p','--prefixname', help='prefixname for output ms, default=object', default='object', type=str)
+parser.add_argument('-p','--prefixname', help='prefixname for output ms, default=object', default='object')#, type=str)
 parser.add_argument('--nodysco', help='Do not dysco compress output', action='store_false')
 parser.add_argument('--split', help='Do not concat but keep 10 SB blocks', action='store_true')
 parser.add_argument('--aoflaggerbefore', help='Do an extra round of AOflagger on input data', action='store_true')
@@ -634,7 +634,7 @@ if dokmscal:
 #msfiles   = ascii.read('big-mslist.txt',data_start=0)
 #msfiles   = list(msfiles[:][msfiles.colnames[0]]) # convert to normal list of strings
 
-
+numberstrings = ['0','1','2','3','4','5','6','7','8','9','10','11','12']
 
 for observation in range(number_of_unique_obsids(msfiles)):
 
@@ -643,7 +643,8 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
     obs_mslist    = add_dummyms(obs_mslist)   
 
-    currentmsoutconcat = msoutconcat + str(observation)
+    # numberstrings is used to avoid boost issues
+    currentmsoutconcat = msoutconcat + numberstrings[observation]#str(observation)
     if doconcat:    
         msfilesconcat = []
 
