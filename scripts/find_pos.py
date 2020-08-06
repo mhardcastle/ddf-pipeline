@@ -92,7 +92,7 @@ if __name__=='__main__':
         dec=sc.dec.value
         print('Parsed coordinates to ra=%f, dec=%f' % (ra,dec))
         name=sys.argv[1]
-        retval=find_pos(ra,dec,name=name)
+        retval=find_pos(ra,dec)
     else:
         print('Call me with the name of an ILTJ source OR RA, Dec in degrees OR "object objectname"')
     if retval is not None:
