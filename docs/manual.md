@@ -70,8 +70,8 @@ will need:
 * git (for installation)
 * pyrap
 * pybdsf (possibly from the LOFAR tree but an up-to-date separate build is recommended)
-* astropy (version compatible with Python 2.7)
-* astropy-healpix (ditto)
+* astropy
+* astropy-healpix
 * pyregion
 * emcee
 * reproject (for mosaicing)
@@ -81,12 +81,15 @@ will need:
 * SharedArray
 * deap
 * py-cpuinfo
-* sshtunnel (for database code)
-* MySQLdb (for database code)
 * cfitsio fpack (only if compression required: fpack must be on PATH)
-* LOFAR software and dysco (for MS compression)
+* DPPP and dysco (for MS compression)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
+
+If you are doing HBA surveys processing and wish to use the database
+integration features you must ensure that `surveys_db.py` from
+https://github.com/mhardcastle/lotss-query is on the PYTHONPATH. This
+introduces dependencies on sshtunnel and MySQLdb.
 
 ## installation
 
