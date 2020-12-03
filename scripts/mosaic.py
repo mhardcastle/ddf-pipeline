@@ -296,7 +296,7 @@ def make_mosaic(args):
 		header[ch]=hdus[0].header[ch]
 	    # Exception for Stokes V images where dong have a BMAJ
 	    except KeyError:
-		header[ch]=20.0/3600.0
+		print('No entry in header for %s and not creating one'%ch)
 
         header['ORIGIN']='ddf-pipeline '+version()
 
