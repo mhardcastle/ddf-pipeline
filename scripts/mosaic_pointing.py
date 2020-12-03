@@ -225,7 +225,7 @@ if __name__=='__main__':
 
     if args.do_stokesV:
         print('Making the stokes V mosaic...')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,20.0)
         mos_args.header=header
         mos_args.rootname='stokesV'
         mos_args.do_stokesV=True
