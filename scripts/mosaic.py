@@ -86,6 +86,10 @@ def make_mosaic(args):
     for d in args.directories:
         name.append(d.split('/')[-1])
         hdu=fits.open(d+'/'+intname)
+
+	if args.do_stokesV:
+		hdu[0].data[0][0] = hdu[0].data[0][1]
+
         if args.find_noise:
 	    print('Estimating noise for', d+'/' + intname)
             if args.do_vlow:
@@ -95,7 +99,12 @@ def make_mosaic(args):
 	    else:
 	        noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
-        app.append(flatten(fits.open(d+'/'+appname)))
+	if args.do_stokesV:
+		tmp = fits.open(d+'/'+appname)
+		tmp[0].data[0][0] = tmp[0].data[0][1]
+	        app.append(flatten(tmp))
+	else:
+	        app.append(flatten(fits.open(d+'/'+appname)))
         if bth:
             astromaps.append(flatten(fits.open(d+'/astromap.fits')))
 
