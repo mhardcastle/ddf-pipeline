@@ -84,6 +84,7 @@ if __name__=='__main__':
     parser.add_argument('--no-bdsf',dest='no_bdsf', action='store_true', help='Skip the source extraction')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
     parser.add_argument('--do-vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images as well')
+    parser.add_argument('--do-stokesV',dest='do_stokesV', action='store_true', help='Mosaic stokes V images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
@@ -96,6 +97,12 @@ if __name__=='__main__':
 
     if args.do_vlow:
         fname='image_full_vlow_nocut_m.int.restored.fits'
+        args.no_highres=True
+    else:
+        fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
+
+    if args.do_stokesV:
+        fname='image_full_low_stokesV.dirty.corr.fits'
         args.no_highres=True
     else:
         fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
@@ -215,6 +222,26 @@ if __name__=='__main__':
 
         blank_mosaic('vlow-mosaic.fits',himsize)
 
+
+    if args.do_stokesV:
+        print('Making the stokes V mosaic...')
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        mos_args.header=header
+        mos_args.rootname='stokesV'
+        mos_args.do_stokesV=True
+        mos_args.astromap_blank=False # don't bother with low-res map
+
+        if args.save_header:
+            with open('stokesV-mosaic-header.pickle','w') as f:
+                pickle.dump(header,f)
+
+        make_mosaic(mos_args)
+
+        print('Blanking the mosaic...')
+
+        blank_mosaic('stokesV-mosaic.fits',himsize)
+
+
     if args.band is None and not args.no_bdsf:
         print('Now running PyBDSF to extract sources')
 
@@ -223,9 +250,9 @@ if __name__=='__main__':
         if args.no_highres:
             catprefix='low-mosaic'
             infile='low-mosaic-blanked.fits'
-
-        img = bdsm.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=True, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=restfrq)    
-        img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
+	    
+	img = bdsm.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=True, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=restfrq)    
+      	img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
         img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.pybdsmmask.fits',img_type='island_mask',img_format='fits',clobber=True)
