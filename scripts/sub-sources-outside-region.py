@@ -17,6 +17,7 @@ import glob
 
 #ddf-pipeline
 from auxcodes import run
+from getcpus import getcpus
 
 # NOTE, applybeam NDPPP step does not work on phase-shifted data, do not use it.
 
@@ -159,11 +160,11 @@ def add_dummyms(msfiles):
 def columnchecker(mslist, colname):
     
     for ms in mslist:
-      t = pt.table(ms, ack=False) 
-      if colname not in t.colnames():
-          print(colname, ' not present in ', ms)
-          sys.exit()
-      t.close()
+        t = pt.table(ms, ack=False) 
+        if colname not in t.colnames():
+            print(colname, ' not present in ', ms)
+            sys.exit()
+        t.close()
 
 
 def filechecker(clustercat, dicomask, indico, h5sols):
@@ -198,9 +199,12 @@ def striparchivename():
   for ms in mslist:
       outname = ms.rstrip('.archive')
       if os.path.exists(outname):
-          print (ms+' and '+outname+' both exist in the directory, exiting so as not to overwrite anydata')
-          sys.exit(1)
-      cmd = 'mv ' + ms + ' ' + outname
+          if os.path.islink(outname):
+              print ('Link to',outname,'already exists')
+              continue
+          else:
+              raise RuntimeError(ms+' and '+outname+' both exist in the directory!')
+      cmd = 'ln -s ' + ms + ' ' + outname
       print (cmd)
       os.system(cmd)
 
@@ -373,7 +377,7 @@ parser.add_argument('-m','--mslist', help='DR2 mslist file, default=big-mslist.t
 parser.add_argument('-c','--column', help='Input column for the ms, default=DATA', default='DATA') #DATA_DI_CORRECTED
 parser.add_argument('-f','--freqavg', help='channel averaging, default=4', default=4, type=int)
 parser.add_argument('-t','--timeavg', help='timesample averaging, default=2', default=2, type=int)
-parser.add_argument('-n','--ncpu', help='number of cpu to use, default=34', default=34, type=int)
+parser.add_argument('-n','--ncpu', help='number of cpu to use, default=%i' % getcpus(), default=getcpus(), type=int)
 parser.add_argument('-p','--prefixname', help='prefixname for output ms, default=object', default='object')#, type=str)
 parser.add_argument('--nodysco', help='Do not dysco compress output', action='store_false')
 parser.add_argument('--split', help='Do not concat but keep 10 SB blocks', action='store_true')
@@ -391,12 +395,14 @@ parser.add_argument('--clustercat', help='Cluster/nodes npy file, default=image_
 parser.add_argument('--chunkhours', help='Data-ChunkHours for DDF.py, default=8.5', default=8.5, type=float)
 parser.add_argument('--dicomask', help='Mask for filtering the Dico model, default=None (automatically determined)', type=str)
 parser.add_argument('--indico', help='Input Dico model, default=None (automatically determined)', type=str)
+parser.add_argument('--nofixsym',help='Do not attempt to fix killms symlinks -- assume ok', action='store_true')
 parser.add_argument('--nopredict', help='Do not do predict step (for use if repeating last step in case of failure)', action='store_true')
 parser.add_argument('--nosubtract', help='Do not do subtract step (for use if repeating last step in case of failure)', action='store_true')
 
 args = vars(parser.parse_args())
 
-striparchivename()
+if args['mslist']=='big-mslist.txt':
+    striparchivename()
 uselowres = args['uselowres']
 if uselowres == False:
   fullmask    = 'image_full_ampphase_di_m.NS.mask01.fits'
@@ -451,7 +457,8 @@ else:
 #print doflagafter, takeoutbeam, aoflagger, dysco, split
 filechecker(clustercat, fullmask, indico, args['h5sols'])
 if args['h5sols'] == None:
-  fixsymlinks()
+  if not(args['nofixsym']):
+      fixsymlinks()
   solsfile = glob.glob('DDS3_full*smoothed.npz')
   if len(solsfile) < 1:
      print('Cannot find the correct solution file')

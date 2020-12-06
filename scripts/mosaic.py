@@ -52,6 +52,9 @@ def make_mosaic(args):
     if args.do_vlow:
         intname='image_full_vlow_nocut_m.int.restored.fits'
         appname='image_full_vlow_nocut_m.app.restored.fits'
+    elif args.do_wsclean:
+        intname='WSCLEAN_low-MFS-image-pb.fits'
+        appname='WSCLEAN_low-MFS-image.fits'
     elif args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
@@ -326,6 +329,7 @@ if __name__=='__main__':
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
+    parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic vlow images instead of high-res')
     parser.add_argument('--astromap_blank',dest='astromap_blank', help='')
     parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')
 
