@@ -53,7 +53,7 @@ def make_mosaic(args):
         intname='image_full_vlow_nocut_m.int.restored.fits'
         appname='image_full_vlow_nocut_m.app.restored.fits'
     elif args.do_wsclean:
-        intname='WSCLEAN_low-MFS-image-pb.fits'
+        intname='WSCLEAN_low-MFS-image-int.fits'
         appname='WSCLEAN_low-MFS-image.fits'
     elif args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
@@ -90,24 +90,24 @@ def make_mosaic(args):
         name.append(d.split('/')[-1])
         hdu=fits.open(d+'/'+intname)
 
-	if args.do_stokesV:
-		hdu[0].data[0][0] = hdu[0].data[0][1]
+        if args.do_stokesV:
+            hdu[0].data[0][0] = hdu[0].data[0][1]
 
         if args.find_noise:
-	    print('Estimating noise for', d+'/' + intname)
-            if args.do_vlow:
-	        noise.append(get_rms(hdu,boxsize=500,niter=50))
-	    elif args.do_lowres:
-	        noise.append(get_rms(hdu,boxsize=1500))
-	    else:
-	        noise.append(get_rms(hdu))
+            print('Estimating noise for', d+'/' + intname)
+            if args.do_vlow or args.do_wsclean:
+                noise.append(get_rms(hdu,boxsize=500,niter=50))
+            elif args.do_lowres:
+                noise.append(get_rms(hdu,boxsize=1500))
+            else:
+                noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
-	if args.do_stokesV:
-		tmp = fits.open(d+'/'+appname)
-		tmp[0].data[0][0] = tmp[0].data[0][1]
-	        app.append(flatten(tmp))
-	else:
-	        app.append(flatten(fits.open(d+'/'+appname)))
+        if args.do_stokesV:
+                tmp = fits.open(d+'/'+appname)
+                tmp[0].data[0][0] = tmp[0].data[0][1]
+                app.append(flatten(tmp))
+        else:
+                app.append(flatten(fits.open(d+'/'+appname)))
         if bth:
             astromaps.append(flatten(fits.open(d+'/astromap.fits')))
 
@@ -120,7 +120,7 @@ def make_mosaic(args):
     print('Computing noise/beam factors...')
     for i in range(len(app)):
         np.seterr(divide='ignore')
-	app[i].data=np.divide(app[i].data,hdus[i].data)
+        app[i].data=np.divide(app[i].data,hdus[i].data)
         app[i].data[app[i].data<threshold]=0
         # at this point this is the beam factor: we want 1/sigma**2.0, so divide by central noise and square
         if args.noise is not None:
@@ -305,10 +305,10 @@ def make_mosaic(args):
         isum[~mask]=np.nan
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             try:
-		header[ch]=hdus[0].header[ch]
-	    # Exception for Stokes V images where dong have a BMAJ
-	    except KeyError:
-		print('No entry in header for %s and not creating one'%ch)
+                header[ch]=hdus[0].header[ch]
+            # Exception for Stokes V images where dong have a BMAJ
+            except KeyError:
+                print('No entry in header for %s and not creating one'%ch)
 
         header['ORIGIN']='ddf-pipeline '+version()
 
