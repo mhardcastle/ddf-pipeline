@@ -346,5 +346,12 @@ class MSList(object):
             self.dysco.append('Dysco' in t.showstructure())
             t.close()
             t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            self.freqs.append(t[0]['REF_FREQUENCY'])
+            # Check freqs due to https://github.com/lofar-astron/DP3/issues/217
+            freqest1 = np.mean(t.getcol('CHAN_FREQ')[0])
+            freqest2 = t[0]['REF_FREQUENCY']
+            if abs(freqest1-freqest2) > 0.1E6:
+                self.freqs.append(freqest1)
+		t.putcol('REF_FREQUENCY', freq)
+            else:
+                self.freqs.append(freqest2)
             self.channels.append(t[0]['CHAN_FREQ'])
