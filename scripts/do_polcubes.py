@@ -74,7 +74,7 @@ def do_polcubes(colname,
 
         ddf_image(ThisImageName,mslistname,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                  applysols='AP',
+                  applysols=o['apply_sols'][6],
                   polcubemode=True,
 		  AllowNegativeInitHMP=True,
                   majorcycles=0,robust=robust,
