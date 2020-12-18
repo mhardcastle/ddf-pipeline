@@ -1785,7 +1785,8 @@ def main(o=None):
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
-        cubefiles=['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']
+        cubefiles = ['image_full_high_StokesQ.cube.dirty.fits','image_full_high_StokesU.cube.dirty.fits','image_full_high_StokesQ.cube.dirty.corr.fits','image_full_high_StokesU.cube.dirty.corr.fits']
+
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
