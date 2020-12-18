@@ -221,7 +221,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += " --GAClean-AllowNegativeInitHMP True"
     if OuterSpaceTh is not None:
         runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
-        
+    if options['use_splitisland']:
+       runcommand += " --SSDClean-MaxIslandSize 100"
+
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
 
