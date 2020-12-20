@@ -846,7 +846,7 @@ def ingest_dynspec(obsid='*'):
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
-    f=file(mslist)
+    f=open(mslist)
     mslist=f.readlines()
     mslist=[msname.replace("\n","") for msname in mslist]
     for msname in mslist:
