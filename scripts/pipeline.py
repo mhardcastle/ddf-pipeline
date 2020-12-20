@@ -1106,7 +1106,7 @@ def main(o=None):
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
         
         if o['external_fits_mask'] is not None:
-            merge_mask(external_mask,o['external_fits_mask',external_mask)
+            merge_mask(external_mask,o['external_fits_mask'],external_mask)
 
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
