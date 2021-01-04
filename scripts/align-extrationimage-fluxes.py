@@ -20,6 +20,22 @@ import pyregion
 from auxcodes import flatten
 from astropy import wcs
 from astropy.wcs import WCS
+from surveys_db import SurveysDB
+from random import random
+from random import randint
+from random import seed
+from numpy import arange
+from numpy import mean
+from numpy import std
+from numpy import absolute
+from sklearn.datasets import make_regression
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import HuberRegressor
+from sklearn.linear_model import RANSACRegressor
+from sklearn.linear_model import TheilSenRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from matplotlib import pyplot
 
 def filter_outside_extract(ds9region,infilename,catalogue):
 
@@ -32,13 +48,79 @@ def filter_outside_extract(ds9region,infilename,catalogue):
     manualmask = r.get_mask(hdu=hduflat)
     inregion = []
     for element in catalogue:
-	i,j = w.wcs_world2pix(element['RA'],element['DEC'],0)
-	print i,j,manualmask[int(i),int(j)]
-	inregion.append(manualmask[int(i),int(j)])
+        i,j = w.wcs_world2pix(element['RA'],element['DEC'],0)
+        #print element['RA'], element['DEC'],'RA,DEC',i,j
+        if i < 0.0 or j < 0.0:
+            # outside map
+            inregion.append(False)
+            continue
+        try:
+            
+            inregion.append(manualmask[int(j),int(i)])
+        except IndexError:
+            #print 'Going into exception'
+            inregion.append(False)
     return catalogue[inregion]
 
-# Run bdsm on the image
+def filter_inside_extract(ds9region,infilename,catalogue):
 
+    hdu=fits.open(infilename)
+    hduflat = flatten(hdu)
+    map=hdu[0].data
+    w = WCS(flatten(hdu).header)
+
+    r = pyregion.open(ds9region)
+    manualmask = r.get_mask(hdu=hduflat)
+    inregion = []
+    for element in catalogue:
+        i,j = w.wcs_world2pix(element['RA'],element['DEC'],0)
+        if i < 0.0 or j < 0.0:
+            # outside map
+            inregion.append(False)
+            continue
+        try:
+            inregion.append(~manualmask[int(j),int(i)])
+        except IndexError:
+            #print 'Going into exception'
+            inregion.append(False)
+    return catalogue[inregion]
+
+def evaluate_model(X, y, model):
+	# define model evaluation method
+	cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+	# force scores to be positive
+	return absolute(scores)
+
+# dictionary of model names and model objects
+def get_models():
+	models = list()
+	models.append(LinearRegression(fit_intercept=False))
+	models.append(HuberRegressor(fit_intercept=False))
+	#models.append(RANSACRegressor())#fit_intercept=False)) # Doesnt have option to not fit the intercept
+	models.append(TheilSenRegressor(fit_intercept=False)) # Strunggling a bit with this one as the output varies a lot given n_samples (if n_samples=1 then it returns the median of the ratio, if it equals the number of data points then it returns essentially the output of least square fitting)
+	return models
+ 
+# plot the dataset and the model's line of best fit
+def plot_best_fit(X, y, xaxis, model):
+	# fit the model on all data
+	model.fit(X, y)
+	# calculate outputs for grid across the domain
+	yaxis = model.predict(xaxis.reshape((len(xaxis), 1)))
+	# plot the line of best fit
+	pyplot.plot(xaxis, yaxis, label=type(model).__name__)
+ 
+        results = evaluate_model(X, y, model)
+
+        gradient = model.coef_
+        intercept = model.intercept_
+        modelname =  type(model).__name__
+        print modelname,'Gradient',gradient,'intercept',intercept,'Mean MAE: %.3f (%.3f)' % (mean(results), std(results))
+        
+        return modelname,gradient,intercept,mean(results),std(results)
+
+# Run bdsm on the image
 parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
 parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue)')
@@ -70,14 +152,23 @@ print 'original length:',len(lotssdr2)
 lotssdr2=filter_catalogue(lotssdr2,ref_ra,ref_dec,1.0)
 print 'filter around',ref_ra,ref_dec
 print 'filter to 1.0 deg:',len(lotssdr2)
-lotssdr2=select_isolated_sources(lotssdr2,30)
+# Cut to match extraction region
+lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
+print len(lotssdr2),'region filtered'
+print lotssdr2['Mosaic_ID'][0]
+
+
+#lotssdr2=select_isolated_sources(lotssdr2,45)
 print 'isolated sources',len(lotssdr2)
-lotssdr2=lotssdr2[lotssdr2['Total_flux']/lotssdr2['Isl_rms']>20.0]
-print 'snr  more than 20 sources',len(lotssdr2)
-lotssdr2=lotssdr2[lotssdr2['S_Code'] == 'S']
-print 'S_Code = S sources',len(lotssdr2)
-lotssdr2 = lotssdr2[ lotssdr2['Total_flux']/lotssdr2['Peak_flux'] < 1.25 + 3.1*(lotssdr2['Peak_flux']/lotssdr2['Isl_rms'])**-0.53]
-print 'Compact sources',len(lotssdr2)
+lotsssnr = lotssdr2['Peak_flux']/(2.0*lotssdr2['E_Peak_flux']) + lotssdr2['Total_flux']/(2.0*lotssdr2['E_Total_flux'])
+lotssdr2=lotssdr2[lotsssnr > 7.0]
+print 'snr  more than 7 sources',len(lotssdr2)
+lotsssnr = lotssdr2['Peak_flux']/(2.0*lotssdr2['E_Peak_flux']) + lotssdr2['Total_flux']/(2.0*lotssdr2['E_Total_flux'])
+lotsscompact = 0.41 + (1.10/(1.0+(lotsssnr/104.32)**2.03))
+lotssR = np.log(lotssdr2['Total_flux']/lotssdr2['Peak_flux'])
+lotssdr2=lotssdr2[lotssR < lotsscompact]
+print 'Compact sources len',len(lotssdr2)
+#print 'Compact sources',len(lotssdr2)
 
 # Filter cutout cat
 cutout=Table.read(infile.replace('.fits','cat.srl.fits'))
@@ -86,31 +177,62 @@ if cutout['RA'][0] < 0.0:
 print 'original length:',len(cutout)
 cutout=filter_catalogue(cutout,ref_ra,ref_dec,1.0)
 print 'filter to 1.0 deg:',len(cutout)
-cutout=select_isolated_sources(cutout,60)
+cutout=select_isolated_sources(cutout,30)
 print 'isolated sources',len(cutout)
-cutout=cutout[cutout['Total_flux']/cutout['Isl_rms']>20.0]
-print 'snr  more than 20 sources',len(cutout)
-cutout=cutout[cutout['S_Code'] == 'S']
-print 'S_Code = S sources',len(cutout)
-cutout = cutout[ cutout['Total_flux']/cutout['Peak_flux'] < 1.25 + 3.1*(cutout['Peak_flux']/cutout['Isl_rms'])**-0.53]
-print 'Compact sources',len(cutout)
+cutoutsnr = cutout['Peak_flux']/(2.0*cutout['E_Peak_flux']) + cutout['Total_flux']/(2.0*cutout['E_Total_flux'])
+cutout=cutout[cutoutsnr > 7.0]
+print 'snr  more than 7 sources',len(cutout)
+#cutout=cutout[cutout['S_Code'] == 'S']
+#print 'S_Code = S sources',len(cutout)
+#cutout = cutout[ cutout['Total_flux']/cutout['Peak_flux'] < 1.25 + 3.1*(cutout['Peak_flux']/cutout['Isl_rms'])**-0.53]
+#print 'Compact sources',len(cutout)
 
 
 # Simply nearest neighbour match
-matched = match_catalogues(lotssdr2,cutout,1,'cutout')
+matched = match_catalogues(lotssdr2,cutout,5,'cutout')
 lotssdr2=lotssdr2[~np.isnan(lotssdr2['cutout_separation'])]
 print 'After cross match',len(lotssdr2)
 
-# Cut to match extraction region
-lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
-print len(lotssdr2),'region filtered'
+# Do a few different fitting techniques (see https://machinelearningmastery.com/robust-regression-for-machine-learning-in-python/)
+
+
+X = lotssdr2['cutout_Total_flux']*1000.0
+X=X.reshape(len(X),1)
+y = lotssdr2['Total_flux']
+# define a uniform grid across the input domain
+xaxis = arange(X.min(), X.max(), 0.01)
+
+bestmae = 10000.0
+for model in get_models():
+    # plot the line of best fit
+    modelname,gradient,intercept,mae,maestd = plot_best_fit(X, y, xaxis, model)
+    if mae < bestmae:
+        bestmodel,bestgradient,bestintercept,bestmae,bestmaestd = modelname,gradient,intercept,mae,maestd 
+
+# plot the dataset
+pyplot.scatter(X, y)
+# show the plot
+if np.min(X) < np.min(y):
+    minval = np.min(X)*0.9
+else:
+    minval = np.min(y)*0.9
+pyplot.loglog()
+#pyplot.xlim(xmin=minval)
+#pyplot.ylim(ymin=minval)
+print minval,'minval'
+pyplot.title('Robust (and non-Robust) Regression')
+pyplot.legend()
+pyplot.savefig(infile.split('_')[0]+'_fitted.png')
+
 
 ratios=lotssdr2['Total_flux']/lotssdr2['cutout_Total_flux']/1000.0
-lotssdr2.write('matched.fits',overwrite=True)
+lotssdr2.write(infile.replace('.fits','cat.srl.matched.fits'),overwrite=True)
 
-print 'Median,mean,std',np.median(ratios),np.mean(ratios),np.std(ratios)
-print 'Multiply image by ',np.median(ratios)
-ds9file = open('matched.ds9.reg','w')
+print 'BEST',bestmodel,bestgradient,bestintercept,bestmae,bestmaestd,len(y),np.median(ratios),np.mean(ratios),np.std(ratios)
+
+#print 'Median,mean,std',np.median(ratios),np.mean(ratios),np.std(ratios)
+#print 'Multiply image by ',np.median(ratios)
+ds9file = open(infile.replace('.fits','cat.srl.matched.reg'),'w')
 ds9file.write('# Region file format: DS9 version 4.1 \n')
 ds9file.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
 ds9file.write('fk5\n')
@@ -118,3 +240,4 @@ ds9file.write('fk5\n')
 for source in lotssdr2:
 	ds9file.write('circle(%s,%s,20")\n'%(source['RA'],source['DEC']))
 ds9file.close()
+
