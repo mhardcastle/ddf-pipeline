@@ -637,36 +637,36 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     Ustart_times = np.unique(start_times)
 
     for start_time in Ustart_times:
-        with open('solslist_%s.txt'%start_time,'w') as f:
+        with open('solslist_%.2f.txt'%start_time,'w') as f:
             for i in range(0,len(full_sollist)):
                 if start_times[i] == start_time:
                     solname = full_sollist[i]
                     f.write('%s\n'%(solname))
         
-        checkname='%s_%s_merged.npz'%(ddsols,start_time)
+        checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
-            ss='MergeSols.py --SolsFilesIn=solslist_%s.txt --SolFileOut=%s_%s_merged.npz'%(start_time,ddsols,start_time)
+            ss='MergeSols.py --SolsFilesIn=solslist_%.2f.txt --SolFileOut=%s '%(start_time,checkname)
             if SigmaFilterOutliers:
                 ss+=" --SigmaFilterOutliers %f"%SigmaFilterOutliers
             run(ss,dryrun=dryrun)
             
-        checkname='%s_%s_smoothed.npz'%(ddsols,start_time)
+        checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
         if o['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%s_merged.npz --SolsFileOut=%s_%s_smoothed.npz --InterpMode=%s'%(ddsols,start_time,ddsols,start_time,o['smoothingtype']),dryrun=dryrun)
+            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s'%(ddsols,start_time,checkname,o['smoothingtype']),dryrun=dryrun)
 
-        smoothoutname='%s_%s_smoothed.npz'%(ddsols,start_time)
+        smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
 
         if InterpToMSListFreqs:
-            interp_outname="%s_%s_interp.npz"%(smoothoutname,start_time)
+            interp_outname="%s_%.2f_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
             if o['restart'] and os.path.isfile(checkname):
-                warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+                warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
                 command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(smoothoutname,interp_outname,InterpToMSListFreqs)
                 run(command,dryrun=dryrun)
@@ -683,9 +683,9 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     os.unlink(symsolname)
 
                 if not SkipSmooth:
-                    os.symlink(os.path.abspath('%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
+                    os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
                 else:
-                    os.symlink(os.path.abspath('%s_%s_merged.npz'%(ddsols,start_time)),symsolname)
+                    os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
                     
                     
         if SkipSmooth:
