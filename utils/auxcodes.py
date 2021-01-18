@@ -351,8 +351,8 @@ class MSList(object):
             freqest2 = t[0]['REF_FREQUENCY']
             if abs(freqest1-freqest2) > 0.1E6:
                 self.freqs.append(freqest1)
-		report('For %s changing ref freq from %s to %s'%(ms,freqest2,freqest1))
-		t.putcol('REF_FREQUENCY', freqest1)
+                report('For %s changing ref freq from %s to %s'%(ms,freqest2,freqest1))
+                t.putcol('REF_FREQUENCY', freqest1)
             else:
                 self.freqs.append(freqest2)
             self.channels.append(t[0]['CHAN_FREQ'])

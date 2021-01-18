@@ -1,9 +1,9 @@
 #!/bin/tcsh
 
-#PBS -m abe
+#PBS -m a
 #PBS -N vlow_reprocess
 #PBS -l nodes=1:ppn=32
-#PBS -l walltime=12:00:00
+#PBS -l walltime=24:00:00
 #PBS -k oe
 #PBS -q main
 
@@ -19,4 +19,4 @@ echo ------------------------------------------------------
 
 echo Field is $FIELD
 
-/soft/bin/singularity exec -B/home,/beegfs,/soft /data/lofar/mjh/test_sandbox2 /home/mjh/pipeline-py3/ddf-pipeline/torque/vlow_image.sh
+/soft/bin/singularity exec -B/home,/beegfs,/soft /data/lofar/mjh/ddf_py3.simg /home/mjh/pipeline-py3/ddf-pipeline/torque/vlow_image.sh
