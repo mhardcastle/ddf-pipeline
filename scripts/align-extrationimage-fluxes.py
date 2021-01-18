@@ -16,7 +16,7 @@ try:
 except ImportError:
     import lofar.bdsm as bdsm
 from crossmatch_utils import *
-import pyregion 
+import pyregion f
 from auxcodes import flatten
 from astropy import wcs
 from astropy.wcs import WCS
