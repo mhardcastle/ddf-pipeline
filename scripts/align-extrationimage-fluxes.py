@@ -123,14 +123,15 @@ def plot_best_fit(X, y, xaxis, model):
 # Run bdsm on the image
 parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
-parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue)')
+parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue or catalogue from another field')
 parser.add_argument('regionfile', type=str, help='extractionregion')
-
+parser.add_argument('--fieldname', type=str,default='LoTSS-DR2',help='field name if not LoTSS-DR2')
 args = parser.parse_args()
 
 infile = args.fitsimage
 catalogue = args.catalogue
 regionfile = args.regionfile
+fieldname = args.fieldname
 
 restfrq=143.65e6 # should work this out from the FITS headers eventually
 
@@ -155,7 +156,20 @@ print 'filter to 1.0 deg:',len(lotssdr2)
 # Cut to match extraction region
 lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
 print len(lotssdr2),'region filtered'
-print lotssdr2['Mosaic_ID'][0]
+if fieldname == 'LoTSS-DR2':
+    print lotssdr2['Mosaic_ID'][0]
+else:
+    sdb = SurveysDB()
+    qualitydict = sdb.get_quality(fieldname)
+    sdb.close()
+    nvssfactor= 1.0/(qualitydict['nvss_scale']/5.9124)
+    tgssscale = qualitydict['tgss_scale']
+    print 'Scaling comparison catalogue by nvssfactor', nvssfactor
+    lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+    lotssdr2['Total_flux'] = lotssdr2['Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+    lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+    lotssdr2['E_Total_flux'] = lotssdr2['E_Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+
 
 
 #lotssdr2=select_isolated_sources(lotssdr2,45)
