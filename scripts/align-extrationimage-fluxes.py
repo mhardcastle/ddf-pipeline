@@ -20,7 +20,6 @@ import pyregion
 from auxcodes import flatten
 from astropy import wcs
 from astropy.wcs import WCS
-from surveys_db import SurveysDB
 from random import random
 from random import randint
 from random import seed
@@ -159,6 +158,7 @@ print len(lotssdr2),'region filtered'
 if fieldname == 'LoTSS-DR2':
     print lotssdr2['Mosaic_ID'][0]
 else:
+    from surveys_db import SurveysDB
     sdb = SurveysDB()
     qualitydict = sdb.get_quality(fieldname)
     sdb.close()
