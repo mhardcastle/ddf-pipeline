@@ -111,7 +111,7 @@ def run_bootstrap(o):
         # As for the main pipeline, first make a dirty map
         ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',
                   cleanmask=None,cleanmode='SSD',ddsols='DDS0',
-                  applysols='P',majorcycles=0,robust=low_robust,
+                  applysols=o['apply_sols'][6],majorcycles=0,robust=low_robust,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
                   imsize=low_imsize,cellsize=o['low_cell'],
                   options=o,colname=colname,automask=True,
@@ -122,7 +122,7 @@ def run_bootstrap(o):
         # Deep SSD clean with this external mask and automasking
         ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
                   cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
-                  cleanmode='SSD',ddsols='DDS0',applysols='P',
+                  cleanmode='SSD',ddsols='DDS0',applysols=o['apply_sols'][6],
                   majorcycles=5,robust=low_robust,uvrange=low_uvrange,
                   beamsize=o['low_psf_arcsec'],imsize=low_imsize,
                   cellsize=o['low_cell'],options=o,
