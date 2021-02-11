@@ -109,40 +109,58 @@ def do_polcubes(colname,
                   startchan=0,endchan=channels,options=o,
                   catcher=catcher)
 
+    if o['split_polcubes']:
 
-    outfile='%s_StokesQ.cube.dirty.fits'%imageoutname
-    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
-        warn('Uncorrected cube file already exists, not making it')
+        outfile='%s_StokesQ.cube.dirty.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Uncorrected cube file already exists, not making it')
+        else:
+            report('Making uncorrected cube')
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
+            outfile = '%s_StokesQ.cube.dirty.fits'%imageoutname
+            make_cube_stokesi(freqs,hdus,outfile,0)
+            
+        outfile='%s_StokesU.cube.dirty.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Uncorrected cube file already exists, not making it')
+        else:
+            report('Making uncorrected cube')
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname) 
+            outfile = '%s_StokesU.cube.dirty.fits'%imageoutname
+            make_cube_stokes(freqs,hdus,outfile,1)
+
+        outfile='%s_StokesQ.cube.dirty.corr.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Uncorrected cube file already exists, not making it')
+        else:
+            report('Making uncorrected cube')
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
+            outfile = '%s_StokesQ.cube.dirty.corr.fits'%imageoutname
+            make_cube_stokes(freqs,hdus,outfile,0)
+
+        outfile='%s_StokesU.cube.dirty.corr.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Uncorrected cube file already exists, not making it')
+        else:
+            report('Making uncorrected cube')
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
+            outfile = '%s_StokesU.cube.dirty.corr.fits'%imageoutname
+            make_cube_stokes(freqs,hdus,outfile,1)
     else:
-        report('Making uncorrected cube')
-        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
-        outfile = '%s_StokesQ.cube.dirty.fits'%imageoutname
-        make_cube_stokesi(freqs,hdus,outfile,0)
 
-    outfile='%s_StokesU.cube.dirty.fits'%imageoutname
-    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
-        warn('Uncorrected cube file already exists, not making it')
-    else:
-        report('Making uncorrected cube')
-        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname) 
-        outfile = '%s_StokesU.cube.dirty.fits'%imageoutname
-        make_cube_stokes(freqs,hdus,outfile,1)
+        outfile='%s_QU.cube.dirty.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Uncorrected cube file already exists, not making it')
+        else:
+            report('Making uncorrected cube')
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
+            make_cube(freqs,hdus,outfile)
 
-    outfile='%s_StokesQ.cube.dirty.corr.fits'%imageoutname
-    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
-        warn('Uncorrected cube file already exists, not making it')
-    else:
-        report('Making uncorrected cube')
-        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
-        outfile = '%s_StokesQ.cube.dirty.corr.fits'%imageoutname
-        make_cube_stokes(freqs,hdus,outfile,0)
-
-    outfile='%s_StokesU.cube.dirty.corr.fits'%imageoutname
-    if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
-        warn('Uncorrected cube file already exists, not making it')
-    else:
-        report('Making uncorrected cube')
-        freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
-        outfile = '%s_StokesU.cube.dirty.corr.fits'%imageoutname
-        make_cube_stokes(freqs,hdus,outfile,1)
-
+        outfile='%s_QU.cube.dirty.corr.fits'%imageoutname
+        if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
+            warn('Corrected cube file already exists, not making it')
+        else:
+            freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.corr.fits'%imageoutname)
+            report('Making corrected cube')
+            make_cube(freqs,hdus,outfile)
+            
