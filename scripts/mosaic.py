@@ -346,7 +346,7 @@ if __name__=='__main__':
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
-    parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic vlow images instead of high-res')
+    parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted vlow images instead of high-res')
     parser.add_argument('--do_stokesV',dest='do_stokesV', action='store_true', help='Mosaic stokes V images instead of high-res')
     parser.add_argument('--astromap_blank',dest='astromap_blank', help='')
     parser.add_argument('--load_layout', dest='load_layout', action='store_true', help='Load a previously defined mosaic layout rather than determining from the images.')

@@ -83,6 +83,7 @@ if __name__=='__main__':
     parser.add_argument('--no-highres',dest='no_highres', action='store_true', help='Skip the high-resolution images')
     parser.add_argument('--no-bdsf',dest='no_bdsf', action='store_true', help='Skip the source extraction')
     parser.add_argument('--do-lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images as well')
+    parser.add_argument('--do-wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted WSCLEAN images')
     parser.add_argument('--do-vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images as well')
     parser.add_argument('--do-stokesV',dest='do_stokesV', action='store_true', help='Mosaic stokes V images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
@@ -95,13 +96,13 @@ if __name__=='__main__':
     pointingdict = read_pointingfile()
     ignorepointings = args.ignorepointings
 
-    if args.do_vlow:
+    if args.do_wsclean:
+        fname='WSCLEAN_low-MFS-image-int.fits'
+        args.no_highres=True
+    elif args.do_vlow:
         fname='image_full_vlow_nocut_m.int.restored.fits'
         args.no_highres=True
-    else:
-        fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
-
-    if args.do_stokesV:
+    elif args.do_stokesV:
         fname='image_full_low_stokesV.dirty.corr.fits'
         args.no_highres=True
     else:
@@ -130,6 +131,7 @@ if __name__=='__main__':
             rd=d+'/'+p
             print(rd)
             if os.path.isfile(rd+'/'+fname):
+                print(rd+'/'+fname,'exists!')
                 mosaicdirs.append(rd)
                 try:
                     qualitydict = sdb.get_quality(p)
@@ -151,9 +153,9 @@ if __name__=='__main__':
         else:
             print('Pointing',p,'not found')
             missingpointing = True
-        if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
-            print('Pointing',p,'not archived with archive_version 4')
-            missingpointing = True
+            if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
+                print('Pointing',p,'not archived with archive_version 4')
+                missingpointing = True
     if not(args.no_check) and missingpointing == True:
         sdb.close()
         raise RuntimeError('Failed to find a required pointing')
@@ -204,8 +206,26 @@ if __name__=='__main__':
 
         blank_mosaic('low-mosaic.fits',himsize)
 
+    if args.do_wsclean:
+        print('Making the WSCLEAN subtracted mosaic...')
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        mos_args.header=header
+        mos_args.rootname='vlow'
+        mos_args.do_wsclean=True
+        mos_args.astromap_blank=False # don't bother with low-res map
+
+        if args.save_header:
+            with open('vlow-mosaic-header.pickle','w') as f:
+                pickle.dump(header,f)
+
+        make_mosaic(mos_args)
+
+        print('Blanking the mosaic...')
+
+        blank_mosaic('vlow-mosaic.fits',himsize)
+
     if args.do_vlow:
-        print('Making the low-resolution mosaic...')
+        print('Making the very low-resolution mosaic...')
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
         mos_args.header=header
         mos_args.rootname='vlow'
