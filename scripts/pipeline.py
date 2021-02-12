@@ -1791,7 +1791,7 @@ def main(o=None):
         flist=[]
 
         if o['split_polcubes']:
-            cubefiles=['image_full_low_Q.cube.dirty.fits','image_full_low_Q.cube.dirty.corr.fits','image_full_low_U.cube.dirty.fits','image_full_low_U.cube.dirty.corr.fits']
+            cubefiles=['image_full_low_StokesQ.cube.dirty.fits','image_full_low_StokesQ.cube.dirty.corr.fits','image_full_low_StokesU.cube.dirty.fits','image_full_low_StokesU.cube.dirty.corr.fits']
         else:
             cubefiles=['image_full_low_QU.cube.dirty.fits','image_full_low_QU.cube.dirty.corr.fits']
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
@@ -1809,7 +1809,7 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         if o['split_polcubes']:
-            cubefiles=['image_full_vlow_Q.cube.dirty.fits','image_full_vlow_Q.cube.dirty.corr.fits','image_full_vlow_U.cube.dirty.fits','image_full_vlow_U.cube.dirty.corr.fits']
+            cubefiles=['image_full_vlow_StokesQ.cube.dirty.fits','image_full_vlow_StokesQ.cube.dirty.corr.fits','image_full_vlow_StokesU.cube.dirty.fits','image_full_vlow_StokesU.cube.dirty.corr.fits']
         else:
             cubefiles=['image_full_vlow_QU.cube.dirty.fits','image_full_vlow_QU.cube.dirty.corr.fits']
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
