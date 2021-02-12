@@ -57,7 +57,7 @@ def make_cube_stokes(freqs,hdus,outfile,stokesparam):
     newdata=np.zeros((np.sum(chans),y,x),dtype=np.float32)
     print('Output file shape is', newdata.shape)
     for i,h in enumerate(hdus):
-        report('Doing planes from small cube %s for stokes'%(i,stokesparam))
+        report('Doing planes from small cube %s for stokes %s'%(i,stokesparam))
         if i==0:
             chb=0
         else:
@@ -118,7 +118,7 @@ def do_polcubes(colname,
             report('Making uncorrected cube')
             freqs,hdus=get_freqs_hdus('%s_QU_Cube*.cube.dirty.fits'%imageoutname)
             outfile = '%s_StokesQ.cube.dirty.fits'%imageoutname
-            make_cube_stokesi(freqs,hdus,outfile,0)
+            make_cube_stokes(freqs,hdus,outfile,0)
             
         outfile='%s_StokesU.cube.dirty.fits'%imageoutname
         if os.path.isfile(outfile) or os.path.isfile(outfile+'.fz'):
