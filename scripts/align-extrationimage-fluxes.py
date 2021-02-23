@@ -1,3 +1,13 @@
+# Script to align an extracted field with the LoTSS-DR2 catalogue or an a catalogue produced from running the lotss quality-pipeline.py
+# Inputs are:
+# fitsimage -- this is the image from the extract pipeline (should be about 6" resolution)
+# catalogue -- this is the catalogue of LoTSS-DR2 (if field in lotss-DR2 or this is the catalogue from the lotss quality-pipeline if not in LoTSS-DR2)
+# regionfile -- this is the region file that comes with the extract tar.gz file (so outside this region sources are subtracted)
+# fieldname -- ONLY USE IF NOT USING LOTSS DR2 - this is the name of the LoTSS field if using the LoTSS database (i.e. PXXX+XX) or any fieldname if not using that.
+# nodatabase -- ONLY USE IF NOT USING LOTSS DR2 - this means that  you have to provide a scaling factor rather than take from the LoTSS database automatically
+# fieldfactor -- ONLY USE IF NOT USING LOTSS DR2 - this is the scaling factor that you multiply you catalogue by (so from the quality-pipeline the nvss_factor/5.9124)
+
+
 #!/usr/bin/env python
 
 # intended as a one-stop shop for mosaicing
