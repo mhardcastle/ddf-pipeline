@@ -5,7 +5,7 @@
 # regionfile -- this is the region file that comes with the extract tar.gz file (so outside this region sources are subtracted)
 # fieldname -- ONLY USE IF NOT USING LOTSS DR2 - this is the name of the LoTSS field if using the LoTSS database (i.e. PXXX+XX) or any fieldname if not using that.
 # nodatabase -- ONLY USE IF NOT USING LOTSS DR2 - this means that  you have to provide a scaling factor rather than take from the LoTSS database automatically
-# fieldfactor -- ONLY USE IF NOT USING LOTSS DR2 - this is the scaling factor that you multiply you catalogue by (so from the quality-pipeline the nvss_factor/5.9124)
+# fieldfactor -- ONLY USE IF NOT USING LOTSS DR2 - this is the scaling factor that you multiply you catalogue by (so from the quality-pipeline the nvss_factor/5.9124 - if a lotss field this can be found on https://lofar-surveys.org/widefields.html and is the "scale" number in the table)
 
 
 #!/usr/bin/env python
