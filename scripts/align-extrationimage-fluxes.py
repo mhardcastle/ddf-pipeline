@@ -124,13 +124,17 @@ parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
 parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue or catalogue from another field')
 parser.add_argument('regionfile', type=str, help='extractionregion')
-parser.add_argument('--fieldname', type=str,default='LoTSS-DR2',help='field name if not LoTSS-DR2')
+parser.add_argument('--fieldname', type=str,default='LoTSS-DR2',help='field name if not LoTSS-DR2 but using surveys database')
+parser.add_argument('--nodatabase', help='Do not use LOFAR surveys fields database', action='store_true')
+parser.add_argument('--fieldfactor', help='Scaling factor of the field if not using surveys database',type=float)
 args = parser.parse_args()
 
 infile = args.fitsimage
 catalogue = args.catalogue
 regionfile = args.regionfile
 fieldname = args.fieldname
+nodatabase = args.nodatabase
+fieldfactor = args.fieldfactor
 
 restfrq=143.65e6 # should work this out from the FITS headers eventually
 
@@ -158,17 +162,24 @@ print len(lotssdr2),'region filtered'
 if fieldname == 'LoTSS-DR2':
     print lotssdr2['Mosaic_ID'][0]
 else:
-    from surveys_db import SurveysDB
-    sdb = SurveysDB()
-    qualitydict = sdb.get_quality(fieldname)
-    sdb.close()
-    nvssfactor= 1.0/(qualitydict['nvss_scale']/5.9124)
-    tgssscale = qualitydict['tgss_scale']
-    print 'Scaling comparison catalogue by nvssfactor', nvssfactor
-    lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
-    lotssdr2['Total_flux'] = lotssdr2['Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
-    lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
-    lotssdr2['E_Total_flux'] = lotssdr2['E_Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+    if nodatabase:
+	print 'Scaling factor being used for field catalogue',fieldfactor
+        lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['Total_flux'] = lotssdr2['Total_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['E_Total_flux'] = lotssdr2['E_Total_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+    else:
+        from surveys_db import SurveysDB
+        sdb = SurveysDB()
+        qualitydict = sdb.get_quality(fieldname)
+        sdb.close()
+        nvssfactor= 1.0/(qualitydict['nvss_scale']/5.9124)
+        tgssscale = qualitydict['tgss_scale']
+        print 'Scaling comparison catalogue by nvssfactor', nvssfactor
+        lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['Total_flux'] = lotssdr2['Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
+        lotssdr2['E_Total_flux'] = lotssdr2['E_Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
 
 
 
@@ -242,8 +253,9 @@ pyplot.savefig(infile.split('_')[0]+'_fitted.png')
 ratios=lotssdr2['Total_flux']/lotssdr2['cutout_Total_flux']/1000.0
 lotssdr2.write(infile.replace('.fits','cat.srl.matched.fits'),overwrite=True)
 
+print 'MODELNAME','FITTEDGRAD','FITTEDINTERCEPT','FIT_MEAN_ABS_ERROR','FIT_MEAN_ABS_ERROR_STD','NUM SOURCES FIT','MED SOURCE RATIOS','MEAN SOURCE RATIOS','STD SOURCE RATIOS'
 print 'BEST',bestmodel,bestgradient,bestintercept,bestmae,bestmaestd,len(y),np.median(ratios),np.mean(ratios),np.std(ratios)
-
+print 'MULTIPLY IMAGE BY',bestgradient
 #print 'Median,mean,std',np.median(ratios),np.mean(ratios),np.std(ratios)
 #print 'Multiply image by ',np.median(ratios)
 ds9file = open(infile.replace('.fits','cat.srl.matched.reg'),'w')
