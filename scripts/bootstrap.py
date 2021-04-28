@@ -30,9 +30,16 @@ def logfilename(s):
         return None
 
 def run_bootstrap(o):
+
+    # guess colname. This is necesssary because skip_di means there is
+    # no DI corrected column. Will break if e.g. sub_square and
+    # skip_di are used together.
     
-    colname='DATA_DI_CORRECTED'
-    
+    if o['skip_di']:
+        colname=o['colname']
+    else:
+        colname='DATA_DI_CORRECTED'
+        
     if o['mslist'] is None:
         die('MS list must be specified')
 
