@@ -12,7 +12,7 @@ def update_frequencies(rootname,freq):
     g=glob.glob(rootname+'*.fits')
     for f in g:
         with fits.open(f) as hdu:
-            if 'CRVAL4' in hdu[0].header:
+            if 'CRVAL4' in hdu[0].header and hdu[0].header['CRVAL4']!=freq:
                 warn('Updating FITS header for %s to freq of %f' % (f,freq))
                 hdu[0].header['CRVAL4']=freq
                 hdu[0].header['RESTFRQ']=freq
