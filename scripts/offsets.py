@@ -387,11 +387,6 @@ def do_offsets(o):
     if o['mode']!='normal' and  o['mode']!='test':
         raise NotImplementedError('Offsets called with mode '+o['mode'])
 
-    if o['skip_di']:
-        image_root='image_full_ampphase_m.NS'
-    else:
-        image_root='image_full_ampphase_di_m.NS'
-
     method=o['method']
 
     report('Determining astrometric offsets with method '+method+' in mode '+o['mode'])

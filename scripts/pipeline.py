@@ -1715,10 +1715,8 @@ def main(o=None):
             download_thread = None
 
 
-    if not o['skip_di']:
-        ImageName = 'image_full_ampphase_di_m.NS'
-    else:
-        ImageName = 'image_full_ampphase_m.NS'
+    ImageName = 'image_full_ampphase_di_m.NS'
+
     # full resolution, one iter of deconvolution
     separator("DD imaging (full resolution)")
     ddf_kw={}
