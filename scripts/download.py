@@ -27,9 +27,8 @@ def download_dataset(server,root,workdir='.'):
         else:
             break
     
-    print(page.status_code)
     if page.status_code!=200:
-        print(page.headers)
+        print('Failed with status code',page.status_code,'headers are',page.headers)
         return False
     print(page.headers['content-type'])
     tree=html.fromstring(page.text)
