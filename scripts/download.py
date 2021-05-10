@@ -56,7 +56,7 @@ def download_dataset(server,root,workdir='.'):
                 result=download_file(url,filename)
                 if not result: return False
             except Exception as e:
-                print(Exception)
+                print(e)
                 return False
             
     return True
