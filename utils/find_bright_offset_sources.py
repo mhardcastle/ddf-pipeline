@@ -36,7 +36,9 @@ def find_bright(root='image_full_ampphase_di_m.NS',cutoff=1):
         ilt.append(str('ILTJ'+s).replace(' ','')[:-1])
     for i,r in enumerate(t):
         f.write('%s,%f,%f,Bright LOFAR\n' % (ilt[i],r['RA'],r['DEC']))
-
+    f.close()
+    return len(t)>0
+        
 if __name__=='__main__':
     find_bright()
     

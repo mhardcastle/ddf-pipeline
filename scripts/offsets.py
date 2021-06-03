@@ -388,7 +388,8 @@ def do_offsets(o):
         raise NotImplementedError('Offsets called with mode '+o['mode'])
 
     method=o['method']
-
+    image_root='image_full_ampphase_di_m.NS'
+    
     report('Determining astrometric offsets with method '+method+' in mode '+o['mode'])
     report('Merging downloaded catalogues')
     if os.path.isfile(method+'.fits'):
