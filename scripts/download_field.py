@@ -44,7 +44,7 @@ def download_field(fname,basedir=None,force=False):
     for o in obs:
         print('Downloading observation ID L'+str(o['id']))
         for prefix in ['','prefactor_v1.0/','prefactor_v3.0/']:
-            success=download_dataset('https://lofar-webdav.grid.sara.nl','/SKSP/'+prefix+'L'+str(o['id'])+'/',workdir=workdir)
+            success=download_dataset('https://lofar-webdav.grid.sara.nl:2880','/SKSP/'+prefix+'L'+str(o['id'])+'/',workdir=workdir)
             if success:
                 break
             else:

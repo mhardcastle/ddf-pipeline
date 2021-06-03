@@ -4,7 +4,7 @@
 from __future__ import print_function
 import requests
 import os
-from time import sleep
+from time import sleep,time
 
 def download_file(url,filename):
 
@@ -29,6 +29,7 @@ def download_file(url,filename):
                 connected=True
         try:
             print('Downloading %i bytes' % esize)
+            starttime=time()
             with open(filename, 'wb') as fd:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
@@ -37,7 +38,9 @@ def download_file(url,filename):
             if esize!=fsize:
                 print('Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize))
             else:
-                print('Download successful, %i of %i bytes received' % (fsize, esize))
+                endtime=time()
+                dt=endtime-starttime
+                print('Download successful, %i of %i bytes received in %.2f seconds (%.2f MB/s)' % (fsize, esize, dt, fsize/(dt*1024*1024)))
                 downloaded=True
 
         except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ChunkedEncodingError):

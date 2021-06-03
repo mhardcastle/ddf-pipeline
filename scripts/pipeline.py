@@ -1859,14 +1859,8 @@ def main(o=None):
         if o['bright_threshold'] is not None and o['method'] is not None:
             warn('Finding bright sources from offsets list')
             from find_bright_offset_sources import find_bright
-            if o['skip_di']:
-                find_bright(root='image_full_ampphase_m.NS',cutoff=o['bright_threshold'])
-            else:
-                find_bright(cutoff=o['bright_threshold'])
-        if not o['skip_di']:
-            LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
-        else:
-            LastImage="image_full_ampphase_m.NS.int.restored.fits"
+            bright_exists=find_bright(cutoff=o['bright_threshold'])
+        LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
         m=MSList(o['full_mslist'])
         uobsid = set(m.obsids)
     
