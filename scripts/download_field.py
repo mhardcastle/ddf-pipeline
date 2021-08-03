@@ -9,6 +9,7 @@ import sys
 import os
 from surveys_db import SurveysDB,tag_field
 from download import download_dataset
+from rclone import RClone
 
 def download_field(fname,basedir=None,force=False):
 
@@ -41,17 +42,47 @@ def download_field(fname,basedir=None,force=False):
 
     # now do the download for each field
     overall_success=True
+    rclone_works=True
     for o in obs:
-        print('Downloading observation ID L'+str(o['id']))
-        for prefix in ['','prefactor_v1.0/','prefactor_v3.0/']:
-            success=download_dataset('https://lofar-webdav.grid.sara.nl:2880','/SKSP/'+prefix+'L'+str(o['id'])+'/',workdir=workdir)
-            if success:
-                break
+        obsname='L'+str(o['id'])
+        print('Downloading observation ID',obsname)
+
+        # first try rclone
+
+        try:
+            rc=RClone('maca_sksp_tape_spiderpref.conf',debug=True)
+        except RuntimeError as e:
+            print('rclone setup failed, probably RCLONE_CONFIG_DIR not set:',e)
+            rclone_works=False
+
+        if rclone_works:
+            try:
+                remote_obs=rc.get_dirs()
+            except OSError as e:
+                print('rclone command failed, probably rclone not installed or RCLONE_COMMAND not set:',e)
+                rclone_works=False
+        
+        if rclone_works and obsname in remote_obs:
+            print('Data available in rclone repository, downloading!')
+            d=rc.execute_live(['-P','copy',rc.remote+'/'+obsname,workdir])
+            if d['err'] or d['code']!=0:
+                print('rclone download failed')
+                success=False
             else:
-                print('URL failed, trying alternative')
-            
-        if not success:
-            print('Download failed')
+                print('rclone download succeeded')
+                success=True
+
+        else:
+            # revert to download method
+            for prefix in ['','prefactor_v1.0/','prefactor_v3.0/']:
+                success=download_dataset('https://lofar-webdav.grid.sara.nl:2880','/SKSP/'+prefix+obsname+'/',workdir=workdir)
+                if success:
+                    break
+                else:
+                    print('URL failed, trying alternative')
+
+            if not success:
+                print('Download failed')
         overall_success=overall_success and success
 
     with SurveysDB() as sdb:

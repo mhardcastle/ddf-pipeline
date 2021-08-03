@@ -48,7 +48,7 @@ def do_rsync(name,basedir,f):
     f=[fle for fle in f if os.path.exists(workdir+'/'+fle)]
         
     while True:
-        s='cd '+workdir+'; rsync -avz --progress --safe-links --perms --chmod=ugo+rX --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
+        s='cd '+workdir+'; rsync -avz --progress --safe-links --perms --chmod=ugo+rX --partial --timeout=60 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
         if other:
             s=s.replace('DR2/archive','DR2/archive_other')
         print('Running command:',s)
