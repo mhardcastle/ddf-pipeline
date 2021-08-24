@@ -6,7 +6,7 @@ import os
 from surveys_db import update_status,use_database
 
 def unpack_db_update():
-    update_status(None,'Unpacked')
+    if use_database(): update_status(None,'Unpacked')
     
 def unpack(workdir='.'):
     # unpack all the files in workdir

@@ -6,7 +6,7 @@ import subprocess
 import os
 
 def splitlines(s):
-    l=s.split('\n')
+    l=s.decode().split('\n')
     if l[-1]=='':
         return l[:-1]
     else:

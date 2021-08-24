@@ -10,6 +10,7 @@ from astropy.wcs import WCS
 from astropy.io import ascii
 import glob
 from subprocess import call
+from fixsymlinks import fixsymlinks
 
 try:
   from getcpus import getcpus
@@ -125,34 +126,6 @@ def number_of_unique_obsids(msfiles):
       obsids.append(ms.split('_')[0])
     print('Using these observations ', np.unique(obsids))
     return len(np.unique(obsids))
-
-
-def get_solutions_timerange(sols):
-    t = np.load(sols)['BeamTimes']
-    return np.min(t),np.max(t)
-
-
-def fixsymlinks(ddsols):
-    # Code from Tim for fixing symbolic links for DDS3_
-    #dds3smoothed = glob.glob('SOLSDIR/*/*killMS.DDS3_full_smoothed*npz')
-    dds3 = glob.glob('SOLSDIR/*/killMS.' + ddsols + '.sols.npz')
-    for i in range(0,len(dds3)):
-        symsolname = dds3[i].split('killMS.' + ddsols + '.sols.npz')[0] + 'killMS.'+ddsols+'_smoothed.sols.npz' 
-        solname = dds3[i]
-
-        start_time,t1 = get_solutions_timerange(solname)
-        # Rounding different on different computers which is a pain.
-        start_time = glob.glob('%s_%s*_smoothed.npz'%(ddsols,int(start_time)))[0].split('_')[2]
-
-        if os.path.islink(symsolname):
-            print('Symlink ' + symsolname + ' already exists, recreating')
-            os.unlink(symsolname)
-            os.symlink(os.path.relpath('../../%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
-        else:
-            print('Symlink ' + symsolname + ' does not yet exist, creating')
-            os.symlink(os.path.relpath('../../%s_%s_smoothed.npz'%(ddsols,start_time)),symsolname)
-            
-    return
 
 
 def add_dummyms(msfiles):
