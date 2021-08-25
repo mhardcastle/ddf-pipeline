@@ -8,7 +8,7 @@ def get_solutions_timerange(sols):
     t = np.load(sols)['BeamTimes']
     return np.min(t),np.max(t)
 
-def fixsymlinks(ddsols,workdir='.',stype='smoothed'):
+def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True):
     #dds3smoothed = glob.glob('SOLSDIR/*/*killMS.DDS3_full_smoothed*npz')
     dds3 = glob.glob(workdir+'/SOLSDIR/*/killMS.' + ddsols + '.sols.npz')
     for i in range(0,len(dds3)):
@@ -30,11 +30,11 @@ def fixsymlinks(ddsols,workdir='.',stype='smoothed'):
             raise RuntimeError('Could not find time')
                 
         if os.path.islink(symsolname):
-            print('Symlink ' + symsolname + ' already exists, recreating')
+            if verbose: print('Symlink ' + symsolname + ' already exists, recreating')
             os.unlink(symsolname)
             os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
         else:
-            print('Symlink ' + symsolname + ' does not yet exist, creating')
+            if verbose: print('Symlink ' + symsolname + ' does not yet exist, creating')
             os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
             
     return
