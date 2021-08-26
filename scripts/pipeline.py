@@ -1865,7 +1865,7 @@ def main(o=None):
         uobsid = set(m.obsids)
     
         for obsid in uobsid:
-            LastImageV="image_full_low_stokesV.dirty.corr.fits"
+            LastImageV="image_full_high_stokesV.dirty.corr.fits"
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
             print('Writing temporary ms list',umslist)
