@@ -103,7 +103,7 @@ if __name__=='__main__':
         fname='image_full_vlow_nocut_m.int.restored.fits'
         args.no_highres=True
     elif args.do_stokesV:
-        fname='image_full_low_stokesV.dirty.corr.fits'
+        fname='image_full_high_stokesV.dirty.corr.fits'
         args.no_highres=True
     else:
         fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
