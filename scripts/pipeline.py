@@ -1828,16 +1828,16 @@ def main(o=None):
         
     if o['stokesv']:
         separator('Stokes V image')
-        ddf_image('image_full_low_stokesV',o['full_mslist'],
+        ddf_image('image_full_high_stokesV',o['full_mslist'],
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
-                  majorcycles=0,robust=o['low_robust'],
+                  majorcycles=0,robust==o['final_robust'],
                   colname=colname,use_dicomodel=False,
-                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+                  uvrange=uvrange,cellsize=cellsize
+                  peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher)
+                  catcher=catcher,**ddf_kw))
 
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist
