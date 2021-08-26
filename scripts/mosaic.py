@@ -59,8 +59,8 @@ def make_mosaic(args):
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
     elif args.do_stokesV:
-        intname='image_full_low_stokesV.dirty.corr.fits'
-        appname='image_full_low_stokesV.dirty.fits'
+        intname='image_full_high_stokesV.dirty.corr.fits'
+        appname='image_full_high_stokesV.dirty.fits'
     elif band is not None:
         intname='image_full_ampphase_di_m.NS_Band%i_shift.int.facetRestored.fits' % band
         appname='image_full_ampphase_di_m.NS_Band%i_shift.app.facetRestored.fits' % band
