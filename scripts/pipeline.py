@@ -1834,7 +1834,7 @@ def main(o=None):
                   AllowNegativeInitHMP=True,
                   majorcycles=0,robust==o['final_robust'],
                   colname=colname,use_dicomodel=False,
-                  uvrange=uvrange,cellsize=cellsize
+                  uvrange=uvrange,cellsize=cellsize,
                   peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher,**ddf_kw))
