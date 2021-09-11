@@ -8,10 +8,7 @@ from auxcodes import report,warn,die
 from surveys_db import *
 from download import download_dataset
 from download_field import download_field
-from run_job import do_run_job
-from unpack import unpack
-from make_mslists import make_list,list_db_update
-from average import average
+
 from auxcodes import MSList
 import sys
 import os
@@ -20,6 +17,14 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import time
 from subprocess import call
+from rclone import RClone
+
+def do_rclone_upload(cname,basedir,f):
+    '''
+    Untested upload code
+    '''
+    rc=Rclone('add-your-macaroon-here.conf',debug=True)
+    rc.multicopy(basedir,f,rc.remote+'destination-directory/'+cname)
 
 def do_rsync_upload(cname,basedir,f):
     workdir=basedir+'/'+cname
@@ -39,6 +44,40 @@ def do_rsync_upload(cname,basedir,f):
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
         time.sleep(10)
+
+def do_rclone_download(cname,f):
+    '''
+    Download required data from field cname into location f
+    '''
+    tarfiles=['images.tar','uv.tar']
+    for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF.conf','archive/')]:
+        try:
+            rc=RClone(macaroon,debug=True)
+        except RuntimeError:
+            print('Macaroon',m,'does not exist!')
+            continue
+        rc.get_remote()
+        d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
+        if d['err'] or d['code']!=0:
+            continue
+        break
+        
+        '''
+        for t in tarfiles:
+            print('Downloading',t)
+            d=rc.copy(rc.remote+directory+cname+'/'+t,f)
+            if d['err'] or d['code']!=0:
+                break # failed so break out of inner loop
+        else:
+            break # succeeded so break out of outer loop
+        '''
+    else:
+        raise RuntimeError('Failed to download from any source')
+    print('Untarring images')
+    for t in tarfiles:
+        d=os.system('cd %s; tar xf %s' % (f,t))
+        if d!=0:
+            raise RuntimeError('untar %s failed!' % t)
 
 def do_rsync_download(cname,basedir,f):
     workdir=basedir+'/'+cname
@@ -123,7 +162,6 @@ def do_run_subtract(name,basedir,inarchivedir,outarchivedir,force=False):
         # WANT TO MAKE THIS INTO A RSYNC SO THAT IT CAN BE DONE OUTSIDE LEIDEN
         #os.system('cp -r %s/%s %s'%(inarchivedir,field,workdir))
         do_rsync_download(field,inarchivedir,workdir)
-
 
         # Update status to copied here
         extract_status[i] = 'COPIED'

@@ -1,9 +1,10 @@
-# Basic rclone functionality wrapper which allows you to create an
-# object and send multiple commands, capturing output
+# Basic rclone functionality thin wrapper which allows you to create an
+# object and send multiple commands, capturing output where necessary.
 
 from __future__ import print_function
 import subprocess
 import os
+import tempfile
 
 def splitlines(s):
     l=s.decode().split('\n')
@@ -14,6 +15,7 @@ def splitlines(s):
 
 class RClone(object):
     def __init__(self, cfg, debug=False):
+        # Set up environment variables or sensible defaults
         try:
             self.command=os.environ['RCLONE_COMMAND']
         except KeyError:
@@ -42,7 +44,8 @@ class RClone(object):
         self.remote=None
 
     def execute(self,command):
-        # generic execution
+        # generic execution with standard out and error caught so that
+        # they can be parsed
         
         if isinstance(command,str):
             command=command.split()
@@ -73,7 +76,29 @@ class RClone(object):
         proc=subprocess.Popen(fullcommand)
         proc.wait()
         return {"code": proc.returncode, "err": None, "out": None }        
-    
+
+    def copy(self,source,dest):
+        # simplifying wrapper function -- one of source and dest needs
+        # to contain a 'remote' specification, probably self.remote,
+        # for this to do anything useful. As with rclone copy this will
+        # work on a single file or a whole directory.
+        
+        return self.execute_live(['-P','copy',source,dest])
+
+    def multicopy(self,sourcedir,files,dest):
+        # another wrapper function, this time copy named files from
+        # the source directory to the destination. Better to use this
+        # than looping over copy if e.g. you want to exploit
+        # multi-threading or stage more than one file at a time but do
+        # not want to copy a whole directory.
+        
+        with tempfile.NamedTemporaryFile(suffix='.txt',delete=False) as outfile:
+            filename=outfile.name
+            outfile.writelines([f+'\n' for f in files])
+        result=self.execute_live(['-P','--include-from',filename,'copy',sourcedir,dest])
+        os.unlink(filename)
+        return result
+        
     def get_remote(self):
         # If there is only one remote covered by the config file, find out what it is and store in self.remote, else raise exception
 
