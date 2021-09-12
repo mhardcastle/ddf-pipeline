@@ -1837,7 +1837,7 @@ def main(o=None):
                   uvrange=uvrange,cellsize=cellsize,
                   peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher,**ddf_kw))
+                  catcher=catcher,**ddf_kw)
 
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist

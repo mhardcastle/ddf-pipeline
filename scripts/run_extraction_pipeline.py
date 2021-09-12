@@ -73,7 +73,7 @@ def do_rclone_download(cname,f):
         '''
     else:
         raise RuntimeError('Failed to download from any source')
-    print('Untarring images')
+    print('Untarring files')
     for t in tarfiles:
         d=os.system('cd %s; tar xf %s; rm %s' % (f,t,t))
         if d!=0:
