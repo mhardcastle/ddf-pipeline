@@ -1832,7 +1832,7 @@ def main(o=None):
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
-                  majorcycles=0,robust==o['final_robust'],
+                  majorcycles=0,robust=o['final_robust'],
                   colname=colname,use_dicomodel=False,
                   uvrange=uvrange,cellsize=cellsize,
                   peakfactor=0.001,
