@@ -92,7 +92,7 @@ class RClone(object):
         # multi-threading or stage more than one file at a time but do
         # not want to copy a whole directory.
         
-        with tempfile.NamedTemporaryFile(suffix='.txt',delete=False) as outfile:
+        with tempfile.NamedTemporaryFile(suffix='.txt',delete=False,mode='w') as outfile:
             filename=outfile.name
             outfile.writelines([f+'\n' for f in files])
         result=self.execute_live(['-P','--include-from',filename,'copy',sourcedir,dest])
