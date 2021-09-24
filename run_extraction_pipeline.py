@@ -114,37 +114,6 @@ def do_run_extract(field,name):
         result=os.system('sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(workdir,name,name))
         if result!=0:
             raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
-        
-        # Archive the results need an rsync code this is just the *archive file that needs to be archived.
-        #os.system('mkdir %s/%s'%(outarchivedir,name))
-        #os.system('mkdir %s/%s/%s'%(outarchivedir,name,field))
-        #os.chdir(workdir)
-        #f = glob.glob('%s/*.archive*'%(field))
-        #do_rsync_upload(name,field,f)
-
-        #print  ('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
-        #os.system('cp -r %s_%s.dysco.sub.shift.avg.weights.ms.archive %s/%s/%s'%(field,name,outarchivedir,name,field))
-
-
-#def archive_run_extract():
-
-        # update the database to give success
-        #extract_status[i] = 'EDONE'
-        #sdb=SurveysDB()
-        #extractdict = sdb.get_reprocessing(name)
-        #extractdict['extract_status'] = ','.join(extract_status)
-        #sdb.db_set('reprocessing',extractdict)
-        #sdb.close()
-        #print('Updated status to EDONE for',field,name)
-
-    # update the database to give selfcal status as SREADY
-    #selfcal_status = 'SREADY'
-    #sdb=SurveysDB()
-    #extractdict = sdb.get_reprocessing(name)
-    #extractdict['selfcal_status'] = selfcal_status
-    #sdb.db_set('reprocessing',extractdict)
-    #sdb.close()
-    #print('Updated status to SREADY for',name)
 
 if __name__=='__main__':
 
