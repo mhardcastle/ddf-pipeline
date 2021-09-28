@@ -44,8 +44,10 @@ class RClone(object):
         self.remote=None
 
     def execute(self,command):
-        # generic execution with standard out and error caught so that
-        # they can be parsed
+        '''
+        generic execution with standard out and error caught so that
+        they can be parsed. Command is a string or a list that can be passed to Popen. stdout and stderr are caught and returned as elements of a dictionary along with any return code.
+        '''
         
         if isinstance(command,str):
             command=command.split()
@@ -66,7 +68,10 @@ class RClone(object):
         }
 
     def execute_live(self,command):
-        # version of the execute command that does *not* catch stdout so you can see what's happening
+        '''
+        version of the execute command that does *not* catch stdout so you can see what's happening. Returns a dictionary of the same format as execute for consistency but as stdout and stderr are caught they are always None
+        '''
+        
         if isinstance(command,str):
             command=command.split()
         
@@ -78,21 +83,25 @@ class RClone(object):
         return {"code": proc.returncode, "err": None, "out": None }        
 
     def copy(self,source,dest):
-        # simplifying wrapper function -- one of source and dest needs
-        # to contain a 'remote' specification, probably self.remote,
-        # for this to do anything useful. As with rclone copy this will
-        # work on a single file or a whole directory.
+        '''
+        simplifying wrapper function -- one of source and dest needs
+        to contain a 'remote' specification, probably self.remote,
+        for this to do anything useful. As with rclone copy this will
+        work on a single file or a whole directory.
+        '''
         
         return self.execute_live(['-P','copy',source,dest])
 
     def multicopy(self,sourcedir,files,dest):
-        # another wrapper function, this time copy named files from
-        # the source directory to the destination. Better to use this
-        # than looping over copy if e.g. you want to exploit
-        # multi-threading or stage more than one file at a time but do
-        # not want to copy a whole directory.
+        '''
+        another wrapper function, this time copy named files from
+        the source directory to the destination. Better to use this
+        than looping over copy if e.g. you want to exploit
+        multi-threading or stage more than one file at a time but do
+        not want to copy a whole directory.
+        '''
         
-        with tempfile.NamedTemporaryFile(suffix='.txt',delete=False) as outfile:
+        with tempfile.NamedTemporaryFile(suffix='.txt',delete=False,mode='w') as outfile:
             filename=outfile.name
             outfile.writelines([f+'\n' for f in files])
         result=self.execute_live(['-P','--include-from',filename,'copy',sourcedir,dest])
@@ -100,7 +109,9 @@ class RClone(object):
         return result
         
     def get_remote(self):
-        # If there is only one remote covered by the config file, find out what it is and store in self.remote, else raise exception
+        '''
+        If there is only one remote covered by the config file, find out what it is and store in self.remote, else raise exception
+        '''
 
         d=self.execute('listremotes')
         if d['code']!=0 or d['err'] or len(d['out'])>1:
@@ -108,13 +119,16 @@ class RClone(object):
         else:
             self.remote=d['out'][0]
             
-    def get_dirs(self,remote=None):
+    def get_dirs(self,base='',remote=None):
+        '''
+        wrapper round rclone lsd that returns a list of directories either in the root of the remote or in a specified base directory. If no remote specified use the result of get_remote().
+        '''
         if remote is None:
             if self.remote is None:
                 self.get_remote()
             remote=self.remote
 
-        d=self.execute(['lsd',remote])
+        d=self.execute(['lsd',remote+base])
         return [l.split()[4] for l in d['out']]
     
     def get_checksum(self,filename):
