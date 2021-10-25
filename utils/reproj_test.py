@@ -26,12 +26,35 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
     if isinstance(order, six.string_types):
         order = ORDER[order]
 
+    # find corners
+    xs=[]
+    ys=[]
+    ymax,xmax=input_data.data.shape
+    for x,y in ((0,0),(xmax,0),(xmax,ymax),(0,ymax)):
+        sky=wcs_in.wcs_pix2world(x,y,0)
+        xt,yt=wcs_out.wcs_world2pix(sky[0],sky[1],0)
+        xs.append(xt)
+        ys.append(yt)
+
+    xtmin=int(np.min(xs)/1.1)
+    if xtmin<0: xtmin=0
+    xtmax=int(np.max(xs)*1.1)
+    if xtmax>shape_out[1]: xtmax=shape_out[1]
+    ytmin=int(np.min(ys)/1.1)
+    if ytmin<0: ytmin=0
+    ytmax=int(np.max(ys)*1.1)
+    if ytmax>shape_out[0]: ytmax=shape_out[0]
+
+    print(xtmin,xtmax,ytmin,ytmax)
+
+    print('There will be',round((ytmax-ytmin)/blocks[0])*round((xtmax-xtmin)/blocks[1]),'chunks')
+    
     # Create output arrays
-    array = np.zeros(shape_out, dtype=float)
-    footprint = np.zeros(shape_out, dtype=float)
-    for imin in range(0, array.shape[0], blocks[0]):
+    array = np.nan*np.ones(shape_out, dtype='float32')
+    footprint = np.zeros(shape_out, dtype='float32')
+    for imin in range(ytmin, ytmax, blocks[0]):
         imax = min(imin + blocks[0], array.shape[0])
-        for jmin in range(0, array.shape[1], blocks[1]):
+        for jmin in range(xtmin, xtmax, blocks[1]):
             print('.', end=' ')
             sys.stdout.flush()
             jmax = min(jmin + blocks[1], array.shape[1])
