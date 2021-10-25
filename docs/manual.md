@@ -16,29 +16,32 @@ objective of ddf-pipeline is to fully reduce LOFAR (continuum, Stokes
 I) imaging data to a science-ready state with no human
 intervention. ddf-pipeline is currently in use by the LOFAR Surveys
 KSP for reduction of the LoTSS survey (Shimwell et al 2017
-http://adsabs.harvard.edu/abs/2017A%26A...598A.104S).
+http://adsabs.harvard.edu/abs/2017A%26A...598A.104S). Version 2 of
+ddf-pipeline is the version used for the second data release (DR2) of
+LoTSS.
 
 ddf-pipeline was written by Martin Hardcastle, Tim Shimwell, Cyril
 Tasse and Wendy Williams and is described by Shimwell et al 2019
-(https://www.aanda.org/articles/aa/full_html/2019/02/aa33559-18/aa33559-18.html).
+(https://www.aanda.org/articles/aa/full_html/2019/02/aa33559-18/aa33559-18.html)
+and Tasse et al 2021
+(https://ui.adsabs.harvard.edu/abs/2021A%26A...648A...1T/abstract).
 Scientific users of ddf-pipeline are requested to cite the relevant
 papers and refer to the ddf-pipeline github.
 
 ## who is this release for?
 
-This release of ddf-pipeline is mainly aimed at people who want to
+This release of ddf-pipeline is aimed at people who want to
 reduce wide-field LOFAR data quickly and to a good standard. If you
 are interested in a single bright source in a LOFAR field and are not
-in a hurry, you may find the current de facto standard factor
+in a hurry, you may find factor
 (https://github.com/lofar-astron/factor) to be more useful to you.
 
 ## getting support
 
 Support for ddf-pipeline and the code that backs it up is provided on
 a best-efforts basis &mdash; it is not supported by ASTRON and all of
-the programmers have other work to do. ddf-pipeline is not recommended
-for people who don't have considerable experience with Python and
-LOFAR already.
+the programmers have other work to do. A certain level of technical
+expertise is required to run ddf-pipeline at all.
 
 Please request support by raising an issue on the github, **not** by
 direct e-mail to the programmers.
@@ -93,38 +96,16 @@ introduces dependencies on sshtunnel and MySQLdb.
 
 ## installation
 
-Currently we recommend that you install ddf-pipeline and its
-prerequisites KillMS, DDFacet and SkyModel directly from the Github
-repositories, so that you can easily get updates with `git pull`.
+Given that the whole ddf-pipeline infrastructure has many
+dependencies. We include a singularity recipe `ddf-py3.singularity` in
+the repository which you may use to build a singularity
+image. Following the post-install part of this script will allow you
+to install from scratch with root access on a Debian bullseye system
+(recent Ubuntu versions will work similarly.)
 
-This process checks out the stable 'DR1' branch of ddf-pipeline and
-associated code. The DR2 branch is under active development and you
-will need to obtain the appropriate versions of the KillMS/DDFacet
-codes from the developers.
-
-The
-installation process is below (assumes that your shell is bash):
-
-1. Make a suitable directory and clone the Github repo to it:
-
-```
-mkdir DDF
-cd DDF
-git clone https://github.com/mhardcastle/ddf-pipeline.git
-cd ddf-pipeline
-git checkout DR1
-cd ..
-```
-
-2. Run the install script from the cloned repo; this installs KillMS and DDFacet and builds an `init.sh` file that sets up the paths:
-
-```
-./ddf-pipeline/scripts/install.sh
-```
-
-3. Source the `init.sh` file. The ddf-pipeline scripts
-   directory, DDFacet and KillMS should now all be on your path. We
-   assume that you have done this from here on.
+Once ddf-pipeline is installed in a source directory (/usr/local/src
+if installing from the Singularity image) source ddf-pipeline/init.sh to get the
+pipeline and other utilities on your PATH/PYTHONPATH.
 
 ## directory structure
 
@@ -139,21 +120,7 @@ ddf-pipeline provides the following directory structure:
 
 ## what it does
 
-NB this describes the DR1 pipeline.
-
-In normal use ddf-pipeline will go through four rounds of imaging and
-three rounds of self-calibration. The steps are as follows:
-
-1. direction-independent imaging
-2. phase-only self-calibration with direction-independent sky model
-3. (optional bootstrap)
-4. phase-only imaging
-5. amplitude and phase self-calibration with phase-only image
-6. amplitude and phase imaging
-7. full-bandwidth self-calibration with amplitude and phase image
-8. (optional low-resolution full-bandwidth imaging)
-9. full-bandwidth amplitude and phase imaging
-10. (optional second full-bandwidth self-calibration and imaging)
+For a full description of version 2 of ddf-pipeline see Tasse et al 2021 (https://ui.adsabs.harvard.edu/abs/2021A%26A...648A...1T/abstract).
 
 ## getting ready to run
 
@@ -358,12 +325,12 @@ ddf-pipeline can correct for astrometric offsets using a version of
 the method of Smith et al (2011) &mdash;
 http://adsabs.harvard.edu/abs/2011MNRAS.416..857S . Empirically we
 have found that the best results come from aligning with PanSTARRS,
-which works anywhere in the Northern hemisphere.
+which works anywhere in the Northern hemisphere. The correction method 'pslocal' uses a version of the PanSTARRS catalogue optimized for this and made available through the Hertfordshire cluster, and is recommended.
 
 Set
 ```
 [offsets]
-method=panstarrs
+method=pslocal
 fit=mcmc
 ```
 to determine and correct for the per-direction offset from the
