@@ -1,0 +1,177 @@
+Bootstrap: docker
+From: debian:bullseye
+
+%post
+ 
+   echo "Here we are installing software and other dependencies for the container!"
+   apt-get update
+   apt-get install -y git emacs nano dpkg-dev htop \
+    libc-dev \
+    git \
+    wget \
+    rsync \
+    python3-pip \
+    libfftw3-dev \
+    python3-numpy \
+    libfreetype6 \
+    libfreetype6-dev \
+    libpng-dev \
+    pkg-config \
+    python3-dev \
+    libboost-all-dev \
+    libcfitsio-dev \
+    libhdf5-dev \
+    wcslib-dev \
+    libatlas-base-dev \
+    liblapack-dev \
+    python3-tk \
+    libreadline6-dev \
+    subversion \
+    liblog4cplus-dev \
+    libhdf5-dev \
+    libncurses5-dev \
+    libssl-dev \
+    flex \
+    bison \
+    libbison-dev \
+    python3-matplotlib \
+    python3-numexpr \
+    python3-astropy \
+    python3-cpuinfo \
+    python3-future \
+    python3-lxml \
+    python3-pandas \
+    python3-psutil \
+    python3-pyfftw python3-pymysql python3-scipy python3-tables \
+    python3-requests python3-deap \
+    python3-sshtunnel \
+    ipython3 \
+    libgsl-dev \
+    libgtkmm-3.0-dev \
+    libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev    
+   update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
+   apt-get install -y casacore-dev python3-casacore cmake
+   apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig
+
+   pip3 install setuptools wheel
+   pip3 install pybind11
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal
+
+   export SRC=/usr/local/src
+
+   # build BDSF
+   cd $SRC
+   git clone https://github.com/lofar-astron/PyBDSF.git
+   cd PyBDSF
+   python setup.py install
+
+   # build LOFAR beam
+   cd $SRC
+   git clone -b v4.1.1 https://github.com/lofar-astron/LOFARBeam.git
+   cd LOFARBeam
+   mkdir build
+   cd build
+   cmake ..
+   make -j 16
+   make install
+
+   cd /usr/local/lib/python3.9/dist-packages
+   ln -s /usr/local/lib/python3.9/site-packages/lofar
+
+   # dysco -- for DPPP
+   cd $SRC
+   git clone https://github.com/aroffringa/dysco.git
+   cd dysco
+   mkdir build
+   cd build
+   cmake ../
+   make -j 16
+   make install
+
+
+   # aoflagger -- for DPPP
+   cd $SRC
+   git clone -b v3.1.0 https://gitlab.com/aroffringa/aoflagger.git
+   cd aoflagger
+   mkdir build
+   cd build
+   cmake ..
+   make -j 16
+   make install
+
+   # Everybeam -- for DPPP
+   cd $SRC
+   git clone -b v0.1.3 https://git.astron.nl/RD/EveryBeam.git
+   cd EveryBeam
+   mkdir build
+   cd build
+   cmake -DBUILD_WITH_PYTHON=On ..
+   make -j 16
+   make install
+
+
+   # DPPP
+   cd $SRC
+   git clone -b v5.1 https://github.com/lofar-astron/DP3.git
+   cd DP3
+   mkdir build
+   cd build
+   cmake ..
+   make -j 16
+   make install
+
+   # few more DDF dependencies
+   pip3 install -U tables prettytable pylru emcee astropy_healpix sharedarray
+
+   # IDG
+   cd $SRC
+   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
+   cd idg && mkdir build && cd build
+   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
+   make -j 16
+   make install
+
+  # wsclean latest
+
+   cd $SRC
+   git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
+   cd wsclean
+   mkdir -p build
+   cd build
+   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg 
+   make -j 16
+   make install
+
+  # DDFacet
+  cd $SRC
+  git clone -b v0.6.0 https://github.com/saopicc/DDFacet.git
+  cd DDFacet
+  python setup.py install
+
+  # killMS
+  cd $SRC
+  git clone https://github.com/saopicc/killMS.git
+  cd killMS
+  python setup.py install
+
+  # dynspecMS
+  cd $SRC
+  git clone https://github.com/cyriltasse/DynSpecMS.git
+
+  # lotss-query
+  cd $SRC
+  git clone https://github.com/mhardcastle/lotss-query.git
+
+  # lotss-hba-survey (not needed for most users)
+  cd $SRC
+  git clone https://github.com/mhardcastle/lotss-hba-survey.git
+
+  # ddf-pipeline
+  cd $SRC
+  git clone https://github.com/mhardcastle/ddf-pipeline.git
+  # create the init script
+  ddf-pipeline/scripts/install.sh
+
+  
+
+  

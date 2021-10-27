@@ -103,9 +103,9 @@ image. Following the post-install part of this script will allow you
 to install from scratch with root access on a Debian bullseye system
 (recent Ubuntu versions will work similarly.)
 
-Once ddf-pipeline is installed in a source directory (/usr/local/src
+Once ddf-pipeline is installed in a source directory (`/usr/local/src`
 if installing from the Singularity image) source ddf-pipeline/init.sh to get the
-pipeline and other utilities on your PATH/PYTHONPATH.
+pipeline and other utilities on your `PATH`/`PYTHONPATH`. Make sure your `LD_LIBRARY_PATH` points to the installation location of libraries such as Dysco.
 
 ## directory structure
 
@@ -125,8 +125,7 @@ For a full description of version 2 of ddf-pipeline see Tasse et al 2021 (https:
 ## getting ready to run
 
 ddf-pipeline assumes that your LOFAR data have been through prefactor
-(https://github.com/lofar-astron/prefactor) or an equivalent
-(e.g. Reinout van Weeren's equivalent scripts). If you are using LOFAR
+(https://github.com/lofar-astron/prefactor). If you are using LOFAR
 surveys KSP data or co-observing with the KSP, you may be able to
 persuade someone to run this for you on SARA.
 
@@ -241,20 +240,12 @@ below).
 ### [solutions]
 
 These control KillMS (most directly translate into KillMS input
-parameters). Generally these values should be sensible. An important
-choice is whether to set a `uvmin` (in km) for self-calibration. The
-default (no uvmin) gives maps with good noise properties but tends to
-absorb unmodelled extended structure. We currently use `uvmin=1.5`
-which does a better job of preserving large-scale extended flux at the
-cost of some additional structure in the large-scale noise. Most other
-options should be left at their default settings.
+parameters). Generally the default values should be sensible.
 
 ### [compression]
 
 Controls the compression of some final images and measurement sets. If
-`compress_ms` is `True` then the `LOFARSOFT` environment variable must
-point to a script that can be sourced to set up the LOFAR software (to
-ensure that `DPPP` is on the path).
+`compress_ms` is `True` then DPPP will be run to compress the output data.
 
 ## running the code
 
@@ -318,6 +309,13 @@ If bootstrap runs successfully then a `SCALED_DATA` column will be
 generated and used thereafter for imaging.
 
 Results can be plotted using the `plot_factors.py` script.
+
+Bootstrap improves the flux scale, but testing during DR2 suggests
+that there is still a reasonable amount of flux scale scatter after
+the process, probably at least 10 per cent (see Shimwell et al in
+prep.) and maybe more on a per field basis. Ideally you should check
+the quality of your flux scale by reference to some known object in
+the field, or several of them.
 
 ### offsets
 
