@@ -5,17 +5,17 @@ From: debian:bullseye
 %environment
    export SRC=/usr/local/src
    . $SRC/ddf-pipeline/init.sh
-   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/idg/lib/
 
 
 %post
    export DEBIAN_FRONTEND=noninteractive
    export J=16
-   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/idg/lib/
 
    echo "Here we are installing software and other dependencies for the container!"
    apt-get update
-   apt-get install -y emacs nano dpkg-dev htop mc \
+   apt-get install -y nano dpkg-dev mc \
     libc-dev \
     git \
     wget \
@@ -36,7 +36,6 @@ From: debian:bullseye
     liblapack-dev \
     python3-tk \
     libreadline6-dev \
-    subversion \
     liblog4cplus-dev \
     libhdf5-dev \
     libncurses5-dev \
@@ -97,7 +96,7 @@ From: debian:bullseye
    cmake ../
    make -j $J
    make install
-
+   cp $SRC/dysco/build/decompress /usr/local/bin/decompress  # https://github.com/aroffringa/dysco/issues/12#issuecomment-773134161
 
    # aoflagger -- for DPPP
    cd $SRC
@@ -142,13 +141,12 @@ From: debian:bullseye
    make install
 
   # wsclean latest
-
    cd $SRC
    git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
    mkdir -p build
    cd build
-   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg 
+   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
    make -j $J
    make install
 
@@ -187,8 +185,9 @@ From: debian:bullseye
   pip3 list --format=columns
 	
   apt-get purge -y cmake git
+  apt-get -y autoremove
+  rm -rf /var/lib/apt/lists/*
 
-
-%runscript
-  echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
-  . $SRC/ddf-pipeline/init.sh                               # not working
+# %runscript
+#   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
+#   . $SRC/ddf-pipeline/init.sh                               # not working
