@@ -44,7 +44,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     if rmsfacet == True:
         get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
         hdu2=fits.open(prefix+'rms-low.fits')
-        rms=hdu2[0].data[0,0,:]
+        rms=hdu2[0].data # [0,0,:]
 
     det=hdu[0].data[0,0,:]>rmsthresh*rms
     labels, count = nd.label(det)

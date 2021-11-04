@@ -112,6 +112,7 @@ def flatten(f):
     
     header = wn.to_header()
     header["NAXIS"]=2
+    header["WCSAXES"]=2
     copy=('EQUINOX','EPOCH','BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER')
     for k in copy:
         r=f[0].header.get(k)
@@ -247,16 +248,16 @@ def get_rms_map2(infilename,ds9region,outfilename):
     infilename = '%s.noise.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
     hdu=fits.open(infilename)
-    hduflat = flatten(hdu)
+    hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
 
     for direction,ds9region in enumerate(polylist):
         print(direction,ds9region)
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
-        rmsval = np.mean(hdu[0].data[0][0][manualmask])
-        hdu[0].data[0][0][manualmask] = rmsval
+        rmsval = np.mean(hduflat.data[manualmask])
+        hduflat.data[manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
-    hdu.writeto(outfilename,overwrite=True)
+    hduflat.writeto(outfilename,overwrite=True)
     
 class dotdict(dict):
     """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""
