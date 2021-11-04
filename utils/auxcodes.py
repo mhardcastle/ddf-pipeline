@@ -248,14 +248,13 @@ def get_rms_map2(infilename,ds9region,outfilename):
     polylist = convert_regionfile_to_poly(ds9region)
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)
-    map=hdu[0].data
 
     for direction,ds9region in enumerate(polylist):
         print(direction,ds9region)
         r = pyregion.parse(ds9region)
         manualmask = r.get_mask(hdu=hduflat)
-        rmsval = np.mean(hdu[0].data[0][0][np.where(manualmask == True)])
-        hdu[0].data[0][0][np.where(manualmask == True)] = rmsval
+        rmsval = np.mean(hdu[0].data[0][0][manualmask])
+        hdu[0].data[0][0][manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
     hdu.writeto(outfilename,overwrite=True)
     
