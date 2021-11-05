@@ -14,15 +14,13 @@ import time
 from subprocess import call
 from rclone import RClone
 
-macaroonpath = '/project/lotss/Software/ddf-operations/testing/'
-
 def do_rclone_upload(cname,basedir,f,directory):
     '''
-    Untested upload code
+    Upload extract results
     '''
-    rc=RClone('%s/maca_sksp_disk_extract.conf'%macaroonpath,debug=True)
+    rc=RClone('maca_sksp_disk_extract.conf',debug=True)
     rc.get_remote()
-    print(rc.remote,'%s/maca_sksp_disk_extract.conf'%macaroonpath)
+    print(rc.remote,'maca_sksp_disk_extract.conf')
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
 def do_rclone_download(cname,f):
@@ -30,7 +28,7 @@ def do_rclone_download(cname,f):
     Download required data from field cname into location f
     '''
     tarfiles=['images.tar','uv.tar']
-    for macaroon, directory in [('%s/maca_sksp_tape_DR2_readonly.conf'%macaroonpath,''),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'archive/'),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'other/')]:
+    for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF.conf','archive/'),('maca_sksp_tape_DDF.conf','other/')]:
         try:
             rc=RClone(macaroon,debug=True)
         except RuntimeError:
@@ -72,38 +70,6 @@ def create_ds9_region(filename,ra,dec,size):
     openfile.close()
     return(filename)
 
-
-def stage_field_data(field):
-
-    for macaroon, directory in [('%s/maca_sksp_tape_DR2_readonly.conf'%macaroonpath,''),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'archive/'),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'other/')]:
-         print('ada --tokenfile %s --stage %s/%s'%(macaroon,directory,field))
-         os.system('ada --tokenfile %s --stage %s/%s'%(macaroon,directory,field))
-    return
-
-def unstage_field_data(field):
-
-    for macaroon, directory in [('%s/maca_sksp_tape_DR2_readonly.conf'%macaroonpath,''),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'archive/'),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'other/')]:
-         print('ada --tokenfile %s --unstage %s/%s'%(macaroon,directory,field))
-         os.system('ada --tokenfile %s --unstage %s/%s'%(macaroon,directory,field))
-    return
-
-def check_staged(field):
-
-   notstaged = True
-   while notstaged:
-       for macaroon, directory in [('%s/maca_sksp_tape_DR2_readonly.conf'%macaroonpath,''),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'archive/'),('%s/maca_sksp_tape_DDF.conf'%macaroonpath,'other/')]:
-           print('ada --tokenfile %s --longlist %s/%s'%(macaroon,directory,field))
-           stageinfo = os.popen('ada --tokenfile %s --longlist %s/%s'%(macaroon,directory,field)).read().split()
-           numofnotstaged = stageinfo.count('NEARLINE')
-           if numofnotstaged == 0:
-              notstage = False
-              return
-           else:
-              print(stageinfo)
-              print('%s not staged'%numofnotstaged)
-              time.sleep(600)
-
-
 def do_run_extract(field,name):
 
         # Run subtract code
@@ -128,20 +94,14 @@ if __name__=='__main__':
     os.system('mkdir %s'%target)
     os.chdir(target)  
 
-    # Stage and wait for coming online
-    stage_field_data(field)
-    check_staged(field)
-
     update_reprocessing_extract(target,field,'STARTED')
 
     do_rclone_download(field,startdir+'/'+target + '/'+field)
-    unstage_field_data(field)
+
     os.chdir(field)
     create_ds9_region('%s.ds9.reg'%(target),ra,dec,size)
 
-    singularityfile = '/project/lotss/Software/lofar_sksp_fedora31_ddf.sif'
-
-    executionstr = 'singularity exec -B  /scratch/,/home/lotss-tshimwell/,/project/lotss/ %s sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(singularityfile,target,target)
+    executionstr = 'sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(target,target)
     print(executionstr)
     os.system(executionstr)
 
