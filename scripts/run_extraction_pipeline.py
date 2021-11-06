@@ -4,7 +4,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import range
-from surveys_db import update_reprocessing_extract, get_next_extraction
+from surveys_db import update_reprocessing_extract, get_next_extraction, SurveysDB
 import sys
 import os
 import glob
@@ -89,6 +89,27 @@ if __name__=='__main__':
     else:
         force = True
         target = sys.argv[1]
+        field = sys.argv[2]
+        with SurveysDB(readonly=True) as sdb:
+            sdb.cur.execute('select * from reprocessing where id="%s"' % target)
+            results=sdb.cur.fetchall()
+        if len(results)==0:
+            raise RuntimeError('Requested target is not in database')
+
+        fields = results[0]['fields'].split(',')
+        if field not in fields:
+            raise RuntimeError('Requested field is not in target list')
+        bad_pointings = results[0]['bad_pointings']
+        if bad_pointings is None:
+            bad_pointings = ['']
+        else:
+            bad_pointings = bad_pointings.split(',')
+        if field in bad_pointings:
+            raise RuntimeError('Field is in bad pointing list')
+        ra=results[0]['ra']
+        dec=results[0]['decl']
+        size=results[0]['size']
+            
 
     startdir = os.getcwd()
     os.system('mkdir %s'%target)
@@ -103,7 +124,9 @@ if __name__=='__main__':
 
     executionstr = 'sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(target,target)
     print(executionstr)
-    os.system(executionstr)
+    result=os.system(executionstr)
+    if result!=0:
+        raise RuntimeError('Failed to run sub-sources')
 
     resultfiles = glob.glob('*archive*')
     resultfilestar = []

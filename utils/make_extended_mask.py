@@ -44,7 +44,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     if rmsfacet == True:
         get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
         hdu2=fits.open(prefix+'rms-low.fits')
-        rms=hdu2[0].data # [0,0,:]
+        rms=hdu2[0].data[0,0,:]
 
     det=hdu[0].data[0,0,:]>rmsthresh*rms
     labels, count = nd.label(det)
@@ -70,7 +70,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     mask = convolve2d(mask, kernel, mode='same', fillvalue=0)
     mask = (mask>1)
     w=WCS(hdu[0].header)
-    hdu[0].data=mask.astype(np.float32)
+    hdu[0].data[0,0]=mask.astype(np.float32)
     hdu.writeto(prefix+'mask-low.fits',clobber=True)
 
     if fullresfile is not None:
@@ -118,7 +118,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
                     # catch wcs mismatches or similar
                     pass
 
-        hduf[0].data=maskf.astype(np.float32)
+        hduf[0].data[0,0]=maskf.astype(np.float32)
         hduf.writeto(prefix+'mask-high.fits',clobber=True)
 
 if __name__=='__main__':
