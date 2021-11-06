@@ -258,7 +258,7 @@ def get_rms_map2(infilename,ds9region,outfilename):
         rmsval = np.mean(hduflat.data[manualmask])
         hduflat.data[manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
-    template.data[0,0]=hduflat.data
+    template[0].data[0,0]=hduflat.data
     template.writeto(outfilename,overwrite=True)
     
 class dotdict(dict):
