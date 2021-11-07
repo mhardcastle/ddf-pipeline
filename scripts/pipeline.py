@@ -1745,7 +1745,7 @@ def main(o=None):
     if o['method'] is not None:
         separator('Offset correction')
         # have we got the catalogue?
-        if download_thread is not None and download_thread.isAlive():
+        if download_thread is not None and download_thread.is_alive():
             warn('Waiting for background download thread to finish...')
             download_thread.join()
         # maybe the thread died, check the files are there
@@ -1842,7 +1842,7 @@ def main(o=None):
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist
         for thread in cthreads:
-            if thread.isAlive():
+            if thread.is_alive():
                 warn('Waiting for a compression thread to finish')
                 thread.join()
         if o['delete_compressed']:
