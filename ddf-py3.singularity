@@ -59,7 +59,7 @@ From: debian:bullseye
     libgtkmm-3.0-dev \
     libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev    
    update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
-   apt-get install -y casacore-dev python3-casacore cmake curl
+   apt-get install -y casacore-dev casacore-tools python3-casacore cmake curl
    apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig
 
    pip3 install setuptools wheel
