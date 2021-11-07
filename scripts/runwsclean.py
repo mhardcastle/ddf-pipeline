@@ -333,21 +333,17 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
    if os.path.isfile('nchan_phase.p') and os.path.isfile('solint_phase.p') and \
       os.path.isfile('solint_ap.p') and os.path.isfile('nchan_ap.p'):
     
-      f = open('nchan_phase.p', 'r') 
-      nchan_phase_F = pickle.load(f)        
-      f.close()   
+      with open('nchan_phase.p', 'rb') as f:
+         nchan_phase_F = pickle.load(f)        
   
-      f = open('solint_phase.p', 'r') 
-      solint_phase_F = pickle.load(f)        
-      f.close()   
+      with open('solint_phase.p', 'rb') as f:
+         solint_phase_F = pickle.load(f)        
 
-      f = open('solint_ap.p', 'r') 
-      solint_ap_F = pickle.load(f)        
-      f.close()         
+      with open('solint_ap.p', 'rb') as f:
+         solint_ap_F = pickle.load(f)
   
-      f = open('nchan_ap.p', 'r') 
-      nchan_ap_F = pickle.load(f)        
-      f.close()   
+      with open('nchan_ap.p', 'rb') as f:
+         nchan_ap_F = pickle.load(f)        
   
    else:
       decl  = getdeclinationms(mslist[0])
@@ -377,21 +373,17 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
           solint_ap_F.append(solint_ap)
           nchan_ap_F.append(nchan_ap)
 
-      f = open('nchan_phase.p', 'wb') 
-      pickle.dump(nchan_phase_F,f)        
-      f.close()   
+      with open('nchan_phase.p', 'wb') as f:
+         pickle.dump(nchan_phase_F,f)
   
-      f = open('solint_phase.p', 'wb') 
-      pickle.dump(solint_phase_F,f)        
-      f.close()   
+      with open('solint_phase.p', 'wb') as f:
+         pickle.dump(solint_phase_F,f)
 
-      f = open('solint_ap.p', 'wb') 
-      pickle.dump(solint_ap_F,f)        
-      f.close()         
+      with open('solint_ap.p', 'wb') as f:
+         pickle.dump(solint_ap_F,f)
   
-      f = open('nchan_ap.p', 'wb') 
-      pickle.dump(nchan_ap_F,f)        
-      f.close()     
+      with open('nchan_ap.p', 'wb') as f:
+         pickle.dump(nchan_ap_F,f)
 
    return nchan_phase_F, solint_phase_F, solint_ap_F, nchan_ap_F
 
