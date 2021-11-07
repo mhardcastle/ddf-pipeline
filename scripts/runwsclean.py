@@ -8,7 +8,7 @@ from builtins import range
 from past.utils import old_div
 import logging
 logging.basicConfig(filename='selfcal.log', format='%(levelname)s:%(asctime)s ---- %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.DEBUG)
-
+from auxcodes import flatten
 import matplotlib
 matplotlib.use('Agg')
 import os, sys
@@ -236,51 +236,43 @@ def which(file_name):
 
 
 def plotimage(fitsimagename, outplotname, mask=None, rmsnoiseimage=None):
+
+   #logging.basicConfig(level=logging.ERROR)   # to block astropy/aplpy warnings about fits headers
+   #image noise for plotting
+   if rmsnoiseimage == None:
+      hdulist = fits.open(fitsimagename)
+   else:
+      hdulist = fits.open(rmsnoiseimage)   
+   imagenoise = findrms(np.ndarray.flatten(hdulist[0].data))
+   hdulist.close() 
   
-  #logging.basicConfig(level=logging.ERROR)   # to block astropy/aplpy warnings about fits headers
-  #image noise for plotting
-  if rmsnoiseimage == None:
-    hdulist = fits.open(fitsimagename)
-  else:
-    hdulist = fits.open(rmsnoiseimage)   
-  imagenoise = findrms(np.ndarray.flatten(hdulist[0].data))
-  hdulist.close() 
+   #image noise info
+   hdulist = fits.open(fitsimagename) 
+   imagenoiseinfo = findrms(np.ndarray.flatten(hdulist[0].data))
+   ffits = flatten(hdulist)
   
-  #image noise info
-  hdulist = fits.open(fitsimagename) 
-  imagenoiseinfo = findrms(np.ndarray.flatten(hdulist[0].data))
-  hdulist.close()   
-  
-  f = aplpy.FITSFigure(fitsimagename, slices=[0, 0])
-  f.show_colorscale(vmax=16*imagenoise, vmin=-6*imagenoise, cmap='bone')
-  f.set_title(fitsimagename+' (noise = {} mJy/beam)'.format(round(imagenoiseinfo*1e3, 3)))
-  #f.add_beam() -- temporary remove
-  #f.beam.set_frame(True)
-  #f.beam.set_color('white')
-  #f.beam.set_edgecolor('black')
-  #f.beam.set_linewidth(1.)
-  f.add_grid()
-  f.grid.set_color('white')
-  f.grid.set_alpha(0.5)
-  f.grid.set_linewidth(0.2)
-  f.add_colorbar()
-  f.colorbar.set_axis_label_text('Flux (Jy beam$^{-1}$)')
-  if mask is not None:
-    f.show_contour(mask, colors='red', levels=[0.1*imagenoise], filled=False, smooth=1, alpha=0.6, linewidths=1)
-  f.save(outplotname, dpi=120, format='png')
-  #logging.basicConfig(level=logging.DEBUG)
-  logging.info(fitsimagename + ' RMS noise: ' + str(imagenoiseinfo))
-  return
-
-
-
-
-# autoadjust solints & nchans based on time and freq averaging of the data
-
-# PSZ1 try no phase from beamcor
-# run through various uvmin
-
-
+   f = aplpy.FITSFigure(ffits)
+   f.show_colorscale(vmax=16*imagenoise, vmin=-6*imagenoise, cmap='bone')
+   f.set_title(fitsimagename+' (noise = {} mJy/beam)'.format(round(imagenoiseinfo*1e3, 3)))
+   f.add_beam()
+   f.beam.set_frame(True)
+   f.beam.set_color('white')
+   f.beam.set_edgecolor('black')
+   f.beam.set_linewidth(1.)
+   f.add_grid()
+   f.grid.set_color('white')
+   f.grid.set_alpha(0.5)
+   f.grid.set_linewidth(0.2)
+   f.add_colorbar()
+   f.colorbar.set_axis_label_text('Flux (Jy beam$^{-1}$)')
+   if mask is not None:
+      maskhdu=fits.open(mask)
+      fmask=flatten(maskhdu)
+      f.show_contour(fmask, colors='red', levels=[0.1*imagenoise], filled=False, smooth=1, alpha=0.6, linewidths=1)
+   f.save(outplotname, dpi=120, format='png')
+   #logging.basicConfig(level=logging.DEBUG)
+   logging.info(fitsimagename + ' RMS noise: ' + str(imagenoiseinfo))
+   hdulist.close()   
 
 def archive(mslist, outtarname, regionfile, fitsmask, imagename):
   for ms in mslist:
@@ -457,7 +449,7 @@ def create_losoto_tecandphaseparset(ms):
     f.write('axesInPlot = [time]\n')
     f.write('axisInTable = ant\n')
     f.write('minmax = [-3.14,3.14]\n')
-    f.write('soltabToAdd = tec000\n')
+    f.write('soltabsToAdd = tec000\n')
     f.write('prefix = plotlosoto%s/fasttecandphase\n' % ms)
     f.write('refAnt = CS003HBA0\n')
   
