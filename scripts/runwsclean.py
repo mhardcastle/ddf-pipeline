@@ -254,7 +254,7 @@ def plotimage(fitsimagename, outplotname, mask=None, rmsnoiseimage=None):
   f = aplpy.FITSFigure(fitsimagename, slices=[0, 0])
   f.show_colorscale(vmax=16*imagenoise, vmin=-6*imagenoise, cmap='bone')
   f.set_title(fitsimagename+' (noise = {} mJy/beam)'.format(round(imagenoiseinfo*1e3, 3)))
-  f.add_beam()
+  #f.add_beam() -- temporary remove
   f.beam.set_frame(True)
   f.beam.set_color('white')
   f.beam.set_edgecolor('black')
@@ -1420,201 +1420,197 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
 #plotimage('imselfcal_0-MFS-image.fits', 'test.png')
 #sys.exit()
 
+# ------------- MAIN LOOP ------------------
 
-# ---- INPUT -----#
+if __name__=='__main__':
 
-
-switchtogaincycle = 3 # number of phase-only selfcal cycles
-
-
+   switchtogaincycle = 3 # number of phase-only selfcal cycles
 
 
+   # ---- INPUT -----#
 
-parser = argparse.ArgumentParser(description='Calibrate and image DR2 cutout')
-parser.add_argument('-b','--boxfile', help='boxfile, required argument', type=str)
-parser.add_argument('--fitsmask', help='fitsmask for deconvolution, if not provided use automasking', type=str)
-parser.add_argument('--H5sols', help='prefix name for H5 solution file, default=solsgrid', default='solsgrid', type=str)
-parser.add_argument('--imsize', help='image size, required if boxfile is not used', type=int)
-parser.add_argument('-n', '--niter', help='niter, default=15000', default=15000, type=int)
-parser.add_argument('--robust', help='Briggs robust paramter, default=-0.5', default=-0.5, type=float)
-parser.add_argument('--channelsout', help='channelsout, default=6', default=6, type=int)
-parser.add_argument('-u', '--uvmin', help='inner uv-cut for calibration in lambda, default=350', default=350., type=float)
-parser.add_argument('--no-tec', help='do not use TEC fitting', action='store_false')
-parser.add_argument('--multiscale', help='use multiscale deconvolution, not recommended', action='store_true')
-parser.add_argument('--pixelscale', help='pixels size in arcsec, deafult=1.5', default=1.5, type=float)
-parser.add_argument('--idg', help='use the Image Domain gridder', action='store_true')
-parser.add_argument('--no-beamcor', help='do not correct the visilbities for the array factor', action='store_false')
-parser.add_argument('-i','--imagename', help='imagename, default=image', required=True, type=str)
-parser.add_argument('--start', help='start selfcal cycle at this iteration, default=0', default=0, type=int)
-parser.add_argument('--stop', help='stop selfcal cycle at this iteration, default=10', default=10, type=int)
-parser.add_argument('--no-smoothcal', help='median smooth amplitudes', action='store_false')
-parser.add_argument('--maskthreshold', help='threshold for MakeMask.py, default=5', default=5, type=int)
-parser.add_argument('ms', nargs='*', help='msfile(s)')  
+   parser = argparse.ArgumentParser(description='Calibrate and image DR2 cutout')
+   parser.add_argument('-b','--boxfile', help='boxfile, required argument', type=str)
+   parser.add_argument('--fitsmask', help='fitsmask for deconvolution, if not provided use automasking', type=str)
+   parser.add_argument('--H5sols', help='prefix name for H5 solution file, default=solsgrid', default='solsgrid', type=str)
+   parser.add_argument('--imsize', help='image size, required if boxfile is not used', type=int)
+   parser.add_argument('-n', '--niter', help='niter, default=15000', default=15000, type=int)
+   parser.add_argument('--robust', help='Briggs robust paramter, default=-0.5', default=-0.5, type=float)
+   parser.add_argument('--channelsout', help='channelsout, default=6', default=6, type=int)
+   parser.add_argument('-u', '--uvmin', help='inner uv-cut for calibration in lambda, default=350', default=350., type=float)
+   parser.add_argument('--no-tec', help='do not use TEC fitting', action='store_false')
+   parser.add_argument('--multiscale', help='use multiscale deconvolution, not recommended', action='store_true')
+   parser.add_argument('--pixelscale', help='pixels size in arcsec, deafult=1.5', default=1.5, type=float)
+   parser.add_argument('--idg', help='use the Image Domain gridder', action='store_true')
+   parser.add_argument('--no-beamcor', help='do not correct the visilbities for the array factor', action='store_false')
+   parser.add_argument('-i','--imagename', help='imagename, default=image', required=True, type=str)
+   parser.add_argument('--start', help='start selfcal cycle at this iteration, default=0', default=0, type=int)
+   parser.add_argument('--stop', help='stop selfcal cycle at this iteration, default=10', default=10, type=int)
+   parser.add_argument('--no-smoothcal', help='median smooth amplitudes', action='store_false')
+   parser.add_argument('--maskthreshold', help='threshold for MakeMask.py, default=5', default=5, type=int)
+   parser.add_argument('ms', nargs='*', help='msfile(s)')  
 
-args = vars(parser.parse_args())
-#print args
+   args = vars(parser.parse_args())
+   #print args
 
-if which('DPPP') == None:
-  print('Cannot find DPPP, forgot to source lofarinit.[c]sh?')
-  sys.exit()
-
-
-
-if args['boxfile'] == None and args['imsize'] == None:
-  print('Incomplete input detected, either boxfile or imsize is required')
-  sys.exit()
-if args['boxfile'] != None and args['imsize'] != None:
-  print('Wrong input detected, both boxfile and imsize are set')
-  sys.exit()
-
-
-mslist = sorted(args['ms'])
-if args['boxfile'] != None:
-  imsize   = str(getimsize(args['boxfile'], args['pixelscale']))
-if args['imsize'] != None:
-  imsize = str(args['imsize']) 
-TEC = args['no_tec']
-idg = args['idg']
-multiscale = args['multiscale']
-imageout  = args['imagename'] + '_'
-dobeamcor = args['no_beamcor']
-if args['fitsmask'] != None:
-  fitsmask = args['fitsmask']
-else:
-  fitsmask = None
-uvmin = args['uvmin']  
-robust = str(args['robust'])
-channelsout = str(args['channelsout'])  
-niter = args['niter']
-parmdb = args['H5sols']  + '_'
-pixsize = str(args['pixelscale'])  
-
-#print args['no_smoothcal']
-if args['boxfile'] != None:
-  outtarname = (args['boxfile'].split('/')[-1]).split('.reg')[0] + '.tar.gz'
-else:
-  outtarname = 'calibrateddata' + '.tar.gz' 
-
-logging.info('Imsize:                    ' + str(imsize))
-logging.info('Pixelscale:                ' + str(pixsize))
-logging.info('Niter:                     ' + str(niter))
-logging.info('Uvmin:                     ' + str(uvmin))
-logging.info('Multiscale:                ' + str(multiscale))
-logging.info('Beam correction:           ' + str(dobeamcor))
-logging.info('IDG:                       ' + str(idg))
-logging.info('TEC:                       ' + str(TEC))
-if args['boxfile'] != None:
-  logging.info('Bobxfile:                  ' + args['boxfile'])
-logging.info('Mslist:                    ' + ' '.join(map(str,mslist)))
-logging.info('User specified clean mask: ' + str(fitsmask))
-logging.info('Threshold for MakeMask:    ' + str(args['maskthreshold']))
-logging.info('Briggs robust:             ' + str(robust))
-logging.info('Imagename prefix:          ' + imageout)
-logging.info('Solution file prefix:      ' + parmdb)
-logging.info('Output file will be:       ' + outtarname)
+   if which('DPPP') == None:
+     print('Cannot find DPPP, forgot to source lofarinit.[c]sh?')
+     sys.exit()
 
 
 
-
-makemask = 'MakeMask.py'
-
-
-
-for ms in mslist:
-  if not os.path.isdir(ms):
-    print(ms, ' does not exist')
-    sys.exit()
-
-if beamcor and idg:
-  print('beamcor=True and IDG=True is not possible')
-  sys.exit()
+   if args['boxfile'] == None and args['imsize'] == None:
+     print('Incomplete input detected, either boxfile or imsize is required')
+     sys.exit()
+   if args['boxfile'] != None and args['imsize'] != None:
+     print('Wrong input detected, both boxfile and imsize are set')
+     sys.exit()
 
 
-deepmultiscale = False
+   mslist = sorted(args['ms'])
+   if args['boxfile'] != None:
+     imsize   = str(getimsize(args['boxfile'], args['pixelscale']))
+   if args['imsize'] != None:
+     imsize = str(args['imsize']) 
+   TEC = args['no_tec']
+   idg = args['idg']
+   multiscale = args['multiscale']
+   imageout  = args['imagename'] + '_'
+   dobeamcor = args['no_beamcor']
+   if args['fitsmask'] != None:
+     fitsmask = args['fitsmask']
+   else:
+     fitsmask = None
+   uvmin = args['uvmin']  
+   robust = str(args['robust'])
+   channelsout = str(args['channelsout'])  
+   niter = args['niter']
+   parmdb = args['H5sols']  + '_'
+   pixsize = str(args['pixelscale'])  
 
-# GET SOLUTION TIMSCALES
-nchan_phase,solint_phase,solint_ap,nchan_ap = determinesolints(mslist, \
-                                              pixsize, imsize, channelsout, \
-                                              np.int(niter), robust, TEC)
+   #print args['no_smoothcal']
+   if args['boxfile'] != None:
+     outtarname = (args['boxfile'].split('/')[-1]).split('.reg')[0] + '.tar.gz'
+   else:
+     outtarname = 'calibrateddata' + '.tar.gz' 
 
-# ----- START SELFCAL LOOP -----
-for i in range(args['start'],args['stop']):
-
-  # AUTOMATICALLY PICKUP PREVIOUS MASK (in case of a restart)
-  if (i > 0) and (args['fitsmask'] == None):
-    if idg:  
-      if os.path.isfile(imageout + str(i-1) + '-MFS-I-image.fits.mask.fits'):
-          fitsmask = imageout + str(i-1) + '-MFS-I-image.fits.mask.fits'
-    else:
-      if os.path.isfile(imageout + str(i-1) + '-MFS-image.fits.mask.fits'):
-          fitsmask = imageout + str(i-1) + '-MFS-image.fits.mask.fits'
-
-       
-  # BEAM CORRECTION
-  if dobeamcor and i == 0:
-      for ms in mslist:
-        beamcor(ms)
-
-  # do an additional clean run with "-continue" using multiscale
-  #if i>= 6 and not multiscale:
-  #    deepmultiscale=True
+   logging.info('Imsize:                    ' + str(imsize))
+   logging.info('Pixelscale:                ' + str(pixsize))
+   logging.info('Niter:                     ' + str(niter))
+   logging.info('Uvmin:                     ' + str(uvmin))
+   logging.info('Multiscale:                ' + str(multiscale))
+   logging.info('Beam correction:           ' + str(dobeamcor))
+   logging.info('IDG:                       ' + str(idg))
+   logging.info('TEC:                       ' + str(TEC))
+   if args['boxfile'] != None:
+     logging.info('Bobxfile:                  ' + args['boxfile'])
+   logging.info('Mslist:                    ' + ' '.join(map(str,mslist)))
+   logging.info('User specified clean mask: ' + str(fitsmask))
+   logging.info('Threshold for MakeMask:    ' + str(args['maskthreshold']))
+   logging.info('Briggs robust:             ' + str(robust))
+   logging.info('Imagename prefix:          ' + imageout)
+   logging.info('Solution file prefix:      ' + parmdb)
+   logging.info('Output file will be:       ' + outtarname)
 
 
-  # IMAGE
-  makeimage(mslist, imageout + str(i), pixsize, imsize, channelsout, np.int(niter), robust, uvtaper=False, multiscale=multiscale, idg=idg, fitsmask=fitsmask, deepmultiscale=deepmultiscale)
-  
-  # MAKE FIGURE WITH APLPY
-  if idg:
-    plotimage(imageout + str(i) +'-MFS-I-image.fits',imageout + str(i) + '.png' , \
-              mask=fitsmask, rmsnoiseimage=imageout + str(0) +'-MFS-I-image.fits')
-  else:
-    plotimage(imageout + str(i) +'-MFS-image.fits',imageout + str(i) + '.png' , \
-              mask=fitsmask, rmsnoiseimage=imageout + str(0) +'-MFS-image.fits')
+   makemask = 'MakeMask.py'
+
+   for ms in mslist:
+     if not os.path.isdir(ms):
+       print(ms, ' does not exist')
+       sys.exit()
+
+   if beamcor and idg:
+     print('beamcor=True and IDG=True is not possible')
+     sys.exit()
 
 
-  # SOLVE
-  for msnumber, ms in enumerate(mslist):
-    if i < switchtogaincycle:
-      runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
-               np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
-               ms + parmdb + str(i) + '.h5' ,'scalarphase', False, uvmin=uvmin, TEC=TEC, FOVedge=False)
-    else:
-      runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
-               np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
-               ms + parmdb + str(i) + '.h5'  ,'complexgain', True, uvmin=uvmin, TEC=TEC, FOVedge=False, smoothcal=args['no_smoothcal'])
+   deepmultiscale = False
 
-  # NORMALIZE GLOBAL GAIN (done in log-space)
-  if i >= switchtogaincycle:
-     print('Doing global gain normalization')  
-     parmdblist = []  
+   # GET SOLUTION TIMSCALES
+   nchan_phase,solint_phase,solint_ap,nchan_ap = determinesolints(mslist, \
+                                                 pixsize, imsize, channelsout, \
+                                                 np.int(niter), robust, TEC)
+
+   # ----- START SELFCAL LOOP -----
+   for i in range(args['start'],args['stop']):
+
+     # AUTOMATICALLY PICKUP PREVIOUS MASK (in case of a restart)
+     if (i > 0) and (args['fitsmask'] == None):
+       if idg:  
+         if os.path.isfile(imageout + str(i-1) + '-MFS-I-image.fits.mask.fits'):
+             fitsmask = imageout + str(i-1) + '-MFS-I-image.fits.mask.fits'
+       else:
+         if os.path.isfile(imageout + str(i-1) + '-MFS-image.fits.mask.fits'):
+             fitsmask = imageout + str(i-1) + '-MFS-image.fits.mask.fits'
+
+
+     # BEAM CORRECTION
+     if dobeamcor and i == 0:
+         for ms in mslist:
+           beamcor(ms)
+
+     # do an additional clean run with "-continue" using multiscale
+     #if i>= 6 and not multiscale:
+     #    deepmultiscale=True
+
+
+     # IMAGE
+     makeimage(mslist, imageout + str(i), pixsize, imsize, channelsout, np.int(niter), robust, uvtaper=False, multiscale=multiscale, idg=idg, fitsmask=fitsmask, deepmultiscale=deepmultiscale)
+
+     # MAKE FIGURE WITH APLPY
+     if idg:
+       plotimage(imageout + str(i) +'-MFS-I-image.fits',imageout + str(i) + '.png' , \
+                 mask=fitsmask, rmsnoiseimage=imageout + str(0) +'-MFS-I-image.fits')
+     else:
+       plotimage(imageout + str(i) +'-MFS-image.fits',imageout + str(i) + '.png' , \
+                 mask=fitsmask, rmsnoiseimage=imageout + str(0) +'-MFS-image.fits')
+
+
+     # SOLVE
      for msnumber, ms in enumerate(mslist):
-       parmdblist.append(ms + parmdb + str(i) + '.h5')  
-     normamps(parmdblist)
+       if i < switchtogaincycle:
+         runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
+                  np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
+                  ms + parmdb + str(i) + '.h5' ,'scalarphase', False, uvmin=uvmin, TEC=TEC, FOVedge=False)
+       else:
+         runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
+                  np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
+                  ms + parmdb + str(i) + '.h5'  ,'complexgain', True, uvmin=uvmin, TEC=TEC, FOVedge=False, smoothcal=args['no_smoothcal'])
 
-  # APPLYCAL
-  for msnumber, ms in enumerate(mslist):
-    if i < switchtogaincycle:
-      applycal(ms, ms + parmdb + str(i) +'.h5' ,'scalarphase', False, TEC=TEC)
-    else:
-      applycal(ms, ms + parmdb + str(i) +'.h5' ,'complexgain', True, TEC=TEC)   
-   
-  # MAKE MASK
-  if args['fitsmask'] == None:
-    if idg:  
-      imagename  = imageout + str(i) + '-MFS-I-image.fits'
-    else:
-      imagename  = imageout + str(i) + '-MFS-image.fits'
-    cmdm  = makemask + ' --Th='+ str(args['maskthreshold']) + ' --RestoredIm=' + imagename
-    os.system(cmdm)
-    fitsmask = imagename + '.mask.fits'
-  
-  # CUT FLAGGED DATA FROM MS AT START AND END
-  if (i == 0) or (i == switchtogaincycle) or (i == switchtogaincycle + 1) or (i == switchtogaincycle + 2) \
-    or (i == switchtogaincycle + 3) or (i == switchtogaincycle + 4):
-     for msnumber, ms in enumerate(mslist):  
-       flagms_startend(ms, 'phaseonly' + ms + parmdb + str(i) + '.h5', np.int(solint_phase[msnumber]))
-  
-  
-  
-archive(mslist, outtarname, args['boxfile'], fitsmask, imagename)    
-cleanup(mslist)
+     # NORMALIZE GLOBAL GAIN (done in log-space)
+     if i >= switchtogaincycle:
+        print('Doing global gain normalization')  
+        parmdblist = []  
+        for msnumber, ms in enumerate(mslist):
+          parmdblist.append(ms + parmdb + str(i) + '.h5')  
+        normamps(parmdblist)
+
+     # APPLYCAL
+     for msnumber, ms in enumerate(mslist):
+       if i < switchtogaincycle:
+         applycal(ms, ms + parmdb + str(i) +'.h5' ,'scalarphase', False, TEC=TEC)
+       else:
+         applycal(ms, ms + parmdb + str(i) +'.h5' ,'complexgain', True, TEC=TEC)   
+
+     # MAKE MASK
+     if args['fitsmask'] == None:
+       if idg:  
+         imagename  = imageout + str(i) + '-MFS-I-image.fits'
+       else:
+         imagename  = imageout + str(i) + '-MFS-image.fits'
+       cmdm  = makemask + ' --Th='+ str(args['maskthreshold']) + ' --RestoredIm=' + imagename
+       os.system(cmdm)
+       fitsmask = imagename + '.mask.fits'
+
+     # CUT FLAGGED DATA FROM MS AT START AND END
+     if (i == 0) or (i == switchtogaincycle) or (i == switchtogaincycle + 1) or (i == switchtogaincycle + 2) \
+       or (i == switchtogaincycle + 3) or (i == switchtogaincycle + 4):
+        for msnumber, ms in enumerate(mslist):  
+          flagms_startend(ms, 'phaseonly' + ms + parmdb + str(i) + '.h5', np.int(solint_phase[msnumber]))
+
+
+
+   archive(mslist, outtarname, args['boxfile'], fitsmask, imagename)    
+   cleanup(mslist)
+
