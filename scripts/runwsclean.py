@@ -377,19 +377,19 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
           solint_ap_F.append(solint_ap)
           nchan_ap_F.append(nchan_ap)
 
-      f = open('nchan_phase.p', 'w') 
+      f = open('nchan_phase.p', 'wb') 
       pickle.dump(nchan_phase_F,f)        
       f.close()   
   
-      f = open('solint_phase.p', 'w') 
+      f = open('solint_phase.p', 'wb') 
       pickle.dump(solint_phase_F,f)        
       f.close()   
 
-      f = open('solint_ap.p', 'w') 
+      f = open('solint_ap.p', 'wb') 
       pickle.dump(solint_ap_F,f)        
       f.close()         
   
-      f = open('nchan_ap.p', 'w') 
+      f = open('nchan_ap.p', 'wb') 
       pickle.dump(nchan_ap_F,f)        
       f.close()     
 

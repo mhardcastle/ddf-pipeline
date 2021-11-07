@@ -68,13 +68,13 @@ From: debian:bullseye
 
    export SRC=/usr/local/src
 
-   # build BDSF
+   # BDSF
    cd $SRC
    git clone https://github.com/lofar-astron/PyBDSF.git
    cd PyBDSF
    python setup.py install
 
-   # build LOFAR beam
+   # LOFAR beam -- for DDF
    cd $SRC
    git clone -b v4.1.1 https://github.com/lofar-astron/LOFARBeam.git
    cd LOFARBeam
@@ -118,7 +118,6 @@ From: debian:bullseye
    make -j $J
    make install
 
-
    # DPPP
    cd $SRC
    git clone -b v5.1 https://github.com/lofar-astron/DP3.git
@@ -132,7 +131,13 @@ From: debian:bullseye
    # few more DDF dependencies
    pip3 install -U tables prettytable pylru emcee astropy_healpix sharedarray
 
-   # IDG
+   # losoto -- for selfcal
+   pip3 install losoto
+
+   # aplpy -- for selfcal
+   pip3 install aplpy
+
+   # IDG -- for wsclean
    cd $SRC
    git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
    cd idg && mkdir build && cd build
@@ -140,7 +145,7 @@ From: debian:bullseye
    make -j $J
    make install
 
-  # wsclean latest
+  # wsclean latest -- for selfcal
    cd $SRC
    git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
