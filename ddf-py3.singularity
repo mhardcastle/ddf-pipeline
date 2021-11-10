@@ -54,6 +54,7 @@ From: debian:bullseye
     python3-pyfftw python3-pymysql python3-scipy python3-tables \
     python3-requests python3-deap \
     python3-sshtunnel \
+    python3-ruamel.yaml python3-ephem \
     ipython3 \
     libgsl-dev \
     libgtkmm-3.0-dev \
@@ -64,7 +65,7 @@ From: debian:bullseye
 
    pip3 install setuptools wheel
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess
 
    export SRC=/usr/local/src
 
