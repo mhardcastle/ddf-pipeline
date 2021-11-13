@@ -23,7 +23,7 @@ def do_rclone_upload(cname,basedir,f,directory):
     print(rc.remote,'maca_sksp_disk_extract.conf')
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
-def do_rclone_download(cname,f):
+def do_rclone_download(cname,f,verbose=False):
     '''
     Download required data from field cname into location f
     '''
@@ -53,6 +53,8 @@ def do_rclone_download(cname,f):
         raise RuntimeError('Failed to download from any source')
     print('Untarring files')
     for t in tarfiles:
+        if verbose:
+            print(t)
         d=os.system('cd %s; tar xf %s; rm %s' % (f,t,t))
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)

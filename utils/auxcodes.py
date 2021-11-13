@@ -56,17 +56,16 @@ def report(s):
 def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False):
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
     report('Running: '+s)
     if not dryrun:
-#      retval=os.system(s)
         if log is None:
             retval=call(s,shell=True)
         else:
             retval=run_log(s,log,quiet)
         if not(proceed) and retval!=0:
            os.system('CleanSHM.py')
-           die('FAILED to run '+s+': return value is '+str(retval))
+           die('FAILED to run '+s+': return value is '+str(retval),database=database)
         return retval
     else:
         warn('Dry run, skipping this step')

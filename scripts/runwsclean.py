@@ -26,7 +26,11 @@ import argparse
 import pickle
 import aplpy
 from lofar.stationresponse import stationresponse
-
+try:
+  from getcpus import getcpus
+  getcpuworks = True
+except:
+  getcpuworks = False 
 
 def removenans(parmdb, soltab):
    H5 = h5parm.h5parm(parmdb, readonly=False)
@@ -274,12 +278,15 @@ def plotimage(fitsimagename, outplotname, mask=None, rmsnoiseimage=None):
    logging.info(fitsimagename + ' RMS noise: ' + str(imagenoiseinfo))
    hdulist.close()   
 
-def archive(mslist, outtarname, regionfile, fitsmask, imagename):
+def archive(mslist, outtarname, regionfile, fitsmask, imagename, ncpu=None):
   for ms in mslist:
     msout = ms + '.calibrated'
     if os.path.isdir(msout):
       os.system('rm -rf ' + msout)
-    cmd  ='DPPP numthreads=32 msin=' + ms + ' msout=' + msout + ' '
+    cmd  = 'DPPP '
+    if ncpu is not None:
+       cmd +='numthreads=%i' % ncpu 
+    cmd += `'msin=' + ms + ' msout=' + msout + ' '
     cmd +='msin.datacolumn=CORRECTED_DATA msout.storagemanager=dysco steps=[]'
     os.system(cmd)
 
@@ -318,7 +325,7 @@ def reweight(mslist, pixsize, imsize, channelsout, niter, robust, multiscale=Fal
    weightslist = []       
    return 
 
-def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, multiscale=False):
+def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, multiscale=False,ncpu=None):
    """
    determine the solution time and frequency intervals based on the amount of compact source flux
    """
@@ -350,7 +357,7 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
 
       for ms in mslist:
           imageout =  'solintimage' + ms.split('.ms')[0] 
-          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(old_div(niter,2)), robust, multiscale=multiscale, predict=False)
+          makeimage([ms], imageout, pixsize, imsize, channelsout, np.int(old_div(niter,2)), robust, multiscale=multiscale, predict=False, ncpu=ncpu)
           csf = determine_compactsource_flux(imageout + '-MFS-image.fits') 
         
           nchan_phase, solint_phase, solint_ap = calculate_solintnchan(old_div(csf,declf) )
@@ -379,13 +386,16 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
 
    return nchan_phase_F, solint_phase_F, solint_ap_F, nchan_ap_F
 
-def create_beamcortemplate(ms):
+def create_beamcortemplate(ms,ncpu=None):
   """
   create a DPPP gain H5 template solutution file that can be filled with losoto
   """
   H5name = ms + '_templatejones.h5'   
 
-  cmd = 'DPPP numthreads=32 msin=' + ms + ' msin.datacolumn=DATA msout=. '
+  cmd = 'DPPP '
+  if ncpu is not None:
+     cmd +='numthreads=%i ' % ncpu
+  cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
   cmd += 'msin.modelcolumn=DATA '
   cmd += 'steps=[ddecal] ddecal.type=ddecal '
   cmd += 'ddecal.maxiter=1 ddecal.usemodelcolumn=True ddecal.nchan=1 '
@@ -600,7 +610,7 @@ def create_losoto_mediumsmoothparset(ms, boxsize):
     return parset
 
 
-def beamcor(ms):
+def beamcor(ms,ncpu=None):
     """
     correct a ms for the beam in the phase center (array_factor only)
     """
@@ -619,7 +629,10 @@ def beamcor(ms):
     print(cmdlosoto)
     os.system(cmdlosoto)
     
-    cmd = 'DPPP numthreads=32 msin=' + ms + ' msin.datacolumn=DATA msout=. '
+    cmd = 'DPPP '
+    if ncpu is not None:
+       cmd +='numthreads=%i ' % ncpu
+    cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
     cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1,ac2] msout.storagemanager=dysco '
     cmd += 'ac1.parmdb='+H5name + ' ac2.parmdb='+H5name + ' '
@@ -716,11 +729,14 @@ def smoothsols(parmdb, ms):
     return
 
 
-def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEIGHT_SPECTRUM_SOLVE'):
+def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEIGHT_SPECTRUM_SOLVE',ncpu=None):
 
     # APPLYCAL CASE I (rare)
     if (soltype == 'complexgain') and (preapplyphase == False):
-      cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
+      cmd = 'DPPP '
+      if ncpu is not None:
+         cmd += 'numthreads=%i ' % ncpu
+      cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
       cmd += 'msin.weightcolumn='+weight_spectrum + ' '
       cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1,ac2] msout.storagemanager=dysco '
       cmd += 'ac1.parmdb='+parmdb + ' ac2.parmdb='+parmdb + ' '
@@ -731,7 +747,11 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
 
     # APPLYCAL CASE II
     if soltype == 'scalarphase' and TEC == False:
-      cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
+      cmd = 'DPPP '
+      if ncpu is not None:
+         cmd += 'numthreads=%i ' % ncpu
+
+      cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
       cmd += 'msin.weightcolumn='+weight_spectrum + ' '
       cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1] msout.storagemanager=dysco '
       cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
@@ -741,7 +761,11 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
     
     # APPLYCAL CASE III  
     if soltype == 'scalarphase' and TEC == True:
-      cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
+      cmd = 'DPPP '
+      if ncpu is not None:
+         cmd += 'numthreads=%i ' % ncpu
+      
+      cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
       cmd += 'msin.weightcolumn='+weight_spectrum + ' '
       cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1,ac2] msout.storagemanager=dysco '
       cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
@@ -754,7 +778,11 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
     # APPLYCAL CASE IV      
     if (soltype == 'complexgain') and (preapplyphase == True):
        
-      cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
+      cmd = 'DPPP '
+      if ncpu is not None:
+         cmd += 'numthreads=%i ' % ncpu
+     
+      cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
       cmd += 'msin.weightcolumn='+weight_spectrum + ' msout.storagemanager=dysco '
       if TEC == False:
         cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac0,ac1,ac2] '
@@ -1123,7 +1151,7 @@ def removenegativefrommodel(imagenames):
         hdul.close()
     return
 
-def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvtaper=False, multiscale=True, predict=True, uvmin=' ', fitsmask=None, idg=False, deepmultiscale=False):
+def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvtaper=False, multiscale=True, predict=True, uvmin=' ', fitsmask=None, idg=False, deepmultiscale=False, ncpu=None):
 
     msliststring = ' '.join(map(str, mslist))
     os.system('rm -f ' + imageout + '-*.fits')
@@ -1144,6 +1172,8 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
        
        
     cmd = wsclean + ' '
+    if ncpu is not None:
+       cmd += '-j %i ' % ncpu
     #if not deepmultiscale:
     cmd += '-no-update-model-required -minuv-l 80 '
     cmd += '-size ' + imsize + ' ' + imsize + ' -reorder '
@@ -1220,7 +1250,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
  
 def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, soltype, \
              preapplyphase, weight_spectrum='WEIGHT_SPECTRUM_SOLVE',uvmin=0, TEC=False,\
-             FOVedge=False, smoothcal=True):
+             FOVedge=False, smoothcal=True, ncpu=None):
     
     losotoparset = create_losoto_flag_apgridparset(ms)
     losotoparset_phase = create_losoto_fastphaseparset(ms)
@@ -1243,7 +1273,11 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
         sys.exit()
     
  
-    cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. msin.modelcolumn=MODEL_DATA '
+    cmd = 'DPPP '
+    if ncpu is not None:
+       cmd += 'numthreads=%i ' % ncpu
+
+    cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. msin.modelcolumn=MODEL_DATA '
     cmd += 'msin.weightcolumn='+weight_spectrum + ' '
     cmd += 'steps=[ddecal] ' + 'msout.storagemanager=dysco ddecal.type=ddecal '
     cmd += 'ddecal.maxiter=100 ddecal.propagatesolutions=True '
@@ -1300,7 +1334,10 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
     os.system(cmd)
     #sys.exit()  
     if preapplyphase: # APPLY FIRST 
-        cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
+        cmd = 'DPPP '
+        if ncpu is not None:
+           cmd += 'numthreads=%i ' % ncpu
+        cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
         cmd += 'msin.weightcolumn='+weight_spectrum + ' msout.storagemanager=dysco '
         if TEC == False:
           cmd += 'msout.datacolumn=CORRECTED_DATA_PHASE steps=[ac1] '
@@ -1324,7 +1361,11 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
           os.system(cmdlosotophase)
 
         # RUN DPPP again
-        cmd = 'DPPP numthreads=32 ' + 'msin=' + ms + ' msin.datacolumn=CORRECTED_DATA_PHASE msout=. '
+        cmd = 'DPPP '
+        if ncpu is not None:
+           cmd += 'numthreads=%i ' % ncpu
+
+        cmd += 'msin=' + ms + ' msin.datacolumn=CORRECTED_DATA_PHASE msout=. '
         cmd += 'msin.weightcolumn='+weight_spectrum + ' '
         cmd += 'msin.modelcolumn=MODEL_DATA '
         cmd += 'steps=[ddecal] ' + 'msout.storagemanager=dysco ddecal.type=ddecal '
@@ -1432,6 +1473,11 @@ if __name__=='__main__':
    parser.add_argument('--stop', help='stop selfcal cycle at this iteration, default=10', default=10, type=int)
    parser.add_argument('--no-smoothcal', help='median smooth amplitudes', action='store_false')
    parser.add_argument('--maskthreshold', help='threshold for MakeMask.py, default=5', default=5, type=int)
+   if getcpuworks:
+      parser.add_argument('-n','--ncpu', help='number of cpu to use, default=%i' % getcpus(), default=getcpus(), type=int)
+   else:
+      parser.add_argument('-n','--ncpu', help='number of cpu to use, default=%i' % os.cpu_count(), default= os.cpu_count(), type=int)
+
    parser.add_argument('ms', nargs='*', help='msfile(s)')  
 
    args = vars(parser.parse_args())
@@ -1458,6 +1504,7 @@ if __name__=='__main__':
      imsize = str(args['imsize']) 
    TEC = args['no_tec']
    idg = args['idg']
+   ncpu = args['ncpu']
    multiscale = args['multiscale']
    imageout  = args['imagename'] + '_'
    dobeamcor = args['no_beamcor']
@@ -1532,7 +1579,7 @@ if __name__=='__main__':
      # BEAM CORRECTION
      if dobeamcor and i == 0:
          for ms in mslist:
-           beamcor(ms)
+           beamcor(ms,ncpu=ncpu)
 
      # do an additional clean run with "-continue" using multiscale
      #if i>= 6 and not multiscale:
@@ -1540,7 +1587,7 @@ if __name__=='__main__':
 
 
      # IMAGE
-     makeimage(mslist, imageout + str(i), pixsize, imsize, channelsout, np.int(niter), robust, uvtaper=False, multiscale=multiscale, idg=idg, fitsmask=fitsmask, deepmultiscale=deepmultiscale)
+     makeimage(mslist, imageout + str(i), pixsize, imsize, channelsout, np.int(niter), robust, uvtaper=False, multiscale=multiscale, idg=idg, fitsmask=fitsmask, deepmultiscale=deepmultiscale, ncpu=ncpu)
 
      # MAKE FIGURE WITH APLPY
      if idg:
@@ -1556,11 +1603,11 @@ if __name__=='__main__':
        if i < switchtogaincycle:
          runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
                   np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
-                  ms + parmdb + str(i) + '.h5' ,'scalarphase', False, uvmin=uvmin, TEC=TEC, FOVedge=False)
+                  ms + parmdb + str(i) + '.h5' ,'scalarphase', False, uvmin=uvmin, TEC=TEC, FOVedge=False, ncpu=ncpu)
        else:
          runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
                   np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
-                  ms + parmdb + str(i) + '.h5'  ,'complexgain', True, uvmin=uvmin, TEC=TEC, FOVedge=False, smoothcal=args['no_smoothcal'])
+                  ms + parmdb + str(i) + '.h5'  ,'complexgain', True, uvmin=uvmin, TEC=TEC, FOVedge=False, smoothcal=args['no_smoothcal'], ncpu=ncpu)
 
      # NORMALIZE GLOBAL GAIN (done in log-space)
      if i >= switchtogaincycle:
@@ -1573,9 +1620,9 @@ if __name__=='__main__':
      # APPLYCAL
      for msnumber, ms in enumerate(mslist):
        if i < switchtogaincycle:
-         applycal(ms, ms + parmdb + str(i) +'.h5' ,'scalarphase', False, TEC=TEC)
+         applycal(ms, ms + parmdb + str(i) +'.h5' ,'scalarphase', False, TEC=TEC, ncpu=ncpu)
        else:
-         applycal(ms, ms + parmdb + str(i) +'.h5' ,'complexgain', True, TEC=TEC)   
+         applycal(ms, ms + parmdb + str(i) +'.h5' ,'complexgain', True, TEC=TEC, ncpu=ncpu)   
 
      # MAKE MASK
      if args['fitsmask'] == None:

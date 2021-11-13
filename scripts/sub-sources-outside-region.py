@@ -11,6 +11,7 @@ from astropy.io import ascii
 import glob
 from subprocess import call
 from fixsymlinks import fixsymlinks
+from auxcodes import die,report,warn,run,flatten
 
 try:
   from getcpus import getcpus
@@ -18,45 +19,6 @@ try:
 except:
   getcpuworks = False 
 
-#ddf-pipeline
-#from auxcodes import run
-
-class bcolors(object):
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-def die(s,database=True):
-    print(bcolors.FAIL+s+bcolors.ENDC)
-    if database and use_database():
-        update_status(None,'Failed')
-    raise Exception(s)
-
-def report(s):
-    print(bcolors.OKGREEN+s+bcolors.ENDC)
-
-def warn(s):
-    print(bcolors.OKBLUE+s+bcolors.ENDC)
-
-def run(s,proceed=False,dryrun=False,log=None,quiet=False):
-    report('Running: '+s)
-    if not dryrun:
-#      retval=os.system(s)
-        if log is None:
-            retval=call(s,shell=True)
-        else:
-            retval=run_log(s,log,quiet)
-        if not(proceed) and retval!=0:
-           os.system('CleanSHM.py')
-           die('FAILED to run '+s+': return value is '+str(retval))
-        return retval
-    else:
-        warn('Dry run, skipping this step')
 
 def arg_as_list(s):                                                            
     v = ast.literal_eval(s)                                                    
@@ -130,7 +92,7 @@ def number_of_unique_obsids(msfiles):
 
 def add_dummyms(msfiles):
     '''
-    Add dummy ms to create a regular freuqency grid when doing a concat with DPPP
+    Add dummy ms to create a regular frequency grid when doing a concat with DPPP
     '''
     if len(msfiles) == 1:
       return msfiles
@@ -338,43 +300,6 @@ def mask_except_region(infilename,ds9region,outfilename):
 
     return
 
-
-def flatten(f):
-    """ Flatten a fits file so that it becomes a 2D image. Return new header and data """
-
-    naxis=f[0].header['NAXIS']
-    if naxis<2:
-        raise RadioError('Can\'t make map from this')
-    if naxis==2:
-        return fits.PrimaryHDU(header=f[0].header,data=f[0].data)
-
-    w = WCS(f[0].header)
-    wn=WCS(naxis=2)
-    
-    wn.wcs.crpix[0]=w.wcs.crpix[0]
-    wn.wcs.crpix[1]=w.wcs.crpix[1]
-    wn.wcs.cdelt=w.wcs.cdelt[0:2]
-    wn.wcs.crval=w.wcs.crval[0:2]
-    wn.wcs.ctype[0]=w.wcs.ctype[0]
-    wn.wcs.ctype[1]=w.wcs.ctype[1]
-    
-    header = wn.to_header()
-    header["NAXIS"]=2
-    copy=('EQUINOX','EPOCH','BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER')
-    for k in copy:
-        r=f[0].header.get(k)
-        if r is not None:
-            header[k]=r
-
-    slice=[]
-    for i in range(naxis,0,-1):
-        if i<=2:
-            slice.append(np.s_[:],)
-        else:
-            slice.append(0)
-        
-    hdu = fits.PrimaryHDU(header=header,data=f[0].data[tuple(slice)])
-    return hdu
 
 def removecolumn(msfile,colname):
      t = pt.table(msfile,readonly=False)
