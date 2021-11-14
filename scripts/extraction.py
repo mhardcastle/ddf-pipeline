@@ -97,7 +97,7 @@ separator('Downloading field data')
 for f in fields:
     field=f['Field']
     report('Doing field '+field)
-    fdir=startdir+'/'+target + '/'+field
+    fdir=startdir+'/'+target+'/'+field
     if os.path.isdir(fdir):
         if len(glob.glob(fdir+'/*.ms.archive'))>0:
             warn('Field directory already contains MSs, skipping download')
@@ -108,8 +108,16 @@ separator('Running subtraction')
 
 for f in fields:
     field=f['Field']
-    fdir=startdir+'/'+target + '/'+field
+    fdir=startdir+'/'+target+'/'+field
     os.chdir(fdir)
     executionstr = 'sub-sources-outside-region.py %s -b ../%s.ds9.reg -p %s'%(subtractoptions,target,target)
-    run(executionstr)
+    run(executionstr,database=False)
 
+separator('Move subtracted datasets to working directory')
+
+wd=startdir+'/'+target
+run('cd %s; mv */*.dysco.sub.shift.avg.weights.ms.archive? .' % wd,database=False)
+
+separator('Done!')
+
+print('To run the pre-packaged self-calibration script do:\n\ncd %s\nrunwsclean.py -b %s.ds9.reg -i %s *.dysco.sub.shift.avg.weights.ms.archive?' % (wd,target,target))

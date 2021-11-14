@@ -286,7 +286,7 @@ def archive(mslist, outtarname, regionfile, fitsmask, imagename, ncpu=None):
     cmd  = 'DPPP '
     if ncpu is not None:
        cmd +='numthreads=%i' % ncpu 
-    cmd += `'msin=' + ms + ' msout=' + msout + ' '
+    cmd += 'msin=' + ms + ' msout=' + msout + ' '
     cmd +='msin.datacolumn=CORRECTED_DATA msout.storagemanager=dysco steps=[]'
     os.system(cmd)
 
@@ -1474,9 +1474,9 @@ if __name__=='__main__':
    parser.add_argument('--no-smoothcal', help='median smooth amplitudes', action='store_false')
    parser.add_argument('--maskthreshold', help='threshold for MakeMask.py, default=5', default=5, type=int)
    if getcpuworks:
-      parser.add_argument('-n','--ncpu', help='number of cpu to use, default=%i' % getcpus(), default=getcpus(), type=int)
+      parser.add_argument('--ncpu', help='number of cpu to use, default=%i' % getcpus(), default=getcpus(), type=int)
    else:
-      parser.add_argument('-n','--ncpu', help='number of cpu to use, default=%i' % os.cpu_count(), default= os.cpu_count(), type=int)
+      parser.add_argument('--ncpu', help='number of cpu to use, default=%i' % os.cpu_count(), default= os.cpu_count(), type=int)
 
    parser.add_argument('ms', nargs='*', help='msfile(s)')  
 

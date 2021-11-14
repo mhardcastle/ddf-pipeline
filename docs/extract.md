@@ -26,10 +26,11 @@ they benefit from large numbers of cores.
 
 The extraction pipeline uses `rclone` (https://rclone.org/) to
 retrieve archive files from cloud storage. You need a token (a
-'macaroon') to download from the archive and you can obtain this from
-the LoTSS website https://lofar-surveys.org/releases.html . Place it
-in a directory and ensure that the environment variable
-`RCLONE_CONFIG_DIR` points to this directory.
+'macaroon') to download from the archive and once the DR2 release is
+complete you can obtain this from the LoTSS website
+https://lofar-surveys.org/releases.html -- in the meantime LoTSS collaborators can download the tokens from the private web pages. Place the macaroon in a directory and
+ensure that the environment variable `RCLONE_CONFIG_DIR` points to
+this directory.
 
 ## running an extraction
 
@@ -57,5 +58,30 @@ An extraction takes a few hours on a machine with >100 GB RAM and 32 cores.
 
 Extraction will create a directory with the downloaded pipeline output
 and concatenated broad-band measurement sets, one per observation
-(which may mean more than one per field).
+(which may mean more than one per field). These measurements sets will be in per-observation directories with names `*.dysco.sub.shift.avg.weights.ms.archive?`.
 
+Inside the working directory for the target, created by the extraction, do
+
+```
+runwsclean.py -b NAME.ds9.reg -i NAME *.dysco.sub.shift.avg.weights.ms.archive?```
+
+where the `NAME` is the name of your target. This assumes that all
+measurement sets extracted are equally good. The self-calibration
+script will go through 9 iterations of phase and then amplitude and
+phase self-calibration, taking between hours and days depending on the
+number of measurement sets, the size and complexity of the field, and
+the speed of your machine and underlying file system. You can monitor
+its progress by looking at PNG files in the working directory
+(`NAME_*.png` and `plotlosoto*/*.png`). If a particular extracted
+measurement set is bad you may want to consider excluding it from the
+self-calibration. The final output image will be stored in your
+working directory as `NAME_9-MFS.image.fits`.
+
+# flux scale
+
+The bootstrap flux scale corrections applied by ddf-pipeline and
+described by Shimwell et al (2019) are applied to the input
+data. However, you are advised to check the flux scale by comparison
+with the released DR2 mosaics (where an additional correction has been
+applied) or with a known flux density for your target or other objects
+in the field.
