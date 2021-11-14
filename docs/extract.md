@@ -63,7 +63,8 @@ and concatenated broad-band measurement sets, one per observation
 Inside the working directory for the target, created by the extraction, do
 
 ```
-runwsclean.py -b NAME.ds9.reg -i NAME *.dysco.sub.shift.avg.weights.ms.archive?```
+runwsclean.py -b NAME.ds9.reg -i NAME *.dysco.sub.shift.avg.weights.ms.archive?
+```
 
 where the `NAME` is the name of your target. This assumes that all
 measurement sets extracted are equally good. The self-calibration
