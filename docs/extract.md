@@ -78,7 +78,7 @@ measurement set is bad you may want to consider excluding it from the
 self-calibration. The final output image will be stored in your
 working directory as `NAME_9-MFS.image.fits`.
 
-# flux scale
+## flux scale
 
 The bootstrap flux scale corrections applied by ddf-pipeline and
 described by Shimwell et al (2019) are applied to the input
