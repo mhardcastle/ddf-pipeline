@@ -980,13 +980,12 @@ def main(o=None):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
 
-if '$$' in o['tgss'] or np.any(['$$' in l for l in o['catalogues']]):
-        
+    if '$$' in o['tgss'] or np.any(['$$' in l for l in o['catalogues']]):
         if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
             die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
-
         o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
         o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
+        
     lCat=o["catalogues"]+[o["tgss"]]
     for fCat in lCat:
         if not os.path.isfile(fCat):
