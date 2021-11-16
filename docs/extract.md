@@ -16,7 +16,7 @@ dependencies, including DDFacet, wsclean and DPPP.
 
 With the default configuration the extraction routines will have a
 memory footprint of around 100 GB and will make good use of large
-numbers of cores (because of the `DDFacet` dependency. It may be
+numbers of cores (because of the `DDFacet` dependency). It may be
 possible to reduce the memory requirements using options that are
 passed to `DDFacet`. The self-calibration routines use only a small
 amount of RAM and could in principle be run on a desktop PC, although

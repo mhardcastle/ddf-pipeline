@@ -118,14 +118,14 @@ def flatten(f):
         if r is not None:
             header[k]=r
 
-    slice=[]
+    dslice=[]
     for i in range(naxis,0,-1):
         if i<=2:
-            slice.append(np.s_[:],)
+            dslice.append(np.s_[:],)
         else:
-            slice.append(0)
+            dslice.append(0)
         
-    hdu = fits.PrimaryHDU(header=header,data=f[0].data[slice])
+    hdu = fits.PrimaryHDU(header=header,data=f[0].data[tuple(dslice)])
     return hdu
 
 class Catcher(object):
