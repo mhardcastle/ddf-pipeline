@@ -164,7 +164,7 @@ From: debian:bullseye
 
   # killMS
   cd $SRC
-  git clone https://github.com/saopicc/killMS.git
+  git clone -b v3.0.1 https://github.com/saopicc/killMS.git
   cd killMS
   python setup.py install
 
