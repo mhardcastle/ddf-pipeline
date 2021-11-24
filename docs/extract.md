@@ -24,11 +24,9 @@ they benefit from large numbers of cores.
 
 ## requirements for download
 
-The extraction pipeline uses `rclone` (https://rclone.org/) to
-retrieve archive files from cloud storage. You need a token (a
-'macaroon') to download from the archive and once the DR2 release is
-complete you can obtain this from the LoTSS website
-https://lofar-surveys.org/releases.html -- in the meantime LoTSS collaborators can download the tokens from the private web pages. Place the macaroon in a directory and
+The extraction pipeline will download from several possible locations. DR2 files are currently located in the SURF Science Data Repository and are downloadable using an API provided by the SDR. Until DR2 is public only collaborators have access to this (see https://lofar-surveys.org/collaborators.html): you need the environment variable `SDR_TOKEN` set to the private token that allows these downloads. Other files (non-DR2 fields) are located in cloud storage and the extraction pipeline uses `rclone` (https://rclone.org/) to
+retrieve archive files from cloud storage. You need a different type of token (a
+'macaroon') to download from the archive, again only available to LoTSS collaborators. Place the macaroon in a directory and
 ensure that the environment variable `RCLONE_CONFIG_DIR` points to
 this directory.
 
