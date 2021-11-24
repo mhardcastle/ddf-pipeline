@@ -25,6 +25,8 @@ def do_rclone_upload(cname,basedir,f,directory):
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
 def do_sdr_and_rclone_download(cname,f,verbose=False):
+    if not os.path.isdir(f):
+        os.makedirs(f)
     s=SDR(target=f)
     try:
         status=s.get_status(cname)
