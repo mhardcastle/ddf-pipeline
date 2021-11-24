@@ -13,6 +13,7 @@ from astropy import units as u
 import time
 from subprocess import call
 from rclone import RClone
+from sdr_wrapper import SDR
 
 def do_rclone_upload(cname,basedir,f,directory):
     '''
@@ -23,6 +24,19 @@ def do_rclone_upload(cname,basedir,f,directory):
     print(rc.remote,'maca_sksp_disk_extract.conf')
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
+def do_sdr_and_rclone_download(cname,f,verbose=False):
+    s=SDR(target=f)
+    try:
+        status=s.get_status(cname)
+    except RuntimeError:
+        status=None
+    if status:
+        if verbose: print('Initiating SDR download for field',cname)
+        s.download_and_stage(cname,['images.tar','uv.tar'])
+    else:
+        if verbose: print('Trying rclone download for field',cname)
+        do_rclone_download(cname,f,verbose=verbose)
+    
 def do_rclone_download(cname,f,verbose=False):
     '''
     Download required data from field cname into location f
@@ -119,7 +133,7 @@ if __name__=='__main__':
 
     update_reprocessing_extract(target,field,'STARTED')
 
-    do_rclone_download(field,startdir+'/'+target + '/'+field)
+    do_sdr_and_rclone_download(field,startdir+'/'+target + '/'+field)
 
     os.chdir(field)
     create_ds9_region('%s.ds9.reg'%(target),ra,dec,size)
