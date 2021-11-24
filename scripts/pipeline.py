@@ -980,19 +980,17 @@ def main(o=None):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
 
-    if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
-        die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
-
-    o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
-    o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
+    if '$$' in o['tgss'] or np.any(['$$' in l for l in o['catalogues']]):
+        if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
+            die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
+        o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
+        o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
+        
     lCat=o["catalogues"]+[o["tgss"]]
     for fCat in lCat:
         if not os.path.isfile(fCat):
             die("Catalog %s does not exist"%fCat)
 
-    if o['pull']:
-        run('pull_ddfpipeline.sh',log=None)
-            
     if o['catch_signal']:
         catcher=Catcher()
     else:
@@ -1745,7 +1743,7 @@ def main(o=None):
     if o['method'] is not None:
         separator('Offset correction')
         # have we got the catalogue?
-        if download_thread is not None and download_thread.isAlive():
+        if download_thread is not None and download_thread.is_alive():
             warn('Waiting for background download thread to finish...')
             download_thread.join()
         # maybe the thread died, check the files are there
@@ -1842,7 +1840,7 @@ def main(o=None):
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist
         for thread in cthreads:
-            if thread.isAlive():
+            if thread.is_alive():
                 warn('Waiting for a compression thread to finish')
                 thread.join()
         if o['delete_compressed']:

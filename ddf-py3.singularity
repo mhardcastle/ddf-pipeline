@@ -54,27 +54,28 @@ From: debian:bullseye
     python3-pyfftw python3-pymysql python3-scipy python3-tables \
     python3-requests python3-deap \
     python3-sshtunnel \
+    python3-ruamel.yaml python3-ephem \
     ipython3 \
     libgsl-dev \
     libgtkmm-3.0-dev \
     libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev    
    update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
-   apt-get install -y casacore-dev python3-casacore cmake curl
+   apt-get install -y casacore-dev casacore-tools python3-casacore cmake curl
    apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig
 
    pip3 install setuptools wheel
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess
 
    export SRC=/usr/local/src
 
-   # build BDSF
+   # BDSF
    cd $SRC
    git clone https://github.com/lofar-astron/PyBDSF.git
    cd PyBDSF
    python setup.py install
 
-   # build LOFAR beam
+   # LOFAR beam -- for DDF
    cd $SRC
    git clone -b v4.1.1 https://github.com/lofar-astron/LOFARBeam.git
    cd LOFARBeam
@@ -118,7 +119,6 @@ From: debian:bullseye
    make -j $J
    make install
 
-
    # DPPP
    cd $SRC
    git clone -b v5.1 https://github.com/lofar-astron/DP3.git
@@ -132,7 +132,13 @@ From: debian:bullseye
    # few more DDF dependencies
    pip3 install -U tables prettytable pylru emcee astropy_healpix sharedarray
 
-   # IDG
+   # losoto -- for selfcal
+   pip3 install losoto
+
+   # aplpy -- for selfcal
+   pip3 install aplpy
+
+   # IDG -- for wsclean
    cd $SRC
    git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
    cd idg && mkdir build && cd build
@@ -140,7 +146,7 @@ From: debian:bullseye
    make -j $J
    make install
 
-  # wsclean latest
+  # wsclean latest -- for selfcal
    cd $SRC
    git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
@@ -158,7 +164,7 @@ From: debian:bullseye
 
   # killMS
   cd $SRC
-  git clone https://github.com/saopicc/killMS.git
+  git clone -b v3.0.1 https://github.com/saopicc/killMS.git
   cd killMS
   python setup.py install
 

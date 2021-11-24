@@ -56,17 +56,16 @@ def report(s):
 def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False):
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
     report('Running: '+s)
     if not dryrun:
-#      retval=os.system(s)
         if log is None:
             retval=call(s,shell=True)
         else:
             retval=run_log(s,log,quiet)
         if not(proceed) and retval!=0:
            os.system('CleanSHM.py')
-           die('FAILED to run '+s+': return value is '+str(retval))
+           die('FAILED to run '+s+': return value is '+str(retval),database=database)
         return retval
     else:
         warn('Dry run, skipping this step')
@@ -120,14 +119,14 @@ def flatten(f):
         if r is not None:
             header[k]=r
 
-    slice=[]
+    dslice=[]
     for i in range(naxis,0,-1):
         if i<=2:
-            slice.append(np.s_[:],)
+            dslice.append(np.s_[:],)
         else:
-            slice.append(0)
+            dslice.append(0)
         
-    hdu = fits.PrimaryHDU(header=header,data=f[0].data[slice])
+    hdu = fits.PrimaryHDU(header=header,data=f[0].data[tuple(dslice)])
     return hdu
 
 class Catcher(object):
@@ -246,9 +245,10 @@ def get_rms_map2(infilename,ds9region,outfilename):
 
     run(runcommand,log=None)
 
-    infilename = '%s.noise.fits'%infilename
+    noisefilename = '%s.noise.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
-    hdu=fits.open(infilename)
+    template=fits.open(infilename) # will be 4D
+    hdu=fits.open(noisefilename)
     hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
 
     for direction,ds9region in enumerate(polylist):
@@ -258,7 +258,8 @@ def get_rms_map2(infilename,ds9region,outfilename):
         rmsval = np.mean(hduflat.data[manualmask])
         hduflat.data[manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
-    hduflat.writeto(outfilename,overwrite=True)
+    template[0].data[0,0]=hduflat.data
+    template.writeto(outfilename,overwrite=True)
     
 class dotdict(dict):
     """dot.notation access to dictionary attributes. Quick hack to allow us to pass options in the form that smoothsols expects"""

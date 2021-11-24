@@ -16,6 +16,7 @@ export PATH=$DDF_DIR/killMS/killMS:$PATH
 
 export PYTHONPATH=$DDF_DIR/lotss-query:$PYTHONPATH
 export PYTHONPATH=$DDF_DIR/lotss-hba-survey:$PYTHONPATH
+export PYTHONPATH=$DDF_DIR:$PYTHONPATH
 
 # force numpy to stay single-threaded -- maybe
 export OPENBLAS_NUM_THREADS=1
