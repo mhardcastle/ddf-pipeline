@@ -24,6 +24,15 @@ def do_rclone_upload(cname,basedir,f,directory):
     print(rc.remote,'maca_sksp_disk_extract.conf')
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
+def untar(f,tarfiles,verbose=False):
+    print('Untarring files')
+    for t in tarfiles:
+        if verbose:
+            print(t)
+        d=os.system('cd %s; tar xf %s; rm %s' % (f,t,t))
+        if d!=0:
+            raise RuntimeError('untar %s failed!' % t)
+
 def do_sdr_and_rclone_download(cname,f,verbose=False):
     if not os.path.isdir(f):
         os.makedirs(f)
@@ -34,7 +43,9 @@ def do_sdr_and_rclone_download(cname,f,verbose=False):
         status=None
     if status:
         if verbose: print('Initiating SDR download for field',cname)
-        s.download_and_stage(cname,['images.tar','uv.tar'])
+        tarfiles=['images.tar','uv.tar']
+        s.download_and_stage(cname,tarfiles)
+        untar(f,tarfiles,verbose=verbose)
     else:
         if verbose: print('Trying rclone download for field',cname)
         do_rclone_download(cname,f,verbose=verbose)
@@ -56,25 +67,10 @@ def do_rclone_download(cname,f,verbose=False):
             continue
         break
         
-        '''
-        for t in tarfiles:
-            print('Downloading',t)
-            d=rc.copy(rc.remote+directory+cname+'/'+t,f)
-            if d['err'] or d['code']!=0:
-                break # failed so break out of inner loop
-        else:
-            break # succeeded so break out of outer loop
-        '''
     else:
         raise RuntimeError('Failed to download from any source')
-    print('Untarring files')
-    for t in tarfiles:
-        if verbose:
-            print(t)
-        d=os.system('cd %s; tar xf %s; rm %s' % (f,t,t))
-        if d!=0:
-            raise RuntimeError('untar %s failed!' % t)
-
+    untar(f,tarfiles,verbose=verbose)
+    
 def create_ds9_region(filename,ra,dec,size):
 
     sc=SkyCoord('%sdeg'%ra,'%sdeg'%dec,frame='icrs')
