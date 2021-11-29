@@ -42,7 +42,7 @@ Look up the object NGC507 to determine a position and do a
 default-size extraction of a region of 0.5 degrees square around the
 catalogued position.
 
-```extract.py myfield 0.5 0.4 286.1918961 59.8494461```
+```extract.py myfield 0.4 286.1918961 59.8494461```
 
 Extract a region of 0.4 degrees square around the specified RA and DEC, naming the working directory `myfield`.
 
