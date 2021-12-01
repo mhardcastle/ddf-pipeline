@@ -55,7 +55,7 @@ def do_rclone_download(cname,f,verbose=False):
     Download required data from field cname into location f
     '''
     tarfiles=['images.tar','uv.tar']
-    for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF.conf','archive/'),('maca_sksp_tape_DDF.conf','other/')]:
+    for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF_readonly.conf','archive/'),('maca_sksp_tape_DDF_readonly.conf','other/')]:
         try:
             rc=RClone(macaroon,debug=True)
         except RuntimeError:
