@@ -48,7 +48,7 @@ def die(s,database=True):
     print(bcolors.FAIL+s+bcolors.ENDC)
     if database and use_database():
         update_status(None,'Failed')
-    raise Exception(s)
+    raise RuntimeError(s)
 
 def report(s):
     print(bcolors.OKGREEN+s+bcolors.ENDC)
@@ -70,7 +70,7 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
     else:
         warn('Dry run, skipping this step')
 
-def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
+def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False,ignore_error=False):
 
     data=hdu[0].data
     if len(data.shape)==4:
@@ -88,14 +88,17 @@ def get_rms(hdu,boxsize=1000,niter=20,eps=1e-6,verbose=False):
             return rms
         subim=subim[np.abs(subim)<5*rms]
         oldrms=rms
-    raise Exception('Failed to converge')
+    if ignore_error:
+        return rms
+    else:
+        raise RuntimeError('Failed to converge')
 
 def flatten(f):
     """ Flatten a fits file so that it becomes a 2D image. Return new header and data """
 
     naxis=f[0].header['NAXIS']
     if naxis<2:
-        raise RadioError('Can\'t make map from this')
+        raise RuntimeError('Can\'t make map from this')
     if naxis==2:
         f[0].header["WCSAXES"]=2
         return fits.PrimaryHDU(header=f[0].header,data=f[0].data)

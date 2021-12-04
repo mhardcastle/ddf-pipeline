@@ -40,7 +40,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
 
     hdu=fits.open(infile)
     if rmsfacet == False:
-        rms=get_rms(hdu)
+        rms=get_rms(hdu,ignore_error=True)
     if rmsfacet == True:
         get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
         hdu2=fits.open(prefix+'rms-low.fits')
