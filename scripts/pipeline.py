@@ -47,7 +47,7 @@ from pipeline_version import version
 __version__=version()
 import datetime
 import threading
-from remove_bootstrap import remove_columns
+
 try:
     from killMS.Other import MyPickle
 except ImportError:
@@ -1063,6 +1063,11 @@ def main(o=None):
             if f not in keep:
                 mvglob(f,o['archive_dir'])
 
+        if o['exitafter'] == 'cleanup':
+            warn('User specified exit after cleanup')
+            stop(2)
+
+                
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
        
