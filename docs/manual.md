@@ -115,7 +115,6 @@ ddf-pipeline provides the following directory structure:
 * utils: should be on your PYTHONPATH after `init.sh`
 * examples: contains example configuration files
 * docs: contains documentation, including this file
-* torque: some examples of how to use ddf-pipeline via torque
 * misc: miscellaneous useful files
 
 ## what it does
