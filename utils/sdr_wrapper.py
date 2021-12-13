@@ -57,7 +57,7 @@ class SDR(object):
         files=self.get_status(field)
         if filename not in files:
             raise RuntimeError('File not found')
-        status,number=files[filename]
+        status=files[filename]
         if status!='DUL':
             raise RuntimeError('File not online!')
         download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename)
