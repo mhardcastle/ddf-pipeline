@@ -272,12 +272,16 @@ if __name__=='__main__':
             result['rms']=float(rms)
             result['dr']=float(dr)
             result['catsources']=int(catsources)
-            result['first_ra']=float(first_ra)
-            result['first_dec']=float(first_dec)
-            result['tgss_scale']=float(tgss_scale)
-            result['nvss_scale']=float(nvss_scale)
-            result['sc_norm']=float(sc_norm)
-            result['sc_index']=float(sc_index)
-            result['sc_scale']=float(scale)
+            if first_ra is not None:
+                result['first_ra']=float(first_ra)
+                result['first_dec']=float(first_dec)
+            if tgss_scale is not None:
+                result['tgss_scale']=float(tgss_scale)
+            if nvss_scale is not None:
+                result['nvss_scale']=float(nvss_scale)
+            if sc_norm is not None:
+                result['sc_norm']=float(sc_norm)
+                result['sc_index']=float(sc_index)
+                result['sc_scale']=float(scale)
             
             sdb.set_quality(result)
