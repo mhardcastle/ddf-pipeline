@@ -1632,6 +1632,7 @@ def main(o=None):
             # an error, so check and drop it if it is
             hdu=fits.open(extmask)
             if not np.any(hdu[0].data>0):
+                warn('Bootstrap external mask is blank, using only internal masking')
                 extmask=None
             hdu.close()
         else:
