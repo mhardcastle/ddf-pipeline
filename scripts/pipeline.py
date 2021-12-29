@@ -1628,6 +1628,12 @@ def main(o=None):
             # if mask-low exists then use it
         if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
+            # can be empty, in which case recent versions of DDF throw
+            # an error, so check and drop it if it is
+            hdu=fits.open(extmask)
+            if !np.any(hdu[0].data>):
+                extmask=None
+            hdu.close()
         else:
             extmask=None
 

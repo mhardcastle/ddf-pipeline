@@ -97,11 +97,11 @@ introduces dependencies on sshtunnel and MySQLdb.
 ## installation
 
 Given that the whole ddf-pipeline infrastructure has many
-dependencies. We include a singularity recipe `ddf-py3.singularity` in
+dependencies, we include a singularity recipe `ddf-py3.singularity` in
 the repository which you may use to build a singularity
-image. Following the post-install part of this script will allow you
-to install from scratch with root access on a Debian bullseye system
-(recent Ubuntu versions will work similarly.)
+image. Alternatively, following the steps in the post-install part of
+this script will allow you to install from scratch with root access on
+a Debian bullseye system (recent Ubuntu versions will work similarly.)
 
 Once ddf-pipeline is installed in a source directory (`/usr/local/src`
 if installing from the Singularity image) source ddf-pipeline/init.sh to get the
@@ -146,10 +146,6 @@ contains all your measurement sets is used only when a good sky model
 has been developed. If you are using KSP data, then `make_mslists.py`
 will build these two MS lists for you.
 
-(The script `run_pipeline.py` packages up the downloading, unpacking
-and making of the measurement sets. It will need modifying for your
-local environment before use and so we do not describe it here.)
-
 ## preparing the configuration file
 
 `pipeline.py` takes as command line options an arbitrary mixture of
@@ -160,7 +156,7 @@ default settings are shown. Most of these are sensible for LOFAR data.
 Config files follow the standard Python ConfigParser layout of section
 names in square brackets followed by name-value pairs separated by an
 equals sign.  An example configuration file is in examples/example.cfg
-. A more detailed example is in examples/tier1.cfg &mdash; note that
+. A more detailed example is in examples/tier1-jul2018.cfg &mdash; note that
 this includes many settings which are the current defaults.
 
 Command-line options are specified by two dashes, the name of the
