@@ -57,7 +57,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     big=(counts>sizethresh) & (counts<maxsize)
     big_regions=label[big]
 
-    print('Found',len(big_regions)-1,'large islands')
+    print('Found',len(big_regions),'large islands')
     if verbose: print(counts[big])
 
     mask=np.zeros_like(det,dtype=int)

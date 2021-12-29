@@ -1631,7 +1631,7 @@ def main(o=None):
             # can be empty, in which case recent versions of DDF throw
             # an error, so check and drop it if it is
             hdu=fits.open(extmask)
-            if !np.any(hdu[0].data>):
+            if not np.any(hdu[0].data>0):
                 extmask=None
             hdu.close()
         else:
