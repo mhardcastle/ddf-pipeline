@@ -142,7 +142,7 @@ if __name__=='__main__':
     if result!=0:
         raise RuntimeError('Failed to run sub-sources')
 
-    resultfiles = glob.glob('*archive*')
+    resultfiles = glob.glob('*sub*archive*')
     resultfilestar = []
     for resultfile in resultfiles:
         d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
