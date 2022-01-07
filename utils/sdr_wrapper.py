@@ -8,6 +8,20 @@ import sys
 import json
 from download_file import download_file
 from time import sleep
+import numpy as np
+
+def request_with_retry(url,rfunction=requests.get):
+    done=False
+    while not done:
+        try:
+            r=rfunction(url,timeout=60)
+        except requests.exceptions.ReadTimeout:
+            print('Timeout fetching URL ',url,': retrying')
+            # fuzzy sleep to avoid synchronized retries from multiple clients
+            sleep(abs(np.random.normal(30,5)))
+        else:
+            done=True
+    return r
 
 class SDR(object):
 
@@ -33,7 +47,7 @@ class SDR(object):
     def get_files(self,field):
         # return mapping of file name to number
         field=self.fc(field)
-        r=requests.get(self.url+field+'/files'+self.tokenstr,timeout=60)
+        r=request_with_retry(self.url+field+'/files'+self.tokenstr)
         if r.status_code!=200:
             raise RuntimeError('Failed to get status! (Probably non-existent field')
         else:
@@ -46,7 +60,7 @@ class SDR(object):
     def get_status(self,field):
         # return staging status of all files
         field=self.fc(field)
-        r=requests.get(self.url+field+'/status'+self.tokenstr,timeout=60)
+        r=request_with_retry(self.url+field+'/status'+self.tokenstr)
         if r.status_code!=200:
             raise RuntimeError('Failed to get status! (Probably non-existent field')
         else:
@@ -67,7 +81,7 @@ class SDR(object):
         if status=='DUL':
             return 'Online'
         else:
-            r=requests.post(self.url+field+'/stage/'+str(number)+self.tokenstr,timeout=60)
+            r=request_with_retry(self.url+field+'/stage/'+str(number)+self.tokenstr,function=requests.post)
             return 'Staged'
         
     def download(self,field,filename):
@@ -78,7 +92,7 @@ class SDR(object):
         status=files[filename]
         if status!='DUL':
             raise RuntimeError('File not online!')
-        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename)
+        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,))
         
     def download_and_stage(self,field,filenames):
         field=self.fc(field)
