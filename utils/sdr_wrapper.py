@@ -81,7 +81,7 @@ class SDR(object):
         if status=='DUL':
             return 'Online'
         else:
-            r=request_with_retry(self.url+field+'/stage/'+str(number)+self.tokenstr,function=requests.post)
+            r=request_with_retry(self.url+field+'/stage/'+str(number)+self.tokenstr,rfunction=requests.post)
             return 'Staged'
         
     def download(self,field,filename):
