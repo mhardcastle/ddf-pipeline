@@ -12,65 +12,9 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import time
 from subprocess import call
-from rclone import RClone
-from sdr_wrapper import SDR
+from reprocessing_utils import *
 
-def do_rclone_upload(cname,basedir,f,directory):
-    '''
-    Upload extract results
-    '''
-    rc=RClone('maca_sksp_disk_extract.conf',debug=True)
-    rc.get_remote()
-    print(rc.remote,'maca_sksp_disk_extract.conf')
-    rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
-def untar(f,tarfiles,verbose=False):
-    print('Untarring files')
-    for t in tarfiles:
-        if verbose:
-            print(t)
-        d=os.system('cd %s; tar xf %s; rm %s' % (f,t,t))
-        if d!=0:
-            raise RuntimeError('untar %s failed!' % t)
-
-def do_sdr_and_rclone_download(cname,f,verbose=False):
-    if not os.path.isdir(f):
-        os.makedirs(f)
-    s=SDR(target=f)
-    try:
-        status=s.get_status(cname)
-    except RuntimeError:
-        status=None
-    if status:
-        if verbose: print('Initiating SDR download for field',cname)
-        tarfiles=['images.tar','uv.tar']
-        s.download_and_stage(cname,tarfiles)
-        untar(f,tarfiles,verbose=verbose)
-    else:
-        if verbose: print('Trying rclone download for field',cname)
-        do_rclone_download(cname,f,verbose=verbose)
-    
-def do_rclone_download(cname,f,verbose=False):
-    '''
-    Download required data from field cname into location f
-    '''
-    tarfiles=['images.tar','uv.tar']
-    for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF_readonly.conf','archive/'),('maca_sksp_tape_DDF_readonly.conf','other/')]:
-        try:
-            rc=RClone(macaroon,debug=True)
-        except RuntimeError:
-            print('Macaroon',macaroon,'does not exist!')
-            continue
-        rc.get_remote()
-        d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
-        if d['err'] or d['code']!=0:
-            continue
-        break
-        
-    else:
-        raise RuntimeError('Failed to download from any source')
-    untar(f,tarfiles,verbose=verbose)
-    
 def create_ds9_region(filename,ra,dec,size):
 
     sc=SkyCoord('%sdeg'%ra,'%sdeg'%dec,frame='icrs')
@@ -86,14 +30,12 @@ def create_ds9_region(filename,ra,dec,size):
 
 def do_run_extract(field,name):
 
-        # Run subtract code
-        os.chdir(startdir)
-        os.chdir(name)
-        os.chdir(field)
-        print ('sub-sources-outside-region.py -b %s/%s.ds9.reg -p %s'%(startdir,name,name,name))
-        result=os.system('sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(workdir,name,name))
-        if result!=0:
-            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    # Run subtract code
+    executionstr = 'sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(target,target)
+    print(executionstr)
+    result=os.system(executionstr)
+    if result!=0:
+        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
 if __name__=='__main__':
 
@@ -128,19 +70,18 @@ if __name__=='__main__':
     startdir = os.getcwd()
     os.system('mkdir %s'%target)
     os.chdir(target)  
+    os.system('mkdir %s'%field)
+    os.chdir(field)
+
+    update_reprocessing_extract(target,field,'STARTING')
+
+    prepare_field(field,startdir +'/'+target+'/'+field)
 
     update_reprocessing_extract(target,field,'STARTED')
 
-    do_sdr_and_rclone_download(field,startdir+'/'+target + '/'+field)
-
-    os.chdir(field)
     create_ds9_region('%s.ds9.reg'%(target),ra,dec,size)
 
-    executionstr = 'sub-sources-outside-region.py -b %s.ds9.reg -p %s'%(target,target)
-    print(executionstr)
-    result=os.system(executionstr)
-    if result!=0:
-        raise RuntimeError('Failed to run sub-sources')
+    do_run_extract(field,target)
 
     resultfiles = glob.glob('*sub*archive*')
     resultfilestar = []
@@ -150,7 +91,7 @@ if __name__=='__main__':
             raise RuntimeError('Tar of %s failed'%resultfile)	
         resultfilestar.append('%s.tar'%resultfile)
 
-    do_rclone_upload(field,os.getcwd(),resultfilestar,target)
+    do_rclone_extract_upload(field,os.getcwd(),resultfilestar,target)
 
     update_reprocessing_extract(target,field,'EDONE')
 
