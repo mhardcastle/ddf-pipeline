@@ -1575,7 +1575,7 @@ def main(o=None):
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
 
-    if o['exitafter'] == 'ampphase':
+    if o['exitafter'] == 'fullampphase':
         warn('User specified exit after image_ampphase.')
         stop(2)
 
