@@ -660,7 +660,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s'%(ddsols,start_time,checkname,o['smoothingtype']),dryrun=dryrun)
+            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,o['smoothingtype'],o['NCPU_killms']),dryrun=dryrun)
 
         smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
 
@@ -670,7 +670,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             if o['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(smoothoutname,interp_outname,InterpToMSListFreqs)
+                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,o['NCPU_killms'])
                 run(command,dryrun=dryrun)
         
         for i in range(0,len(full_sollist)):

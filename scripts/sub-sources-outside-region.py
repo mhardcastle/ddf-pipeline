@@ -90,6 +90,39 @@ def number_of_unique_obsids(msfiles):
     return len(np.unique(obsids))
 
 
+def filechecker(clustercat, dicomask, indico, h5sols, HMPmodelfits, uselowres):
+  '''
+  Check if files are present to avoid errors to avoid crashes
+  '''
+  if HMPmodelfits == None:
+    if not os.path.isfile(indico):
+        raise IOError(indico + ' does not exist')
+    if not os.path.isfile(dicomask):
+        raise IOError(dicomask + ' does not exist')
+  else:
+    if not os.path.isfile(HMPmodelfits):
+        raise IOError(HMPmodelfits + ' does not exist')   
+  
+  if not os.path.isfile(clustercat):
+    raise IOError(clustercat + ' does not exist')   
+
+  if h5sols == None:
+    if not os.path.isdir('SOLSDIR'):
+     raise IOError('SOLSDIR directory does not exist')
+
+    solsfiletmp = glob.glob('DDS3_full*smoothed.npz')
+    if len(solsfiletmp) < 1:
+     raise IOError('Cannot find the DDS3_full*smoothed.npz file(s)')
+
+    solsfiletmp = glob.glob('DDS3_full_slow*.npz')
+    if len(solsfiletmp) < 1:
+     raise IOError('Cannot find the DDS3_full_slow*.npz file(s)')
+  else:
+    if not os.path.isfile(h5sols):  
+     raise IOError(h5sols + ' does not exist')  
+  return
+
+
 def add_dummyms(msfiles):
     '''
     Add dummy ms to create a regular frequency grid when doing a concat with DPPP
@@ -156,69 +189,6 @@ def columnchecker(mslist, colname):
           print(colname, ' not present in ', ms)
           sys.exit()
       t.close()
-
-
-def filechecker(clustercat, dicomask, indico, h5sols, HMPmodelfits, uselowres):
-  '''
-  Check if files are present to avoid errors to avoid crashes
-  '''
-  if HMPmodelfits == None:
-    if not os.path.isfile(indico):
-        raise IOError(indico + ' does not exist')
-    if not os.path.isfile(dicomask):
-        raise IOError(dicomask + ' does not exist')
-  else:
-    if not os.path.isfile(HMPmodelfits):
-        raise IOError(HMPmodelfits + ' does not exist')   
-  
-  if not os.path.isfile(clustercat):
-    raise IOError(clustercat + ' does not exist')   
-
-  if h5sols == None:
-    if not os.path.isdir('SOLSDIR'):
-     raise IOError('SOLSDIR directory does not exist')
-
-    solsfiletmp = glob.glob('DDS3_full*smoothed.npz')
-    if len(solsfiletmp) < 1:
-     raise IOError('Cannot find the DDS3_full*smoothed.npz file(s)')
-
-    solsfiletmp = glob.glob('DDS3_full_slow*.npz')
-    if len(solsfiletmp) < 1:
-     raise IOError('Cannot find the DDS3_full_slow*.npz file(s)')
-  else:
-    if not os.path.isfile(h5sols):  
-     raise IOError(h5sols + ' does not exist')  
-  return
-
-#def striparchivename():
-#  mslist = glob.glob('L*_SB*.ms.archive')
-#  for ms in mslist:
-#      outname = ms.rstrip('.archive')
-#      if os.path.exists(outname):
-#          print (ms+' and '+outname+' both exist in the directory, exiting so as not to overwrite anydata')
-#          sys.exit(1)
-#      cmd = 'mv ' + ms + ' ' + outname
-#      print (cmd)
-#      os.system(cmd)
-#  return
-
-def striparchivename():
-  mslist = glob.glob('L*_SB*.ms.archive')
-  for ms in mslist:
-      outname = ms.rstrip('.archive')
-      if os.path.exists(outname):
-          if os.path.islink(outname):
-              print ('Link to',outname,'already exists')
-              continue
-          else:
-              raise RuntimeError(ms+' and '+outname+' both exist in the directory!')
-      cmd = 'ln -s ' + ms + ' ' + outname
-      print (cmd)
-      os.system(cmd)
-
-  return
-
-
 
 def addextraweights(msfiles):
    '''
@@ -300,15 +270,6 @@ def mask_except_region(infilename,ds9region,outfilename):
 
     return
 
-
-def removecolumn(msfile,colname):
-     t = pt.table(msfile,readonly=False)
-     colnames =t.colnames()
-     if colname in colnames:
-        print('Removing ',  colname, 'from ', msfile)
-        t.removecols(colname)
-     t.close()
-     return
 
 def getregionboxcenter(regionfile, standardbox=True):
     """
@@ -461,9 +422,6 @@ parser.add_argument('--useHMP', help='Use HMP', action='store_true')
 args = vars(parser.parse_args())
 
 
-if args['mslist']=='big-mslist.txt':
-  striparchivename()
-
 uselowres = args['uselowres']
 if uselowres == False:
   fullmask    = 'image_full_ampphase_di_m.NS.mask01.fits'
@@ -515,7 +473,6 @@ if args['keeplongbaselines']:
   uvsel = "[0.0100000,5000.000000]" # lower limit is 10 meters!
 else:
   uvsel = "[0.0100000,1000.000000]" # lower limit is 10 meters!  
-
 #print doflagafter, takeoutbeam, aoflagger, dysco, split
 filechecker(clustercat, fullmask, indico, args['h5sols'], args['HMPmodelfits'],args['uselowres'])
 if args['h5sols'] == None:
@@ -739,6 +696,7 @@ if dokmscal:
 for observation in range(number_of_unique_obsids(msfiles)):
 
     # insert dummies for completely missing blocks to create a regular freuqency grid for DPPP
+
     obs_mslist = getobsmslist(msfiles, observation)
 
     obs_mslist    = add_dummyms(obs_mslist)   
