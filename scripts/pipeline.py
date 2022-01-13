@@ -1550,6 +1550,11 @@ def main(o=None):
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
               apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
 
+
+    if o['exitafter'] == 'fullampphase':
+        warn('User specified exit after image_ampphase.')
+        stop(2)
+
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
 
@@ -1574,10 +1579,6 @@ def main(o=None):
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
-
-    if o['exitafter'] == 'fullampphase':
-        warn('User specified exit after image_ampphase.')
-        stop(2)
 
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
