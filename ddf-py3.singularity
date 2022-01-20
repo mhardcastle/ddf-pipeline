@@ -61,11 +61,11 @@ From: debian:bullseye
     libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev    
    update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
    apt-get install -y casacore-dev casacore-tools python3-casacore cmake curl
-   apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig
+   apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux
 
    pip3 install setuptools wheel
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator
 
    export SRC=/usr/local/src
 
