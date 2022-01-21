@@ -10,7 +10,8 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 def check_output_ada(cname):
-	os.system('ada --tokenfile  --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf --longlist /%s/* > extract_files.list'%cname)
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	os.system('ada --tokenfile  --config=%s/maca_sksp_disk_extract.conf --longlist /%s/* > extract_files.list'%(rclonepath,cname))
 	tmpfile = open('extract_files.list','r')
 	tmpobs = []
 	for line in tmpfile:
@@ -19,8 +20,9 @@ def check_output_ada(cname):
 	return tmpobs
 
 def download_extract(cname,msfilename):
-	os.system('rclone  --multi-thread-streams 1 --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(cname,msfilename))
-	print('rclone  --multi-thread-streams 1 --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(cname,msfilename))
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	os.system('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(rclonepath,cname,msfilename))
+	print('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(rclonepath,cname,msfilename))
 	tarfiles = glob.glob('*tar')
 	for tarfile in tarfiles:
 		print('tar -xf %s'%tarfile)
@@ -28,28 +30,9 @@ def download_extract(cname,msfilename):
 		os.system('rm %s'%tarfile)
 
 def upload_extract(cname,uploadfilename):
-	print('rclone  --multi-thread-streams 1 --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(uploadfilename,cname))
-	os.system('rclone  --multi-thread-streams 1 --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(uploadfilename,cname))
-
-def do_rsync_upload(cname,basedir,f):
-    workdir=basedir+'/'+cname
-
-    #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-    target='lofararchive@ssh.strw.leidenuniv.nl:'
-    #else:
-    #    target=''
-
-    while True:
-        s= 'rsync -avz --relative --progress --perms --chmod=ugo+rX --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname +'/selfcal/' 
-        print('Running command:',s)
-        retval=call(s,shell=True)
-        if retval==0:
-            break
-        print('Non-zero return value',retval)
-        if retval!=30:
-            raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
-
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	print('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(rclonepath,uploadfilename,cname))
+	os.system('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(rclonepath,uploadfilename,cname))
 
 def create_ds9_region(filename,ra,dec,size):
 
@@ -149,8 +132,10 @@ def do_run_selfcal(name,basedir):
 
     # Run subtract code
     print(os.getcwd(), 'working here')
-    os.system('cp /project/lotss/Software/ddf-operations/utils/*.py .')    
-    
+    selfcalscriptpath = os.environ['SELFCAL_CONFIG_DIR']
+
+    os.system('cp %s/*.py .')
+
     if uvmin > 0.0:
        print ('python runwscleanLBautoR.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
        excom = 'python runwscleanLBautoR.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring)
