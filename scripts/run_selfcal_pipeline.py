@@ -8,7 +8,6 @@ import os
 import glob
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-from job_handling import *
 
 def check_output_ada(cname):
 	os.system('ada --tokenfile  --config=/project/lotss/Software/ddf-operations/macaroons/maca_sksp_disk_extract.conf --longlist /%s/* > extract_files.list'%cname)
@@ -159,18 +158,7 @@ def do_run_selfcal(name,basedir):
        print ('python  runwscleanLBautoR.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
        excom = 'python  runwscleanLBautoR.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring)
 
-
-    singularityfile = '/project/lotss/Software/lofar_sksp_fedora27_ddf_cpuinfofix.sif'
-    executionstr = 'singularity exec -B  /scratch/,/home/lotss-tshimwell/,/project/lotss/ %s %s'%(singularityfile,excom)
-    job_template_extract('self_%s_job.sh'%name,36,'700:00:00',executionstr)
-    for i in range(0,1):
-        jobid = os.popen('sbatch self_%s_job.sh'%name).read()[:-1].split()[-1]
-        print('info',jobid)
-        jobstatus = monitor_squeue(jobid)
-        while jobstatus != 'F':
-              jobstatus = monitor_squeue(jobid)
-              print('Monitoring self %s job ID %s - status %s'%(name,jobid,jobstatus))
-              time.sleep(600)
+    os.system(excom)
 
     print('Archiving the results to SURF')
     os.chdir(workdir)
