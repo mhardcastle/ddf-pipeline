@@ -134,7 +134,7 @@ def do_run_selfcal(name,basedir):
     print(os.getcwd(), 'working here')
     selfcalscriptpath = os.environ['SELFCAL_CONFIG_DIR']
 
-    os.system('cp %s/*.py .')
+    os.system('cp %s/*.py .'%selfcalscriptpath)
 
     if uvmin > 0.0:
        print ('python runwscleanLBautoR.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
