@@ -226,10 +226,16 @@ def run_bootstrap(o):
                     factor=spl(frq)
                     print(frq,factor)
                     t=pt.table(ms,readonly=False)
-                    desc=t.getcoldesc(o['colname'])
+                    if o['redo_DI']:
+                        desc=t.getcoldesc('DATA_SUB')
+                    else:
+                        desc=t.getcoldesc(o['colname'])
                     desc['name']='SCALED_DATA'
                     t.addcols(desc)
-                    d=t.getcol(o['colname'])
+                    if o['redo_DI']:
+                        d=t.getcol('DATA_SUB')
+                    else:
+                        d=t.getcol(o['colname'])
                     d*=factor
                     t.putcol('SCALED_DATA',d)
                     try:
