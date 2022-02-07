@@ -928,7 +928,7 @@ def subtractOuterSquare(o):
 
     # predict outside the central rectangle
     
-    NpixMaskSquare = np.floor(o['imsize']*o['cellsize']/o['wide_cell'])
+    NpixMaskSquare = np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell'])
     
     FileHasPredicted='image_full_wide_predict.HasPredicted'
     if o['restart'] and os.path.isfile(FileHasPredicted):
