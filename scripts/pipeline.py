@@ -1489,6 +1489,8 @@ def main(o=None):
     if not o['skip_di']:
         # Compute the DD predict
         colname=o['colname']
+        if o['do_wide']:
+            colname ='DATA_SUB'
         separator("Compute DD Predict (full mslist)")
         ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
                 applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
