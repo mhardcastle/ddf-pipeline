@@ -51,7 +51,7 @@ From: debian:bullseye
     python3-lxml \
     python3-pandas \
     python3-psutil \
-    python3-pyfftw python3-pymysql python3-scipy python3-tables \
+    python3-pyfftw python3-pymysql python3-scipy \
     python3-requests python3-deap \
     python3-sshtunnel \
     python3-ruamel.yaml python3-ephem \
