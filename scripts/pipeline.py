@@ -928,7 +928,7 @@ def subtractOuterSquare(o):
 
     # predict outside the central rectangle
     
-    NpixMaskSquare = np.floor(o['imsize']*o['cellsize']/o['wide_cell'])
+    NpixMaskSquare = np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell'])
     
     FileHasPredicted='image_full_wide_predict.HasPredicted'
     if o['restart'] and os.path.isfile(FileHasPredicted):
@@ -1489,6 +1489,8 @@ def main(o=None):
     if not o['skip_di']:
         # Compute the DD predict
         colname=o['colname']
+        if o['do_wide']:
+            colname ='DATA_SUB'
         separator("Compute DD Predict (full mslist)")
         ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
                 applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,

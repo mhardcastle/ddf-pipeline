@@ -51,7 +51,7 @@ From: debian:bullseye
     python3-lxml \
     python3-pandas \
     python3-psutil \
-    python3-pyfftw python3-pymysql python3-scipy python3-tables \
+    python3-pyfftw python3-pymysql python3-scipy \
     python3-requests python3-deap \
     python3-sshtunnel \
     python3-ruamel.yaml python3-ephem \
@@ -201,6 +201,7 @@ From: debian:bullseye
   #apt-get purge -y cmake git
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
+  rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean}
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
