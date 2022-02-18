@@ -30,7 +30,6 @@ From: debian:bullseye
     python3-dev \
     libboost-all-dev \
     libcfitsio-dev \
-    libhdf5-dev \
     wcslib-dev \
     libatlas-base-dev \
     liblapack-dev \
