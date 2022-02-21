@@ -23,7 +23,6 @@ From: debian:bullseye
     python3-pip \
     libfftw3-dev \
     python3-numpy \
-    libfreetype6 \
     libfreetype6-dev \
     libpng-dev \
     pkg-config \
