@@ -197,7 +197,7 @@ From: debian:bullseye
   #apt-get purge -y cmake git
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
-  rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean}
+  bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,killMS,DDFacet}"
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
