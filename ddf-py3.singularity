@@ -94,6 +94,14 @@ From: debian:bullseye
    make install
    cp $SRC/dysco/build/decompress /usr/local/bin/decompress  # https://github.com/aroffringa/dysco/issues/12#issuecomment-773134161
 
+   # IDG -- for wsclean and DP3
+   cd $SRC
+   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
+   cd idg && mkdir build && cd build
+   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
+   make -j $J
+   make install
+
    # aoflagger -- for DPPP
    cd $SRC
    git clone -b v3.1.0 https://gitlab.com/aroffringa/aoflagger.git
@@ -120,7 +128,7 @@ From: debian:bullseye
    cd DP3
    mkdir build
    cd build
-   cmake ..
+   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
    make -j $J
    make install
 
@@ -132,14 +140,6 @@ From: debian:bullseye
 
    # aplpy -- for selfcal
    pip3 install aplpy
-
-   # IDG -- for wsclean
-   cd $SRC
-   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
-   cd idg && mkdir build && cd build
-   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
-   make -j $J
-   make install
 
   # wsclean latest -- for selfcal
    cd $SRC
