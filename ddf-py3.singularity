@@ -192,7 +192,8 @@ From: debian:bullseye
 
   #pip list --format=columns
   pip3 list --format=columns
-	
+
+  pip3 cache purge
   #apt-get purge -y cmake git
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
