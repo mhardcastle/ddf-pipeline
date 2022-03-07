@@ -15,8 +15,7 @@ From: debian:bullseye
 
    echo "Here we are installing software and other dependencies for the container!"
    apt-get update
-   apt-get install -y emacs htop nano dpkg-dev mc \
-    libc-dev \
+   apt-get install -y emacs htop nano mc \
     git \
     wget \
     rsync \
