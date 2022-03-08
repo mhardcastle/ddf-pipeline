@@ -26,6 +26,25 @@ def do_rclone_extract_upload(cname,basedir,f,directory):
     print(rc.remote,'maca_sksp_disk_extract.conf')
     rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
 
+
+def do_rclone_disk_upload(cname,basedir,f,directory):
+    '''
+    Upload results to surf disk
+    '''
+    rc=RClone('maca_sksp_disk_subtract.conf',debug=True)
+    rc.get_remote()
+    print(rc.remote,'maca_sksp_disk_subtract.conf')
+    rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
+
+def do_rclone_tape_pol_upload(cname,basedir,f,directory):
+    '''
+    Upload results to surf tape
+    '''
+    rc=RClone('maca_sksp_tape_pol.conf',debug=True)
+    rc.get_remote()
+    print(rc.remote,'maca_sksp_tape_pol.conf')
+    rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
+    
 def untar(f,tarfiles,verbose=False):
     print('Untarring files')
     for t in tarfiles:

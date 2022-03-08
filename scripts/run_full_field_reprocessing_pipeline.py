@@ -99,8 +99,13 @@ if __name__=='__main__':
         raise RuntimeError('Requested field is not in database')
 
     startdir = os.getcwd()
-    os.system('mkdir %s'%field)
-    os.chdir(field)
+
+    if not os.path.exists(startdir+'/'+field):
+	    os.system('mkdir %s'%field)
+	    os.chdir(field)
+	    prepare_field(field,startdir +'/'+field)
+    else:
+	    os.chdir(field)
 
     if args['StokesV']:
         with SurveysDB(readonly=False) as sdb:
@@ -132,9 +137,6 @@ if __name__=='__main__':
             print('Changing HighPol status to Started')
             sdb.set_ffr(tmp)
 
-
-
-    #prepare_field(field,startdir +'/'+field)
 
     if args['FullSub']:
         do_run_subtract(field)
