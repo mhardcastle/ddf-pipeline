@@ -136,7 +136,9 @@ From: debian:bullseye
    # losoto -- for selfcal
    pip3 install losoto
 
-   # aplpy -- for selfcal
+   # APLpy -- for selfcal
+   pip3 install reproject pyavm
+   pip3 install imageio==2.14.1
    pip3 install aplpy
 
   # wsclean latest -- for selfcal
