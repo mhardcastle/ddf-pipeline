@@ -66,7 +66,7 @@ From: debian:bullseye
    pip3 install setuptools wheel
    pip3 install pybind11
    pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator
-
+   pip3 install numpy==1.21
    export SRC=/usr/local/src
 
    # BDSF
