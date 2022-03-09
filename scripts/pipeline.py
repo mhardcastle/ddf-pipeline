@@ -670,7 +670,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             if o['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s"%(smoothoutname,interp_outname,InterpToMSListFreqs)
+                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,o['NCPU_killms'])
                 run(command,dryrun=dryrun)
         
         for i in range(0,len(full_sollist)):
