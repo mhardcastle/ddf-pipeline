@@ -137,11 +137,11 @@ def do_run_selfcal(name,basedir):
     os.system('cp %s/*.py .'%selfcalscriptpath)
 
     if uvmin > 0.0:
-       print ('python runwscleanLBautoR.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
-       excom = 'python runwscleanLBautoR.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring)
+       print ('python facetselfcal.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
+       excom = 'python facetselfcal.py --auto --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring)
     else:    
-       print ('python  runwscleanLBautoR.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
-       excom = 'python  runwscleanLBautoR.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring)
+       print ('python  facetselfcal.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
+       excom = 'python  facetselfcal.py --auto  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring)
 
     os.system(excom)
 
