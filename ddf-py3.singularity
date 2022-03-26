@@ -61,8 +61,9 @@ From: debian:bullseye
    apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux bsdmainutils
 
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator
-   # pip3 install numpy==1.21
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator astroquery
+   pip3 install numpy==1.21
+   
    export SRC=/usr/local/src
 
    # PyBDSF
@@ -85,6 +86,7 @@ From: debian:bullseye
    cd $SRC
    git clone https://github.com/aroffringa/dysco.git
    cd dysco
+   git checkout 3fd7a5fd17f3d09db89ad7827c9bdc4febf66eff
    mkdir build
    cd build
    cmake ../
@@ -197,7 +199,9 @@ From: debian:bullseye
   #apt-get purge -y cmake git
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
+  
   bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,killMS,DDFacet,SpiderScripts}"
+  ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working

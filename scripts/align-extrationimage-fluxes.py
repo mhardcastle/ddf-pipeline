@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Script to align an extracted field with the LoTSS-DR2 catalogue or an a catalogue produced from running the lotss quality-pipeline.py
 # Inputs are:
 # fitsimage -- this is the image from the extract pipeline (should be about 6" resolution)
@@ -7,8 +9,6 @@
 # nodatabase -- ONLY USE IF NOT USING LOTSS DR2 - this means that  you have to provide a scaling factor rather than take from the LoTSS database automatically
 # fieldfactor -- ONLY USE IF NOT USING LOTSS DR2 - this is the scaling factor that you multiply you catalogue by (so from the quality-pipeline the nvss_factor/5.9124 - if a lotss field this can be found on https://lofar-surveys.org/widefields.html and is the "scale" number in the table)
 
-
-#!/usr/bin/env python
 
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
@@ -51,7 +51,7 @@ def flatten(f):
     naxis=f[0].header['NAXIS']
     if naxis<2:
         print('Can\'t make map from this')
-	sys.exit(0)
+        sys.exit(0)
     if naxis==2:
         return fits.PrimaryHDU(header=f[0].header,data=f[0].data)
 
@@ -151,21 +151,19 @@ def get_models():
  
 # plot the dataset and the model's line of best fit
 def plot_best_fit(X, y, xaxis, model):
-	# fit the model on all data
-	model.fit(X, y)
-	# calculate outputs for grid across the domain
-	yaxis = model.predict(xaxis.reshape((len(xaxis), 1)))
-	# plot the line of best fit
-	pyplot.plot(xaxis, yaxis, label=type(model).__name__)
- 
-        results = evaluate_model(X, y, model)
-
-        gradient = model.coef_
-        intercept = model.intercept_
-        modelname =  type(model).__name__
-        print modelname,'Gradient',gradient,'intercept',intercept,'Mean MAE: %.3f (%.3f)' % (mean(results), std(results))
+    # fit the model on all data
+    model.fit(X, y)
+    # calculate outputs for grid across the domain
+    yaxis = model.predict(xaxis.reshape((len(xaxis), 1)))
+    # plot the line of best fit
+    pyplot.plot(xaxis, yaxis, label=type(model).__name__)
+    results = evaluate_model(X, y, model)
+    gradient = model.coef_
+    intercept = model.intercept_
+    modelname =  type(model).__name__
+    print(modelname,'Gradient',gradient,'intercept',intercept,'Mean MAE: %.3f (%.3f)' % (mean(results), std(results)))
         
-        return modelname,gradient,intercept,mean(results),std(results)
+    return modelname,gradient,intercept,mean(results),std(results)
 
 # Run bdsm on the image
 parser = argparse.ArgumentParser(description='fitsimage')
@@ -193,25 +191,25 @@ if ref_ra < 0.0:
 ref_dec = f[0].header['CRVAL2']
 
 if  not os.path.exists(infile.replace('.fits','cat.srl.fits')):
-	img = bdsm.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=True, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=restfrq)
-	img.write_catalog(outfile=infile.replace('.fits','cat.srl.fits'),catalog_type='srl',format='fits',correct_proj='True')
-        img.write_catalog(outfile=infile.replace('.fits','cat.srl.reg'),catalog_type='srl',format='ds9',correct_proj='True')
+    img = bdsm.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=True, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=restfrq)
+    img.write_catalog(outfile=infile.replace('.fits','cat.srl.fits'),catalog_type='srl',format='fits',correct_proj='True')
+    img.write_catalog(outfile=infile.replace('.fits','cat.srl.reg'),catalog_type='srl',format='ds9',correct_proj='True')
 # LoTSS-DR2 catalogue
 # Filter DR2 cat
 
 lotssdr2=Table.read(catalogue)
-print 'original length:',len(lotssdr2)
+print('original length:',len(lotssdr2))
 lotssdr2=filter_catalogue(lotssdr2,ref_ra,ref_dec,1.0)
-print 'filter around',ref_ra,ref_dec
-print 'filter to 1.0 deg:',len(lotssdr2)
+print('filter around',ref_ra,ref_dec)
+print('filter to 1.0 deg:',len(lotssdr2))
 # Cut to match extraction region
 lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
-print len(lotssdr2),'region filtered'
+print(len(lotssdr2),'region filtered')
 if fieldname == 'LoTSS-DR2':
-    print lotssdr2['Mosaic_ID'][0]
+    print(lotssdr2['Mosaic_ID'][0])
 else:
     if nodatabase:
-	print 'Scaling factor being used for field catalogue',fieldfactor
+        print('Scaling factor being used for field catalogue',fieldfactor)
         lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
         lotssdr2['Total_flux'] = lotssdr2['Total_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
         lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*fieldfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
@@ -223,7 +221,7 @@ else:
         sdb.close()
         nvssfactor= 1.0/(qualitydict['nvss_scale']/5.9124)
         tgssscale = qualitydict['tgss_scale']
-        print 'Scaling comparison catalogue by nvssfactor', nvssfactor
+        print('Scaling comparison catalogue by nvssfactor', nvssfactor)
         lotssdr2['Peak_flux'] = lotssdr2['Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
         lotssdr2['Total_flux'] = lotssdr2['Total_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
         lotssdr2['E_Peak_flux'] = lotssdr2['E_Peak_flux']*nvssfactor*1000.0 #1000 scaling is to match mJy which is the units of LoTSS-DR2 cat
@@ -232,29 +230,29 @@ else:
 
 
 #lotssdr2=select_isolated_sources(lotssdr2,45)
-print 'isolated sources',len(lotssdr2)
+print('isolated sources',len(lotssdr2))
 lotsssnr = lotssdr2['Peak_flux']/(2.0*lotssdr2['E_Peak_flux']) + lotssdr2['Total_flux']/(2.0*lotssdr2['E_Total_flux'])
 lotssdr2=lotssdr2[lotsssnr > 7.0]
-print 'snr  more than 7 sources',len(lotssdr2)
+print('snr  more than 7 sources',len(lotssdr2))
 lotsssnr = lotssdr2['Peak_flux']/(2.0*lotssdr2['E_Peak_flux']) + lotssdr2['Total_flux']/(2.0*lotssdr2['E_Total_flux'])
 lotsscompact = 0.41 + (1.10/(1.0+(lotsssnr/104.32)**2.03))
 lotssR = np.log(lotssdr2['Total_flux']/lotssdr2['Peak_flux'])
 lotssdr2=lotssdr2[lotssR < lotsscompact]
-print 'Compact sources len',len(lotssdr2)
+print('Compact sources len',len(lotssdr2))
 #print 'Compact sources',len(lotssdr2)
 
 # Filter cutout cat
 cutout=Table.read(infile.replace('.fits','cat.srl.fits'))
 if cutout['RA'][0] < 0.0:
 	cutout['RA'] = 360.0+cutout['RA']
-print 'original length:',len(cutout)
+print('original length:',len(cutout))
 cutout=filter_catalogue(cutout,ref_ra,ref_dec,1.0)
-print 'filter to 1.0 deg:',len(cutout)
+print('filter to 1.0 deg:',len(cutout))
 cutout=select_isolated_sources(cutout,30)
-print 'isolated sources',len(cutout)
+print('isolated sources',len(cutout))
 cutoutsnr = cutout['Peak_flux']/(2.0*cutout['E_Peak_flux']) + cutout['Total_flux']/(2.0*cutout['E_Total_flux'])
 cutout=cutout[cutoutsnr > 7.0]
-print 'snr  more than 7 sources',len(cutout)
+print('snr  more than 7 sources',len(cutout))
 #cutout=cutout[cutout['S_Code'] == 'S']
 #print 'S_Code = S sources',len(cutout)
 #cutout = cutout[ cutout['Total_flux']/cutout['Peak_flux'] < 1.25 + 3.1*(cutout['Peak_flux']/cutout['Isl_rms'])**-0.53]
@@ -264,7 +262,7 @@ print 'snr  more than 7 sources',len(cutout)
 # Simply nearest neighbour match
 matched = match_catalogues(lotssdr2,cutout,5,'cutout')
 lotssdr2=lotssdr2[~np.isnan(lotssdr2['cutout_separation'])]
-print 'After cross match',len(lotssdr2)
+print('After cross match',len(lotssdr2))
 
 # Do a few different fitting techniques (see https://machinelearningmastery.com/robust-regression-for-machine-learning-in-python/)
 
@@ -292,7 +290,7 @@ else:
 pyplot.loglog()
 #pyplot.xlim(xmin=minval)
 #pyplot.ylim(ymin=minval)
-print minval,'minval'
+print(minval,'minval')
 pyplot.title('Robust (and non-Robust) Regression')
 pyplot.legend()
 pyplot.savefig(infile.split('_')[0]+'_fitted.png')
@@ -301,9 +299,9 @@ pyplot.savefig(infile.split('_')[0]+'_fitted.png')
 ratios=lotssdr2['Total_flux']/lotssdr2['cutout_Total_flux']/1000.0
 lotssdr2.write(infile.replace('.fits','cat.srl.matched.fits'),overwrite=True)
 
-print 'MODELNAME','FITTEDGRAD','FITTEDINTERCEPT','FIT_MEAN_ABS_ERROR','FIT_MEAN_ABS_ERROR_STD','NUM SOURCES FIT','MED SOURCE RATIOS','MEAN SOURCE RATIOS','STD SOURCE RATIOS'
-print 'BEST',bestmodel,bestgradient,bestintercept,bestmae,bestmaestd,len(y),np.median(ratios),np.mean(ratios),np.std(ratios)
-print 'MULTIPLY IMAGE BY',bestgradient
+print('MODELNAME','FITTEDGRAD','FITTEDINTERCEPT','FIT_MEAN_ABS_ERROR','FIT_MEAN_ABS_ERROR_STD','NUM SOURCES FIT','MED SOURCE RATIOS','MEAN SOURCE RATIOS','STD SOURCE RATIOS')
+print('BEST',bestmodel,bestgradient,bestintercept,bestmae,bestmaestd,len(y),np.median(ratios),np.mean(ratios),np.std(ratios))
+print('MULTIPLY IMAGE BY',bestgradient)
 #print 'Median,mean,std',np.median(ratios),np.mean(ratios),np.std(ratios)
 #print 'Multiply image by ',np.median(ratios)
 ds9file = open(infile.replace('.fits','cat.srl.matched.reg'),'w')
