@@ -15,22 +15,19 @@ From: debian:bullseye
 
    echo "Here we are installing software and other dependencies for the container!"
    apt-get update
-   apt-get install -y emacs htop nano dpkg-dev mc \
-    libc-dev \
+   apt-get install -y emacs htop nano mc \
     git \
     wget \
     rsync \
     python3-pip \
     libfftw3-dev \
     python3-numpy \
-    libfreetype6 \
     libfreetype6-dev \
     libpng-dev \
     pkg-config \
     python3-dev \
     libboost-all-dev \
     libcfitsio-dev \
-    libhdf5-dev \
     wcslib-dev \
     libatlas-base-dev \
     liblapack-dev \
@@ -63,17 +60,13 @@ From: debian:bullseye
    apt-get install -y casacore-dev casacore-tools python3-casacore cmake curl
    apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux bsdmainutils
 
-   pip3 install setuptools wheel
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator
+   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator astroquery
    pip3 install --ignore-installed numpy==1.19.5
    export SRC=/usr/local/src
 
-   # BDSF
-   cd $SRC
-   git clone https://github.com/lofar-astron/PyBDSF.git
-   cd PyBDSF
-   python setup.py install
+   # PyBDSF
+   pip3 install git+https://github.com/lofar-astron/PyBDSF.git
 
    # LOFAR beam -- for DDF
    cd $SRC
@@ -92,12 +85,21 @@ From: debian:bullseye
    cd $SRC
    git clone https://github.com/aroffringa/dysco.git
    cd dysco
+   git checkout 3fd7a5fd17f3d09db89ad7827c9bdc4febf66eff
    mkdir build
    cd build
    cmake ../
    make -j $J
    make install
    cp $SRC/dysco/build/decompress /usr/local/bin/decompress  # https://github.com/aroffringa/dysco/issues/12#issuecomment-773134161
+
+   # IDG -- for wsclean and DP3
+   cd $SRC
+   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
+   cd idg && mkdir build && cd build
+   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
+   make -j $J
+   make install
 
    # aoflagger -- for DPPP
    cd $SRC
@@ -125,7 +127,7 @@ From: debian:bullseye
    cd DP3
    mkdir build
    cd build
-   cmake ..
+   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
    make -j $J
    make install
 
@@ -135,18 +137,10 @@ From: debian:bullseye
    # losoto -- for selfcal
    pip3 install losoto
 
-   # aplpy -- for selfcal
+   # APLpy -- for selfcal
    pip3 install reproject pyavm
    pip3 install imageio==2.14.1
    pip3 install aplpy
-
-   # IDG -- for wsclean
-   cd $SRC
-   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
-   cd idg && mkdir build && cd build
-   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
-   make -j $J
-   make install
 
   # wsclean latest -- for selfcal
    cd $SRC
@@ -199,11 +193,14 @@ From: debian:bullseye
 
   #pip list --format=columns
   pip3 list --format=columns
-	
+
+  pip3 cache purge
   #apt-get purge -y cmake git
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
-  rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean}
+  
+  bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,killMS,DDFacet,SpiderScripts}"
+  ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
