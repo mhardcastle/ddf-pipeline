@@ -1,9 +1,14 @@
 from __future__ import print_function
 from builtins import range
-from reproject import reproject_interp,reproject_exact
 from reproject.utils import parse_input_data, parse_output_projection
-from reproject.interpolation.core_celestial import _reproject_celestial as reproj_interp
-from reproject.spherical_intersect.core import _reproject_celestial as reproj_exact
+try:
+    from reproject.interpolation.core_celestial import _reproject_celestial as reproj_interp
+except ModuleNotFoundError:
+    from reproject.interpolation.core import _reproject_full as reproj_interp
+try:
+    from reproject.spherical_intersect.core import _reproject_celestial as reproj_exact
+except ModuleNotFoundError:
+    from reproject.interpolation.core import _reproject_full as reproj_exact    
 from reproject.interpolation.high_level import ORDER
 
 import six
