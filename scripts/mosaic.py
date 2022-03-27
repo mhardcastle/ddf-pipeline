@@ -257,7 +257,7 @@ def make_mosaic(args):
             header['NAXIS1']=xsize
             header['NAXIS2']=ysize
 
-            with open(rootname+'mosaic-header.pickle','w') as f:
+            with open(rootname+'mosaic-header.pickle','wb') as f:
                 pickle.dump(header,f)
 
     isum=np.zeros([ysize,xsize])
