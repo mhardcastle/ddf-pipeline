@@ -200,7 +200,7 @@ From: debian:bullseye
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
   
-  bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,killMS,DDFacet,SpiderScripts}"
+  bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,killMS,SpiderScripts}/" # DDFacet
   ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
 
 # %runscript
