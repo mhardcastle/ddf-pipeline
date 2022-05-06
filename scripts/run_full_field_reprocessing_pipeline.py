@@ -12,12 +12,55 @@ import os
 import glob
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from astropy.io import fits
 import time
 from subprocess import call
 from reprocessing_utils import *
 import argparse
 import threading
 from auxcodes import run,warn,report
+import numpy as np
+
+def check_cube_format(header):
+    try:
+        assert header["CTYPE1"].startswith("RA")
+        assert header["CTYPE2"].startswith("DEC")
+        assert header["CTYPE3"].startswith("STOKES")
+        assert header["CTYPE4"].startswith("FREQ")
+    except AssertionError:
+        raise ValueError("Input cube must be in order: RA,DEC,STOKES,FREQ")
+
+def redo_cube_headers(incubename,outcubename,stokesparam):
+    hdu = fits.open(incubename)[0]
+    header = hdu.header
+    data = hdu.data
+    check_cube_format(header)
+    print('data shape:', hdu.data.shape)
+    old_crval4 = header["CRVAL4"]
+    # Survey individual Q or U cubes will be ordered: [Freqs, Dec, RA]
+    data = data[:,:,:]
+    header_axes_attributes = ["NAXIS", "CTYPE",  "CRVAL", "CRPIX", "CDELT", "CUNIT", "CROTA"]
+    for attr in header_axes_attributes:
+        attr += "4"
+        if attr in header:
+            del header[attr]
+    header["CTYPE3"] = "freq"
+    header["CUNIT3"] = "Hz"
+    header["CRPIX3"] = 1
+    header["CRVAL3"] = old_crval4
+    header["CDELT3"] = 97656.25
+    header["NAXIS"] = 4
+    header["CTYPE4"] = "STOKES"
+    header["CUNIT4"] = " "
+    header["CRPIX4"] = 1.
+    if stokesparam == 'Q':
+        header["CRVAL4"] = 2
+    if stokesparam == 'U':
+        header["CRVAL4"] = 3
+    header["CDELT4"] = 1.
+    cube_shape = (1,hdu.data.shape[0], hdu.data.shape[1], hdu.data.shape[2])
+    fits.writeto(outcubename, data.reshape(cube_shape), header, overwrite=True)
+    del data # to clear from memory
 
 def do_run_subtract(field):
 
@@ -39,6 +82,12 @@ def do_highres_pol(field):
     flist=[]
     ddf_kw = {}
     do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,1000.0],'image_full_polhigh',ddf_kw,beamsize=6.0,imsize=o['imsize'],cellsize=1.5,robust=-0.5,options=o,catcher=None)
+
+    # Redo the headers
+    for cubefile in cubefiles:
+        stokesparam = cubefile.split('_')[3].split('.')[0].replace('Stokes','')
+        redo_cube_headers(cubefile,cubefile,stokesparam)
+    
     if o['compress_polcubes']:
         for cubefile in cubefiles:
             if o['restart'] and os.path.isfile(cubefile+'.fz'):
@@ -101,11 +150,12 @@ if __name__=='__main__':
     startdir = os.getcwd()
 
     if not os.path.exists(startdir+'/'+field):
-	    os.system('mkdir %s'%field)
-	    os.chdir(field)
-	    prepare_field(field,startdir +'/'+field)
+        os.system('mkdir %s'%field)
+        os.chdir(field)
+        print('Downloading field',field)
+        prepare_field(field,startdir +'/'+field)
     else:
-	    os.chdir(field)
+        os.chdir(field)
 
     if args['StokesV']:
         with SurveysDB(readonly=False) as sdb:
@@ -179,7 +229,7 @@ if __name__=='__main__':
         os.system('mkdir logs')
         do_highres_pol(field)
         resultfiles = glob.glob('*fz')
-        print('Compress pol cubes',resultfiles)
+        print('Compressed pol cubes',resultfiles)
         os.system('mkdir stokes_highres')
         for resultfile in resultfiles:
             os.system('mv %s stokes_highres/'%(resultfile))

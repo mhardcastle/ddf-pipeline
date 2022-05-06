@@ -64,8 +64,9 @@ def do_sdr_and_rclone_download(cname,f,verbose=False):
         status=None
     if status:
         if verbose: print('Initiating SDR download for field',cname)
-        tarfiles=['images.tar','uv.tar']
+        tarfiles=['images.tar','uv*.tar']
         s.download_and_stage(cname,tarfiles)
+        tarfiles = glob.glob('*tar')
         untar(f,tarfiles,verbose=verbose)
     else:
         if verbose: print('Trying rclone download for field',cname)
@@ -75,7 +76,7 @@ def do_rclone_download(cname,f,verbose=False):
     '''
     Download required data from field cname into location f
     '''
-    tarfiles=['images.tar','uv.tar']
+    tarfiles=['images.tar','uv*.tar']
     for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF.conf','archive/'),('maca_sksp_tape_DDF_readonly.conf','other/')]:
         try:
             rc=RClone(macaroon,debug=True)
@@ -90,6 +91,7 @@ def do_rclone_download(cname,f,verbose=False):
         
     else:
         raise RuntimeError('Failed to download from any source')
+    tarfiles = glob.glob('*tar')
     untar(f,tarfiles,verbose=verbose)
     
 
