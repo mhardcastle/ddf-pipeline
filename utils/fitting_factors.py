@@ -76,12 +76,11 @@ def read_frequencies_fluxes(intable,name=''):
     errors=np.zeros((len(data),nf))
     for i,r in enumerate(data):
         for j,(k,k_e) in enumerate(zip(keywords,e_keywords)):
-            if np.isnan(r[k]):
-                fluxes[i,j]=1.0
-                errors[i,j]=1e6
-            else:
-                fluxes[i,j]=r[k]
-                errors[i,j]=r[k_e]
+             fluxes[i,j]=r[k]
+             errors[i,j]=r[k_e]
+             if np.isnan(fluxes[i,j]):
+                  fluxes[i,j]=1.0
+                  errors[i,j]=1e6
 
     return frequencies,fluxes,errors,smask,data
 
