@@ -1,8 +1,9 @@
+from __future__ import print_function
 import os
 import glob
 import numpy as np
 
-# Code from Tim for fixing symbolic links for DDS3_
+# Code from Tim for fixing symbolic links
 
 def get_solutions_timerange(sols):
     t = np.load(sols)['BeamTimes']
@@ -11,6 +12,8 @@ def get_solutions_timerange(sols):
 def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True):
     #dds3smoothed = glob.glob('SOLSDIR/*/*killMS.DDS3_full_smoothed*npz')
     dds3 = glob.glob(workdir+'/SOLSDIR/*/killMS.' + ddsols + '.sols.npz')
+    if verbose:
+        print('About to process',len(dds3),'solution lines')
     for i in range(0,len(dds3)):
         symsolname = dds3[i].split('killMS.' + ddsols + '.sols.npz')[0] + 'killMS.'+ddsols+'_'+stype+'.sols.npz' 
         solname = dds3[i]
