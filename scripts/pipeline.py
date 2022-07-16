@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
-Copyright (C) 2017-2021 Martin Hardcastle (mjh@extragalactic.info) and others
+Copyright (C) 2017-2022 Martin Hardcastle (mjh@extragalactic.info) and others
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -94,6 +94,8 @@ integration features you must ensure that `surveys_db.py` from
 https://github.com/mhardcastle/lotss-query is on the PYTHONPATH. This
 introduces dependencies on sshtunnel and MySQLdb.
 
+Infrastructure for the LoTSS HBA survey is (mostly) in https://github.com/mhardcastle/lotss-hba-survey .
+
 ## installation
 
 Given that the whole ddf-pipeline infrastructure has many
@@ -103,16 +105,18 @@ image. Alternatively, following the steps in the post-install part of
 this script will allow you to install from scratch with root access on
 a Debian bullseye system (recent Ubuntu versions will work similarly.)
 
-Once ddf-pipeline is installed in a source directory (`/usr/local/src`
-if installing from the Singularity image) source ddf-pipeline/init.sh to get the
-pipeline and other utilities on your `PATH`/`PYTHONPATH`. Make sure your `LD_LIBRARY_PATH` points to the installation location of libraries such as Dysco.
+If you are manually installing, once ddf-pipeline is installed in a
+source directory you need to source ddf-pipeline/init.sh to get the
+pipeline and other utilities on your `PATH`/`PYTHONPATH`. Make sure
+your `LD_LIBRARY_PATH` points to the installation location of
+libraries such as Dysco.
 
 ## directory structure
 
 ddf-pipeline provides the following directory structure:
 
-* scripts: should be on your PATH and PYTHONPATH after `init.sh`
-* utils: should be on your PYTHONPATH after `init.sh`
+* scripts: main scripts, should be on your PATH and PYTHONPATH after `init.sh`
+* utils: utility code, should be on your PYTHONPATH after `init.sh`
 * examples: contains example configuration files
 * docs: contains documentation, including this file
 * misc: miscellaneous useful files
