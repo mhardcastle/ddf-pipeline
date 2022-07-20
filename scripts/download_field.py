@@ -48,31 +48,34 @@ def download_field(fname,basedir=None,force=False):
         print('Downloading observation ID',obsname)
 
         # first try rclone
-
-        try:
-            rc=RClone('maca_sksp_tape_spiderpref.conf',debug=True)
-        except RuntimeError as e:
-            print('rclone setup failed, probably RCLONE_CONFIG_DIR not set:',e)
-            rclone_works=False
-
-        if rclone_works:
+        success=False # will be set to true if rclone works and we can
+                      # find the dataset there
+                      
+        for macaroon in ['maca_sksp_tape_spiderlinc.conf','maca_sksp_tape_spiderpref.conf']:
             try:
-                remote_obs=rc.get_dirs()
-            except OSError as e:
-                print('rclone command failed, probably rclone not installed or RCLONE_COMMAND not set:',e)
+                rc=RClone(macaroon,debug=True)
+            except RuntimeError as e:
+                print('rclone setup failed, probably RCLONE_CONFIG_DIR not set:',e)
                 rclone_works=False
-        
-        if rclone_works and obsname in remote_obs:
-            print('Data available in rclone repository, downloading!')
-            d=rc.execute_live(['-P','copy',rc.remote+'/'+obsname,workdir])
-            if d['err'] or d['code']!=0:
-                print('rclone download failed')
-                success=False
-            else:
-                print('rclone download succeeded')
-                success=True
 
-        else:
+            if rclone_works:
+                try:
+                    remote_obs=rc.get_dirs()
+                except OSError as e:
+                    print('rclone command failed, probably rclone not installed or RCLONE_COMMAND not set:',e)
+                    rclone_works=False
+
+            if rclone_works and obsname in remote_obs:
+                print('Data available in rclone repository, downloading!')
+                d=rc.execute_live(['-P','copy',rc.remote+'/'+obsname,workdir])
+                if d['err'] or d['code']!=0:
+                    print('rclone found data but download failed')
+                else:
+                    print('rclone download succeeded')
+                    success=True
+                    break # out of rclone loop
+            
+        if not success:
             # revert to download method
             for prefix in ['','prefactor_v1.0/','prefactor_v3.0/']:
                 success=download_dataset('https://lofar-webdav.grid.sara.nl:2880','/SKSP/'+prefix+obsname+'/',workdir=workdir)
