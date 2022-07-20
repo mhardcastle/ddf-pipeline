@@ -14,37 +14,38 @@ deg2rad = np.pi/180.0
 rad2deg = 180.0/np.pi
 
 def read_pointingfile(pointingfilename=None):
-        # pointingfilename should no longer be used as we use the database instead
-        assert(pointingfilename is None)
+    # pointingfilename should no longer be used as we use the database instead
+    assert(pointingfilename is None)
 
-	pointingdict = {}
-        with SurveysDB(readonly=True) as sdb:
-                sdb.cur.execute('select * from fields')
-                fields=sdb.cur.fetchall()
+    pointingdict = {}
+    with SurveysDB(readonly=True) as sdb:
+        sdb.cur.execute('select * from fields')
+        fields=sdb.cur.fetchall()
 
-        # turn list of dicts into dict of lists...
-        for f in fields:
-                pointingname=f['id']
-                pointingdict[pointingname] = [f['status'],f['ra'],f['decl']]
-	return pointingdict
+    # turn list of dicts into dict of lists...
+    for f in fields:
+        pointingname=f['id']
+        pointingdict[pointingname] = [f['status'],f['ra'],f['decl']]
+    return pointingdict
 
 def find_pointings_to_mosaic(pointingdict,mospointingname):
-	seps = np.array([])
-	tomospointings = np.array([])
-	ra1,dec1 = pointingdict[mospointingname][1],pointingdict[mospointingname][2]
-	for j in pointingdict:
-		ra2,dec2 = pointingdict[j][1],pointingdict[j][2]
-		seps = np.append(seps,(sepn(ra1*deg2rad,dec1*deg2rad,ra2*deg2rad,dec2*deg2rad)*rad2deg))
-		tomospointings = np.append(tomospointings,j)
-	sortedseps = np.sort(seps)
-	# For now include the 6 closest pointings plus keep including others until we have all that are within the distance of 1.1 times the 6th closest pointing. At later stage try to take into account e.g. elongation of beam for low declination observations.
-	endmosindex = 7
-	for i in range(7,20):
-		if old_div((sortedseps[i]),(sortedseps[6])) < 1.1:
-			endmosindex = i
-	mosaicpointings = tomospointings[np.where(seps < sortedseps[endmosindex])]
-	mosseps = seps[np.where(seps < sortedseps[endmosindex])]
-	return mosaicpointings,mosseps
+    seps = np.array([])
+    tomospointings = np.array([])
+    ra1,dec1 = pointingdict[mospointingname][1],pointingdict[mospointingname][2]
+    for j in pointingdict:
+        ra2,dec2 = pointingdict[j][1],pointingdict[j][2]
+        seps = np.append(seps,(sepn(ra1*deg2rad,dec1*deg2rad,ra2*deg2rad,dec2*deg2rad)*rad2deg))
+        tomospointings = np.append(tomospointings,j)
+    sortedseps = np.sort(seps)
+    # For now include the 6 closest pointings plus keep including others until we have all that are within the distance of 1.1 times the 6th closest pointing. At later stage try to take into account e.g. elongation of beam for low declination observations.
+    endmosindex = 7
+    for i in range(7,20):
+        if (sortedseps[i]/sortedseps[6]) < 1.1:
+            endmosindex = i
+
+    mosaicpointings = tomospointings[np.where(seps < sortedseps[endmosindex])]
+    mosseps = seps[np.where(seps < sortedseps[endmosindex])]
+    return mosaicpointings,mosseps
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
