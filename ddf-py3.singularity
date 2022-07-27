@@ -61,7 +61,7 @@ From: debian:bullseye
    apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux bsdmainutils
 
    pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyfits pyregion terminal pyephem ptyprocess timeout-decorator astroquery
+   pip3 install dask codex_africanus ephem Polygon3 pyregion terminal pyephem ptyprocess timeout-decorator astroquery # pyfits
    pip3 install --ignore-installed numpy==1.19.5
    pip3 install reproject 
    export SRC=/usr/local/src
