@@ -43,7 +43,7 @@ def redo_dppp_di(o):
                 calparset.write('gaincal.parmdb                  = %s/instrument_new\n'%inmsfile)
                 calparset.close()
 
-                os.system('DPPP dppp-cal.parset')
+                os.system('DP3 dppp-cal.parset')
 
                 applyparset = open('apply-cal.parset','w')
                 applyparset.write('msin                            = %s\n'%inmsfile)
@@ -57,7 +57,7 @@ def redo_dppp_di(o):
                 applyparset.write('applycal.parmdb                 = %s/instrument_new\n'%inmsfile)
                 applyparset.close()
         
-                os.system('DPPP apply-cal.parset')
+                os.system('DP3 apply-cal.parset')
 
 if __name__=='__main__':
     from options import options
