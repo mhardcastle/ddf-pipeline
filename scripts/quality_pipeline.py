@@ -239,12 +239,16 @@ if __name__=='__main__':
     else:
         tgss_scale=None
     if 'NVSS' in o['list']:
-        t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
-        t=t[t['Total_flux']>30e-3]
-        ratios=old_div(t['Total_flux'],t['NVSS_Total_flux'])
+        nvss_scale = 5.9124  # expected ratio for perfect flux scale
+        for i in range(5):  # do this iteratively to remove bias from flux cut if flux scale factor non-unity
+            t=Table.read(o['catprefix']+'.cat.fits_NVSS_match_filtered.fits')
+            t = t[t['Total_flux']>200e-3/(5.9124/nvss_scale)]  # 200mJy~ 6C completeness (190 mJy * (144/151)^-0.783). Correct for estimate of flux scale
+            # t=t[t['Total_flux']>30e-3]
+            ratios=old_div(t['Total_flux'],t['NVSS_Total_flux'])
+            print(np.median(ratios), len(ratios))
+            nvss_scale = np.median(ratios)
         bsratio=np.percentile(bootstrap(ratios,np.median,10000),(16,84))
         print('Median LOFAR/NVSS ratio is %.3f (1-sigma %.3f -- %.3f)' % (np.median(ratios),bsratio[0],bsratio[1]))
-        nvss_scale=np.median(ratios)
     else:
         nvss_scale=None
     # Noise estimate
