@@ -86,7 +86,7 @@ for ms in msfiles:
         cmd  = 'rm -r '+msout+'; '
     else:
         cmd = ''
-    cmd += 'DPPP msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
+    cmd += 'DP3 msin=' + msin + ' msin.datacolumn=' + args['column'] + ' '
     cmd += 'msout.storagemanager=dysco msout=' + msout  + ' steps=[] '
     cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM '
 
@@ -95,7 +95,7 @@ for ms in msfiles:
       result=os.system(cmd)
       if result!=0:
           os.system('rm -r '+msout)
-          raise RuntimeError('DPPP call failed')
+          raise RuntimeError('DP3 call failed')
       
       if not args['skipimweights']:
         tin = pt.table(msin, ack=False)

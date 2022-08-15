@@ -10,7 +10,7 @@ you use these routines please cite that paper as well as the relevant
 LoTSS survey papers.
 
 The singularity image is the recommended way of installing the
-dependencies, including DDFacet, wsclean and DPPP.
+dependencies, including DDFacet, wsclean and DP3.
 
 ## system requirements
 

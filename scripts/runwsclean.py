@@ -184,7 +184,7 @@ def removestartendms(ms, starttime=None, endtime=None):
           os.system('rm -rf ' + ms + '.cuttmp')  
 
         
-    cmd = 'DPPP msin=' + ms + ' ' + 'msout.storagemanager=dysco msout=' + ms + '.cut '
+    cmd = 'DP3 msin=' + ms + ' ' + 'msout.storagemanager=dysco msout=' + ms + '.cut '
     cmd+=  'msin.weightcolumn=WEIGHT_SPECTRUM steps=[] ' 
     if starttime is not None:
       cmd+= 'msin.starttime=' + starttime + ' '
@@ -193,7 +193,7 @@ def removestartendms(ms, starttime=None, endtime=None):
     print(cmd)  
     os.system(cmd)
     
-    cmd = 'DPPP msin=' + ms + ' ' + 'msout.storagemanager=dysco msout=' + ms + '.cuttmp '
+    cmd = 'DP3 msin=' + ms + ' ' + 'msout.storagemanager=dysco msout=' + ms + '.cuttmp '
     cmd+= 'msin.weightcolumn=WEIGHT_SPECTRUM_SOLVE steps=[] '  
     if starttime is not None:
       cmd+= 'msin.starttime=' + starttime + ' '
@@ -283,7 +283,7 @@ def archive(mslist, outtarname, regionfile, fitsmask, imagename, ncpu=None):
     msout = ms + '.calibrated'
     if os.path.isdir(msout):
       os.system('rm -rf ' + msout)
-    cmd  = 'DPPP '
+    cmd  = 'DP3 '
     if ncpu is not None:
        cmd +='numthreads=%i' % ncpu 
     cmd += 'msin=' + ms + ' msout=' + msout + ' '
@@ -388,11 +388,11 @@ def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, m
 
 def create_beamcortemplate(ms,ncpu=None):
   """
-  create a DPPP gain H5 template solutution file that can be filled with losoto
+  create a DP3 gain H5 template solutution file that can be filled with losoto
   """
   H5name = ms + '_templatejones.h5'   
 
-  cmd = 'DPPP '
+  cmd = 'DP3 '
   if ncpu is not None:
      cmd +='numthreads=%i ' % ncpu
   cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
@@ -629,7 +629,7 @@ def beamcor(ms,ncpu=None):
     print(cmdlosoto)
     os.system(cmdlosoto)
     
-    cmd = 'DPPP '
+    cmd = 'DP3 '
     if ncpu is not None:
        cmd +='numthreads=%i ' % ncpu
     cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
@@ -638,7 +638,7 @@ def beamcor(ms,ncpu=None):
     cmd += 'ac1.parmdb='+H5name + ' ac2.parmdb='+H5name + ' '
     cmd += 'ac1.type=applycal ac2.type=applycal '
     cmd += 'ac1.correction=phase000 ac2.correction=amplitude000 ac2.updateweights=True ' 
-    print('DPPP applycal:', cmd)
+    print('DP3 applycal:', cmd)
     os.system(cmd)
    
     
@@ -733,7 +733,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
 
     # APPLYCAL CASE I (rare)
     if (soltype == 'complexgain') and (preapplyphase == False):
-      cmd = 'DPPP '
+      cmd = 'DP3 '
       if ncpu is not None:
          cmd += 'numthreads=%i ' % ncpu
       cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
@@ -742,12 +742,12 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'ac1.parmdb='+parmdb + ' ac2.parmdb='+parmdb + ' '
       cmd += 'ac1.type=applycal ac2.type=applycal '
       cmd += 'ac1.correction=phase000 ac2.correction=amplitude000 ' 
-      print('DPPP applycal:', cmd)
+      print('DP3 applycal:', cmd)
       os.system(cmd)
 
     # APPLYCAL CASE II
     if soltype == 'scalarphase' and TEC == False:
-      cmd = 'DPPP '
+      cmd = 'DP3 '
       if ncpu is not None:
          cmd += 'numthreads=%i ' % ncpu
 
@@ -756,12 +756,12 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'msout.datacolumn=CORRECTED_DATA steps=[ac1] msout.storagemanager=dysco '
       cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
       cmd += 'ac1.correction=phase000 '
-      print('DPPP applycal:', cmd)
+      print('DP3 applycal:', cmd)
       os.system(cmd)
     
     # APPLYCAL CASE III  
     if soltype == 'scalarphase' and TEC == True:
-      cmd = 'DPPP '
+      cmd = 'DP3 '
       if ncpu is not None:
          cmd += 'numthreads=%i ' % ncpu
       
@@ -772,13 +772,13 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
       cmd += 'ac1.correction=phase000 '
       cmd += 'ac2.parmdb=phaseonly'+parmdb + ' ac2.type=applycal '
       cmd += 'ac2.correction=tec000 '
-      print('DPPP applycal:', cmd)
+      print('DP3 applycal:', cmd)
       os.system(cmd)
 
     # APPLYCAL CASE IV      
     if (soltype == 'complexgain') and (preapplyphase == True):
        
-      cmd = 'DPPP '
+      cmd = 'DP3 '
       if ncpu is not None:
          cmd += 'numthreads=%i ' % ncpu
      
@@ -796,7 +796,7 @@ def applycal(ms, parmdb, soltype, preapplyphase, TEC=False, weight_spectrum='WEI
         cmd += 'ac2.parmdb='+parmdb + ' ac2.type=applycal ac2.correction=phase000 '
         cmd += 'ac3.parmdb='+parmdb + ' ac3.type=applycal ac3.correction=amplitude000 '
                     
-      print('DPPP applycal:', cmd)
+      print('DP3 applycal:', cmd)
       os.system(cmd) 
 
     return
@@ -1248,7 +1248,7 @@ def makeimage(mslist, imageout, pixsize, imsize, channelsout, niter, robust, uvt
       os.system(cmd)
 
  
-def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, soltype, \
+def runDP3(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, soltype, \
              preapplyphase, weight_spectrum='WEIGHT_SPECTRUM_SOLVE',uvmin=0, TEC=False,\
              FOVedge=False, smoothcal=True, ncpu=None):
     
@@ -1273,7 +1273,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
         sys.exit()
     
  
-    cmd = 'DPPP '
+    cmd = 'DP3 '
     if ncpu is not None:
        cmd += 'numthreads=%i ' % ncpu
 
@@ -1330,11 +1330,11 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
         cmd += 'ddecal.h5parm=phaseonly' + parmdb + ' ' 
         
  
-    print('DPPP solve:', cmd)
+    print('DP3 solve:', cmd)
     os.system(cmd)
     #sys.exit()  
     if preapplyphase: # APPLY FIRST 
-        cmd = 'DPPP '
+        cmd = 'DP3 '
         if ncpu is not None:
            cmd += 'numthreads=%i ' % ncpu
         cmd += 'msin=' + ms + ' msin.datacolumn=DATA msout=. '
@@ -1343,7 +1343,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
           cmd += 'msout.datacolumn=CORRECTED_DATA_PHASE steps=[ac1] '
           cmd += 'ac1.parmdb=phaseonly'+parmdb + ' ac1.type=applycal '
           cmd += 'ac1.correction=phase000 '
-          print('DPPP PRE-APPLY PHASE-ONLY:', cmd)
+          print('DP3 PRE-APPLY PHASE-ONLY:', cmd)
           os.system(cmd)
           cmdlosotophase = losoto + ' '
           cmdlosotophase += 'phaseonly' + parmdb + ' ' + losotoparset_phase
@@ -1354,14 +1354,14 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
           cmd += 'ac1.correction=phase000 '
           cmd += 'ac2.parmdb=phaseonly'+parmdb + ' ac2.type=applycal '
           cmd += 'ac2.correction=tec000 '
-          print('DPPP PRE-APPLY TECANDPHASE:', cmd)
+          print('DP3 PRE-APPLY TECANDPHASE:', cmd)
           os.system(cmd)
           cmdlosotophase = losoto + ' '
           cmdlosotophase += 'phaseonly' + parmdb + ' ' + losotoparset_tecandphase
           os.system(cmdlosotophase)
 
-        # RUN DPPP again
-        cmd = 'DPPP '
+        # RUN DP3 again
+        cmd = 'DP3 '
         if ncpu is not None:
            cmd += 'numthreads=%i ' % ncpu
 
@@ -1380,7 +1380,7 @@ def runDPPP(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solt
 
         if uvmin != 0:
            cmd += 'ddecal.uvlambdamin=' + str(uvmin) + ' '
-        print('DPPP SLOW GAIN solve:', cmd)
+        print('DP3 SLOW GAIN solve:', cmd)
         os.system(cmd)
         os.system('cp ' + parmdb + ' ' + parmdb + '.backup')
 
@@ -1483,8 +1483,8 @@ if __name__=='__main__':
    args = vars(parser.parse_args())
    #print args
 
-   if which('DPPP') == None:
-     print('Cannot find DPPP, forgot to source lofarinit.[c]sh?')
+   if which('DP3') == None:
+     print('Cannot find DP3, forgot to source lofarinit.[c]sh?')
      sys.exit()
 
 
@@ -1601,11 +1601,11 @@ if __name__=='__main__':
      # SOLVE
      for msnumber, ms in enumerate(mslist):
        if i < switchtogaincycle:
-         runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
+         runDP3(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
                   np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
                   ms + parmdb + str(i) + '.h5' ,'scalarphase', False, uvmin=uvmin, TEC=TEC, FOVedge=False, ncpu=ncpu)
        else:
-         runDPPP(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
+         runDP3(ms, np.int(solint_ap[msnumber]), np.int(solint_phase[msnumber]), \
                   np.int(nchan_phase[msnumber]), np.int(nchan_ap[msnumber]), \
                   ms + parmdb + str(i) + '.h5'  ,'complexgain', True, uvmin=uvmin, TEC=TEC, FOVedge=False, smoothcal=args['no_smoothcal'], ncpu=ncpu)
 

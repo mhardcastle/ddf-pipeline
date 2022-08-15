@@ -93,7 +93,7 @@ def number_of_unique_obsids(msfiles):
 
 def add_dummyms(msfiles):
     '''
-    Add dummy ms to create a regular frequency grid when doing a concat with DPPP
+    Add dummy ms to create a regular frequency grid when doing a concat with DP3
     '''
     if len(msfiles) == 1:
       return msfiles
@@ -101,7 +101,7 @@ def add_dummyms(msfiles):
     freqaxis = []
     newmslist  = []
 
-    # Check for wrong REF_FREQUENCY which happens after a DPPP split in frequency
+    # Check for wrong REF_FREQUENCY which happens after a DP3 split in frequency
     for ms in msfiles:        
         t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
         freq = t.getcol('REF_FREQUENCY')[0]
@@ -314,7 +314,7 @@ def removecolumn(msfile,colname):
 def getregionboxcenter(regionfile, standardbox=True):
     """
     Extract box center of a DS9 box region. 
-    Input is regionfile Return NDPPP compatible string for phasecenter shifting
+    Input is regionfile Return DP3 compatible string for phasecenter shifting
     """
     r = pyregion.open(regionfile)
     
@@ -503,7 +503,7 @@ dokmscal     = False
 dophaseshift = True
 doflagafter = args['aoflaggerafter']
 amplmax     = args['maxamplitude']  # flag data with amplitues above this number
-takeoutbeam = False # not supported by NDPPP #args['takeoutbeam']
+takeoutbeam = False # not supported by DP3 #args['takeoutbeam']
 holesfixed = True
 
 aoflagger   = args['aoflaggerbefore']
@@ -696,7 +696,7 @@ if args['noconcat']:
   
     msout   = obsid + '_' + ms + '.sub.shift.avg.ms'
 
-    cmd =  'DPPP msin="' + str(ms) + '" msout.writefullresflag=False '
+    cmd =  'DP3 msin="' + str(ms) + '" msout.writefullresflag=False '
     if dophaseshift:
        cmd +=  'steps=[phaseshift,average] '
        cmd += 'phaseshift.type=phaseshift phaseshift.phasecenter=' + phasecenter + ' '
@@ -739,7 +739,7 @@ if dokmscal:
 
 for observation in range(number_of_unique_obsids(msfiles)):
 
-    # insert dummies for completely missing blocks to create a regular freuqency grid for DPPP
+    # insert dummies for completely missing blocks to create a regular freuqency grid for DP3
     obs_mslist = getobsmslist(msfiles, observation)
 
     obs_mslist    = add_dummyms(obs_mslist)   
@@ -748,7 +748,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
     if doconcat:    
         msfilesconcat = []
 
-        #remove ms from the list where column DATA_SUB does not exist (to prevent NDPPP crash)
+        #remove ms from the list where column DATA_SUB does not exist (to prevent DP3 crash)
         for msnumber, ms in enumerate(obs_mslist):
             if os.path.isdir(ms):
                 if mscolexist(ms,colname):
@@ -760,7 +760,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         
         
         # FIRST CONCAT WITH WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT
-        cmd =  'DPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
+        cmd =  'DP3 msin="' + str(msfilesconcat) + '" msin.orderms=False '
         if aoflagger:
             cmd += 'aoflagger.type=aoflagger '
             if takeoutbeam:  
@@ -801,7 +801,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
         if not args['onlyuseweightspectrum']:
             # SECOND CONCAT WITH WEIGHT_SPECTRUM
-            cmd =  'DPPP msin="' + str(msfilesconcat) + '" msin.orderms=False '
+            cmd =  'DP3 msin="' + str(msfilesconcat) + '" msin.orderms=False '
             if aoflagger:
                 cmd += 'aoflagger.type=aoflagger '    
                 if takeoutbeam:  
@@ -862,7 +862,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         #cmd += 'msin.starttime=12May2015/19:23:22.0 msin.endtime=13May2015/01:43:00.0 '
 
     if doflagafter:
-        cmd = 'DPPP msin=' + currentmsoutconcat + ' msout=. msin.datacolumn=DATA ' 
+        cmd = 'DP3 msin=' + currentmsoutconcat + ' msout=. msin.datacolumn=DATA ' 
         cmd += 'steps=[aoflagger,preflag] aoflagger.type=aoflagger preflag.type=preflagger '
         cmd += 'preflag.amplmax=' + str(amplmax) + ' '
         run(cmd)
@@ -878,7 +878,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
         for chan in range(0,nchan,nchanperblock):
             msout = obsid + '_chan' + str(chan) + '-' + str(chan+nchanperblock-1) + '.ms'
 
-            cmd  = 'DPPP msin=' + currentmsoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
+            cmd  = 'DP3 msin=' + currentmsoutconcat + ' msout='+ msout + ' msin.datacolumn=DATA ' 
             if dysco:
                 cmd += 'msout.storagemanager=dysco '
             cmd += 'msin.weightcolumn=WEIGHT_SPECTRUM_SOLVE '

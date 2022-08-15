@@ -85,7 +85,7 @@ will need:
 * deap
 * py-cpuinfo
 * cfitsio fpack (only if compression required: fpack must be on PATH)
-* DPPP and dysco (for MS compression)
+* DP3 and dysco (for MS compression)
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 
@@ -244,7 +244,7 @@ parameters). Generally the default values should be sensible.
 ### [compression]
 
 Controls the compression of some final images and measurement sets. If
-`compress_ms` is `True` then DPPP will be run to compress the output data.
+`compress_ms` is `True` then DP3 will be run to compress the output data.
 
 ## running the code
 
