@@ -67,7 +67,8 @@ From: debian:bullseye
    export SRC=/usr/local/src
 
    # PyBDSF
-   pip3 install git+https://github.com/lofar-astron/PyBDSF.git
+   # pip3 install git+https://github.com/lofar-astron/PyBDSF.git
+   pip3 install bdsf # workaround for https://github.com/lofar-astron/PyBDSF/issues/179
 
    # LOFAR beam -- for DDF
    cd $SRC
