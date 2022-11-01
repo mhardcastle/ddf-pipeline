@@ -1,64 +1,38 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from auxcodes import report,warn,die
+import time
 from surveys_db import *
-from download import download_dataset
-from download_field import download_field
-from run_job import do_run_job
-from unpack import unpack
-from make_mslists import make_list,list_db_update
-from average import average
-from auxcodes import MSList
 import sys
 import os
 import glob
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-import time
-from subprocess import call
-from subprocess import check_output
 
-def do_rsync_upload(cname,basedir,f):
-    workdir=basedir+'/'+cname
+def check_output_ada(cname):
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	os.system('ada --tokenfile  --config=%s/maca_sksp_disk_extract.conf --longlist /%s/* > extract_files.list'%(rclonepath,cname))
+	tmpfile = open('extract_files.list','r')
+	tmpobs = []
+	for line in tmpfile:
+		line = line[:-1]
+		tmpobs.append(line)
+	return tmpobs
 
-    #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-    target='lofararchive@ssh.strw.leidenuniv.nl:'
-    #else:
-    #    target=''
+def download_extract(cname,msfilename):
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	os.system('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(rclonepath,cname,msfilename))
+	print('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy maca_sksp_disk_extract:%s/%s .'%(rclonepath,cname,msfilename))
+	tarfiles = glob.glob('*tar')
+	for tarfile in tarfiles:
+		print('tar -xf %s'%tarfile)
+		os.system('tar -xf %s'%tarfile)
+		os.system('rm %s'%tarfile)
 
-    while True:
-        s= 'rsync -avz --relative --progress --perms --chmod=ugo+rX --safe-links --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/'+cname +'/selfcal/' 
-        print('Running command:',s)
-        retval=call(s,shell=True)
-        if retval==0:
-            break
-        print('Non-zero return value',retval)
-        if retval!=30:
-            raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
-
-def do_rsync_download(cname,basedir,f):
-    workdir=basedir+'/'+cname
-
-    #if os.environ['DDF_PIPELINE_CLUSTER']!='paracluster':
-    target='lofararchive@ssh.strw.leidenuniv.nl:'
-    #else:
-    #    target=''
-
-    while True:
-        s= 'rsync -azvh --timeout=20 --progress '+target+workdir + ' ' + f
-        print('Running command:',s)
-        retval=call(s,shell=True)
-        if retval==0:
-            break
-        print('Non-zero return value',retval)
-        if retval!=30:
-            raise RuntimeError('rsync failed unexpectedly')
-        sleep(10)
+def upload_extract(cname,uploadfilename):
+	rclonepath = os.environ['RCLONE_CONFIG_DIR']
+	print('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(rclonepath,uploadfilename,cname))
+	os.system('rclone  --multi-thread-streams 1 --config=%s/maca_sksp_disk_extract.conf copy %s maca_sksp_disk_extract:%s/selfcal/'%(rclonepath,uploadfilename,cname))
 
 def create_ds9_region(filename,ra,dec,size):
 
@@ -74,7 +48,7 @@ def create_ds9_region(filename,ra,dec,size):
     return(filename)
 
 
-def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
+def do_run_selfcal(name,basedir):
     startdir = os.getcwd()
     sdb=SurveysDB()
     extractdict = sdb.get_reprocessing(name)
@@ -102,9 +76,10 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     try:
         os.mkdir(workdir)
     except OSError:
-        warn('Working directory already exists')
+        print('Working directory already exists')
     print('In directory', os.getcwd())
     os.chdir(workdir)
+    print('In directory', os.getcwd())
     # Update status to running here
     selfcal_status = 'STARTED'
     sdb=SurveysDB()
@@ -114,7 +89,6 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     sdb.db_set('reprocessing',extractdict)
     sdb.close()
     print('Updated status to STARTED for',name)
-    time.sleep(2.0)
     
     print('Starting rsync')
     fieldstring = ''
@@ -126,34 +100,21 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
         extractdict = sdb.get_reprocessing(name)
         sdb.close()
         extract_status = extractdict['extract_status'].split(',')
-        
-        if extract_status[fieldid] == 'EDONE' and field in selfcal_pointings:
-          cmd = '%s/%s/%s/%s_%s*archive*'%(inarchivedir,name,field,field,name)
-          observations = check_output('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd, shell=True)
-          print('ssh lofararchive@ssh.strw.leidenuniv.nl ls -d ' + cmd)
-          observations = observations.split('\n')[:-1] # remove last empty item in this list
-        else:
-          observations = []
 
-        print('DATA LOCATIONS', observations)
         print('FIELDS', fields)
         print('SELFCAL_POINTINGS', selfcal_pointings)
         print('BAD_POINTINGS',bad_pointings)
         print('EXTRACT STATUS', extract_status)
-
-        for observation in observations:
-            print(observation)
-            report('Copying data from %s'%observation)
         
-            #'+ inarchivedir +'/' + name + '/' + field +'/' + field +'_'+name +'.dysco.sub.shift.avg.weights.ms.archive')
-            do_rsync_download(observation.split('/')[-1],inarchivedir +'/'+name + '/'+field +'/',workdir)
-
-            fieldstring += observation.split('/')[-1] + ' '
-            #'%s_%s.dysco.sub.shift.avg.weights.ms.archive '%(field,name)
+        print('Copying data from %s'%field)
+        download_extract(name,field)
+        fieldfiles = glob.glob('*%s*'%field)
+        for fieldfile in fieldfiles:
+	        fieldstring += fieldfile + ' '
     fieldstring = fieldstring[:-1]
 
     # Update status to copied here
-    report('Updating %s status to copied'%name)
+    print('Updating %s status to copied'%name)
     selfcal_status = 'COPIED'
     sdb=SurveysDB()
     extractdict = sdb.get_reprocessing(name)
@@ -165,27 +126,33 @@ def do_run_selfcal(name,basedir,inarchivedir,outarchivedir):
     
     
     # Create boxfile
-    report('Create ds9 region file for extraction')
+    print('Create ds9 region file for extraction')
     create_ds9_region('%s.ds9.reg'%name,extractdict['ra'],extractdict['decl'],extractdict['size'])
     
 
     # Run subtract code
     print(os.getcwd(), 'working here')
-    
-    
-    if uvmin > 0.0:
-       print ('runwsclean.py --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
-       os.system('runwsclean.py --uvmin=%s -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
-    else:    
-       print ('runwsclean.py -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
-       os.system('runwsclean.py -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
+    selfcalscriptpath = os.environ['SELFCAL_CONFIG_DIR']
 
-    report('Archiving the results to %s'%outarchivedir)
+    os.system('cp %s/*.py .'%selfcalscriptpath)
+
+    if uvmin > 0.0:
+       print ('python facetselfcal.py --auto  --uvmin=%s --remove-flagged-from-startend -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
+       excom = 'python facetselfcal.py--auto --uvmin=%s --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring)
+    else:    
+       print ('python  facetselfcal.py --auto  --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
+       excom = 'python  facetselfcal.py --auto --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring)
+
+    os.system(excom)
+
+    print('Archiving the results to SURF')
     os.chdir(workdir)
     f = glob.glob('%s.ds9.tar.gz'%(name)) + glob.glob('%s_image_9.png'%(name))
-    do_rsync_upload(name,outarchivedir,f)
-    
 
+    for uploadfilename in f:
+         upload_extract(name,uploadfilename)
+    #do_rsync_upload(name,outarchivedir,f)
+    
     # update the database to give success
     selfcal_status = 'SDONE'
     sdb=SurveysDB()
@@ -200,4 +167,4 @@ if __name__=='__main__':
     target = get_next_selfcalibration()['id']
     print(target)
     # Takes the targetname, the current directory (the working directory), and the directory that contains the LoTSS-DR2 archive
-    do_run_selfcal(target,os.getcwd(),'/disks/paradata/shimwell/LoTSS-DR2/archive_extract/','/disks/paradata/shimwell/LoTSS-DR2/archive_extract/')
+    do_run_selfcal(target,os.getcwd())
