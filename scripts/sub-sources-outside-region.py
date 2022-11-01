@@ -13,6 +13,7 @@ import glob
 from subprocess import call
 from fixsymlinks import fixsymlinks
 from auxcodes import die,report,warn,run,flatten
+from reprocessing_utils import *
 
 try:
   from getcpus import getcpus
@@ -191,36 +192,6 @@ def filechecker(clustercat, dicomask, indico, h5sols, HMPmodelfits, uselowres):
      raise IOError(h5sols + ' does not exist')  
   return
 
-#def striparchivename():
-#  mslist = glob.glob('L*_SB*.ms.archive')
-#  for ms in mslist:
-#      outname = ms.rstrip('.archive')
-#      if os.path.exists(outname):
-#          print (ms+' and '+outname+' both exist in the directory, exiting so as not to overwrite anydata')
-#          sys.exit(1)
-#      cmd = 'mv ' + ms + ' ' + outname
-#      print (cmd)
-#      os.system(cmd)
-#  return
-
-def striparchivename():
-  mslist = glob.glob('L*_SB*.ms.archive')
-  for ms in mslist:
-      outname = ms.rstrip('.archive')
-      if os.path.exists(outname):
-          if os.path.islink(outname):
-              print ('Link to',outname,'already exists')
-              continue
-          else:
-              raise RuntimeError(ms+' and '+outname+' both exist in the directory!')
-      cmd = 'ln -s ' + ms + ' ' + outname
-      print(cmd)
-      os.system(cmd)
-
-  return
-
-
-
 def addextraweights(msfiles):
    '''
    Adds the column WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT from IMAGING_WEIGHT from DR2
@@ -300,16 +271,6 @@ def mask_except_region(infilename,ds9region,outfilename):
     hdu.writeto(outfilename,overwrite=True)
 
     return
-
-
-def removecolumn(msfile,colname):
-     t = pt.table(msfile,readonly=False)
-     colnames =t.colnames()
-     if colname in colnames:
-        print('Removing ',  colname, 'from ', msfile)
-        t.removecols(colname)
-     t.close()
-     return
 
 def getregionboxcenter(regionfile, standardbox=True):
     """
