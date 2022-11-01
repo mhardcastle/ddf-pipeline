@@ -4,7 +4,8 @@
 
 from __future__ import print_function
 
-from run_extraction_pipeline import do_sdr_and_rclone_download,create_ds9_region,do_run_extract
+from run_extraction_pipeline create_ds9_region,do_run_extract
+from reprocessing_utils import *
 import sys
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
 import astropy.units as u
