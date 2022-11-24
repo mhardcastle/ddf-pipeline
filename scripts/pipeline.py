@@ -1123,7 +1123,7 @@ def main(o=None):
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
         _=make_mask('image_dirin_SSD.residual01.fits',
-                    o['thresholds'][0],
+                    o['thres_outmaskextended'],
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
