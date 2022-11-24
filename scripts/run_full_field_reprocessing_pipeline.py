@@ -62,6 +62,7 @@ def redo_cube_headers(incubename,outcubename,stokesparam):
     fits.writeto(outcubename, data.reshape(cube_shape), header, overwrite=True)
     del data # to clear from memory
 
+
 def do_run_subtract(field):
 
     # Run subtract code
@@ -70,6 +71,23 @@ def do_run_subtract(field):
     result=os.system(executionstr)
     if result!=0:
         raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+
+def do_run_dynspec(field):
+    # Run subtract code
+    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --noconcat'
+    print(executionstr)
+    result=os.system(executionstr)
+    if result!=0:
+        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    #
+    #executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
+    #print(executionstr)
+    #result=os.system(executionstr)
+    #if result!=0:
+    #    raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+
+
+
 
 def compress_fits(filename,q):
     command='fpack -q %i %s' % (q,filename)
@@ -130,6 +148,7 @@ if __name__=='__main__':
     parser.add_argument('--StokesV', help='Include Stokes V reprocessing', action='store_true')
     parser.add_argument('--FullSub', help='Include full field subtraction', action='store_true')
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
+    parser.add_argument('--Dynspec', help='Include full field 6asec QU cube', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str)
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
     args = vars(parser.parse_args())
@@ -206,6 +225,9 @@ if __name__=='__main__':
             tmp = sdb.get_ffr(field,'FullSub')
             tmp['status'] == 'Verified'
             sdb.set_ffr(tmp)
+
+    if args['Dynspec']:
+        do_run_dynspec(field)
 
     if args['StokesV']:
         do_run_high_v(field)
