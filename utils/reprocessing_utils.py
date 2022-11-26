@@ -76,7 +76,7 @@ def do_rclone_download(cname,f,verbose=False):
     '''
     Download required data from field cname into location f
     '''
-    tarfiles=['images.tar','uv.tar']
+    #tarfiles=['images.tar','uv.tar']
     for macaroon, directory in [('maca_sksp_tape_DR2_readonly.conf',''),('maca_sksp_tape_DDF.conf','archive/'),('maca_sksp_tape_DDF_readonly.conf','other/')]:
         try:
             rc=RClone(macaroon,debug=True)
@@ -84,8 +84,13 @@ def do_rclone_download(cname,f,verbose=False):
             print('Macaroon',macaroon,'does not exist!')
             continue
         rc.get_remote()
-        d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
-        if d['err'] or d['code']!=0:
+        files=rc.get_files(directory+cname)
+        tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
+        if tarfiles:
+            d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
+            if d['err'] or d['code']!=0:
+                continue
+        else:
             continue
         break
         
@@ -96,7 +101,7 @@ def do_rclone_download(cname,f,verbose=False):
     
 
 def striparchivename():
-  mslist = glob.glob('L*_SB*.ms.archive')
+  mslist = glob.glob('L*.ms.archive')
   for ms in mslist:
       outname = ms.rstrip('.archive')
       if os.path.exists(outname):
@@ -106,22 +111,26 @@ def striparchivename():
           else:
               raise RuntimeError(ms+' and '+outname+' both exist in the directory!')
       cmd = 'ln -s ' + ms + ' ' + outname
-      print (cmd)
+      print(cmd)
       os.system(cmd)
 
   return
 
-def prepare_field(field,processingdir):
+def prepare_field(field,processingdir,verbose=False):
 
     cdir = os.getcwd()
+    if not os.path.isdir(processingdir):
+        if verbose:
+            print('Creating directory',processingdir)
+        os.mkdir(processingdir)
     os.chdir(processingdir)
 
-    do_sdr_and_rclone_download(field,processingdir)
+    do_sdr_and_rclone_download(field,processingdir,verbose=verbose)
 
     striparchivename()
     fixsymlinks('DDS3_full')
-    success=make_list(workdir=os.getcwd())
+    success=make_list(workdir=processingdir)
   
     os.chdir(cdir)
 
-    return
+    return success
