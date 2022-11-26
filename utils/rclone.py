@@ -131,6 +131,18 @@ class RClone(object):
         d=self.execute(['lsd',remote+base])
         return [l.split()[4] for l in d['out']]
     
+    def get_files(self,base='',remote=None, exclude_dirs=True):
+        '''
+        wrapper round rclone lsf that returns a list of files either in the root of the remote or in a specified base directory. If no remote specified use the result of get_remote().
+        '''
+        if remote is None:
+            if self.remote is None:
+                self.get_remote()
+            remote=self.remote
+
+        d=self.execute(['lsf',remote+base])
+        return [l for l in d['out'] if not exclude_dirs or not l.endswith('/')]
+    
     def get_checksum(self,filename):
         ''' Use ada to get the checksum. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
         command=self.ada_command+' --tokenfile '+self.config_file+' --checksum %s'% filename
