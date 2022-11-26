@@ -52,7 +52,7 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
 
     print(xtmin,xtmax,ytmin,ytmax)
 
-    print('There will be',round((ytmax-ytmin)/blocks[0])*round((xtmax-xtmin)/blocks[1]),'chunks')
+    print('There will be',int(round((ytmax-ytmin)/blocks[0])*round((xtmax-xtmin)/blocks[1])),'chunks')
     
     # Create output arrays
     array = np.nan*np.ones(shape_out, dtype='float32')
