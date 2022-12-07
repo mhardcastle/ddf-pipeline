@@ -74,17 +74,19 @@ def do_run_subtract(field):
 
 def do_run_dynspec(field):
     # Run subtract code
-    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --noconcat'
+    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict'
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
-        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
-    #
-    #executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
-    #print(executionstr)
-    #result=os.system(executionstr)
-    #if result!=0:
-    #    raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+       raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    
+    # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
+    
+    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow_merged] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --NCPU 94 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1'
+    print(executionstr)
+    result=os.system(executionstr)
+    if result!=0:
+       raise RuntimeError('ms2dynspec.py failed with error code %i' % result)
 
 
 

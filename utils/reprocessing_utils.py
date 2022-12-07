@@ -54,7 +54,7 @@ def untar(f,tarfiles,verbose=False):
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)
 
-def do_sdr_and_rclone_download(cname,f,verbose=False):
+def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
     if not os.path.isdir(f):
         os.makedirs(f)
     s=SDR(target=f)
@@ -64,15 +64,21 @@ def do_sdr_and_rclone_download(cname,f,verbose=False):
         status=None
     if status:
         if verbose: print('Initiating SDR download for field',cname)
-        tarfiles=['images.tar','uv.tar']
+        if Mode=="Imaging":
+            tarfiles=['images.tar','uv.tar']
+        elif Mode=="Misc":
+            tarfiles=['misc.tar']
+        elif Mode=="Imaging+Misc":
+            tarfiles=['images.tar','uv.tar','misc.tar']
+            
         s.download_and_stage(cname,tarfiles)
         tarfiles = glob.glob('*tar')
         untar(f,tarfiles,verbose=verbose)
     else:
         if verbose: print('Trying rclone download for field',cname)
-        do_rclone_download(cname,f,verbose=verbose)
-    
-def do_rclone_download(cname,f,verbose=False):
+        do_rclone_download(cname,f,verbose=verbose,Mode=Mode)
+
+def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
     '''
     Download required data from field cname into location f
     '''
@@ -85,7 +91,15 @@ def do_rclone_download(cname,f,verbose=False):
             continue
         rc.get_remote()
         files=rc.get_files(directory+cname)
-        tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
+        print(files)
+        tarfiles=None
+        if Mode=="Imaging":
+            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
+        elif Mode=="Misc":
+            tarfiles=[fl for fl in files if 'misc.tar'==fl]
+        elif Mode=="Imaging+Misc":
+            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl]
+            
         if tarfiles:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
             if d['err'] or d['code']!=0:
@@ -116,7 +130,7 @@ def striparchivename():
 
   return
 
-def prepare_field(field,processingdir,verbose=False):
+def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc"):
 
     cdir = os.getcwd()
     if not os.path.isdir(processingdir):
@@ -125,7 +139,7 @@ def prepare_field(field,processingdir,verbose=False):
         os.mkdir(processingdir)
     os.chdir(processingdir)
 
-    do_sdr_and_rclone_download(field,processingdir,verbose=verbose)
+    do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode)
 
     striparchivename()
     fixsymlinks('DDS3_full')
