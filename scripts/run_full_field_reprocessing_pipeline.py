@@ -82,7 +82,7 @@ def do_run_dynspec(field):
     
     # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
     
-    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow_merged] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --NCPU 94 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1'
+    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow_merged] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --NCPU 94 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --UseLoTSSDB 1'
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
