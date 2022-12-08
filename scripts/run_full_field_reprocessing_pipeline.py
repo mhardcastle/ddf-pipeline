@@ -74,7 +74,7 @@ def do_run_subtract(field):
 
 def do_run_dynspec(field):
     # Run subtract code
-    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict'
+    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage'
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
@@ -163,6 +163,7 @@ if __name__=='__main__':
 
     with SurveysDB(readonly=True) as sdb:
         sdb.cur.execute('select * from full_field_reprocessing where id="%s"'%field)
+        # sdb.cur.execute('select * from fields where status=Verified and id="%s"'%field)
         results=sdb.cur.fetchall()
         print('Requested field database:',results)
     if len(results)==0:
