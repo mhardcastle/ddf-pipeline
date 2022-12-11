@@ -92,13 +92,17 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         rc.get_remote()
         files=rc.get_files(directory+cname)
         print(files)
+        print(files)
+        print(files)
+        print(files)
+        print(files)
         tarfiles=None
         if Mode=="Imaging":
             tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
         elif Mode=="Misc":
             tarfiles=[fl for fl in files if 'misc.tar'==fl]
         elif Mode=="Imaging+Misc":
-            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl]
+            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_large.tar"==fl]
             
         if tarfiles:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)

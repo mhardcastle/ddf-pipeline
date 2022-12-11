@@ -79,10 +79,10 @@ def do_run_dynspec(field):
     result=os.system(executionstr)
     if result!=0:
        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
-    
+
     # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
     
-    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --UseLoTSSDB 1'
+    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --UseLoTSSDB 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits'
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
@@ -151,7 +151,7 @@ if __name__=='__main__':
     parser.add_argument('--FullSub', help='Include full field subtraction', action='store_true')
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
     parser.add_argument('--Dynspec', help='Include full field 6asec QU cube', action='store_true')
-    parser.add_argument('--Field',help='LoTSS fieldname',type=str)
+    parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
     args = vars(parser.parse_args())
 
@@ -213,25 +213,38 @@ if __name__=='__main__':
     if args['FullSub']:
         do_run_subtract(field)
 
-        resultfiles = glob.glob('*sub*archive*')
-        resultfilestar = []
-        for resultfile in resultfiles:
-            d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
-            if d!=0:
-                raise RuntimeError('Tar of %s failed'%resultfile)	
-            resultfilestar.append('%s.tar'%resultfile)
+        # resultfiles = glob.glob('*sub*archive*')
+        # resultfilestar = []
+        # for resultfile in resultfiles:
+        #     d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
+        #     if d!=0:
+        #         raise RuntimeError('Tar of %s failed'%resultfile)	
+        #     resultfilestar.append('%s.tar'%resultfile)
 
+        # do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'subtract_pipeline/')
 
-        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'subtract_pipeline/')
-
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'FullSub')
-            tmp['status'] == 'Verified'
-            sdb.set_ffr(tmp)
+        # with SurveysDB(readonly=False) as sdb:
+        #     tmp = sdb.get_ffr(field,'FullSub')
+        #     tmp['status'] == 'Verified'
+        #     sdb.set_ffr(tmp)
 
     if args['Dynspec']:
         do_run_dynspec(field)
 
+        os.system("mkdir -p DynSpecs")
+        resultfiles = glob.glob('DynSpecs_*.tgz')
+        for resultfile in resultfiles:
+            os.system('mv %s DynSpecs'%(resultfile))
+        os.system('tar -cvf DynSpecs.tar DynSpecs')
+        resultfilestar = ['DynSpecs.tar']
+        
+        # do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+        
+        # with SurveysDB(readonly=False) as sdb:
+        #     tmp = sdb.get_ffr(field,'DynSpecMS')
+        #     tmp['status'] == 'Verified'
+        #     sdb.set_ffr(tmp)
+            
     if args['StokesV']:
         do_run_high_v(field)
 
