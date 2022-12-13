@@ -102,7 +102,7 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         elif Mode=="Misc":
             tarfiles=[fl for fl in files if 'misc.tar'==fl]
         elif Mode=="Imaging+Misc":
-            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_large.tar"==fl]
+            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
             
         if tarfiles:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
