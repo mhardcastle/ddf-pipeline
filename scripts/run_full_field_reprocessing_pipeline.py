@@ -237,12 +237,12 @@ if __name__=='__main__':
         os.system('tar -cvf DynSpecs.tar DynSpecs')
         resultfilestar = ['DynSpecs.tar']
         
-        # do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
         
-        # with SurveysDB(readonly=False) as sdb:
-        #     tmp = sdb.get_ffr(field,'DynSpecMS')
-        #     tmp['status'] == 'Verified'
-        #     sdb.set_ffr(tmp)
+        with SurveysDB(readonly=False) as sdb:
+            tmp = sdb.get_ffr(field,'DynSpecMS')
+            tmp['status'] == 'Verified'
+            sdb.set_ffr(tmp)
             
     if args['StokesV']:
         do_run_high_v(field)
