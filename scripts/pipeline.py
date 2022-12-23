@@ -844,7 +844,9 @@ def ingest_dynspec(obsid='*'):
                 name=r['Name']
                 if isinstance(name,np.bytes_):
                     name=name.decode('utf-8')
-                sdb.cur.execute('insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV']))
+                sExec='insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
+                print(sExec)
+                sdb.cur.execute(sExec)
         
     
 
