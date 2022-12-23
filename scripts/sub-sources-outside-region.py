@@ -52,11 +52,11 @@ def getimsize(image):
     his = hdul[0].header['HISTORY']
     for line in his:
         if 'Image-NPix' in line:
-            imsizeddf = np.int(line.split('=')[1])
+            imsizeddf = int(line.split('=')[1])
         elif 'Image-Cell' in line:
-            cellddf = np.float(line.split('=')[1])
+            cellddf = float(line.split('=')[1])
         elif 'Weight-Robust' in line:
-            robustddf = np.float(line.split('=')[1])
+            robustddf = float(line.split('=')[1])
     
 
     if imsizeddf is None:
@@ -884,7 +884,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
     if split:
 
-        nchanperblock = np.int(20/freqstepavg)
+        nchanperblock = int(20/freqstepavg)
         t = pt.table(currentmsoutconcat + '/SPECTRAL_WINDOW', readonly=True)
         nchan = t.getcol('NUM_CHAN')[0]
         t.close()
