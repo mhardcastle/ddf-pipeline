@@ -213,7 +213,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
+    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
 
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
@@ -504,7 +504,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode LOFAR --PhasedArrayMode=A --DDFCacheDir=%s'%cache_dir
+                runcommand+=' --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
                 if 'BeamAt' in keywords:
                     runcommand+=' --BeamAt=%s'%options['beam_at']
 
