@@ -74,11 +74,19 @@ def do_run_subtract(field):
 
 def do_run_dynspec(field):
     # Run subtract code
-    executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage'
-    print(executionstr)
-    result=os.system(executionstr)
-    if result!=0:
-       raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    try:
+        DoRunDDF=("DDFacet ended successfully" not in open("image_full_ampphase_di_m.NS_SUB.log","r").readlines()[-1])
+    except:
+        DoRunDDF=True
+    if DoRunDDF:
+        executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage'
+        print(executionstr)
+        result=os.system(executionstr)
+        if result!=0:
+            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    else:
+        print("DDFacet has already been successfully ran, skipping")
+
     # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
     
     executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
