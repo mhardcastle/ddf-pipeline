@@ -69,7 +69,7 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         elif Mode=="Misc":
             tarfiles=['misc.tar']
         elif Mode=="Imaging+Misc":
-            tarfiles=['images.tar','uv.tar','misc.tar']
+            tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
             
         s.download_and_stage(cname,tarfiles)
         tarfiles = glob.glob('*tar')
