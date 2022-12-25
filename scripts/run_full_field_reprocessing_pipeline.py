@@ -20,6 +20,7 @@ import argparse
 import threading
 from auxcodes import run,warn,report
 import numpy as np
+import pipeline
 
 def check_cube_format(header):
     try:
@@ -88,12 +89,24 @@ def do_run_dynspec(field):
         print("DDFacet has already been successfully ran, skipping")
 
     # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
-    
-    executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
-    print(executionstr)
-    result=os.system(executionstr)
-    if result!=0:
-       raise RuntimeError('ms2dynspec.py failed with error code %i' % result)
+
+    ListMSName=[l.strip() for l in open("big-mslist.txt","r").readlines()]
+    ListObsName=sorted(list(set([MSName.split("/")[-1].split("_")[0] for MSName in ListMSName])))
+    AllOutputExist=True
+    for ObsID in ListObsName:
+        tgzName="DynSpecs_%s.tgz"%ObsID
+        if not os.path.isfile(tgzName):
+            AllOutputExist=False
+            print("DynSpecMS output %s does not exist"%tgzName)
+        else:
+            print("DynSpecMS output %s exists"%tgzName)
+            
+    if not AllOutputExist:
+        executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
+        print(executionstr)
+        result=os.system(executionstr)
+        if result!=0:
+            raise RuntimeError('ms2dynspec.py failed with error code %i' % result)
 
 
 
@@ -236,10 +249,10 @@ if __name__=='__main__':
         #     sdb.set_ffr(tmp)
 
     if args['Dynspec']:
+        
         do_run_dynspec(field)
         
-        import scripts.pipeline
-        scripts.pipeline.ingest_dynspec()
+        pipeline.ingest_dynspec()
         
         os.system("mkdir -p DynSpecs")
         resultfiles = glob.glob('DynSpecs_*.tgz')
