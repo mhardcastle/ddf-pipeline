@@ -254,13 +254,14 @@ if __name__=='__main__':
         do_run_dynspec(field)
         
         pipeline.ingest_dynspec()
-        
-        os.system("mkdir -p DynSpecs")
+
+        OutDir="DynSpecs_%s"%field
+        os.system("mkdir -p %s"%OutDir)
         resultfiles = glob.glob('DynSpecs_*.tgz')
         for resultfile in resultfiles:
-            os.system('cp %s DynSpecs'%(resultfile))
-        os.system('tar -cvf DynSpecs.tar DynSpecs')
-        resultfilestar = ['DynSpecs.tar']
+            os.system('cp %s %s'%(resultfile,OutDir))
+        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+        resultfilestar = ['%s.tar'%OutDir]
         
         do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
         
