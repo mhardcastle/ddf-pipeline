@@ -107,7 +107,8 @@ def do_run_dynspec(field):
         result=os.system(executionstr)
         if result!=0:
             raise RuntimeError('ms2dynspec.py failed with error code %i' % result)
-
+    else:
+        print("All DynSpecMS output exit, skipping... ")    
 
 
 
@@ -257,7 +258,7 @@ if __name__=='__main__':
         os.system("mkdir -p DynSpecs")
         resultfiles = glob.glob('DynSpecs_*.tgz')
         for resultfile in resultfiles:
-            os.system('mv %s DynSpecs'%(resultfile))
+            os.system('cp %s DynSpecs'%(resultfile))
         os.system('tar -cvf DynSpecs.tar DynSpecs')
         resultfilestar = ['DynSpecs.tar']
         
