@@ -823,8 +823,12 @@ def ingest_dynspec(obsid='*'):
             bits=f.split('_')
             obsid=bits[1]
             CatName=f+'/Catalog.npy'
-            catalogue=np.load(CatName)
             print("Loading %s"%CatName)
+            try:
+                catalogue=np.load(CatName)
+            except:
+                print("   %s does not exist"%CatName)
+                continue
             # match filenames to names
             fd={}
             for r in catalogue:
