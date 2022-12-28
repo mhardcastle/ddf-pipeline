@@ -267,7 +267,7 @@ if __name__=='__main__':
         
         with SurveysDB(readonly=False) as sdb:
             tmp = sdb.get_ffr(field,'DynSpecMS')
-            tmp['status'] == 'Verified'
+            tmp['status'] = 'Verified'
             sdb.set_ffr(tmp)
 
 
