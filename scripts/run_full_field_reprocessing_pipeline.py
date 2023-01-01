@@ -4,7 +4,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import range
-from surveys_db import update_reprocessing_extract, get_next_extraction, SurveysDB
+from surveys_db import SurveysDB, tag_field, use_database, get_cluster
 from parset import option_list
 from options import options,print_options
 import sys
@@ -15,12 +15,85 @@ from astropy import units as u
 from astropy.io import fits
 import time
 from subprocess import call
-from reprocessing_utils import *
+from reprocessing_utils import prepare_field,do_rclone_disk_upload,do_rclone_tape_pol_upload
 import argparse
 import threading
 from auxcodes import run,warn,report
 import numpy as np
 import pipeline
+import datetime
+
+from rclone import RClone
+from sdr_wrapper import SDR
+from time import sleep
+
+def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
+    # stage a dataset from SDR or rclone repos 
+    # this should really live in reprocessing_utils and share code with do_sdr_and_rclone_download -- low-level stage functionality should be moved to sdr_wrapper
+    # as with that function cname is the field name, f is the processing directory
+    # should not need f but SDR expects one
+    
+    if not os.path.isdir(f):
+        os.makedirs(f)
+    s=SDR(target=f)
+    try:
+        files=s.get_status(cname)
+    except RuntimeError:
+        files=None
+    if files:
+        if verbose: print('Initiating SDR stage for field',cname)
+        if Mode=="Imaging":
+            tarfiles=['images.tar','uv.tar']
+        elif Mode=="Misc":
+            tarfiles=['misc.tar']
+        elif Mode=="Imaging+Misc":
+            tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
+
+        # code adapted from download_and_stage
+        for f in tarfiles:
+            if f not in files:
+                raise RuntimeError('File not found!')
+            else:
+                if files[f]=='OFL':
+                    s.stage(cname,f)
+
+        if verbose:
+            print('Waiting for files to be online:')
+        
+        while True:
+            files=s.get_status(cname)
+            count=0
+            for f in tarfiles:
+                if files[f]=='DUL':
+                    count+=1
+            if verbose:
+                print('%i/%i... ' % (count,len(tarfiles)),end='')
+                sys.stdout.flush()
+            if count==len(tarfiles):
+                if verbose: print()
+                break
+            else:
+                sleep(30)
+
+    else:
+        # staging for rclone goes here.
+        pass
+    
+
+def update_status(name,operation,status,time=None,workdir=None,survey=None):
+    # modified from surveys_db update_status
+    # utility function to just update the status of a ffr entry
+    # name can be None (work it out from cwd), or string (field name)
+
+    with SurveysDB(survey=survey) as sdb:
+        idd=sdb.get_ffr(id,operation)
+        if idd is None:
+            raise RuntimeError('Unable to find database entry for field "%s".' % id)
+        idd['status']=status
+        tag_field(sdb,idd,workdir=workdir)
+        if time is not None and idd[time] is None:
+            idd[time]=datetime.datetime.now()
+        sdb.set_ffr(idd)
 
 def check_cube_format(header):
     try:
@@ -163,7 +236,20 @@ def do_run_high_v(field):
     if result!=0:
         raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
+def update_status(name,operation,status,time=None,workdir=None,av=None,survey=None):
+    # modified from surveys_db.update_status
+    # utility function to just update the status of a field
+    # name can be None (work it out from cwd), or string (field name)
 
+    with SurveysDB(survey=survey) as sdb:
+        idd=sdb.get_ffr(name,operation)
+        if idd is None:
+            raise RuntimeError('Unable to find database entry for field "%s".' % id)
+        idd['status']=status
+        tag_field(sdb,idd,workdir=workdir)
+        if time is not None and idd[time] is None:
+            idd[time]=datetime.datetime.now()
+        sdb.set_ffr(idd)
 
 if __name__=='__main__':
 
@@ -171,14 +257,16 @@ if __name__=='__main__':
     parser.add_argument('--StokesV', help='Include Stokes V reprocessing', action='store_true')
     parser.add_argument('--FullSub', help='Include full field subtraction', action='store_true')
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
-    parser.add_argument('--Dynspec', help='Include full field 6asec QU cube', action='store_true')
+    parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
     args = vars(parser.parse_args())
-
+    args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
+    
     field = args['Field']
-    o = options(args['Parset'],option_list)
-    print(o)
+    if args['Parset']:
+        o = options(args['Parset'],option_list)
+        print(o)
     print('Input arguments: ',args)
 
 
@@ -192,44 +280,29 @@ if __name__=='__main__':
 
     startdir = os.getcwd()
 
+    for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
+        if args[option]:
+            with SurveysDB(readonly=False) as sdb:
+                tmp = sdb.get_ffr(field,option)
+                if tmp['status'] not in ['Not started','Staged','Downloaded','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
+                    print('Status of',option,tmp['status'])
+                    raise RuntimeError('Field already processing')
+
     if not os.path.exists(startdir+'/'+field):
         os.system('mkdir %s'%field)
         os.chdir(field)
         print('Downloading field',field)
+        for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
+            if args[option]:
+                update_status(field,option,'Downloading')
         prepare_field(field,startdir +'/'+field)
     else:
         os.chdir(field)
 
-    if args['StokesV']:
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'StokesV')
-            if tmp['status'] != 'Not started':
-                print('Status of StokesV',tmp['status'])
-                raise RunTimeError('Field already processing')
-            tmp['status'] = 'Started'
-            print('Changing StokesV status to Started')
-            sdb.set_ffr(tmp)
-        
-    if args['FullSub']:
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'FullSub')
-            if tmp['status'] != 'Not started':
-                print('Status of FullSub',tmp['status'])
-                raise RunTimeError('Field already processing')
-            tmp['status'] = 'Started'
-            print('Changing FullSub status to Started')
-            sdb.set_ffr(tmp)
-
-    if args['HighPol']:
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'HighPol')
-            if tmp['status'] != 'Not started':
-                print('Status of HighPol',tmp['status'])
-                raise RunTimeError('Field already processing')
-            tmp['status'] = 'Started'
-            print('Changing HighPol status to Started')
-            sdb.set_ffr(tmp)
-
+    for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
+        if args[option]:
+            print('Changing',option,'status to Started')
+            update_status(field,option,'Started',time='start_date')
 
     if args['FullSub']:
         do_run_subtract(field)
@@ -262,14 +335,11 @@ if __name__=='__main__':
             os.system('cp %s %s'%(resultfile,OutDir))
         os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
         resultfilestar = ['%s.tar'%OutDir]
-        
-        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
-        
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'DynSpecMS')
-            tmp['status'] = 'Verified'
-            sdb.set_ffr(tmp)
 
+        update_status(field,'DynSpecMS','Uploading')
+        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+
+        update_status(field,'DynSpecMS','Verified',time='end_date')
 
             
     if args['StokesV']:
@@ -282,12 +352,10 @@ if __name__=='__main__':
         os.system('tar -cvf V_high_maps.tar V_high_maps')
         resultfilestar = ['V_high_maps.tar']
 
+        update_status(field,'StokesV','Uploading')
         do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'Stokes_V_imaging')
 
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'StokesV')
-            tmp['status'] == 'Verified'
-            sdb.set_ffr(tmp)
+        update_status(field,'StokesV','Verified',time='end_date')
 
     if args['HighPol']:
         from do_polcubes import do_polcubes
@@ -302,10 +370,7 @@ if __name__=='__main__':
 
         resultfilestar = ['stokes_highres.tar']
         print('Starting upload of',resultfilestar)
+        update_status(field,'HighPol','Uploading')
         do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
 
-        with SurveysDB(readonly=False) as sdb:
-            tmp = sdb.get_ffr(field,'HighPol')
-            tmp['status'] == 'Verified'
-            sdb.set_ffr(tmp)
-        # SEe /net/lofar8/data2/shimwell/testing-highres-pol
+        update_status(field,'HighPol','Verified',time='end_date')
