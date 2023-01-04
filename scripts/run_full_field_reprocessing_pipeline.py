@@ -300,7 +300,7 @@ if __name__=='__main__':
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
         if args[option]:
             print('Changing',option,'status to Started')
-            update_status(field,option,'Started',time='start_time')
+            update_status(field,option,'Started',time='start_date')
 
     if args['FullSub']:
         do_run_subtract(field)
