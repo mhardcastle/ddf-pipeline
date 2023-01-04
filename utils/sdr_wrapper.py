@@ -84,7 +84,7 @@ class SDR(object):
             r=request_with_retry(self.url+field+'/stage/'+str(number)+self.tokenstr,rfunction=requests.post)
             return 'Staged'
         
-    def download(self,field,filename):
+    def download(self,field,filename,progress_bar=False):
         field=self.fc(field)
         files=self.get_status(field)
         if filename not in files:
@@ -92,9 +92,9 @@ class SDR(object):
         status=files[filename]
         if status!='DUL':
             raise RuntimeError('File not online!')
-        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,))
+        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar)
         
-    def download_and_stage(self,field,filenames):
+    def download_and_stage(self,field,filenames,progress_bar=False):
         field=self.fc(field)
         files=self.get_status(field)
         for f in filenames:
@@ -122,5 +122,5 @@ class SDR(object):
             
         for f in filenames:
             print('Downloading',f)
-            self.download(field,f)
+            self.download(field,f,progress_bar=progress_bar)
             

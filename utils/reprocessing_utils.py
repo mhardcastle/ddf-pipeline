@@ -54,7 +54,8 @@ def untar(f,tarfiles,verbose=False):
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)
 
-def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
+def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
+    ''' download tar files from field cname to location f. Try SDR and if that doesn't work try rclone. '''
     if not os.path.isdir(f):
         os.makedirs(f)
     s=SDR(target=f)
@@ -63,22 +64,24 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
     except RuntimeError:
         status=None
     if status:
-        if verbose: print('Initiating SDR download for field',cname)
         if Mode=="Imaging":
             tarfiles=['images.tar','uv.tar']
         elif Mode=="Misc":
             tarfiles=['misc.tar']
         elif Mode=="Imaging+Misc":
             tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
-            
-        s.download_and_stage(cname,tarfiles)
-        tarfiles = glob.glob('*tar')
-        untar(f,tarfiles,verbose=verbose)
+
+        if 'download' in operations:
+            if verbose: print('Initiating SDR download for field',cname)
+            s.download_and_stage(cname,tarfiles,progress_bar=verbose)
+        if 'untar' in operations:
+            #tarfiles = glob.glob('*tar')
+            untar(f,tarfiles,verbose=verbose)
     else:
         if verbose: print('Trying rclone download for field',cname)
-        do_rclone_download(cname,f,verbose=verbose,Mode=Mode)
+        do_rclone_download(cname,f,verbose=verbose,Mode=Mode,operations=operations)
 
-def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
+def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     '''
     Download required data from field cname into location f
     '''
@@ -92,10 +95,6 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         rc.get_remote()
         files=rc.get_files(directory+cname)
         print(files)
-        print(files)
-        print(files)
-        print(files)
-        print(files)
         tarfiles=None
         if Mode=="Imaging":
             tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
@@ -104,7 +103,7 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         elif Mode=="Imaging+Misc":
             tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
             
-        if tarfiles:
+        if 'download' in operations and tarfiles is not None:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
             if d['err'] or d['code']!=0:
                 continue
@@ -114,12 +113,13 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc"):
         
     else:
         raise RuntimeError('Failed to download from any source')
-    tarfiles = glob.glob('*tar')
-    untar(f,tarfiles,verbose=verbose)
+    #tarfiles = glob.glob('*tar')
+    if 'untar' in operations and tarfiles is not None:
+        untar(f,tarfiles,verbose=verbose)
     
 
-def striparchivename():
-  mslist = glob.glob('L*.ms.archive')
+def striparchivename(workdir='.'):
+  mslist = glob.glob(workdir+'/L*.ms.archive')
   for ms in mslist:
       outname = ms.rstrip('.archive')
       if os.path.exists(outname):
@@ -134,21 +134,34 @@ def striparchivename():
 
   return
 
-def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc"):
+def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc",operations=['download','untar','fixsymlinks','makelist']):
 
-    cdir = os.getcwd()
+    ''' General function to prepare a field for reprocessing.
+    field: the field to download
+    processingdir: where we will download and unpack the data (i.e. normally in a directory with the same name as the field
+    verbose: set True to have more interactive information about what's being done
+    Mode: controls what tarfiles are downloaded. Default is 'Imaging+Misc' which gets all files including misc.tar, needed for some reprocessing because it includes summary.txt'
+    operations: list of operations to carry out. By default all of them will be done but a subset can be passed to break up the prepare_field run.
+    '''
+    
     if not os.path.isdir(processingdir):
         if verbose:
             print('Creating directory',processingdir)
         os.mkdir(processingdir)
-    os.chdir(processingdir)
 
-    do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode)
+    if 'download' in operations or 'untar' in operations:
+        if verbose:
+            print('Calling download code...')
+        do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode,operations=operations)
 
-    striparchivename()
-    fixsymlinks('DDS3_full')
-    success=make_list(workdir=processingdir)
-  
-    os.chdir(cdir)
-
+    if 'fixsymlinks' in operations:
+        if verbose: print('Fixing symlinks')
+        striparchivename(workdir=processingdir)
+        fixsymlinks('DDS3_full',workdir=processingdir)
+    if 'makelist' in operations:
+        if verbose: print('Making list')
+        success=make_list(workdir=processingdir)
+    else:
+        success=True
+        
     return success
