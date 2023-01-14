@@ -1898,7 +1898,7 @@ def main(o=None):
             if len(g)>0:
                 warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
             else:
-                DicoFacetName="%s.DicoFacet"%LastImage.split(".app.restored.fits")[0]
+                DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
                 runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
 
                 
