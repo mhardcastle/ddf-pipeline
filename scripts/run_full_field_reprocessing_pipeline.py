@@ -173,7 +173,7 @@ def do_run_dynspec(field):
             print("DynSpecMS output %s exists"%tgzName)
             
     if not AllOutputExist:
-        executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 3 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
+        executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
         print(executionstr)
         result=os.system(executionstr)
         if result!=0:
@@ -258,6 +258,7 @@ if __name__=='__main__':
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
+    parser.add_argument('--NoDBSync',help='DDF pipeline parset',type=int,default=0)
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     
@@ -284,21 +285,22 @@ if __name__=='__main__':
                 tmp = sdb.get_ffr(field,option)
                 if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
                     print('Status of',option,tmp['status'])
-                    raise RuntimeError('Field already processing')
+                    if not args["NoDBSync"]:
+                        raise RuntimeError('Field already processing')
 
     if not os.path.exists(startdir+'/'+field):
         os.system('mkdir %s'%field)
         os.chdir(field)
         print('Downloading field',field)
         for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
-            if args[option]:
+            if args[option] and not args["NoDBSync"]:
                 update_status(field,option,'Downloading')
         prepare_field(field,startdir +'/'+field)
     else:
         os.chdir(field)
 
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
-        if args[option]:
+        if args[option] and not args["NoDBSync"]:
             print('Changing',option,'status to Started')
             update_status(field,option,'Started',time='start_date')
 
@@ -334,10 +336,10 @@ if __name__=='__main__':
         os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
         resultfilestar = ['%s.tar'%OutDir]
 
-        update_status(field,'DynSpecMS','Uploading')
-        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
-
-        update_status(field,'DynSpecMS','Verified',time='end_date')
+        if not args["NoDBSync"]:
+            update_status(field,'DynSpecMS','Uploading')
+            do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+            update_status(field,'DynSpecMS','Verified',time='end_date')
 
             
     if args['StokesV']:
@@ -350,10 +352,11 @@ if __name__=='__main__':
         os.system('tar -cvf V_high_maps.tar V_high_maps')
         resultfilestar = ['V_high_maps.tar']
 
-        update_status(field,'StokesV','Uploading')
-        do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'Stokes_V_imaging')
-
-        update_status(field,'StokesV','Verified',time='end_date')
+            
+        if not args["NoDBSync"]:
+            update_status(field,'StokesV','Uploading')
+            do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'Stokes_V_imaging')
+            update_status(field,'StokesV','Verified',time='end_date')
 
     if args['HighPol']:
         from do_polcubes import do_polcubes
@@ -366,9 +369,9 @@ if __name__=='__main__':
             os.system('mv %s stokes_highres/'%(resultfile))
         os.system('tar -cvf stokes_highres.tar stokes_highres')
 
-        resultfilestar = ['stokes_highres.tar']
-        print('Starting upload of',resultfilestar)
-        update_status(field,'HighPol','Uploading')
-        do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
-
-        update_status(field,'HighPol','Verified',time='end_date')
+        if not args["NoDBSync"]:
+            resultfilestar = ['stokes_highres.tar']
+            print('Starting upload of',resultfilestar)
+            update_status(field,'HighPol','Uploading')
+            do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
+            update_status(field,'HighPol','Verified',time='end_date')
