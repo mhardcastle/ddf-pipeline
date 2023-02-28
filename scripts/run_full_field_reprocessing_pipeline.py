@@ -282,7 +282,7 @@ if __name__=='__main__':
         if args[option]:
             with SurveysDB(readonly=False) as sdb:
                 tmp = sdb.get_ffr(field,option)
-                if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
+                if tmp['status'] not in ['Not started','Staged','Downloaded'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
                     print('Status of',option,tmp['status'])
                     raise RuntimeError('Field already processing')
 
@@ -300,7 +300,7 @@ if __name__=='__main__':
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
         if args[option]:
             print('Changing',option,'status to Started')
-            update_status(field,option,'Started',time='start_date')
+            update_status(field,option,'Started',time='start_time')
 
     if args['FullSub']:
         do_run_subtract(field)

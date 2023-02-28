@@ -96,20 +96,21 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['do
         files=rc.get_files(directory+cname)
         print(files)
         tarfiles=None
-        if Mode=="Imaging":
-            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
-        elif Mode=="Misc":
-            tarfiles=[fl for fl in files if 'misc.tar'==fl]
-        elif Mode=="Imaging+Misc":
-            tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
+        if files:
+            if Mode=="Imaging":
+                tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl]
+            elif Mode=="Misc":
+                tarfiles=[fl for fl in files if 'misc.tar'==fl]
+            elif Mode=="Imaging+Misc":
+                tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
             
         if 'download' in operations and tarfiles is not None:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
             if d['err'] or d['code']!=0:
-                continue
-        else:
-            continue
-        break
+                continue # try next source
+
+        if tarfiles is not None:
+            break # out of loop to unpack
         
     else:
         raise RuntimeError('Failed to download from any source')
@@ -151,7 +152,7 @@ def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc",operatio
 
     if 'download' in operations or 'untar' in operations:
         if verbose:
-            print('Calling download code...')
+            print('Calling sdr/rclone code to download/untar')
         do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode,operations=operations)
 
     if 'fixsymlinks' in operations:

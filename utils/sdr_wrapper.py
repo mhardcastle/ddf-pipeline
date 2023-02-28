@@ -95,6 +95,7 @@ class SDR(object):
         download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar)
         
     def download_and_stage(self,field,filenames,progress_bar=False):
+        print('Progress bar is',progress_bar)
         field=self.fc(field)
         files=self.get_status(field)
         for f in filenames:
