@@ -283,7 +283,7 @@ if __name__=='__main__':
         if args[option]:
             with SurveysDB(readonly=False) as sdb:
                 tmp = sdb.get_ffr(field,option)
-                if tmp['status'] not in ['Not started','Staged','Downloaded'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
+                if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
                     print('Status of',option,tmp['status'])
                     if not args["NoDBSync"]:
                         raise RuntimeError('Field already processing')
