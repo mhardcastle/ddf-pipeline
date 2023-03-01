@@ -338,8 +338,11 @@ if __name__=='__main__':
 
         if not args["NoDBSync"]:
             update_status(field,'DynSpecMS','Uploading')
-            do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
-            update_status(field,'DynSpecMS','Verified',time='end_date')
+            result=do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+            if result['code']==0:
+                update_status(field,'DynSpecMS','Verified',time='end_date')
+            else:
+                update_status(field,'DynSpecMS','Upload failed')
 
             
     if args['StokesV']:
