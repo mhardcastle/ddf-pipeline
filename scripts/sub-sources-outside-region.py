@@ -14,6 +14,7 @@ from subprocess import call
 from fixsymlinks import fixsymlinks
 from auxcodes import die,report,warn,run,flatten
 from reprocessing_utils import *
+import datetime
 
 try:
   from getcpus import getcpus
@@ -51,11 +52,11 @@ def getimsize(image):
     his = hdul[0].header['HISTORY']
     for line in his:
         if 'Image-NPix' in line:
-            imsizeddf = np.int(line.split('=')[1])
+            imsizeddf = int(line.split('=')[1])
         elif 'Image-Cell' in line:
-            cellddf = np.float(line.split('=')[1])
+            cellddf = float(line.split('=')[1])
         elif 'Weight-Robust' in line:
-            robustddf = np.float(line.split('=')[1])
+            robustddf = float(line.split('=')[1])
     
 
     if imsizeddf is None:
@@ -403,6 +404,8 @@ parser.add_argument('--maxamplitude', help='flag amplitudes above this number, d
 parser.add_argument('--uselowres',help='Use the high resolution mode for subtraction, otherwise use the low resolution', action='store_true')
 parser.add_argument('--noconcat',help='Stop after making the DATA_SUB column', action='store_true')
 parser.add_argument('--nophaseshift',help='Do not phaseshift', action='store_true')
+parser.add_argument('--onlyPredict',help='Do only predict', action='store_true')
+parser.add_argument('--AlsoMakeResidualImage',help='Do residual image together with predict column (the .dirty.fits), for debugging', action='store_true')
 parser.add_argument('--keeplongbaselines', help='Use a Selection-UVRangeKm=[0.100000,5000.000000] instead of the DR2 default', action='store_true')
 parser.add_argument('--h5sols', help='HDF5 solution file, default=None', type=str)
 parser.add_argument('--h5solstring', help='HDF5 solution string, default=sol000/phase000+amplitude000', default='sol000/phase000+amplitude000', type=str)
@@ -552,6 +555,48 @@ columnchecker(msfiles, args['column'])
 
 imagenpix, robust, imagecell = getimsize(fullmask)
 
+BeamAtMode="Tessel"
+def SummaryToVersion(summaryFile):        
+  f=open(summaryFile,"r")
+  ll=f.readlines()
+  L=[l.strip() for l in ll]
+  DFields={"StrDate":'ddf-pipeline completed at ',
+           "v_ddfPipe":'ddf-pipeline version was ',
+           "v_DDF":'DDF version was ',
+           "v_kMS":'killMS version was ',
+           "v_DynSpec":'DynSpecMS version was '}
+
+  DOut={}
+  for npField in DFields.keys():
+    field=DFields[npField]
+    iLine=0
+    while True:
+      l=L[iLine]
+      if l.startswith(field):
+        d=l.split(field)[-1]
+        DOut[npField]=d
+        if npField=="StrDate":
+          DOut["time"]=time.mktime(datetime.datetime.strptime(d,"%Y-%m-%d %H:%M:%S").timetuple())
+        break
+      iLine+=1
+      
+  return DOut
+
+DOut=SummaryToVersion("summary.txt")
+
+ 
+if DOut["v_DDF"] in ['0.3.4.1-008503a', '0.3.4.1-5769a96', '0.3.4.1-c563ecb', 'dev',
+                     'dev-008503a', 'dev-5769a96', 'dev-72bb0d96', 'dev-7b87403',
+                     'dev-c563ecb', 'dev-c9477b47', 'dev-cf5e34b', 'dev-df745f9']:
+  BeamAtMode="tessel"
+else:
+  BeamAtMode="facet"
+
+  
+StrBeamAt=" --Beam-At %s "%BeamAtMode
+print('[date = %s] DDF version = %s , using %s'%(DOut["StrDate"],DOut["v_DDF"],StrBeamAt))
+
+
 if dopredict:
 
     
@@ -572,16 +617,20 @@ if dopredict:
     if args['HMPmodelfits'] == None:
       run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask,indico,outdico))
 
+    OutputMode="Predict"
+    if args['AlsoMakeResidualImage']:
+      OutputMode="Dirty"
 
+    
 
     if holesfixed:
        print('Starting DDF for prediction') 
        if args['h5sols'] != None:
          if not args['useHMP']:
-            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'")
+            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
          else:
-            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'")
-            #run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-FromImage=" + "cutoutmask.fits" + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'") 
+            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
+            #run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-FromImage=" + "cutoutmask.fits" + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'") 
   
          
        else:
@@ -591,15 +640,15 @@ if dopredict:
             else:
                ddsolstr = "DDS3_full_smoothed,DDS3_full_slow" 
             
-            run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --Cache-DirWisdomFFTW=. --DDESolutions-SolsDir=SOLSDIR")
+            run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --Cache-DirWisdomFFTW=. --DDESolutions-SolsDir=SOLSDIR"+StrBeamAt+" --Misc-ConserveMemory 1")
          else:
             if args['DDESolutions_DDSols']:
                ddsolstr = args['DDESolutions_DDSols']
             else:
                ddsolstr = "DDS3_full_smoothed,DDS3_full_slow" 
                
-            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Cache-DirWisdomFFTW=. --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")
-            #run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-FromImage=" + "cutoutmask.fits" + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")    
+            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Cache-DirWisdomFFTW=. --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
+            #run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-FromImage=" + "cutoutmask.fits" + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB'")    
 
     else:
        print('Starting DDF for prediction')
@@ -608,11 +657,14 @@ if dopredict:
        else:
           ddsolstr = "DDS3_full_smoothed" 
                       
-       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + ddsolstr + " --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'")
+       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + ddsolstr + " --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
 
 
 # clear up ddfcache files to save disk space
 os.system('rm -rf *.ddfcache')
+
+if args['onlyPredict']:
+  sys.exit()
 
 # Subtract the columns
 if dosubtract:
@@ -645,6 +697,8 @@ if dosubtract:
      if not args['keeplongbaselines']:
       addextraweights(msfiles)
 
+
+      
 if composite:
   print('Since you are using a composite DS9 region file I am not going to phaseshift')
   dophaseshift = False
@@ -680,7 +734,7 @@ if dokmscal:
     
   run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask_target,indico,outdico_target))
 
-  run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_TAR'")
+  run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_TAR'"+" --Misc-ConserveMemory 1")
   
   for ms in msfiles:
 
@@ -830,7 +884,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
 
     if split:
 
-        nchanperblock = np.int(20/freqstepavg)
+        nchanperblock = int(20/freqstepavg)
         t = pt.table(currentmsoutconcat + '/SPECTRAL_WINDOW', readonly=True)
         nchan = t.getcol('NUM_CHAN')[0]
         t.close()
