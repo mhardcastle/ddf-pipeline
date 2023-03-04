@@ -11,7 +11,7 @@ from surveys_db import SurveysDB,tag_field
 from download import download_dataset
 from rclone import RClone
 
-def download_field(fname,basedir=None,force=False):
+def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['maca_sksp_tape_spiderlinc.conf']):
 
     # check database
     if basedir is None:
@@ -51,7 +51,7 @@ def download_field(fname,basedir=None,force=False):
         success=False # will be set to true if rclone works and we can
                       # find the dataset there
                       
-        for macaroon in ['maca_sksp_tape_spiderlinc.conf','maca_sksp_tape_spiderpref.conf']:
+        for macaroon in macaroons:
             try:
                 rc=RClone(macaroon,debug=True)
             except RuntimeError as e:
@@ -75,7 +75,7 @@ def download_field(fname,basedir=None,force=False):
                     success=True
                     break # out of rclone loop
             
-        if not success:
+        if not success and use_http:
             # revert to download method
             for prefix in ['','prefactor_v1.0/','prefactor_v3.0/']:
                 success=download_dataset('https://lofar-webdav.grid.sara.nl:2880','/SKSP/'+prefix+obsname+'/',workdir=workdir)
