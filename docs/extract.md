@@ -24,15 +24,15 @@ they benefit from large numbers of cores.
 
 ## requirements for download
 
-The extraction pipeline will download from several possible locations. DR2 files are currently located in the SURF Science Data Repository and are downloadable using an API provided by the SDR. Until DR2 is public only collaborators have access to this (see https://lofar-surveys.org/collaborators.html): you need the environment variable `SDR_TOKEN` set to the private token that allows these downloads. Other files (non-DR2 fields) are located in cloud storage and the extraction pipeline uses `rclone` (https://rclone.org/) to
-retrieve archive files from cloud storage. You need a different type of token (a
-'macaroon') to download from the archive, again only available to LoTSS collaborators. Place the macaroon in a directory and
+The extraction pipeline will download from several possible locations. DR2 files are currently located in the SURF Science Data Repository and are downloadable without credentials using an API provided by the SDR. Other files (non-DR2 fields) are located in cloud storage and the extraction pipeline uses `rclone` (https://rclone.org/) to
+retrieve archive files from cloud storage. You need a special token (a
+'macaroon') to download from the archive, again only available to LoTSS collaborators. If using this, place the macaroon in a directory and
 ensure that the environment variable `RCLONE_CONFIG_DIR` points to
 this directory.
 
 ## running an extraction
 
-To run an extraction call the `extract.py` script with the name of a field or object you wish to extract, and optionally the field size, right ascension and declination.
+To run an extraction call the `extraction.py` script with the name of a field or object you wish to extract, and optionally the field size, right ascension and declination.
 
 Examples:
 
