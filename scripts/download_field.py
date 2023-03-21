@@ -84,15 +84,17 @@ def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['mac
                 else:
                     print('URL failed, trying alternative')
 
-            if not success:
-                print('Download failed')
+        if not success:
+            print('Download failed')
         overall_success=overall_success and success
 
     with SurveysDB() as sdb:
         if overall_success:
+            print('Download overall successful!')
             result['status']='Downloaded'
             tag_field(sdb,result,workdir=workdir)
         else:
+            print('Download overall failed! (some fields did not download or were not available.')
             result['status']='D/L failed'
             tag_field(sdb,result,workdir=workdir)
         sdb.set_field(result)
