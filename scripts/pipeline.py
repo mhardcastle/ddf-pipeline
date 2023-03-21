@@ -397,7 +397,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     Name=imagename.split(".app.restored.fits")[0]
 
     #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
-    filenames=[Name+'.app.restored.pybdsm.srl.fits',Name+'app.restored.pybdsf.srl.fits']
+    filenames=[Name+'.app.restored.pybdsm.srl.fits',Name+'.app.restored.pybdsf.srl.fits']
     for filename in filenames:
         if os.path.isfile(filename):
             break
