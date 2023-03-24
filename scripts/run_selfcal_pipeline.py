@@ -136,12 +136,14 @@ def do_run_selfcal(name,basedir):
 
     os.system('cp %s/*.py .'%selfcalscriptpath)
 
+    if uvmin == None:
+       uvmin = 0.0
     if uvmin > 0.0:
-       print ('python facetselfcal.py --auto  --uvmin=%s --remove-flagged-from-startend -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring))
-       excom = 'python facetselfcal.py--auto --uvmin=%s --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(uvminstr,name,name+"_image",fieldstring)
+       print ('python facetselfcal.py --auto  --uvmin=%s --remove-flagged-from-startend --helperscriptspath %s -b  %s.ds9.reg -i %s %s'%(uvminstr,selfcalscriptpath,name,name+"_image",fieldstring))
+       excom = 'python facetselfcal.p y--auto --uvmin=%s --remove-flagged-from-startend  --helperscriptspath %s -b  %s.ds9.reg -i %s %s'%(uvminstr,selfcalscriptpath,name,name+"_image",fieldstring)
     else:    
-       print ('python  facetselfcal.py --auto  --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring))
-       excom = 'python  facetselfcal.py --auto --remove-flagged-from-startend  -b  %s.ds9.reg -i %s %s'%(name,name+"_image",fieldstring)
+       print ('python  facetselfcal.py --auto  --remove-flagged-from-startend  --helperscriptspath %s -b  %s.ds9.reg -i %s %s'%(selfcalscriptpath,name,name+"_image",fieldstring))
+       excom = 'python  facetselfcal.py --auto --remove-flagged-from-startend  --helperscriptspath %s -b  %s.ds9.reg -i %s %s'%(selfcalscriptpath,name,name+"_image",fieldstring)
 
     os.system(excom)
 
