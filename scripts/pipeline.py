@@ -84,7 +84,9 @@ def logfilename(s,options=None):
         return None
 
 def get_solutions_timerange(sols):
-    t = np.load(sols)['BeamTimes']
+    print('Reading %s'%sols)
+    S=np.load(sols)
+    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
     return np.min(t),np.max(t)
 
 def find_cache_dir(options):
