@@ -157,7 +157,7 @@ def do_run_dynspec(field):
         if result!=0:
             raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
     else:
-        print("DDFacet has already been successfully ran, skipping")
+        print("DDFacet has already been successfully run, skipping")
 
     # executionstr = 'ms2dynspec.py --ms=big-mslist.txt --data DATA_SUB --model '
 
@@ -179,7 +179,7 @@ def do_run_dynspec(field):
         if result!=0:
             raise RuntimeError('ms2dynspec.py failed with error code %i' % result)
     else:
-        print("All DynSpecMS output exit, skipping... ")    
+        print("All DynSpecMS output exists, skipping... ")    
 
 
 
