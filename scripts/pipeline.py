@@ -1383,9 +1383,15 @@ def main(o=None):
                     MaxMinorIterInitHMP=10000,
                     PredictSettings=("Predict","DD_PREDICT"))
 
+            
             separator("Another DI step")
             if o['bootstrap']:
                 colname='SCALED_DATA'
+            else:
+                if o['do_wide']:
+                    colname='DATA_SUB'
+                else:
+                    colname=o['colname']
             else:
                 colname=o['colname']
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
@@ -1441,7 +1447,10 @@ def main(o=None):
         if o['bootstrap']:
             colname='SCALED_DATA'
         else:
-            colname=o['colname']
+            if o['do_wide']:
+                colname='DATA_SUB'
+            else:
+                colname=o['colname']
 
         if not o['skip_di']:
             separator("Make Mask")
