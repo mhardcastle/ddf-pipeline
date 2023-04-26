@@ -1441,7 +1441,10 @@ def main(o=None):
         if o['bootstrap']:
             colname='SCALED_DATA'
         else:
-            colname=o['colname']
+            if o['do_wide']:
+                colname='DATA_SUB'
+            else:
+                colname=o['colname']
 
         if not o['skip_di']:
             separator("Make Mask")
