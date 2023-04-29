@@ -1392,8 +1392,6 @@ def main(o=None):
                     colname='DATA_SUB'
                 else:
                     colname=o['colname']
-            else:
-                colname=o['colname']
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                         #clusterfile=ClusterFile,
