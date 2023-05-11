@@ -1234,7 +1234,7 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED",
             #              ReinitWeights=True)
-        
+            stop
             colname="DATA_DI_CORRECTED"
 
 
