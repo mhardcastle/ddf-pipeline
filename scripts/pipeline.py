@@ -523,13 +523,15 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
-                _,_,ModelColName,_=DISettings
-                _,dt,_,n_df=give_dt_dnu(f,
+                if not options['auto_dt_ch_di']:
+                    runcommand+=" --dt %f --NChanSols %i"%(dt,NChanSols)
+                else:
+                    _,_,ModelColName,_=DISettings
+                    _,dt,_,n_df=give_dt_dnu(f,
                                         DataCol=colname,
                                         ModelCol=ModelColName,
                                         T=10.)
-                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
-                
+                    runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
                 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
