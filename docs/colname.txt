@@ -1,0 +1,36 @@
+Use of column names in the pipeline
+-----------------------------------
+
+The initial column name is o['colname']. (These days always 'DATA' but
+in the past CORRECTED_DATA was also used.)
+
+The 'colname' variable is intended to keep track of this. To make this
+work, 'colname' has to be updated whenever the column that is to be
+used in future is changed.
+
+If o['do_wide'] is set then an outer square is subtracted. The colname is
+then 'DATA_SUB'. This must be used from then on.
+
+If not o['skip_di'] then the colname becomes DATA_DI_CORRECTED.
+
+If o['bootstrap'] then bootstrap.py runs. This does not know what colname is at this point but it attempts to guess. If o['skip_di'] it reverts to the original colname, which does not seem correct since it will use DATA rather than DATA_SUB for the bootstrap images. But then DATA_SUB is scaled rather than DATA. May be an attempt to get a wide area for bootstrap image. Both 'SCALED_DATA' and colname+'_SCALED' are generated here, so in a typical run we have
+
+'SCALED_DATA' -- scaled DATA or DATA_SUB, if do_wide
+'DATA_DI_CORRECTED_SCALED' -- scaled DI corrected data, if not skip_di
+
+At 'Another DI step', if not o['skip_di'], we revert to the
+non-DI-corrected data. That's SCALED_DATA if bootstrap has run, or
+DATA_SUB if the subtraction has run, or o['colname']
+otherwise. Another DATA_DI_CORRECTED column is generated. That column
+will be scaled by bootstrap at this point.
+
+When we move to big_mslist use we again pick SCALED_DATA if bootstrap
+is used, else DATA_SUB if do_wide, else colname.
+
+If not o['skip_di'], this is reset to DATA_DI_CORRECTED again after
+the full mslist di.
+
+colname then remains the same to the end of the code and archivems.sh
+should use that colname.
+
+

@@ -1387,11 +1387,11 @@ def main(o=None):
             separator("Another DI step")
             if o['bootstrap']:
                 colname='SCALED_DATA'
+            elif o['do_wide']:
+                colname='DATA_SUB'
             else:
-                if o['do_wide']:
-                    colname='DATA_SUB'
-                else:
-                    colname=o['colname']
+                colname=o['colname']
+
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                         #clusterfile=ClusterFile,
@@ -1508,10 +1508,6 @@ def main(o=None):
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
         
     if not o['skip_di']:
-        # Compute the DD predict
-        colname=o['colname']
-        if o['do_wide']:
-            colname ='DATA_SUB'
         separator("Compute DD Predict (full mslist)")
         ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
                 applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
@@ -1923,11 +1919,8 @@ def main(o=None):
 
 
     if o['compress_ms']:
-        separator('Compressing MS for archive')
-        if o['skip_di']:
-            os.system('archivems.sh . '+o['colname'])
-        else:
-            os.system('archivems.sh . DATA_DI_CORRECTED')
+        separator('Compressing MS for archive -- column '+colname)
+        os.system('archivems.sh . '+colname)
                 
     separator('Write summary and tidy up')
     summary(o)
