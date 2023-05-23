@@ -925,7 +925,7 @@ def subtractOuterSquare(o):
     external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
     
-    make_mask('image_full_wide.app.restored.fits',3.0,external_mask=external_mask,catcher=catcher)
+    make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
     
     ddf_image('image_full_wide_im',o['mslist'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
@@ -1669,7 +1669,7 @@ def main(o=None):
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher)
 
-        make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_im',o['full_mslist'],
               cleanmask='image_full_low.app.restored.fits.mask.fits',
@@ -1703,7 +1703,7 @@ def main(o=None):
                 die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
         extmask='full-mask-low.fits'
-        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        make_mask('image_full_low_im.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
