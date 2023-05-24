@@ -446,7 +446,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
-                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
 
@@ -483,7 +483,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
             
@@ -509,6 +509,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
                 
             if DISettings is None:
+                if NChanSols is None:
+                    NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
                 runcommand+=' --BeamMode LOFAR --PhasedArrayMode=A --DDFCacheDir=%s'%cache_dir
                 if 'BeamAt' in keywords:
@@ -520,15 +522,20 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     runcommand+=' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
                     runcommand+=' --EvolutionSolFile '+EvolutionSolFile
-                    
+                if dt is not None:
+                    runcommand+=' --dt %f' % dt
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
                 _,_,ModelColName,_=DISettings
-                _,dt,_,n_df=give_dt_dnu(f,
+                _,dt_give,_,n_df_give=give_dt_dnu(f,
                                         DataCol=colname,
                                         ModelCol=ModelColName,
                                         T=10.)
-                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
+                if dt is None:
+                    dt=dt_give
+                if NChanSols is None:
+                    NChanSols=n_df_give
+                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
                 
                 
             rootfilename=outsols.split('/')[-1]
