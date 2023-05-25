@@ -227,6 +227,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
 
+    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
+        runcommand+=' --Beam-PhasedArrayMode=A'
+    else:
+        runcommand+=' --Beam-LOFARBeamMode=A'
+    
     if 'Misc-IgnoreDeprecationMarking' in keywords:
         runcommand+=' --Misc-IgnoreDeprecationMarking=1'
 
