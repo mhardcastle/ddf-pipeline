@@ -517,7 +517,12 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 if NChanSols is None:
                     NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode LOFAR --PhasedArrayMode=A --DDFCacheDir=%s'%cache_dir
+                runcommand+=' --BeamMode LOFAR'
+                if 'PhasedArrayMode' in keywords: # incompatible change
+                    runcommand+=' --PhasedArrayMode=A'
+                else:
+                    runcommand+=' --LOFARBeamMode=A'
+                runcommand+=' --DDFCacheDir='+cache_dir
                 if 'BeamAt' in keywords:
                     runcommand+=' --BeamAt=%s'%options['beam_at']
 
