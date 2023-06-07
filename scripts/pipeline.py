@@ -1216,7 +1216,7 @@ def main(o=None):
             warn('User specified exit after image_dirin.')
             stop(2)
 
-        if True:#not o['skip_di']:
+        if not o['skip_di']:
             separator("DI CAL")
             ########################
             killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
@@ -1299,7 +1299,7 @@ def main(o=None):
 
         # ##########################################################
         # run bootstrap, and change the column name if it runs
-        if False:#o['bootstrap']:
+        if o['bootstrap']:
             separator("Bootstrap")
             report('Running bootstrap')
             run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
