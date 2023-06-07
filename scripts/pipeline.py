@@ -1216,7 +1216,7 @@ def main(o=None):
             warn('User specified exit after image_dirin.')
             stop(2)
 
-        if not o['skip_di']:
+        if True:#not o['skip_di']:
             separator("DI CAL")
             ########################
             killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
@@ -1234,7 +1234,7 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED",
             #              ReinitWeights=True)
-            stop
+
             colname="DATA_DI_CORRECTED"
 
 
@@ -1246,7 +1246,7 @@ def main(o=None):
                         use_dicomodel=True,
                         #dirty_from_resid=True,
                         peakfactor=0.001,rms_factor=0,
-                        colname=colname,clusterfile=None,
+                        colname=colname,clusterfile=ClusterFile,#None,
                         automask=True,
                         automask_threshold=o['thresholds'][0],
                         apply_weights=True,#o['apply_weights'][0],
@@ -1254,7 +1254,6 @@ def main(o=None):
                         RMSFactorInitHMP=1.,
                         MaxMinorIterInitHMP=10000,
                         PredictSettings=("Clean","DD_PREDICT"))
-
 
             CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
                                             cleanmask=CurrentMaskName,cleanmode='SSD',
@@ -1265,7 +1264,7 @@ def main(o=None):
                                             use_dicomodel=True,
                                             #dirty_from_resid=True,
                                             peakfactor=0.001,rms_factor=0,
-                                            colname=colname,clusterfile=None,
+                                            colname=colname,clusterfile=ClusterFile,#None,
                                             automask=True,
                                             automask_threshold=o['thresholds'][0],
                                             apply_weights=True,#o['apply_weights'][0],
@@ -1300,7 +1299,7 @@ def main(o=None):
 
         # ##########################################################
         # run bootstrap, and change the column name if it runs
-        if o['bootstrap']:
+        if False:#o['bootstrap']:
             separator("Bootstrap")
             report('Running bootstrap')
             run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
@@ -1324,7 +1323,8 @@ def main(o=None):
                                            catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           #PredictSettings=("Clean","DD_PREDICT")
+                                           )
 
         if o['exitafter'] == 'phase':
             warn('User specified exit after phase-only deconvolution.')
