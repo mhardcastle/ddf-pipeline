@@ -137,7 +137,8 @@ def run_bootstrap(o):
                   automask_threshold=15,smooth=True,cubemode=True,
                   conditional_clearcache=False)
 
-        if os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl'):
+        if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
+            os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl')):
             warn('Source list exists, skipping source extraction')
         else:
             warn('Running PyBDSM, please wait...')
@@ -164,7 +165,14 @@ def run_bootstrap(o):
             dec*=180.0/np.pi
 
             cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
-            make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl',ra,dec,2.5,cats,outnameprefix=obsid)
+            filenames=['image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl','image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl']
+            for filename in filenames:
+                if os.path.isfile(filename):
+                    break
+            else:
+                die('Catalogue file does not exist!')
+
+            make_catalogue(filename,ra,dec,2.5,cats,outnameprefix=obsid)
     
         freqlist=open(obsid+'frequencies.txt','w')
         for n,f in zip(o['names'],o['frequencies']):

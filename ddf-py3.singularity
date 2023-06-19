@@ -115,7 +115,7 @@ From: debian:bullseye
 
    # Everybeam -- for DP3
    cd $SRC
-   git clone -b v0.4.0 https://git.astron.nl/RD/EveryBeam.git
+   git clone -b v0.5.1 https://git.astron.nl/RD/EveryBeam.git
    cd EveryBeam
    mkdir build
    cd build
@@ -146,7 +146,7 @@ From: debian:bullseye
 
   # wsclean latest -- for selfcal
    cd $SRC
-   git clone -b v3.3 https://gitlab.com/aroffringa/wsclean.git
+   git clone https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
    mkdir -p build
    cd build
