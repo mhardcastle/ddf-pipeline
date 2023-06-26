@@ -149,4 +149,6 @@ class RClone(object):
         if self.debug:
             print('Running '+command)
         t = os.popen(command).read()
+        if self.debug:
+            print('Output was:\n'+t)
         return t.split()[1].replace('ADLER32=','')
