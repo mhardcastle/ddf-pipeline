@@ -1874,9 +1874,20 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         
+    m=MSList(o['full_mslist'])
+    uobsid = set(m.obsids)
+    
+    for obsid in uobsid:
+        umslist='mslist-%s.txt' % obsid
+        print('Writing ms list for obsids',umslist)
+        with open(umslist,'w') as file:
+            for ms,ob in zip(m.mss,m.obsids):
+                if ob==obsid:
+                    file.write(ms+'\n')
     if o['stokesv']:
-        separator('Stokes V image')
-        ddf_image('image_full_high_stokesV',o['full_mslist'],
+        for obsid in uobsid:
+            separator('Stokes V image for',obsid)
+            ddf_image('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
@@ -1913,22 +1924,15 @@ def main(o=None):
         uobsid = set(m.obsids)
     
         for obsid in uobsid:
-            LastImageV="image_full_high_stokesV.dirty.corr.fits"
+            LastImageV="image_full_high_stokesV_%s.dirty.corr.fits"%obsid
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
-            print('Writing temporary ms list',umslist)
-            with open(umslist,'w') as file:
-                for ms,ob in zip(m.mss,m.obsids):
-                    if ob==obsid:
-                        file.write(ms+'\n')
-
             g=glob.glob('DynSpec*'+obsid+'*')
             if len(g)>0:
                 warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
             else:
                 DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
                 runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
-
                 
                 if o['bright_threshold'] is not None:
                     runcommand+=' --srclist brightlist.csv'
