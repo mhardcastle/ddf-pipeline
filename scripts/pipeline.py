@@ -1926,9 +1926,7 @@ def main(o=None):
             from find_bright_offset_sources import find_bright
             bright_exists=find_bright(cutoff=o['bright_threshold'])
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
-        m=MSList(o['full_mslist'])
-        uobsid = set(m.obsids)
-    
+
         for obsid in uobsid:
             LastImageV="image_full_high_stokesV_%s.dirty.corr.fits"%obsid
             warn('Running ms2dynspec for obsid %s' % obsid)
