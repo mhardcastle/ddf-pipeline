@@ -1160,9 +1160,10 @@ def main(o=None):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
-        separator("Merge diffuse emission mask into external mask")
-        merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
-
+        if o['use_maskdiffuse']:
+            separator("Merge diffuse emission mask into external mask")
+            merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+        
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
@@ -1197,9 +1198,14 @@ def main(o=None):
         if o['clusterfile'] is None:
             separator("Cluster the sky model")
             ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
-            clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+            if o['use_maskdiffuse']:
+                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
                       OutClusterCat=ClusterFile,
                       use_makemask_products=True)
+            else:
+                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                      OutClusterCat=ClusterFile,
+                      use_makemask_products=False)
         else:
             ClusterFile=o['clusterfile']
             warn('Using user-specifed cluster file '+ClusterFile)
