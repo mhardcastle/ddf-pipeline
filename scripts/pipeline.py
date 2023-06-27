@@ -224,7 +224,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if OuterSpaceTh is not None:
         runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
     if options['use_splitisland']:
-       runcommand += " --SSDClean-MaxIslandSize 100"
+       runcommand += " --SSDClean-MaxIslandSize %s"%options['splitisland_size']
 
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
