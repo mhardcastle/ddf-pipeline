@@ -509,6 +509,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if PreApplySols:
                 runcommand+=' --PreApplySols=[%s]'%PreApplySols
 
+            runcommand+=' --WeightInCol=IMAGING_WEIGHT'
+            
                 
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
@@ -1368,7 +1370,7 @@ def main(o=None):
         separator("Make Mask")
         CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
-
+        
         if not o['skip_di']:
             separator("Second DI calibration")
             ddf_image('Predict_DI1',o['mslist'],
@@ -1384,7 +1386,7 @@ def main(o=None):
                     #AllowNegativeInitHMP=True,
                     MaxMinorIterInitHMP=10000,
                     PredictSettings=("Predict","DD_PREDICT"))
-
+            
             separator("Another DI step")
             if o['bootstrap']:
                 colname='SCALED_DATA'
