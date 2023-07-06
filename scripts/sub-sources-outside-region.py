@@ -386,8 +386,7 @@ def SummaryToVersion(summaryFile):
     DFields={"StrDate":'ddf-pipeline completed at ',
                      "v_ddfPipe":'ddf-pipeline version was ',
                      "v_DDF":'DDF version was ',
-                     "v_kMS":'killMS version was ',
-                     "v_DynSpec":'DynSpecMS version was '}
+                     "v_kMS":'killMS version was '}
 
     DOut={}
     for npField in DFields.keys():
