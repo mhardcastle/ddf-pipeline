@@ -6,7 +6,9 @@ import numpy as np
 # Code from Tim for fixing symbolic links
 
 def get_solutions_timerange(sols):
-    t = np.load(sols)['BeamTimes']
+    print('Reading %s'%sols)
+    S=np.load(sols)
+    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])    
     return np.min(t),np.max(t)
 
 def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True):
