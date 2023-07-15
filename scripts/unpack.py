@@ -15,7 +15,7 @@ def unpack(workdir='.'):
     if len(files)==0:
         raise RuntimeError('Cannot find files to unpack')
     for f in files:
-        if 'tokens' in f:
+        if 'tokens' in f or 'LINC' in f or 'cal_solutions' in f or 'logs' in f or 'inspection' in f:
             print('Skipping',f)
             continue
         fn=os.path.basename(f)
