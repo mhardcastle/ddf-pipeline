@@ -1433,7 +1433,20 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED")
 
+
             colname='DATA_DI_CORRECTED' # again
+
+            separator("DD calibration with tweaked DI column")
+            CurrentDDkMSSolName=killms_data('image_ampphase1',o['mslist'],'DDS1A',colname=colname,
+                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        CovQ=0.02,
+                                        clusterfile=ClusterFile,
+                                        niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                        dt=o['dt_slow'],
+                                        catcher=catcher,NChanSols=o['NChanSols'],
+                                        EvolutionSolFile=CurrentDDkMSSolName,
+                                        MergeSmooth=o['smoothing'])
+
             CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                         cleanmask=CurrentMaskName,cleanmode='SSD',
                                         ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][3],
@@ -1560,6 +1573,21 @@ def main(o=None):
                     DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
         colname="DATA_DI_CORRECTED"
 
+        separator("Compute DD calibration off new DI column (full mslist)")
+        CurrentDDkMSSolName=killms_data(CurrentImageName,o['full_mslist'],'DDS2A_full',
+                                    colname=colname,
+                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    CovQ=0.1,
+                                    clusterfile=ClusterFile,
+                                    niterkf=o['NIterKF'][4],
+                                    uvrange=killms_uvrange,
+                                    wtuv=o['wtuv'],
+                                    robust=o['solutions_robust'],
+                                    dt=o['dt_slow'],
+                                    catcher=catcher,
+                                    NChanSols=o['NChanSols'],
+                                    # EvolutionSolFile=CurrentDDkMSSolName,
+                                    MergeSmooth=o['smoothing'])
     # ###############################################
     # Apply phase and amplitude solutions and image again
     separator("Deconvolution AP (full mslist)")
