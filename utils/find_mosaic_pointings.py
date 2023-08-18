@@ -24,6 +24,8 @@ def read_pointingfile(pointingfilename=None):
 
     # turn list of dicts into dict of lists...
     for f in fields:
+        if f['lotss_field'] != 1:
+                continue
         pointingname=f['id']
         pointingdict[pointingname] = [f['status'],f['ra'],f['decl']]
     return pointingdict
