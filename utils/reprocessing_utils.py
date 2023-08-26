@@ -4,7 +4,8 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import range
-from surveys_db import update_reprocessing_extract, get_next_extraction, SurveysDB
+from surveys_db import SurveysDB
+from db_utils import update_reprocessing_extract, get_next_extraction
 import sys
 import os
 import glob
