@@ -314,7 +314,7 @@ def make_mosaic(args):
 
         hdu = fits.PrimaryHDU(header=header,data=isum)
         if args.do_lowres:
-            mosname='low-mosaic.fits'
+            mosname='mosaic.fits'
         else:
             mosname='mosaic.fits'
         hdu.writeto(rootname+mosname,overwrite=True)
