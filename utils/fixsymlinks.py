@@ -11,7 +11,7 @@ def get_solutions_timerange(sols):
     t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])    
     return np.min(t),np.max(t)
 
-def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True):
+def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True,delete_existing=False):
     #dds3smoothed = glob.glob('SOLSDIR/*/*killMS.DDS3_full_smoothed*npz')
     dds3 = glob.glob(workdir+'/SOLSDIR/*/killMS.' + ddsols + '.sols.npz')
     if verbose:
@@ -40,7 +40,13 @@ def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True):
             os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
         else:
             if verbose: print('Symlink ' + symsolname + ' does not yet exist, creating')
+            if os.path.isfile(symsolname):
+                if verbose: print('Deleting existing real file in this location, since you asked me to!')
+                os.unlink(symsolname)
             os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
             
     return
 
+if __name__=='__main__':
+    fixsymlinks('DDS3_full',delete_existing=True)
+    
