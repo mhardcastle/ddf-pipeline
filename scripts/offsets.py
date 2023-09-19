@@ -19,7 +19,7 @@ from builtins import object
 from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
-from auxcodes import report,run,warn,die,get_centpos,sepn
+from auxcodes import report,run,warn,die,getposim,sepn
 import requests
 import os
 from get_cat import get_cat
@@ -45,18 +45,22 @@ def model(x,norm,sigma,offset,bl,radius=60):
     return old_div(bl*np.sqrt(radius**2.0-x**2.0),radius)+norm*np.exp(old_div(-(x-offset)**2.0,(2*sigma**2.0)))
 
 class Offsets(object):
-    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc'):
+    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc',pos=None):
         self.prefix=prefix
         self.n=n
         self.chains=[]
         self.cellsize=cellsize
         self.imroot=imroot
         self.fitmethod=fitmethod
+        self.pos=pos
         if imroot is not None:
             self.read_regfile(imroot+'.tessel.reg')
 
     def read_regfile(self,regfile):
-        cra,cdec=get_centpos()
+        if self.pos is None:
+            cra,cdec=get_centpos()
+        else:
+            cra,cdec=self.pos
         self.r=RegPoly(regfile,cra,cdec)
         self.polys=self.r.oclist
         self.labels=self.r.ollist
@@ -381,14 +385,13 @@ def merge_cat(rootname,rastr='ra',decstr='dec'):
     t2.write(rootname+'.fits',overwrite=True)
     return t2
 
-def do_offsets(o):
+def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     # o is the options file
 
     if o['mode']!='normal' and  o['mode']!='test':
         raise NotImplementedError('Offsets called with mode '+o['mode'])
 
     method=o['method']
-    image_root='image_full_ampphase_di_m.NS'
     
     report('Determining astrometric offsets with method '+method+' in mode '+o['mode'])
     report('Merging downloaded catalogues')
@@ -413,17 +416,17 @@ def do_offsets(o):
         method+='-test'
 
     report('Running PyBDSM on LOFAR image, please wait...')
+    if o['mode']=='test':
+        suffix='facetRestored'
+    else:
+        suffix='restored'
+    pbimage=image_root+'.int.'+suffix+'.fits'
+    nonpbimage=image_root+'.app.'+suffix+'.fits'
     catfile=image_root+'.offset_cat.fits'
     gaulfile=catfile.replace('cat','gaul')
     if os.path.isfile(catfile):
         warn('Catalogue already exists, skipping pybdsf run')
     else:
-        if o['mode']=='test':
-            suffix='facetRestored'
-        else:
-            suffix='restored'
-        pbimage=image_root+'.int.'+suffix+'.fits'
-        nonpbimage=image_root+'.app.'+suffix+'.fits'
         img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
         img.write_catalog(outfile=catfile,catalog_type='srl',format='fits',correct_proj='True')
         img.write_catalog(outfile=gaulfile,catalog_type='gaul',format='fits',correct_proj='True')
@@ -436,14 +439,14 @@ def do_offsets(o):
     lofar=lofar[filter]
     print(len(lofar),'LOFAR sources after filtering')
     regfile=image_root+'.tessel.reg'
-    cra,cdec=get_centpos()
+    cra,cdec=getposim(nonpbimage)
     report('Set up structure')
     if o['clusterfile'] is None:
         clusterfile="image_dirin_SSD_m.npy.ClusterCat.npy"
     else:
         clusterfile=o['clusterfile']
     NDir=np.load(clusterfile).shape[0]
-    oo=Offsets(method,n=NDir,imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'])
+    oo=Offsets(method,n=NDir,imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'],pos=(cra,cdec))
     report('Label table')
     lofar_l=oo.r.add_facet_labels(lofar)
     report('Finding offsets')
