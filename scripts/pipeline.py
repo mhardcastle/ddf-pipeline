@@ -1892,7 +1892,7 @@ def main(o=None):
                     file.write(ms+'\n')
     if o['stokesv']:
         for obsid in uobsid:
-            separator('Stokes V image for'%obsid)
+            separator('Stokes V image for %s'%obsid)
             ddf_image('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
