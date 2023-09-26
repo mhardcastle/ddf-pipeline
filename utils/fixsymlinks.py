@@ -8,7 +8,16 @@ import numpy as np
 def get_solutions_timerange(sols):
     print('Reading %s'%sols)
     S=np.load(sols)
-    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])    
+    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
+    # Fix for when first and last time slots are offset.
+    tdiff = np.diff(t, 2)
+    if not np.allclose(tdiff, 0):
+        offset_start = tdiff[0]
+        offset_end = tdiff[-1]
+        print('Found offset of %d, %d for first and last time slots.'%(offset_start,offset_end))
+        # +1 seems needed to match the time in the solution filename.
+        t[0] -= offset_start + 1
+        t[-1] -= offset_end
     return np.min(t),np.max(t)
 
 def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True,delete_existing=False):
