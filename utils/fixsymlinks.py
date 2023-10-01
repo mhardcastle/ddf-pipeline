@@ -28,31 +28,40 @@ def fixsymlinks(ddsols,workdir='.',stype='smoothed',verbose=True,delete_existing
     for i in range(0,len(dds3)):
         symsolname = dds3[i].split('killMS.' + ddsols + '.sols.npz')[0] + 'killMS.'+ddsols+'_'+stype+'.sols.npz' 
         solname = dds3[i]
-
+        print('Symsolname is',symsolname,'and solname is',solname)
         start_time,t1 = get_solutions_timerange(solname)
         # Rounding different on different computers which is a pain.
         # find start time generally for any type of filename
-        filename = glob.glob(workdir+'/%s_%s*_%s.npz'%(ddsols,int(start_time),stype))[0]
-        bits=filename.split('_')
-        for b in bits[1:]:
-            try:
-                start_time=str(float(b))
+        # this is thoroughly broken, so
+        # find all the files of this form and try to find one that matches!
+        globst=workdir+'/%s_*_%s.npz'%(ddsols,stype)
+        print('Looking for filenames of the form',globst)
+        for filename in glob.glob(globst):
+            bits=filename.split('_')
+            f_start_time=None
+            for b in bits[1:]:
+                try:
+                    f_start_time=float(b)
+                    break
+                except ValueError:
+                    pass
+            offset=f_start_time-start_time
+            if np.abs(offset)<3600: # adjust to taste
+                print('Taking %s to be a match (offset %.2f seconds)' % (filename,offset))
                 break
-            except ValueError:
-                pass
         else:
-            raise RuntimeError('Could not find time')
+            raise RuntimeError('Failed to find a match!')
                 
         if os.path.islink(symsolname):
             if verbose: print('Symlink ' + symsolname + ' already exists, recreating')
             os.unlink(symsolname)
-            os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
+            os.symlink(os.path.relpath('../../'+filename),symsolname)
         else:
             if verbose: print('Symlink ' + symsolname + ' does not yet exist, creating')
             if os.path.isfile(symsolname):
                 if verbose: print('Deleting existing real file in this location, since you asked me to!')
                 os.unlink(symsolname)
-            os.symlink(os.path.relpath('../../%s_%s_%s.npz'%(ddsols,start_time,stype)),symsolname)
+            os.symlink(os.path.relpath('../../'+filename),symsolname)
             
     return
 
