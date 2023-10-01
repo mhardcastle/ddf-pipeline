@@ -306,8 +306,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
         else:
             raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
-    if dicomodel_base is None and use_dicomodel:
-        raise RuntimeError('that s wrong')
         
     if threshold is not None:
         runcommand += ' --Deconv-FluxThreshold=%f'%threshold
