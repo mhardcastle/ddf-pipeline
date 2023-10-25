@@ -740,7 +740,8 @@ if dokmscal:
 
   colname="DATA_SUB_CORRECTED"
 
-
+if not dosubtract:
+   colname = args['column']
 
 # can manually update mslist for other selection 
 #msfiles   = ascii.read('big-mslist.txt',data_start=0)
