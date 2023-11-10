@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 from time import sleep,time
 
-def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False):
+def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True):
     '''Download a file from URL url to file filename.  Optionally, specify
     a tuple of HTTP response codes in catch_codes where we will back
     off and retry rather than failing.
@@ -48,7 +48,7 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                     use_range=False
                     headers=None
                     expected_response=200
-                response = requests.get(url, stream=True,verify=True,timeout=60,headers=headers)
+                response = requests.get(url, stream=True,verify=verify,timeout=60,headers=headers)
                 if response.status_code!=expected_response:
                     print('Unexpected response code received!')
                     print(response.headers)
