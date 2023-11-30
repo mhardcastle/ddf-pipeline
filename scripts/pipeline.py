@@ -453,7 +453,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
-                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -499,6 +499,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --Weighting Natural'
             else:
                 runcommand+=' --Weighting Briggs --Robust=%f' % robust
+            if UpdateWeights is not None:
+                runcommand+=' --UpdateWeights=%f' %UpdateWeights               
             if uvrange is not None:
                 if wtuv is not None:
                     runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
@@ -511,7 +513,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
             if PreApplySols:
                 runcommand+=' --PreApplySols=[%s]'%PreApplySols
-
                 
             if DISettings is None:
                 if NChanSols is None:
@@ -1415,7 +1416,7 @@ def main(o=None):
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
             #              n_dt=1,
@@ -1549,7 +1550,7 @@ def main(o=None):
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
         colname="DATA_DI_CORRECTED"
 
     # ###############################################
