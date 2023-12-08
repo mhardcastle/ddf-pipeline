@@ -78,13 +78,13 @@ def run_tiered_bdsf(imf,appf,label):
 
     restfrq=144000000.0
  
-    #img = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
-    #img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.rms.fits',img_format='fits', img_type='rms', clobber=True)
-    #img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
-    #img.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'.srl.fits',format='fits', catalog_type='srl', clobber=True)
-    #img.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
-    #img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
-    #img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
+    img = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
+    img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.rms.fits',img_format='fits', img_type='rms', clobber=True)
+    img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
+    img.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'.srl.fits',format='fits', catalog_type='srl', clobber=True)
+    img.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
+    img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
+    img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
 
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'.rms.fits')
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'.resid.fits')
@@ -176,10 +176,10 @@ def run_tiered_bdsf(imf,appf,label):
     create_pb_image(resid_im_no_brightf, resid_im_no_bright_appf, pbimagef)
     intermediate_products.append(resid_im_no_bright_appf)
     
-    #img_resid = bdsf.process_image(resid_im_no_brightf, detection_image=resid_im_no_bright_appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
+    img_resid = bdsf.process_image(resid_im_no_brightf, detection_image=resid_im_no_bright_appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
 
     rms_image_withBright_f=resid_im_no_brightf[:-5]+'.rms.fits'
-    #img_resid.export_image(outfile=rms_image_withBright_f, img_format='fits', img_type='rms', clobber=True)
+    img_resid.export_image(outfile=rms_image_withBright_f, img_format='fits', img_type='rms', clobber=True)
     intermediate_products.append(rms_image_withBright_f)
 
 
@@ -189,13 +189,13 @@ def run_tiered_bdsf(imf,appf,label):
     intermediate_products.append(rms_image_withBright_appf)
     create_pb_image(rms_image_withBright_f, rms_image_withBright_appf, pbimagef)
  
-    #img_supply = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf])
-    #img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.rms.fits',img_format='fits', img_type='rms', clobber=True)
-    #img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
-    #img_supply.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.srl.fits',format='fits', catalog_type='srl', clobber=True)
-    #img_supply.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
-    #img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
-    #img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
+    img_supply = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf])
+    img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.rms.fits',img_format='fits', img_type='rms', clobber=True)
+    img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
+    img_supply.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.srl.fits',format='fits', catalog_type='srl', clobber=True)
+    img_supply.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
+    img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
+    img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
 
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'-SupplyMaps.rms.fits')
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'-SupplyMaps.resid.fits')
@@ -212,11 +212,11 @@ def run_tiered_bdsf(imf,appf,label):
     intermediate_products.append(app_residf)
     create_pb_image(int_residf, app_residf, pbimagef)
 
-    #img_supply_large = bdsf.process_image(int_residf,detection_image=app_residf,thresh_isl=3.0, thresh_pix=10.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf], flag_maxsize_bm=100)
-    #img_supply_large.write_catalog(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
-    #img_supply_large.write_catalog(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits',format='fits', catalog_type='srl', clobber=True)
-    #img_supply_large.export_image(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
-    #img_supply_large.export_image(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
+    img_supply_large = bdsf.process_image(int_residf,detection_image=app_residf,thresh_isl=3.0, thresh_pix=10.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf], flag_maxsize_bm=100)
+    img_supply_large.write_catalog(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits',format='fits', catalog_type='gaul', clobber=True)
+    img_supply_large.write_catalog(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits',format='fits', catalog_type='srl', clobber=True)
+    img_supply_large.export_image(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.model.fits',img_format='fits', img_type='gaus_model', clobber=True)
+    img_supply_large.export_image(outfile=int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.mask.fits',img_format='fits', img_type='island_mask', clobber=True)
 
     intermediate_products.append(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
     intermediate_products.append(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
