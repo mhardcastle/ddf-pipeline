@@ -5,13 +5,17 @@
 from __future__ import print_function
 import bdsf
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, vstack
 import numpy as np
 from photutils.aperture import SkyEllipticalAperture
 from auxcodes import flatten
 import argparse
 import os
 from shutil import copyfile
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+from auxcodes import warn, report, separator
 
 def create_pb_image(imagef_int, imagef_out, pbimagef):
     with fits.open(imagef_int) as dat:
@@ -19,7 +23,9 @@ def create_pb_image(imagef_int, imagef_out, pbimagef):
         dat[0].data*=pbim
         dat.writeto(imagef_out,overwrite=True)
 
-def run_old_bdsf(infile):
+def run_old_bdsf(infile,catprefix='mosaic'):
+    restfrq=144000000.0
+    separator('Running PyBDSF')
     img = bdsf.process_image(infile, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=True, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=restfrq)    
     img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
     img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
@@ -27,12 +33,13 @@ def run_old_bdsf(infile):
     img.export_image(outfile=catprefix +'.pybdsfmask.fits',img_type='island_mask',img_format='fits',clobber=True)
     img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
-def run_tiered_bdsf(imf,appf,label=''):
+def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
     # Tiered source finding code adapted from Catherine Hale code.
     # For mosaics put imf and appf as the same image
     # For individual pointings imf and appf are int and app images.
 
-    # --- Create Mean 0 map ---
+    separator('Create Mean 0 map')
+    
     folder = os.getcwd()+'/'
     
     intermediate_products = []
@@ -59,7 +66,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     d.close()
     intermediate_products.append(pbimagef)
     
-    # --- Run initial PyBDSF ---
+    #-----------------------------------------------------
+    separator('Run initial PyBDSF')
+    #-----------------------------------------------------
 
     restfrq=144000000.0
  
@@ -78,7 +87,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'.model.fits')
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'.mask.fits')
 
-    # --- Add Bright Sources back into field ---
+    #-----------------------------------------------------
+    separator('Add Bright Sources back into field')
+    #-----------------------------------------------------
 
     snr_thresh=150
     source_dat=Table.read(imagef[:-5]+'-Default-'+label+'.srl.fits')
@@ -105,24 +116,28 @@ def run_tiered_bdsf(imf,appf,label=''):
 
     model_im_new=flatten(fits.open(imagef[:-5]+'-Default-'+label+'.model.fits'))
     
-    # Model mask regions (i.e. regions where model is not zero)
+    #-----------------------------------------------------
+    separator('Model mask regions (i.e. regions where model is not zero)')
+    #-----------------------------------------------------
 
-    model_mask_final=np.zeros((np.shape(model_im_new[0].data)[0], np.shape(model_im_new[0].data)[1]))
+    model_mask_final=np.zeros((np.shape(model_im_new.data)[0], np.shape(model_im_new.data)[1]))
     for i in range(len(bright_gaus)):
         position = SkyCoord(ra=bright_gaus['RA'][i], dec=bright_gaus['DEC'][i], unit='deg')
         aper = SkyEllipticalAperture(position, 1.5*bright_gaus['Maj'][i]*u.degree, 1.5*bright_gaus['Min'][i]*u.degree, bright_gaus['PA'][i]*u.degree)
         pix_aper=aper.to_pixel(wcs_im)
         m=pix_aper.to_mask()
-        out=m.to_image((np.shape(model_im_new[0].data)[0], np.shape(model_im_new[0].data)[1]))
+        out=m.to_image((np.shape(model_im_new.data)[0], np.shape(model_im_new.data)[1]))
         model_mask_final+=out
 
     model_mask_final[model_mask_final!=0]=1
 
-    model_im_new[0].data=1-model_mask_final
+    model_im_new.data=1-model_mask_final
     intermediate_products.append(model_im_new_f)
     model_im_new.writeto(model_im_new_f,overwrite=True)
 
-    # Make final residual map with bright sources in
+    #-----------------------------------------------------
+    separator('Make final residual map with bright sources in')
+    #-----------------------------------------------------
 
     model_im_orig=fits.getdata(imagef[:-5]+'-Default-'+label+'.model.fits')
     model_im_no_brightf= imagef[:-5]+'-Default-'+label+'.model-Bright-Removed.fits'
@@ -134,7 +149,7 @@ def run_tiered_bdsf(imf,appf,label=''):
     
 
     model_im_no_bright=fits.open(model_im_no_brightf, mode='update')
-    model_im_no_bright[0].data=model_im_new[0].data*model_im_orig
+    model_im_no_bright[0].data=model_im_new.data*model_im_orig
     model_im_no_bright.flush()
     model_im_no_bright.close()
 
@@ -148,9 +163,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     resid_im_no_bright.flush()
     resid_im_no_bright.close()
 
-    # --- Run PyBDSF on Residual ---
-
-    # create app image 
+    #-----------------------------------------------------
+    separator('Run PyBDSF on Residual')
+    #-----------------------------------------------------
 
     resid_im_no_bright_appf=appf[:-5]+'-Default-'+label+'.resid-Bright-Remain.app.fits'
 
@@ -164,7 +179,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     intermediate_products.append(rms_image_withBright_f)
 
 
-    # --- Run PyBDSF - supplying RMS image --- 
+    #-----------------------------------------------------
+    separator('Run PyBDSF - supplying RMS image')
+    #-----------------------------------------------------
 
     rms_image_withBright_appf=rms_image_withBright_f.replace('.fits', '.app.fits')
     intermediate_products.append(rms_image_withBright_appf)
@@ -185,7 +202,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'-SupplyMaps.model.fits')
     intermediate_products.append(imagef[:-5]+'-Default-'+label+'-SupplyMaps.mask.fits')
 
-    # --- Extract Bright sources from Residual ---
+    #-----------------------------------------------------
+    separator('Extract Bright sources from Residual')
+    #-----------------------------------------------------
 
     int_residf=imf[:-5]+'-Default-'+label+'-SupplyMaps.resid.fits'
 
@@ -205,7 +224,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     intermediate_products.append(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.mask.fits')
 
 
-    # --- Update residual with large sources ---
+    #-----------------------------------------------------
+    separator('Update residual with large sources')
+    #-----------------------------------------------------
 
     resid_ext_emf=imagef+'-Default-'+label+'-SupplyMaps-withFlagBeam.resid.fits'
     model_final=imagef+'-Default-'+label+'-SupplyMaps-withFlagBeam.model.fits'
@@ -232,7 +253,9 @@ def run_tiered_bdsf(imf,appf,label=''):
     model_withflag_dat.close()
     resid_withflag_dat.close()
 
-    # --- Update Catalogue ---
+    #-----------------------------------------------------
+    separator('Update Catalogue')
+    #-----------------------------------------------------
 
     dat_srl_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
     dat_gaul_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
@@ -264,6 +287,10 @@ def run_tiered_bdsf(imf,appf,label=''):
     dat_srl_final=vstack([dat_srl_orig, dat_srl_flagbeam])
     dat_gaul_final=vstack([dat_gaul_orig, dat_gaul_flagbeam])
 
+    #-----------------------------------------------------
+    separator('Write to disk')
+    #-----------------------------------------------------
+    
     dat_srl_final.write(imagef[:-5]+'-Default-'+label+'-SupplyMaps-withFlagBeam.srl.fits', overwrite=True)
     dat_gaul_final.write(imagef[:-5]+'-Default-'+label+'-SupplyMaps-withFlagBeam.gaul.fits', overwrite=True)
 
@@ -298,9 +325,12 @@ def run_tiered_bdsf(imf,appf,label=''):
     intermediate_products.append('mosaic-blanked.fits.pybdsf.log')
     os.system('mkdir intermediate-products')
     for product in intermediate_products:
-        os.system('mv %s intermediate-products'%product)
-        if os.path.exists('%s.pybdsf.log'%product):
-            os.system('mv %s.pybdsf.log intermediate-products'%product)
+        if os.path.isfile(product):
+            os.system('mv %s intermediate-products'%product)
+            if os.path.exists('%s.pybdsf.log'%product):
+                os.system('mv %s.pybdsf.log intermediate-products'%product)
+        else:
+            warn('Intermediate product %s does not exist' % product)    
     return
 
 if __name__=='__main__':

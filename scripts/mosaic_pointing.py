@@ -19,11 +19,7 @@ import numpy as np
 from surveys_db import SurveysDB
 import pickle
 import os,sys
-from shutil import copyfile
-from astropy.table import Table, vstack
-from astropy.wcs import WCS
-from astropy.coordinates import SkyCoord
-from astropy import units as u
+from sourcefind import run_tiered_bdsf as run_bdsf
 
 def make_header(maxsep,name,ra,dec,cellsize,resolution):
     # construct template FITS header
@@ -272,6 +268,4 @@ if __name__=='__main__':
             catprefix='low-mosaic'
             infile='low-mosaic-blanked.fits'
 	    
-        run_bdsf(infile,infile)
-
-        # OLD (pre Nov 2023) SOURCE FINDING APPROACH
+        run_bdsf(infile,infile,prefix=catprefix)
