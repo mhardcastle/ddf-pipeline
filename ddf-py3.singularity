@@ -1,25 +1,87 @@
 Bootstrap: docker
 From: debian:bullseye
 
-
+%post -c /bin/bash
+    CUSTOM_ENV=/.singularity.d/env/99-zz_custom_env.sh
+    cat >$CUSTOM_ENV <<EOF
+#!/bin/bash
+PS1="\[\e[1;92m\][Singularity]\[\e[m\] \u@\h:\w\$ "
+EOF
+    chmod 755 $CUSTOM_ENV
+    
 %environment
    export SRC=/usr/local/src
    . $SRC/ddf-pipeline/init.sh
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/idg/lib/
+   export SRC=/usr/local/src
+   export KILLMS_DIR=$SRC
+   export PYTHONPATH=$KILLMS_DIR:$PYTHONPATH
+   export PYTHONPATH=$KILLMS_DIR/DDFacet:$PYTHONPATH
+   export PYTHONPATH=$KILLMS_DIR/killMS:$PYTHONPATH
+   export PYTHONPATH=$KILLMS_DIR/DynSpecMS:$PYTHONPATH
+   export PYTHONPATH=$KILLMS_DIR/drawMS:$PYTHONPATH
+   export PYTHONPATH=$KILLMS_DIR/ms_info:$PYTHONPATH
+   
+   export PATH=$KILLMS_DIR/killMS/killMS:$PATH
+   export PATH=$KILLMS_DIR/DDFacet/DDFacet:$PATH
+   export PATH=$KILLMS_DIR/DDFacet/SkyModel:$PATH
+   export PATH=$KILLMS_DIR/DynSpecMS:$PATH
+   export PATH=$KILLMS_DIR/drawMS:$PATH
+   export PATH=$KILLMS_DIR/ms_info:$PATH
+   export LD_LIBRARY_PATH=$KILLMS_DIR/DDFacet/DDFacet/cbuild:$LD_LIBRARY_PATH
+   #   clear
+   
+   python /usr/bin/logo.py
+
+   
+
+%files
+
 
 
 %post
    export DEBIAN_FRONTEND=noninteractive
-   export J=16
+   export J=32
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/idg/lib/
+   export SRC=/usr/local/src
+   
+   $SRC
 
-   echo "Here we are installing software and other dependencies for the container!"
+
+  ##############################
+  # Dev branches names 
+  export BCH_DDF=master
+  export BCH_KMS=master
+  export BCH_DYN=MTilde_ASync_weights_mergeJones_merge
+  export BCH_DDFPIPE=master
+  ##############################
+
+
+
+   ls $SRC
+  echo "Here we are installing software and other dependencies for the container!"
    apt-get update
-   apt-get install -y emacs htop nano mc \
+
+
+
+
+apt install -y boxes
+#apt install -y spyder
+
+apt install -y openssh-client 
+eval `ssh-agent -s`
+ssh-add
+
+
+apt-get install -y git mlocate
+
+
+apt-get install -y emacs htop nano mc \
     git \
     wget \
     rsync \
     python3-pip \
+    vim \
     libfftw3-dev \
     python3-numpy \
     libfreetype6-dev \
@@ -48,29 +110,241 @@ From: debian:bullseye
     python3-lxml \
     python3-pandas \
     python3-psutil \
-    python3-pyfftw python3-pymysql python3-scipy \
-    python3-requests python3-deap \
+    python3-pyfftw python3-pymysql  \
+    python3-requests  \
     python3-sshtunnel \
-    python3-ruamel.yaml python3-ephem \
+    python3-ruamel.yaml python3-ephem python3-photutils \
+    python3-venv \
+    bzip2 \
     ipython3 \
     libgsl-dev \
     libgtkmm-3.0-dev \
-    libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev    
+    libcfitsio-bin libxml2-dev libarmadillo-dev libsigc++-2.0-dev liblua5.3-dev libxslt-dev tcl zip libbz2-dev
+    #saods9 
    update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
-   apt-get install -y casacore-dev casacore-tools python3-casacore cmake curl
-   apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux bsdmainutils
+   apt-get install -y casacore-dev casacore-data casacore-tools python3-casacore cmake curl
+   apt-get install -y python3-astlib python3-ipdb python3-nose python3-metaconfig jq util-linux bsdmainutils evince ristretto imagemagick
+   pip3 install certifi
 
-   pip3 install pybind11
-   pip3 install dask codex_africanus ephem Polygon3 pyregion terminal pyephem ptyprocess timeout-decorator astroquery # pyfits
-   pip3 install --ignore-installed numpy==1.19.5
-   pip3 install reproject tqdm
-   export SRC=/usr/local/src
+  # fitsio
+  cd $SRC
+  git clone https://github.com/esheldon/fitsio.git
+  cd fitsio
+  python setup.py install
 
-   # PyBDSF
-   # pip3 install git+https://github.com/lofar-astron/PyBDSF.git
-   pip3 install bdsf # workaround for https://github.com/lofar-astron/PyBDSF/issues/179
 
-   # LOFAR beam -- for DDF
+# ####################
+apt-get install -y tar wget
+
+apt-get install -y saods9
+
+#cd $SRC
+#wget https://ds9.si.edu/download/source/ds9.8.4.1.tar.gz
+#tar -zxvf ds9.8.4.1.tar.gz
+#cd SAOImageDS9
+#./unix/configure
+#make -j $J
+#cp bin/ds9 /usr/bin/.
+#cd $SRC
+# ####################
+
+
+
+
+# pip3 install opencv-python
+
+
+
+   
+  echo
+  echo
+  echo
+  pip3 show numpy scipy
+  echo
+  echo
+  echo
+    pip3 install Pillow==9.3.0
+  pip3 show numpy scipy
+    pip3 install imageio==2.4.1
+    pip3 install PyWavelets==1.1.1
+    pip3 install tifffile==2019.7.26
+    pip3 install scikit-image==0.19.3
+    # tifffile, scikit-image, pywavelets, imageio affect numpy version
+  pip3 show numpy scipy
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+  pip3 install reproject==0.10.0
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+   pip3 install aplpy==2.1.0
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+  
+  pip3 install pybind11==2.9.2
+   pip3 install dask codex_africanus==0.2.10 "ephem<=9.99" "Polygon3<=3.0.9.1" pyregion terminal "pyephem<=9.99" "ptyprocess<=0.7.0" timeout-decorator astroquery # pyfits
+   pip3 install --ignore-installed numpy==1.19.5 scipy==1.5.4 deap==1.3.1
+   pip3 install reproject
+   pip3 install meqtrees-cattery==1.7.6
+   pip3 install "regions<=0.5" "pywavelets<=1.1.1" "tqdm<=4.64.0" "configparser<=5.2.0"
+  cd $SRC
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+  # PyBDSF
+  pip3 install git+https://github.com/lofar-astron/PyBDSF.git
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+   # few more DDF dependencies
+   pip3 install -U tables==3.7.0 prettytable==2.5.0 pylru==1.2.1 emcee astropy_healpix "sharedarray<=3.2.1" "Cython<=0.29.30"
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+  # tools
+  cd $SRC
+  git clone https://github.com/IanHeywood/ms_info.git
+
+  
+  
+
+  # DDFacet
+  cd $SRC
+  git clone -b v0.7.2 https://github.com/saopicc/DDFacet.git
+  cd DDFacet
+  git checkout $BCH_DDF
+  cd ..
+  #pip install -e ./DDFacet
+  cd DDFacet
+  #rm -rf DDFacet/cbuild
+  #python setup.py clean
+  python setup.py build
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+  
+  # killMS
+  cd $SRC
+  git clone git@github.com:cyriltasse/killMS.git
+  cd killMS
+  git checkout $BCH_KMS
+  rm -rf killMS/cbuild
+  python setup.py build
+  #  python setup.py install
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+  # killMS
+  cd $SRC
+  git clone git@github.com:cyriltasse/drawMS.git
+
+
+
+
+  # Nenupy
+  cd $SRC
+  pip3 install --upgrade https://github.com/AlanLoh/nenupy/tarball/master
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+  # dynspecMS
+  cd $SRC
+  git clone git@github.com:cyriltasse/DynSpecMS.git
+  cd DynSpecMS
+  git checkout $BCH_DYN
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+# LSMTool 
+   cd $SRC
+   git clone https://github.com/darafferty/LSMTool.git
+   cd LSMTool
+   python setup.py install
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+  
+   # LofarStMan
+   cd $SRC
+   git clone https://github.com/lofar-astron/LofarStMan.git
+   cd LofarStMan
+   mkdir cbuild; cd cbuild
+   cmake ..
+   make -j $J
+   make install
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+# LOFAR beam -- for DDF
    cd $SRC
    git clone -b v4.1.1 https://github.com/lofar-astron/LOFARBeam.git
    cd LOFARBeam
@@ -80,10 +354,26 @@ From: debian:bullseye
    make -j $J
    make install
 
-   cd /usr/local/lib/python3.9/dist-packages
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+cd /usr/local/lib/python3.9/dist-packages
    ln -s /usr/local/lib/python3.9/site-packages/lofar
 
-   # dysco -- for DP3
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+# dysco -- for DP3
    cd $SRC
    git clone https://github.com/aroffringa/dysco.git
    cd dysco
@@ -95,15 +385,35 @@ From: debian:bullseye
    make install
    cp $SRC/dysco/build/decompress /usr/local/bin/decompress  # https://github.com/aroffringa/dysco/issues/12#issuecomment-773134161
 
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
    # IDG -- for wsclean and DP3
    cd $SRC
-   git clone -b 1.1.0 https://gitlab.com/astron-idg/idg.git
+   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
    cd idg && mkdir build && cd build
-   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
+   #   cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
+   cmake ..
    make -j $J
    make install
 
-   # aoflagger -- for DP3
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+# aoflagger -- for DP3
    cd $SRC
    git clone -b v3.1.0 https://gitlab.com/aroffringa/aoflagger.git
    cd aoflagger
@@ -113,97 +423,223 @@ From: debian:bullseye
    make -j $J
    make install
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
    # Everybeam -- for DP3
    cd $SRC
-   git clone -b v0.5.1 https://git.astron.nl/RD/EveryBeam.git
+   #git clone -b v0.1.3 https://git.astron.nl/RD/EveryBeam.git
+   git clone https://git.astron.nl/RD/EveryBeam.git
    cd EveryBeam
+   #   git checkout d75cfa914aa84c556467298237333c2308b592b5
    mkdir build
    cd build
    cmake -DBUILD_WITH_PYTHON=On ..
    make -j $J
    make install
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
    # DP3
    cd $SRC
+   #git clone -b v5.1 https://github.com/lofar-astron/DP3.git
    git clone https://github.com/lofar-astron/DP3.git
    cd DP3
    mkdir build
    cd build
-   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
+   #   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
+   cmake ..
    make -j $J
    make install
 
-   # few more DDF dependencies
-   pip3 install -U tables prettytable pylru emcee astropy_healpix sharedarray
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+
 
    # losoto -- for selfcal
    pip3 install losoto
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
    # APLpy -- for selfcal
    pip3 install pyavm
-   pip3 install imageio==2.14.1
-   pip3 install aplpy
 
-  # wsclean latest -- for selfcal
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+
+pip3 install imageio==2.14.1
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+  
+   pip3 install aplpy==2.1.0
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
+   # wsclean latest -- for selfcal
    cd $SRC
+   #   git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
    git clone https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
    mkdir -p build
    cd build
-   cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
+   #cmake .. -DCMAKE_PREFIX_PATH=/usr/local/idg
+   cmake ..
    make -j $J
    make install
-
-  # DDFacet
-  cd $SRC
-  git clone -b v0.6.0 https://github.com/saopicc/DDFacet.git
-  cd DDFacet
-  python setup.py install
-
-  # killMS
-  cd $SRC
-  git clone -b v3.0.1 https://github.com/saopicc/killMS.git
-  cd killMS
-  python setup.py install
-
-  # dynspecMS
-  cd $SRC
-  git clone https://github.com/cyriltasse/DynSpecMS.git
 
   # lotss-query
   cd $SRC
   git clone https://github.com/mhardcastle/lotss-query.git
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
   # lotss-hba-survey (not needed for most users)
   cd $SRC
   git clone https://github.com/mhardcastle/lotss-hba-survey.git
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
   # ddf-pipeline
   cd $SRC
   git clone https://github.com/mhardcastle/ddf-pipeline.git
+  cd ddf-pipeline
+  git checkout $BCH_DDFPIPE
+  cd ..
   # create the init script
   ddf-pipeline/scripts/install.sh
+  cp ddf-pipeline/bin/logoSingularity.py /usr/bin/logo.py
+  
+  # git config --global --add safe.directory /usr/local/src/ddf-pipeline
+  
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
 
   cd /usr/local/src
   wget https://rclone.org/install.sh
   bash install.sh
+
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
 
   cd /usr/local/src
   git clone https://github.com/sara-nl/SpiderScripts.git
   cd SpiderScripts
   cp ada/ada /usr/local/bin
 
+  echo
+  echo
+  echo
+  pip show numpy scipy
+  echo
+  echo
+  echo
+
+
   #pip list --format=columns
   pip3 list --format=columns
+
+
 
   pip3 cache purge
   #apt-get purge -y cmake
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
-  
+  rm -rf /root/.ssh
   bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,SpiderScripts}/" # DDFacet,killMS
-  #ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
+
+
+  echo
+  echo
+  echo
+  pip3 show numpy scipy
+  echo
+  echo
+  echo
+
+
+#  ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
 #   . $SRC/ddf-pipeline/init.sh                               # not working
+
+
+# %startscript
+
+# %startscript
+# . /root/set-alias.sh
+# #   alias ip=ipython3
+#    eval ${@}
