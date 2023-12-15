@@ -246,6 +246,10 @@ parameters). Generally the default values should be sensible.
 Controls the compression of some final images and measurement sets. If
 `compress_ms` is `True` then DP3 will be run to compress the output data.
 
+### [spectra]
+
+Dynamical spectra require the DynSpecMS package.
+
 ## running the code
 
 Once you have set up a config file, make sure you are in the directory

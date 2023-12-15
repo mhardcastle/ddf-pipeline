@@ -243,9 +243,6 @@ apt-get install -y saods9
   # DDFacet
   cd $SRC
   git clone -b v0.7.2 https://github.com/saopicc/DDFacet.git
-  cd DDFacet
-  git checkout $BCH_DDF
-  cd ..
   #pip install -e ./DDFacet
   cd DDFacet
   #rm -rf DDFacet/cbuild
@@ -263,46 +260,10 @@ apt-get install -y saods9
   
   # killMS
   cd $SRC
-  git clone git@github.com:cyriltasse/killMS.git
+  git clone https://github.com/saopicc/killMS.git
   cd killMS
-  git checkout $BCH_KMS
   rm -rf killMS/cbuild
   python setup.py build
-  #  python setup.py install
-
-  echo
-  echo
-  echo
-  pip show numpy scipy
-  echo
-  echo
-  echo
-
-  # killMS
-  cd $SRC
-  git clone git@github.com:cyriltasse/drawMS.git
-
-
-
-
-  # Nenupy
-  cd $SRC
-  pip3 install --upgrade https://github.com/AlanLoh/nenupy/tarball/master
-
-  echo
-  echo
-  echo
-  pip show numpy scipy
-  echo
-  echo
-  echo
-
-
-  # dynspecMS
-  cd $SRC
-  git clone git@github.com:cyriltasse/DynSpecMS.git
-  cd DynSpecMS
-  git checkout $BCH_DYN
 
   echo
   echo
