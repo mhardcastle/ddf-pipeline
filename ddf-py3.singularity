@@ -529,7 +529,7 @@ pip3 install imageio==2.14.1
   cd ..
   # create the init script
   ddf-pipeline/scripts/install.sh
-  cp ddf-pipeline/bin/logoSingularity.py /usr/bin/logo.py
+  cp ddf-pipeline/misc/logoSingularity.py /usr/bin/logo.py
   
   # git config --global --add safe.directory /usr/local/src/ddf-pipeline
   
