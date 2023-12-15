@@ -51,7 +51,7 @@ def make_header(maxsep,name,ra,dec,cellsize,resolution):
     header['BMIN']=resolution/3600.0
     header['BPA']=0
     header['TELESCOP']='LOFAR'
-    header['RESTFRQ']=restfrq
+    header['RESTFRQ']=144e6
     header['OBSERVER']='LoTSS'
     header['BUNIT']='JY/BEAM'
     header['BSCALE']=1.0
@@ -268,4 +268,4 @@ if __name__=='__main__':
             catprefix='low-mosaic'
             infile='low-mosaic-blanked.fits'
 	    
-        run_bdsf(infile,infile,prefix=catprefix)
+        run_bdsf(infile,infile,catprefix=catprefix)
