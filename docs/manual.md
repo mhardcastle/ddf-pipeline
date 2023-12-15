@@ -246,6 +246,10 @@ parameters). Generally the default values should be sensible.
 Controls the compression of some final images and measurement sets. If
 `compress_ms` is `True` then DP3 will be run to compress the output data.
 
+### [spectra]
+
+Dynamical spectra require the DynSpecMS package.
+
 ## running the code
 
 Once you have set up a config file, make sure you are in the directory
@@ -264,7 +268,7 @@ you. Good images to look at (use a FITS viewer like ds9) are files of
 the form `image_*_app.restored.fits`. These are the final imaging
 products, in apparent flux units, for each of the self-calibration
 steps. When the code is finished,
-`image_full_ampphase1m.int.restored.fits` is the full-resolution image
+`image_full_ampphase_di_m.NS.app.restored.fits` is the full-resolution image
 in physical units (unless you have specified correction for offsets,
 see below). A file `summary.txt` is also created summarizing the
 run. Log files for the individual steps are stored by default in the
