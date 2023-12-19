@@ -1171,7 +1171,7 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           PredictSettings=None)
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
@@ -1255,7 +1255,7 @@ def main(o=None):
                         uvrange=uvrange,catcher=catcher,
                         RMSFactorInitHMP=1.,
                         MaxMinorIterInitHMP=10000,
-                        PredictSettings=("Clean","DD_PREDICT"))
+                        PredictSettings=None)
 
             CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
                                             cleanmask=CurrentMaskName,cleanmode='SSD',
@@ -1273,7 +1273,7 @@ def main(o=None):
                                             uvrange=uvrange,catcher=catcher,
                                             RMSFactorInitHMP=1.,
                                             MaxMinorIterInitHMP=10000,
-                                            PredictSettings=("Clean","DD_PREDICT"))
+                                            PredictSettings=None)
 
             # make a mask from the full-res image
             separator("Make mask for next iteration")
@@ -1325,7 +1325,7 @@ def main(o=None):
                                            catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           #PredictSettings=("Clean","DD_PREDICT")
+                                           PredictSettings=("Clean","DD_PREDICT")
                                            )
 
         if o['exitafter'] == 'phase':
@@ -1361,8 +1361,8 @@ def main(o=None):
                                        RMSFactorInitHMP=1.,
                                        #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
-                                       PredictSettings=("Clean","DD_PREDICT"))
-
+                                    PredictSettings=("Clean","DD_PREDICT")
+                                           )
         if o['exitafter'] == 'ampphase':
             warn('User specified exit after amp-phase deconvolution.')
             stop(2)
@@ -1398,7 +1398,7 @@ def main(o=None):
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED_DI"))
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
             #              n_dt=1,
@@ -1408,7 +1408,7 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED")
 
-            colname='DATA_DI_CORRECTED' # again
+            colname='DATA_DI_CORRECTED_DI' # again
             CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                         cleanmask=CurrentMaskName,cleanmode='SSD',
                                         ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][3],
@@ -1425,6 +1425,7 @@ def main(o=None):
                                         MaxMinorIterInitHMP=10000,
                                         PredictSettings=("Clean","DD_PREDICT"))
 
+            stoppp
             if o['exitafter'] == 'ampphase_di':
                 warn('User specified exit after amp-phase plus DI deconvolution.')
                 stop(2)
