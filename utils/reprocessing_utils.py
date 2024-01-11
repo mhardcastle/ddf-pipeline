@@ -16,7 +16,6 @@ from subprocess import call
 from rclone import RClone
 from sdr_wrapper import SDR
 from fixsymlinks import fixsymlinks
-from make_mslists import make_list
 
 def do_rclone_extract_upload(cname,basedir,f,directory):
     '''
@@ -136,6 +135,8 @@ def striparchivename(workdir='.'):
   return
 
 def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc",operations=['download','untar','fixsymlinks','makelist']):
+
+    from make_mslists import make_list
 
     ''' General function to prepare a field for reprocessing.
     field: the field to download
