@@ -28,9 +28,9 @@ class RClone(object):
         except KeyError:
             self.ada_command='ada'
 
-        for config in ['RCLONE_CONFIG_DIR','MACAROON_DIR']
+        for config in ['RCLONE_CONFIG_DIR','MACAROON_DIR']:
             if config in os.environ:
-                self.config_dir=config
+                self.config_dir=os.environ[config]
                 break
         else:
             self.config_dir=None
@@ -46,7 +46,7 @@ class RClone(object):
         if '*' in self.config_file:
             g=glob.glob(self.config_file)
             if len(g)==0:
-                raise RuntimeError('Config file has wild cards but no match found')
+                raise RuntimeError('Config file '+self.config_file+' has wild cards but no match found')
             else:
                 self.config_file=g[0]
         if not os.path.isfile(self.config_file):
