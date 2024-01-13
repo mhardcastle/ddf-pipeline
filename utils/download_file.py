@@ -84,9 +84,13 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                 mode='wb'
             with open(filename, mode) as fd:
                 if progress_bar:
-                    for chunk in tqdm(response.iter_content(chunk_size=chunk_size),total=int(psize/chunk_size),unit_scale=chunk_size*1.0/1024/1024,unit='MB'):
-                        if chunk: fd.write(chunk)
-                    print()
+                    try: # this works round a strange (Py2?) error in tqdm itself at download end
+                        for chunk in tqdm(response.iter_content(chunk_size=chunk_size),total=int(psize/chunk_size),unit_scale=chunk_size*1.0/1024/1024,unit='MB'):
+                            if chunk: fd.write(chunk)
+                    except TypeError:
+                        pass
+                    finally:
+                        print()
                 else:
                     for chunk in response.iter_content(chunk_size=chunk_size):
                         if chunk: fd.write(chunk)
