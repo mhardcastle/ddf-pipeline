@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 from time import sleep,time
 
-def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True):
+def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True,retry_size=0):
     '''Download a file from URL url to file filename.  Optionally, specify
     a tuple of HTTP response codes in catch_codes where we will back
     off and retry rather than failing.
@@ -18,6 +18,10 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
     if retry_partial is set, then an incomplete file prompts a retry
     with HTTP Range keyword (should work on most servers). Otherwise
     incomplete files are retried from start.
+
+    if retry_size is non_zero, then a file size<retrysize on a partial download
+    will be redone from the start -- this allows us to deal with broken servers
+    that return an error message here without returning an http error code.
 
     if force_retry_partial is set, then the target file must already
     exist, and the code will attempt to complete the download.
@@ -100,10 +104,12 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                 print('Partial download incomplete (expected %i, got %i)! Retrying' % (psize, fsize))
             elif (not(use_range) or retrying_partial) and esize!=fsize:
                 print('Download incomplete (expected %i, got %i)! Retrying' % (esize, fsize))
-                if retry_partial:
+                if retry_partial and fsize>retry_size:
                     retrying_partial=True
                     selected_range=(fsize,)
                     print('Retry partial range is:',selected_range)
+                elif retry_partial:
+                    print('Download size below threshold, redo from start' % (psize, fsize))
             else:
                 endtime=time()
                 dt=endtime-starttime
