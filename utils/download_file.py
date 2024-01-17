@@ -109,7 +109,7 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                     selected_range=(fsize,)
                     print('Retry partial range is:',selected_range)
                 elif retry_partial:
-                    print('Download size below threshold, redo from start' % (psize, fsize))
+                    print('Download size below threshold, redo from start')
             else:
                 endtime=time()
                 dt=endtime-starttime
