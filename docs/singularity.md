@@ -15,7 +15,7 @@ requires them.
 
 * Copy the recipe to a build directory -- you do not need any of the rest of the repository.
 * Identify a large temporary directory for singularity's working files, say `/my/big/file/system`
-* Run `export SINGULARITY_CACHEDIR=/my/big/file/system ; export SINGULARITY_TMPDIR=/my/big/file/system`
+* Assuming you're in bash, run `export SINGULARITY_CACHEDIR=/my/big/file/system ; export SINGULARITY_TMPDIR=/my/big/file/system` (note that these must be full paths to an existing directory)
 * Run `singularity build --fakeroot ddf.sif ddf-py3.singularity`
 
 (You either need to be root or to have 'fakeroot' permission set up. If the former, remove the `--fakeroot` option above.)
