@@ -63,7 +63,15 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                     else:
                         raise RuntimeError('Download failed, code was %i' % response.status_code)
                 if not use_range:
-                    esize=int(response.headers['Content-Length'])
+                    # defective web server at Juelich can sometimes not return content-length
+                    # header: back off and retry as though connection error if so
+                    try:
+                        esize=int(response.headers['Content-Length'])
+                    except KeyError:
+                        esize=None
+                    if esize is None:
+                        print('Failed to get content length, back off and retry')
+                        raise requests.exceptions.ConnectionError
                     psize=esize
                 else:
                     cr=response.headers['Content-Range'].split()[1]
