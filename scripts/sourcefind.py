@@ -309,12 +309,14 @@ def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
     # mosaic-blanked.fits-Default-P23Hetdex20-SupplyMaps-withFlagBeam.mask.fits - final mask map
     # mosaic-blanked-Default-P23Hetdex20-SupplyMaps-withFlagBeam.srl.fits - final source catalogue
     # mosaic-blanked-Default-P23Hetdex20-SupplyMaps-withFlagBeam.gaul.fits final guassian catalogue
+    finalrms = imagef[:-5]+'-Default-'+label+'-SupplyMaps.rms.fits'
     finalscat = imagef[:-5]+'-Default-'+label+'-SupplyMaps-withFlagBeam.srl.fits'
     finalgcat = imagef[:-5]+'-Default-'+label+'-SupplyMaps-withFlagBeam.gaul.fits'
     finalresid = resid_ext_emf
     finalmodel = model_final
     finalmask = 'combined-mask.fits'
 
+    os.system('mv %s %s-%s-final.rms.fits'%(finalrms,imagef[:-5],label))
     os.system('mv %s %s-%s-final.srl.fits'%(finalscat,imagef[:-5],label))
     os.system('mv %s %s-%s-final.gaul.fits'%(finalgcat,imagef[:-5],label))
     os.system('mv %s %s-%s-final.resid.fits'%(finalresid,imagef[:-5],label))
