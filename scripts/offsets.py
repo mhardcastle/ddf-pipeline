@@ -473,7 +473,7 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
         oo.save(method+'-fit_state.pickle')
         report('Making astrometry error map, please wait')
         oo.make_astrometry_map('astromap.fits',20)
-        #oo.offsets_to_facetshift('facet-offset.txt')
+        oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
     from options import options
