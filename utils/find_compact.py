@@ -268,7 +268,7 @@ def find_only_compact(incatname,inimagename):
         print('Number of sources in compact cat in flux bin',len(meetscriterea_real))
         print('Max number at different Total/Int',numberbin)
 
-        plt.hist(np.log(np.array(filt_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,normed=True,histtype='step',color='g')
+        plt.hist(np.log(np.array(filt_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,density=True,histtype='step',color='g')
 
         distribution = find_bestfit_scipyfunction(np.log(np.array(filt_fratio)[meetscriterea_real]),binvals)
         distribution = getattr(stats,distribution)
@@ -285,7 +285,7 @@ def find_only_compact(incatname,inimagename):
         meetscriterea_real = np.intersect1d(sourcemin,sourcemax)  
 
         print('Number of sources in full cat in bin',len(meetscriterea_real))
-        plt.hist(np.log(np.array(full_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,normed=True,histtype='step',color='r')
+        plt.hist(np.log(np.array(full_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,density=True,histtype='step',color='r')
         distribution = find_bestfit_scipyfunction(np.log(np.array(full_fratio)[meetscriterea_real]),binvals)
         distribution = getattr(stats,distribution)
         fitdistrib = distribution.fit(np.log(np.array(full_fratio)[meetscriterea_real]))
@@ -365,8 +365,6 @@ def find_only_compact(incatname,inimagename):
     plt.cla()
 
     print('The fitted envelope is ',xfit)
-
-
 
 
 #inimagename = '/disks/paradata/shimwell/Beyond-DR2/archive_images/testing-astrometry/P014+08/image_full_ampphase_di_m.NS.app.restored.fits'
