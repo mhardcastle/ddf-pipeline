@@ -234,7 +234,8 @@ def find_only_compact(incatname,inimagename):
     filt_fratio = opencat['Total_flux']/opencat['Peak_flux']
 
 
-    steps = 6
+    # Rough way to get good number of steps
+    steps = int(len(full_snr)/1000)
     bins = histedges_equalN(filt_snr,steps)
     print('Bins',bins)
 
@@ -365,6 +366,8 @@ def find_only_compact(incatname,inimagename):
     plt.cla()
 
     print('The fitted envelope is ',xfit)
+
+    return incatname.replace('.fits','_compact.fits')
 
 
 #inimagename = '/disks/paradata/shimwell/Beyond-DR2/archive_images/testing-astrometry/P014+08/image_full_ampphase_di_m.NS.app.restored.fits'
