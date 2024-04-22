@@ -32,6 +32,7 @@ from scipy.special import gammaln
 from facet_offsets import RegPoly
 from astropy.io import fits
 from astropy.wcs import WCS
+from find_compact import *
 import pickle
 try:
     import bdsf as bdsm
@@ -238,9 +239,11 @@ class Offsets(object):
                 plt.subplot(2,1,1)
                 plt.plot(self.bcenter,self.rah[i])
                 plt.plot(self.bcenter,model(self.bcenter,*self.rar[i]))
+                plt.plot([self.rae[i],self.rae[i]],[0.0,10.0],'g')
                 plt.subplot(2,1,2)
                 plt.plot(self.bcenter,self.dech[i])
                 plt.plot(self.bcenter,model(self.bcenter,*self.decr[i]))
+                plt.plot([self.dece[i],self.dece[i]],[0.0,10.0],'g')
                 plt.suptitle('Facet '+str(i))
                 pdf.savefig()
                 plt.close()
@@ -424,19 +427,28 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     nonpbimage=image_root+'.app.'+suffix+'.fits'
     catfile=image_root+'.offset_cat.fits'
     gaulfile=catfile.replace('cat','gaul')
+    catprefix = 'image_full_ampphase_di_m.NS.offset'
     if os.path.isfile(catfile):
         warn('Catalogue already exists, skipping pybdsf run')
     else:
         img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
         img.write_catalog(outfile=catfile,catalog_type='srl',format='fits',correct_proj='True')
         img.write_catalog(outfile=gaulfile,catalog_type='gaul',format='fits',correct_proj='True')
+        img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
+        img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
+        img.export_image(outfile=catprefix +'.pybdsfmask.fits',img_type='island_mask',img_format='fits',clobber=True)
+        img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
     lofar=Table.read(catfile)
     print(len(lofar),'LOFAR sources before filtering')
-    filter=(lofar['E_RA']*3600.0)<2.0
-    filter&=(lofar['E_DEC']*3600.0)<2.0
-    filter&=(lofar['Maj']*3600.0)<20
-    lofar=lofar[filter]
+    #filter=(lofar['E_RA']*3600.0)<2.0
+    #filter&=(lofar['E_DEC']*3600.0)<2.0
+    #filter&=(lofar['Maj']*3600.0)<20
+    #lofar=lofar[filter]
+    # NEW FILTERING
+    radcorcat = radial_correction(catfile,pbimage)
+    compactcat = find_only_compact(radcorcat,pbimage)
+    lofar = Table.read(compactcat)
     print(len(lofar),'LOFAR sources after filtering')
     regfile=image_root+'.tessel.reg'
     cra,cdec=getposim(nonpbimage)
@@ -454,14 +466,14 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     report('Fitting offsets')
     oo.fit_offsets()
     report('Making plots and saving output')
-    #oo.plot_fits(method+'-fits.pdf')
+    oo.plot_fits(method+'-fits.pdf')
     oo.save_fits()
     oo.plot_offsets()
     if 'test' not in o['mode']:
         oo.save(method+'-fit_state.pickle')
         report('Making astrometry error map, please wait')
         oo.make_astrometry_map('astromap.fits',20)
-        oo.offsets_to_facetshift('facet-offset.txt')
+        #oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
     from options import options
