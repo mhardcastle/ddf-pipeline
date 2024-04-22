@@ -435,7 +435,7 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     print(len(lofar),'LOFAR sources before filtering')
     filter=(lofar['E_RA']*3600.0)<2.0
     filter&=(lofar['E_DEC']*3600.0)<2.0
-    filter&=(lofar['Maj']*3600.0)<10
+    filter&=(lofar['Maj']*3600.0)<20
     lofar=lofar[filter]
     print(len(lofar),'LOFAR sources after filtering')
     regfile=image_root+'.tessel.reg'
