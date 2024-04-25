@@ -215,7 +215,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
+    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
 
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
@@ -229,6 +229,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
 
+    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
+        runcommand+=' --Beam-PhasedArrayMode=A'
+    else:
+        runcommand+=' --Beam-LOFARBeamMode=A'
+    
     if 'Misc-IgnoreDeprecationMarking' in keywords:
         runcommand+=' --Misc-IgnoreDeprecationMarking=1'
 
@@ -448,7 +453,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
-                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=1,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
 
@@ -485,7 +490,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --dt %f --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,dt,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
             
@@ -513,8 +518,15 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
                 
             if DISettings is None:
+                if NChanSols is None:
+                    NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode LOFAR --PhasedArrayMode=A --DDFCacheDir=%s'%cache_dir
+                runcommand+=' --BeamMode LOFAR'
+                if 'PhasedArrayMode' in keywords: # incompatible change
+                    runcommand+=' --PhasedArrayMode=A'
+                else:
+                    runcommand+=' --LOFARBeamMode=A'
+                runcommand+=' --DDFCacheDir='+cache_dir
                 if 'BeamAt' in keywords:
                     runcommand+=' --BeamAt=%s'%options['beam_at']
 
@@ -524,15 +536,20 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     runcommand+=' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
                     runcommand+=' --EvolutionSolFile '+EvolutionSolFile
-                    
+                if dt is not None:
+                    runcommand+=' --dt %f' % dt
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
                 _,_,ModelColName,_=DISettings
-                _,dt,_,n_df=give_dt_dnu(f,
+                _,dt_give,_,n_df_give=give_dt_dnu(f,
                                         DataCol=colname,
                                         ModelCol=ModelColName,
                                         T=10.)
-                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,n_df)
+                if dt is None:
+                    dt=dt_give
+                if NChanSols is None:
+                    NChanSols=n_df_give
+                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
                 
                 
             rootfilename=outsols.split('/')[-1]
@@ -929,7 +946,7 @@ def subtractOuterSquare(o):
     external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
     
-    make_mask('image_full_wide.app.restored.fits',3.0,external_mask=external_mask,catcher=catcher)
+    make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
     
     ddf_image('image_full_wide_im',o['mslist'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
@@ -1248,7 +1265,7 @@ def main(o=None):
                         use_dicomodel=True,
                         #dirty_from_resid=True,
                         peakfactor=0.001,rms_factor=0,
-                        colname=colname,clusterfile=ClusterFile,#None,
+                        colname=colname,clusterfile=ClusterFile,
                         automask=True,
                         automask_threshold=o['thresholds'][0],
                         apply_weights=True,#o['apply_weights'][0],
@@ -1266,7 +1283,7 @@ def main(o=None):
                                             use_dicomodel=True,
                                             #dirty_from_resid=True,
                                             peakfactor=0.001,rms_factor=0,
-                                            colname=colname,clusterfile=ClusterFile,#None,
+                                            colname=colname,clusterfile=ClusterFile,
                                             automask=True,
                                             automask_threshold=o['thresholds'][0],
                                             apply_weights=True,#o['apply_weights'][0],
@@ -1390,8 +1407,11 @@ def main(o=None):
             separator("Another DI step")
             if o['bootstrap']:
                 colname='SCALED_DATA'
+            elif o['do_wide']:
+                colname='DATA_SUB'
             else:
                 colname=o['colname']
+
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                         #clusterfile=ClusterFile,
@@ -1446,7 +1466,10 @@ def main(o=None):
         if o['bootstrap']:
             colname='SCALED_DATA'
         else:
-            colname=o['colname']
+            if o['do_wide']:
+                colname='DATA_SUB'
+            else:
+                colname=o['colname']
 
         if not o['skip_di']:
             separator("Make Mask")
@@ -1506,10 +1529,6 @@ def main(o=None):
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
         
     if not o['skip_di']:
-        # Compute the DD predict
-        colname=o['colname']
-        if o['do_wide']:
-            colname ='DATA_SUB'
         separator("Compute DD Predict (full mslist)")
         ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
                 applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
@@ -1671,7 +1690,7 @@ def main(o=None):
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher)
 
-        make_mask('image_full_low.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_im',o['full_mslist'],
               cleanmask='image_full_low.app.restored.fits.mask.fits',
@@ -1705,7 +1724,7 @@ def main(o=None):
                 die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
         extmask='full-mask-low.fits'
-        make_mask('image_full_low_im.app.restored.fits',3.0,external_mask=extmask,catcher=catcher)
+        make_mask('image_full_low_im.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
@@ -1921,11 +1940,8 @@ def main(o=None):
 
 
     if o['compress_ms']:
-        separator('Compressing MS for archive')
-        if o['skip_di']:
-            os.system('archivems.sh . '+o['colname'])
-        else:
-            os.system('archivems.sh . DATA_DI_CORRECTED')
+        separator('Compressing MS for archive -- column '+colname)
+        os.system('archivems.sh . '+colname)
                 
     separator('Write summary and tidy up')
     summary(o)

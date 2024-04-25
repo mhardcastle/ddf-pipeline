@@ -13,6 +13,7 @@ import glob
 from subprocess import call
 from fixsymlinks import fixsymlinks
 from auxcodes import die,report,warn,run,flatten
+from pipeline import parse_parset
 from reprocessing_utils import *
 import datetime
 
@@ -378,7 +379,31 @@ def adjustboxrotationlocalnorth(boxregionfile, fitsimage):
     
     return 'adjustedbox.reg'
 
+def SummaryToVersion(summaryFile):        
+    f=open(summaryFile,"r")
+    ll=f.readlines()
+    L=[l.strip() for l in ll]
+    DFields={"StrDate":'ddf-pipeline completed at ',
+                     "v_ddfPipe":'ddf-pipeline version was ',
+                     "v_DDF":'DDF version was ',
+                     "v_kMS":'killMS version was ',
+                     "v_DynSpec":'DynSpecMS version was '}
 
+    DOut={}
+    for npField in DFields.keys():
+        field=DFields[npField]
+        iLine=0
+        while iLine<len(L):
+            l=L[iLine]
+            if l.startswith(field):
+                d=l.split(field)[-1]
+                DOut[npField]=d
+                if npField=="StrDate":
+                    DOut["time"]=time.mktime(datetime.datetime.strptime(d,"%Y-%m-%d %H:%M:%S").timetuple())
+                break
+            iLine+=1
+            
+    return DOut
 
 parser = argparse.ArgumentParser(description='Keep soures inside box region, subtract everything else and create new ms')
 parser.add_argument('-b','--boxfile', help='boxfile, required argument', required=True, type=str)
@@ -507,7 +532,6 @@ t.close()
 
 msoutconcat   = fieldname + '_' + obsid + '.dysco.sub.shift.avg.weights.ms.archive'
 
-
 if boxfile != 'fullfield':
     composite = False
     r = pyregion.open(boxfile)
@@ -549,57 +573,32 @@ for observation in range(number_of_unique_obsids(msfiles)):
           sys.exit()
 
 
-
-
 columnchecker(msfiles, args['column'])
 
 imagenpix, robust, imagecell = getimsize(fullmask)
 
 BeamAtMode="Tessel"
-def SummaryToVersion(summaryFile):        
-  f=open(summaryFile,"r")
-  ll=f.readlines()
-  L=[l.strip() for l in ll]
-  DFields={"StrDate":'ddf-pipeline completed at ',
-           "v_ddfPipe":'ddf-pipeline version was ',
-           "v_DDF":'DDF version was ',
-           "v_kMS":'killMS version was ',
-           "v_DynSpec":'DynSpecMS version was '}
-
-  DOut={}
-  for npField in DFields.keys():
-    field=DFields[npField]
-    iLine=0
-    while True:
-      l=L[iLine]
-      if l.startswith(field):
-        d=l.split(field)[-1]
-        DOut[npField]=d
-        if npField=="StrDate":
-          DOut["time"]=time.mktime(datetime.datetime.strptime(d,"%Y-%m-%d %H:%M:%S").timetuple())
-        break
-      iLine+=1
-      
-  return DOut
-
 DOut=SummaryToVersion("summary.txt")
 
- 
 if DOut["v_DDF"] in ['0.3.4.1-008503a', '0.3.4.1-5769a96', '0.3.4.1-c563ecb', 'dev',
                      'dev-008503a', 'dev-5769a96', 'dev-72bb0d96', 'dev-7b87403',
                      'dev-c563ecb', 'dev-c9477b47', 'dev-cf5e34b', 'dev-df745f9']:
-  BeamAtMode="tessel"
+    BeamAtMode="tessel"
 else:
-  BeamAtMode="facet"
+    BeamAtMode="facet"
 
+keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+if 'Beam-PhasedArrayMode' in keywords: # incompatible change
+    beamoption='--Beam-PhasedArrayMode=A'
+else:
+    beamoption='--Beam-LOFARBeamMode=A'
+  
   
 StrBeamAt=" --Beam-At %s "%BeamAtMode
 print('[date = %s] DDF version = %s , using %s'%(DOut["StrDate"],DOut["v_DDF"],StrBeamAt))
 
-
 if dopredict:
 
-    
     os.system('rm -f ' + outdico)  # clean up
     os.system('rm -f ' + outmask)
 
@@ -621,15 +620,13 @@ if dopredict:
     if args['AlsoMakeResidualImage']:
       OutputMode="Dirty"
 
-    
-
     if holesfixed:
        
        print('Starting DDF for prediction') 
        if args['h5sols'] != None:
          if not args['useHMP']:
-            
-            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1 ")
+            run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR "+beamoption+" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
+
          else:
             
             run("DDF.py --Output-Name=image_dd_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=" +gethistorykey(outmask,'Beam-CenterNorm') + " --Deconv-Mode HMP --Beam-Model=" + gethistorykey(outmask,'Beam-Model') +" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=" + gethistorykey(outmask,'Facets-NFacets') + " --Freq-NDegridBand="+ gethistorykey(outmask,'Freq-NDegridBand') + " --Beam-NBand=" +gethistorykey(outmask,'Beam-NBand') + " --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam=" + gethistorykey(outmask,'Output-RestoringBeam') +" --Freq-NBand="+gethistorykey(outmask,'Freq-NBand') + " --RIME-DecorrMode=FT --Mask-Auto=1 --Mask-SigTh=5.00 " + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=["+ args['h5sols']+ ":" + args['h5solstring'] + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
@@ -643,7 +640,8 @@ if dopredict:
             else:
                ddsolstr = "DDS3_full_smoothed,DDS3_full_slow" 
             
-            run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --Cache-DirWisdomFFTW=. --DDESolutions-SolsDir=SOLSDIR"+StrBeamAt+" --Misc-ConserveMemory 1  --Weight-ColName IMAGING_WEIGHT")
+            run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-ChunkHours=" + str(args['chunkhours']) + " --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR "+beamoption+" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[" + ddsolstr + "] --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Predict-ColName='PREDICT_SUB' --Cache-DirWisdomFFTW=. --DDESolutions-SolsDir=SOLSDIR"+StrBeamAt+" --Misc-ConserveMemory 1")
+
          else:
             if args['DDESolutions_DDSols']:
                ddsolstr = args['DDESolutions_DDSols']
@@ -659,8 +657,9 @@ if dopredict:
           ddsolstr =  args['DDESolutions_DDSols']
        else:
           ddsolstr = "DDS3_full_smoothed" 
-       
-       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + ddsolstr + " --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1 ")
+                      
+       run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR "+beamoption+" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + ddsolstr + " --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
+
 
 
 # clear up ddfcache files to save disk space
@@ -737,7 +736,7 @@ if dokmscal:
     
   run("MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(outmask_target,indico,outdico_target))
 
-  run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_TAR'"+" --Misc-ConserveMemory 1")
+  run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_TAR --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes=" + clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR "+beamoption+" --Weight-Robust -0.500000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode=Predict --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=" + solsfile + " --Predict-InitDicoModel=" + outdico_target + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_TAR'"+" --Misc-ConserveMemory 1")
   
   for ms in msfiles:
 

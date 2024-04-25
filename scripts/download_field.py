@@ -131,7 +131,7 @@ def download_obsid(fname,basedir=None,force=False):
     for o in obs:
         obsname='L'+str(o['id'])
         print('Downloading observation ID',obsname)
-
+        success=False
         # first try rclone
 
         for macaroon in ['maca_sksp_tape_spiderlinc.conf','maca_sksp_tape_spiderpref.conf']:

@@ -63,7 +63,7 @@ From: debian:bullseye
    pip3 install pybind11
    pip3 install dask codex_africanus ephem Polygon3 pyregion terminal pyephem ptyprocess timeout-decorator astroquery # pyfits
    pip3 install --ignore-installed numpy==1.19.5
-   pip3 install reproject 
+   pip3 install reproject tqdm
    export SRC=/usr/local/src
 
    # PyBDSF
@@ -97,7 +97,7 @@ From: debian:bullseye
 
    # IDG -- for wsclean and DP3
    cd $SRC
-   git clone -b 0.8 https://gitlab.com/astron-idg/idg.git
+   git clone -b 1.1.0 https://gitlab.com/astron-idg/idg.git
    cd idg && mkdir build && cd build
    cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
    make -j $J
@@ -115,7 +115,7 @@ From: debian:bullseye
 
    # Everybeam -- for DP3
    cd $SRC
-   git clone -b v0.1.3 https://git.astron.nl/RD/EveryBeam.git
+   git clone -b v0.5.1 https://git.astron.nl/RD/EveryBeam.git
    cd EveryBeam
    mkdir build
    cd build
@@ -125,7 +125,7 @@ From: debian:bullseye
 
    # DP3
    cd $SRC
-   git clone -b v5.1 https://github.com/lofar-astron/DP3.git
+   git clone https://github.com/lofar-astron/DP3.git
    cd DP3
    mkdir build
    cd build
@@ -146,7 +146,7 @@ From: debian:bullseye
 
   # wsclean latest -- for selfcal
    cd $SRC
-   git clone -b v3.0 https://gitlab.com/aroffringa/wsclean.git
+   git clone https://gitlab.com/aroffringa/wsclean.git
    cd wsclean
    mkdir -p build
    cd build
@@ -202,7 +202,7 @@ From: debian:bullseye
   rm -rf /var/lib/apt/lists/*
   
   bash -c "rm -rf /usr/local/src/{DP3,EveryBeam,LOFARBeam,aoflagger,dysco,idg,wsclean,PyBDSF,SpiderScripts}/" # DDFacet,killMS
-  ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
+  #ln -s /usr/local/bin/DPPP /usr/local/bin/DP3
 
 # %runscript
 #   echo source $SRC/ddf-pipeline/init.sh >> $HOME/.bashrc    # not working
