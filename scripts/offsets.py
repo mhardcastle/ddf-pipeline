@@ -38,6 +38,8 @@ try:
     import bdsf as bdsm
 except ImportError:
     import lofar.bdsm as bdsm
+from auxcodes import *
+
 degtorad=np.pi/180.0
 
 import sys
@@ -453,11 +455,7 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     regfile=image_root+'.tessel.reg'
     cra,cdec=getposim(nonpbimage)
     report('Set up structure')
-    if o['clusterfile'] is None:
-        clusterfile="image_dirin_SSD_m.npy.ClusterCat.npy"
-    else:
-        clusterfile=o['clusterfile']
-    NDir=np.load(clusterfile).shape[0]
+    NDir = len(convert_regionfile_to_poly(regfile))
     oo=Offsets(method,n=NDir,imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'],pos=(cra,cdec))
     report('Label table')
     lofar_l=oo.r.add_facet_labels(lofar)
