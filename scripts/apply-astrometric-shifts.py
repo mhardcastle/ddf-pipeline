@@ -60,7 +60,7 @@ for direction,ds9region in enumerate(polylist):
     raoffset_e = offsets[direction][2]/1.5
     decoffset_e = offsets[direction][3]/1.5
 
-    if raoffset < raoffset_e or decoffset < decoffset_e:
+    if abs(raoffset) < abs(raoffset_e) or abs(decoffset) < abs(decoffset_e):
         print('No applying RA offset of %s pixels and DEC offset %s pixels to facet %s as errors are %s (RA) %s (DEC)'%(raoffset,decoffset,direction,raoffset_e,decoffset_e))
 
     print('Applying RA offset %s pixels and DEC offset %s pixels to facet %s'%(raoffset,decoffset,direction))
