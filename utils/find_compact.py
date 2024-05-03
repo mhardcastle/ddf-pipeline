@@ -235,7 +235,7 @@ def find_only_compact(incatname,inimagename):
 
 
     # Rough way to get good number of steps
-    steps = int(len(full_snr)/1000)
+    steps = int(len(full_snr)/500)
     bins = histedges_equalN(filt_snr,steps)
     print('Bins',bins)
 
