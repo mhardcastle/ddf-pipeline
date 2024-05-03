@@ -45,7 +45,7 @@ def filterarray_outliers(dataarray,niter=20,eps=1e-6):
 # Make facet images
 ds9region = 'image_full_ampphase_di_m.NS.tessel.reg'
 infilename = 'image_full_low_m.app.restored.fits' # Note that in some tests the low res image was both faster to work with and easier to identify bad facets (might not always be true)
-outfilename = 'image_full_low_m_blanked.app.restored.fits' # Also could do high res image here
+finaloutfilename = 'image_full_low_m_blanked.app.restored.fits' # Also could do high res image here
 polylist = convert_regionfile_to_poly(ds9region)
 allastrooffsets = np.load('pslocal-facet_offsets.npy')
 debug = False
@@ -190,4 +190,4 @@ for direction,ds9region in enumerate(polylist):
     manualmask = r.get_mask(hdu=hduflat)
     hduflat.data[manualmask] = np.nan
 hdu[0].data[0,0]= hduflat.data
-hdu.writeto('filteredmap.fits',overwrite=True)
+hdu.writeto(finaloutfilename,overwrite=True)
