@@ -64,7 +64,7 @@ for direction,ds9region in enumerate(polylist):
     move_error = np.sqrt(raoffset_e**2.0 + decoffset_e**2.0)
     if move_amount < move_error:
         print('Not applying RA offset of %s pixels and DEC offset %s pixels to facet %s as errors are %s (RA) %s (DEC)'%(raoffset,decoffset,direction,raoffset_e,decoffset_e))
-	continue
+        continue
     print('Applying RA offset %s pixels and DEC offset %s pixels to facet %s'%(raoffset,decoffset,direction))
     shifteddata = nd.shift(hduflat.data,[decoffset,raoffset],order=3,cval=np.nan) # Shift in pixels
 
