@@ -97,7 +97,7 @@ for direction,ds9region in enumerate(polylist):
     # Fit pixels inside facet with gaussian
     yvals,xvals = np.histogram(dataarrayin,bins=bins,density=True)
     xcenters = (xvals[:-1]+xvals[1:])/2
-    initialguess = [np.max(np.histogram(yvals, bins=bins)[0]), np.mean(xvals), np.std(xvals),0.0]
+    initialguess = [np.max(yvals), np.mean(xvals), np.std(xvals),0.0]
     xpopt1,pcov = curve_fit(gaussian_func,xcenters,yvals,p0=initialguess)
     plottingvals = np.arange(np.min(bins),np.max(bins),(np.max(bins)-np.min(bins))/1000.0)
     plt.plot(plottingvals,gaussian_func(np.array(plottingvals),xpopt1[0],xpopt1[1],xpopt1[2],xpopt1[3]),'g--')
@@ -105,7 +105,7 @@ for direction,ds9region in enumerate(polylist):
     # Fit pixels outside facet with gaussian
     yvals,xvals = np.histogram(dataarrayout,bins=bins,density=True)
     xcenters = (xvals[:-1]+xvals[1:])/2
-    initialguess = [np.max(np.histogram(yvals, bins=bins)[0]), np.mean(xvals), np.std(xvals),0.0]
+    initialguess = [np.max(yvals), np.mean(xvals), np.std(xvals),0.0]
     xpopt1,pcov = curve_fit(gaussian_func,xcenters,yvals,p0=initialguess)
     plottingvals = np.arange(np.min(bins),np.max(bins),(np.max(bins)-np.min(bins))/1000.0)
     plt.plot(plottingvals,gaussian_func(np.array(plottingvals),xpopt1[0],xpopt1[1],xpopt1[2],xpopt1[3]),'r--')
