@@ -129,7 +129,7 @@ for direction in facetdata:
     # Fit with gaussian
     yvals,xvals = np.histogram(dataarrayin,bins=bins,density=True)
     xcenters = (xvals[:-1]+xvals[1:])/2
-    initialguess = [np.max(np.histogram(yvals, bins=bins)[0]), np.mean(xvals), np.std(xvals),0.0]
+    initialguess = [np.max(yvals), np.mean(xvals), np.std(xvals),0.0]
 
     xpopt1,pcov = curve_fit(gaussian_func,xcenters,yvals,p0=initialguess)
     plottingvals = np.arange(np.min(bins),np.max(bins),(np.max(bins)-np.min(bins))/1000.0)
