@@ -26,6 +26,7 @@ def mad(arr):
         https://en.wikipedia.org/wiki/Median_absolute_deviation 
     """
     arr = np.ma.array(arr).compressed() # should be faster to not use masked arrays.
+
     med = np.median(arr)
     return np.median(np.abs(arr - med))
 
@@ -52,6 +53,8 @@ debug = False
 
 template=fits.open(infilename) # will be 4D
 facetdata = {}
+fullfacetdata = {}
+fullfacetextendeddata = {}
 
 for direction,ds9region in enumerate(polylist):
 
@@ -64,10 +67,13 @@ for direction,ds9region in enumerate(polylist):
     outfilename = 'facet_%s.fits'%direction
     manualmask = r.get_mask(hdu=hduflat)
 
+    fullfacetdata[direction] = hduflat.data[manualmask]
+
     # Extend the manual mask a bit and remove facet (i.e. get other facet info)
     largemanualmask = nd.gaussian_filter(manualmask.astype(float),sigma=6) # Using a float makes the island of non zero values larger
     largemanualmask[largemanualmask>0.0] = 1.0
     largemanualmask = largemanualmask.astype(bool)
+    fullfacetextendeddata[direction] = hduflat.data[largemanualmask]
     largemanualmask = largemanualmask.astype(int)-manualmask.astype(int)
 
     # make a small manual mask
@@ -122,9 +128,12 @@ positions = []
 heights = []
 offsets = []
 astrooffsets = []
+dynamicranges = []
 
 for direction in facetdata:
+    # Either choose just the outside bit (facetdata[direction]) or just use the full data from the facet (fullfacetdata[direction])
     dataarrayin = facetdata[direction]
+    dataarrayin = filterarray_outliers(fullfacetdata[direction],niter=20,eps=1e-6)
 
     # Fit with gaussian
     yvals,xvals = np.histogram(dataarrayin,bins=bins,density=True)
@@ -138,18 +147,29 @@ for direction in facetdata:
 
     height,position,std,offset = xpopt1
 
+    # Change the dynamic range so it looks in an extended region around the facet.
+    dynamicrange= abs(np.max(fullfacetextendeddata[direction])/np.min(fullfacetextendeddata[direction]))
+
+
     stds.append(std)
     positions.append(position)
     heights.append(height)
     offsets.append(offset)
-    astrooffsets.append(np.sqrt(allastrooffsets[direction][2]**2.0 + allastrooffsets[direction][3]**2.0))
+    dynamicranges.append(dynamicrange)
+    astrooffset = np.sqrt(allastrooffsets[direction][2]**2.0 + allastrooffsets[direction][3]**2.0)
+    astrooffsets.append(astrooffset)
+    print('Facet %s: std %s, postion %s, hieght %s, noise offset %s, astro offset %s dynamci range %s'%(direction,std,position,height,offset,astrooffset,dynamicrange))
     #print('astro offset',np.sqrt(allastrooffsets[direction][2]**2.0 + allastrooffsets[direction][3]**2.0))
-                        
+
+print('MAD std %s, position %s, height %s, offset %s, astro %s dynamc range %s'%(mad(stds),mad(positions),mad(heights),mad(offsets),mad(astrooffsets),mad(dynamicranges)))
 badstd = np.where((abs(stds-np.median(stds)))>3*mad(stds))[0]
 badposition= np.where((abs(positions-np.median(positions)))>3*mad(positions))[0]
 badheight = np.where((abs(heights-np.median(heights)))>3*mad(heights))[0]
 badoffset = np.where((abs(offsets-np.median(offsets)))>3*mad(offsets))[0]
 badastro =  np.where((abs(astrooffsets-np.median(astrooffsets)))>3*mad(astrooffsets))[0]
+baddynamic =  np.where(np.array(dynamicranges) < 30)[0]
+
+gooddynamic = np.where(np.array(dynamicranges) > 200)[0]
                         
 allbad = []
 
@@ -158,6 +178,8 @@ print('bad noise position',badposition)
 print('bad noise height',badheight)
 print('bad noise offset',badoffset)
 print('bad astrometry',badastro)
+print('bad dynamic range',baddynamic)
+print('Good dynamic range',gooddynamic)
 for i in range(0,len(polylist)):
     counterbad = 0
     if i in badstd:
@@ -170,6 +192,10 @@ for i in range(0,len(polylist)):
         counterbad +=1
     if i in badastro:
         counterbad +=1
+    if i in baddynamic:
+        counterbad +=1
+    if i in gooddynamic: # Always keep ones with a good dynamic range
+        counterbad = 0
     if counterbad > 3:
         allbad.append(i)
 print('Final Bad',allbad)
