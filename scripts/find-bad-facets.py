@@ -228,9 +228,9 @@ for i in range(0,len(polylist)):
         counterbad +=1
     if i in baddynamic:
         counterbad +=1
-    if i in jump_std:
+    if i in jump_std and i in badstd:
         counterbad +=2
-    if i in jump_height:
+    if i in jump_height and i in badheight:
         counterbad+=2
     if i in gooddynamic: # Always keep ones with a good dynamic range
         counterbad = 0
