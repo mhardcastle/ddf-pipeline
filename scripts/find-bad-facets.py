@@ -56,6 +56,12 @@ facetdata = {}
 fullfacetdata = {}
 fullfacetextendeddata = {}
 
+
+height_diffs = [] 
+position_diffs = []
+std_diffs = []
+offset_diffs = []
+
 for direction,ds9region in enumerate(polylist):
 
     r = pyregion.parse(ds9region)
@@ -107,7 +113,9 @@ for direction,ds9region in enumerate(polylist):
     xpopt1,pcov = curve_fit(gaussian_func,xcenters,yvals,p0=initialguess)
     plottingvals = np.arange(np.min(bins),np.max(bins),(np.max(bins)-np.min(bins))/1000.0)
     plt.plot(plottingvals,gaussian_func(np.array(plottingvals),xpopt1[0],xpopt1[1],xpopt1[2],xpopt1[3]),'g--')
+    height_inner,position_inner,std_inner,offset_inner = xpopt1
 
+    
     # Fit pixels outside facet with gaussian
     yvals,xvals = np.histogram(dataarrayout,bins=bins,density=True)
     xcenters = (xvals[:-1]+xvals[1:])/2
@@ -115,6 +123,7 @@ for direction,ds9region in enumerate(polylist):
     xpopt1,pcov = curve_fit(gaussian_func,xcenters,yvals,p0=initialguess)
     plottingvals = np.arange(np.min(bins),np.max(bins),(np.max(bins)-np.min(bins))/1000.0)
     plt.plot(plottingvals,gaussian_func(np.array(plottingvals),xpopt1[0],xpopt1[1],xpopt1[2],xpopt1[3]),'r--')
+    height_outer,position_outer,std_outer,offset_outer = xpopt1
 
     # Save fig and data for inside facet boarder
     plt.savefig('facet_%s_hist.png'%(direction))
@@ -123,6 +132,28 @@ for direction,ds9region in enumerate(polylist):
     facetdata[direction] = dataarrayin
     print('Facet',direction,'done')
 
+    # Detect if there was a jump
+    height_diff = height_outer - height_inner # High positive bad (i.e. lower gaussian)
+    position_diff = position_outer - position_inner # High negative bad (i.e. wider gaussian)
+    std_diff = std_outer - std_inner
+    offset_diff = offset_outer - offset_inner
+
+    height_diffs.append(height_diff)
+    position_diffs.append(position_diff)
+    std_diffs.append(std_diff)
+    offset_diffs.append(offset_diff)
+
+
+    print('Height diff %s, position diff %s, std diff %s, offset diff %s'%(height_diff,position_diff,std_diff,offset_diff))
+# Search for jumps between the facets that are significantly larger than normal jumps between facets
+
+jump_height = np.where(height_diffs > (np.median(height_diffs) + 3*mad(height_diffs)))[0]
+jump_std = np.where(std_diffs < (np.median(std_diffs) - 3*mad(std_diffs)))[0]
+
+if len(jump_height) == 0 and len(jump_std) == 0:
+    print('No jumps between facets found')
+    
+# Search for facets that are outliers.
 stds = []
 positions = []
 heights = []
@@ -167,9 +198,10 @@ badposition= np.where((abs(positions-np.median(positions)))>3*mad(positions))[0]
 badheight = np.where((abs(heights-np.median(heights)))>3*mad(heights))[0]
 badoffset = np.where((abs(offsets-np.median(offsets)))>3*mad(offsets))[0]
 badastro =  np.where((abs(astrooffsets-np.median(astrooffsets)))>3*mad(astrooffsets))[0]
-baddynamic =  np.where(np.array(dynamicranges) < 30)[0]
+baddyncut = np.max([np.median(dynamicranges)- 3*mad(dynamicranges),30])
+baddynamic =  np.where(dynamicranges < baddyncut)[0] # np.where(np.array(dynamicranges) < 30)[0]
 
-gooddynamic = np.where(np.array(dynamicranges) > 200)[0]
+gooddynamic = np.where(dynamicranges > (np.median(dynamicranges)+mad(dynamicranges)))[0] #np.where(np.array(dynamicranges) > 200)[0]
                         
 allbad = []
 
@@ -180,6 +212,8 @@ print('bad noise offset',badoffset)
 print('bad astrometry',badastro)
 print('bad dynamic range',baddynamic)
 print('Good dynamic range',gooddynamic)
+print('Facets with std jumps on boundaries',jump_std)
+print('Facets with height jumps on boundaries',jump_height)
 for i in range(0,len(polylist)):
     counterbad = 0
     if i in badstd:
@@ -194,9 +228,14 @@ for i in range(0,len(polylist)):
         counterbad +=1
     if i in baddynamic:
         counterbad +=1
+    if i in jump_std:
+        counterbad +=2
+    if i in jump_height:
+        counterbad+=2
     if i in gooddynamic: # Always keep ones with a good dynamic range
         counterbad = 0
-    if counterbad > 3:
+    if counterbad > 4:
+        print('Facet %s: %s points'%(i,counterbad))
         allbad.append(i)
 print('Final Bad',allbad)
 
