@@ -69,7 +69,7 @@ def losotolofarbeam(parmdb, soltabname, ms, inverse=False, useElementResponse=Tr
     numants = pt.taql('select gcount(*) as numants from '+ms+'::ANTENNA').getcol('numants')[0]
     times = soltab.getAxisValues('time')
 
-    for vals, coord, selection in soltab.getValuesIter(returnAxes=['ant','time','pol','freq'], weight=False):
+    for vals, _, selection in soltab.getValuesIter(returnAxes=['ant','time','pol','freq'], weight=False):
         vals = losoto.lib_operations.reorderAxes( vals, soltab.getAxesNames(), ['ant','time','freq','pol'] )
 
         for stationnum in range(numants):
@@ -143,7 +143,7 @@ def flagms_startend(ms, tecsolsfile, tecsolint):
     
     goodtimesvec = []
     
-    for timeid, time in enumerate(times):
+    for timeid, _ in enumerate(times):
     
       tecvals[timeid,:]
       
@@ -322,7 +322,7 @@ def reweight(mslist, pixsize, imsize, channelsout, niter, robust, multiscale=Fal
           hdulist.close() 
           rmslist.append(imagenoise)
           
-   weightslist = []       
+  #  weightslist = []       
    return 
 
 def determinesolints(mslist, pixsize, imsize, channelsout, niter, robust, TEC, multiscale=False,ncpu=None):
@@ -695,7 +695,7 @@ def getimsize(boxfile, cellsize=1.5):
    r = pyregion.open(boxfile)
    
    xs = np.ceil(old_div((r[0].coord_list[2])*1.6*3600.,cellsize))
-   ys = np.ceil(old_div((r[0].coord_list[3])*1.6*3600.,cellsize))
+  #  ys = np.ceil(old_div((r[0].coord_list[3])*1.6*3600.,cellsize))
 
    imsize = np.ceil(xs) # // Round up decimals to an integer
    if(imsize % 2 == 1): 

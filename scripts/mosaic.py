@@ -12,7 +12,7 @@ from pipeline_version import version
 from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
 from auxcodes import die, get_rms, flatten
-import sys
+# import sys
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS

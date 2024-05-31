@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
-import time
+# import time
 from surveys_db import *
 from db_utils import *
-import sys
+# import sys
 import os
 import glob
 from astropy.coordinates import SkyCoord
@@ -50,7 +50,7 @@ def create_ds9_region(filename,ra,dec,size):
 
 
 def do_run_selfcal(name,basedir):
-    startdir = os.getcwd()
+    # startdir = os.getcwd()
     sdb=SurveysDB()
     extractdict = sdb.get_reprocessing(name)
     sdb.close()

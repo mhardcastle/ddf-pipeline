@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import range
+# from builtins import range
 from surveys_db import SurveysDB
 from db_utils import update_reprocessing_extract, get_next_extraction
 import sys
@@ -11,8 +11,8 @@ import os
 import glob
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-import time
-from subprocess import call
+# import time
+# from subprocess import call
 from reprocessing_utils import *
 
 

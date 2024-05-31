@@ -20,7 +20,7 @@ from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
 from auxcodes import report,run,warn,die,getposim,sepn
-import requests
+# import requests
 import os
 from get_cat import get_cat
 import glob

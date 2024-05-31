@@ -26,7 +26,7 @@ standard_library.install_aliases()
 from builtins import zip
 from builtins import str
 from builtins import range
-from past.utils import old_div
+# from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
@@ -40,7 +40,7 @@ import pyrap.tables as pt
 from redo_dppp_di import redo_dppp_di
 from modify_mask import modify_mask
 from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
-from histmsamp import find_uvmin,sumdico
+# from histmsamp import find_uvmin,sumdico
 import numpy as np
 from astropy.io import fits
 from pipeline_version import version
@@ -901,8 +901,8 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
 
 def subtractOuterSquare(o):
     
-    wide_imsize=o['wide_imsize']
-    NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
+    # wide_imsize=o['wide_imsize']
+    # NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
 
 
@@ -1923,7 +1923,7 @@ def main(o=None):
         if o['bright_threshold'] is not None and o['method'] is not None:
             warn('Finding bright sources from offsets list')
             from find_bright_offset_sources import find_bright
-            bright_exists=find_bright(cutoff=o['bright_threshold'])
+            # bright_exists=find_bright(cutoff=o['bright_threshold'])
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
 
         for obsid in uobsid:
