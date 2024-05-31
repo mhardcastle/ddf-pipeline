@@ -15,16 +15,17 @@ import casacore.tables as pt
 import os,sys
 import numpy as np
 import argparse
-import pyregion
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.io import ascii
+# import pyregion
+# from astropy.io import fits
+# from astropy.wcs import WCS
+# from astropy.io import ascii
 import glob
 from subprocess import call
 import argparse
 import threading
 from surveys_db import use_database,SurveysDB,get_id
 from upload import do_upload_vlow
+from time import sleep
 
 def die(error,cname=None):
     update_status(cname,'Failed')
@@ -38,8 +39,9 @@ def do_rsync_download(cname,basedir,f):
     #else:
     #    target=''
 
+    # Inconsistent use of tabs and spaces below:
     while True:
-	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" --exclude="*.pickle" --exclude="*.DicoModel" --exclude="*.txt" --exclude="*.png" '
+        excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" --exclude="*.pickle" --exclude="*.DicoModel" --exclude="*.txt" --exclude="*.png" '
         s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
         print('Running command:',s)
         retval=call(s,shell=True)
