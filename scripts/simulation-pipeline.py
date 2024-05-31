@@ -1,5 +1,6 @@
 import argparse
-import os,sys
+# import os,sys
+import os
 from subprocess import call
 import pyrap.tables as pt
 import numpy as np
@@ -9,7 +10,8 @@ import glob
 from astropy.io import ascii
 from astropy.io import fits
 from scipy.signal import convolve2d
-from scipy.ndimage import gaussian_filter
+from time import sleep
+# from scipy.ndimage import gaussian_filter
 
 # Simulate a model image from DR2 solutions
 
@@ -74,8 +76,9 @@ def do_rsync_download(cname,basedir,f):
     #else:
     #    target=''
 
+    # Inconsistent use of tabs and spaces below:
     while True:
-	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --include="image_full_low_m*fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" '
+        excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --include="image_full_low_m*fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" '
         s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
         #'cd '+workdir+'; rsync -avz --progress --safe-links --inplace --append --partial --timeout=20 '+' '.join(f)+' '+target+'/disks/paradata/shimwell/LoTSS-DR2/archive/'+name
         print('Running command:',s)
@@ -85,7 +88,7 @@ def do_rsync_download(cname,basedir,f):
         print('Non-zero return value',retval)
         if retval!=30:
             raise RuntimeError('rsync failed unexpectedly')
-        time.sleep(10)
+        sleep(10)
 
 
 def predict_model(fakemap):
@@ -94,7 +97,7 @@ def predict_model(fakemap):
 
 def add_predicted(msfiles):
     for msfile in msfiles:
-        print 'Creating simulated column for ',msfile
+        print ('Creating simulated column for ',msfile)
         # Add noise to the predict_modeled column
         t = pt.table(msfile,readonly=False)
         d=t.getcol("DATA")
@@ -113,9 +116,9 @@ def convolve_model(model,template,outname):
     hdu_model = fits.open(model)
     convfwhm = hdu_template[0].header['BMAJ']/hdu_template[0].header['CDELT1']
     minindex,maxindex = int(hdu_template[0].header['NAXIS1']*0.1),int(hdu_template[0].header['NAXIS1']*0.9)
-    print 'Starting model convolution'
+    print ('Starting model convolution')
     kernel = makeGaussian(size=35,fwhm=convfwhm,center=None)
-    print 'Made convolution kernel'
+    print ('Made convolution kernel')
     #hdu_model[0].data[0,0,6000:14000,6000:14000] = convolve2d(hdu_model[0].data[0,0,6000:14000,6000:14000],kernel,mode='same',boundary='fill')
     hdu_model[0].data[0,0,minindex:maxindex,minindex:maxindex] = convolve2d(hdu_model[0].data[0,0,minindex:maxindex,minindex:maxindex],kernel,mode='same',boundary='fill')
     #hdu_model[0].data[0,0,:,:] = convolve2d(hdu_model[0].data[0,0,:,:],kernel,mode='same')#,boundary='fill')
@@ -144,7 +147,7 @@ if __name__=='__main__':
 
     args = vars(parser.parse_args())
     
-    print args
+    print (args)
 
     field = args['field']
     fakemap = args['model']
@@ -172,5 +175,5 @@ if __name__=='__main__':
     predict_model(fakemap)
     add_predicted(msfiles)
 
-    print 'FINISHED '
-    print 'Now run LoTSS-DR2 pipeline on the SIMULATED data column'
+    print ('FINISHED ')
+    print ('Now run LoTSS-DR2 pipeline on the SIMULATED data column')
