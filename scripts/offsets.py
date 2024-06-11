@@ -233,6 +233,19 @@ class Offsets(object):
     def save_fits(self):
         np.save(self.prefix+'-facet_offsets.npy',np.array([self.rar[:,2],self.decr[:,2],self.rae[:,2],self.dece[:,2]]).T)
 
+    def save_fits_table(self):
+        saveT = Table()
+        saveT['RA_offset'] = self.rar[:,2]
+        saveT['DEC_offset'] = self.decr[:,2]
+        saveT['RA_error'] =  self.rae[:,2]
+        saveT['DEC_error'] =  self.dece[:,2]
+        saveT = Table(names=('Facet_id','RA_offset','DEC_offset','RA_error','DEC_error'),dtype=('i4','f8','f8','f8','f8'))
+        for facetid in range(0,len(self.rar[:,2])):
+            saveT.add_row((facetid,self.rar[facetid,2],self.decr[facetid,2],self.rae[facetid,2],self.dece[facetid,2]))
+        saveT.write(self.prefix+'-facet_offsets.fits')
+                             
+                                      
+        
     def plot_fits(self,pdffile):
         from matplotlib.backends.backend_pdf import PdfPages
         import matplotlib.pyplot as plt
@@ -465,13 +478,13 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     oo.fit_offsets()
     report('Making plots and saving output')
     oo.plot_fits(method+'-fits.pdf')
-    oo.save_fits()
+    oo.save_fits_table()
     oo.plot_offsets()
     if 'test' not in o['mode']:
         oo.save(method+'-fit_state.pickle')
         report('Making astrometry error map, please wait')
         oo.make_astrometry_map('astromap.fits',20)
-        oo.offsets_to_facetshift('facet-offset.txt')
+        #oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
     from options import options

@@ -92,9 +92,9 @@ def filter_sources(opencat,majcut):
     sourcesizenum = len(opencat)-len(delete_entries)
 
     # Remove low SNR ones
-    delete_entries = np.append(delete_entries,np.where(opencat['Total_flux']/opencat['E_Total_flux'] < 5.0))
+    delete_entries = np.append(delete_entries,np.where(opencat['Total_flux']/opencat['E_Total_flux'] < 3.0))
     delete_entries = np.unique(delete_entries)
-    print(len(opencat)-len(delete_entries),'after removing <5 snr sources sources')
+    print(len(opencat)-len(delete_entries),'after removing <3 snr sources sources')
 
     opencat.remove_rows(delete_entries)
     print('Size of filterred cat',len(opencat))
@@ -235,7 +235,11 @@ def find_only_compact(incatname,inimagename):
 
 
     # Rough way to get good number of steps
-    steps = int(len(full_snr)/500)
+    steps = int(len(full_snr)/1000)
+    if steps < 10:
+        steps = int(len(full_snr)/500)
+        if steps < 10:
+            steps = int(len(full_snr)/250)
     bins = histedges_equalN(filt_snr,steps)
     print('Bins',bins)
 
