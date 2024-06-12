@@ -51,7 +51,12 @@ for i in range(len(labels)):
 tt=np.sum(sums)
 print('---------------------------------\n\nTotal time %.0f seconds -- %.2f days' % (tt,tt/86400.0))
 
-cmap = plt.cm.spectral
+# compatibility
+try:
+    cmap = plt.cm.Spectral
+except:
+    cmap = plt.cm.spectral
+    
 colors = cmap(np.linspace(0.1, 1., len(pl)))
 
 fig1, ax1 = plt.subplots()
