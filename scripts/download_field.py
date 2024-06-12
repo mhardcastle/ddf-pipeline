@@ -10,15 +10,16 @@ import os
 from surveys_db import SurveysDB,tag_field
 from download import download_dataset
 from rclone import RClone
+import argparse
 
-def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['maca_sksp_tape_spiderlinc.conf']):
+def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['maca_sksp_tape_spiderlinc.conf','maca_sksp_tape_spiderpref3.conf','maca_sksp_distrib_Pref3.conf'],update_status=True):
 
     # check database
     if basedir is None:
         print('No basedir supplied, working in current directory...')
         basedir='.'
     workdir=basedir+'/'+fname
-    with SurveysDB() as sdb:
+    with SurveysDB(readonly=not update_status) as sdb:
         result=sdb.get_field(fname)
         if result is None:
             print('Field',fname,'does not exist in the database')
@@ -31,11 +32,12 @@ def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['mac
         sdb.cur.execute('select * from observations where field=%s and (status="DI_processed" or status="Archived")',(fname,))
         obs=sdb.cur.fetchall()
         if len(obs)>0:
-            result['status']='Downloading'
             if not os.path.isdir(workdir):
                 os.mkdir(workdir)
-            tag_field(sdb,result)
-            sdb.set_field(result)
+            if update_status:
+                result['status']='Downloading'
+                tag_field(sdb,result)
+                sdb.set_field(result)
         else:
             print('No downloadable observations for this field')
             sys.exit(3)
@@ -88,16 +90,17 @@ def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['mac
             print('Download failed')
         overall_success=overall_success and success
 
-    with SurveysDB() as sdb:
-        if overall_success:
-            print('Download overall successful!')
-            result['status']='Downloaded'
-            tag_field(sdb,result,workdir=workdir)
-        else:
-            print('Download overall failed! (some fields did not download or were not available.')
-            result['status']='D/L failed'
-            tag_field(sdb,result,workdir=workdir)
-        sdb.set_field(result)
+    if update_status:
+        with SurveysDB() as sdb:
+            if overall_success:
+                print('Download overall successful!')
+                result['status']='Downloaded'
+                tag_field(sdb,result,workdir=workdir)
+            else:
+                print('Download overall failed! (some fields did not download or were not available.')
+                result['status']='D/L failed'
+                tag_field(sdb,result,workdir=workdir)
+            sdb.set_field(result)
 
     return overall_success
 
@@ -175,5 +178,19 @@ def download_obsid(fname,basedir=None,force=False):
     return overall_success
         
 if __name__=='__main__':
-    download_field(sys.argv[1],force=(len(sys.argv)>2))
+    parser = argparse.ArgumentParser(description='Download LoTSS field')
+    parser.add_argument('--force',action='store_true',help='Force download irrespective of field status')
+    parser.add_argument('--no_update',action='store_true',help='No database update')
+    parser.add_argument('--use_http',action='store_true',help='Use HTTP download method (obsolete)')
+    parser.add_argument('--macaroons', metavar='filename.conf', nargs='+', help='Macaroons to use')
+    parser.add_argument('field', help='field name')
+    args = parser.parse_args()
+    field=args.field
+    update_status=not args.no_update
+    del(args.field)
+    del(args.no_update)
+    if not args.macaroons:
+        del(args.macaroons)
+    download_field(field,update_status=update_status,**vars(args))
+    #download_field(args.field,force=args.force,use_http=args.use_http,update_status=not args.no_update)
     

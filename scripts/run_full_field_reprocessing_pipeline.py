@@ -144,6 +144,23 @@ def do_run_subtract(field):
     if result!=0:
         raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
+
+def do_residual(field):
+    # Run subtract code
+    try:
+        DoRunDDF=("DDFacet ended successfully" not in open("image_full_ampphase_di_m.NS_SUB.log","r").readlines()[-1])
+    except:
+        DoRunDDF=True
+    if DoRunDDF:
+        executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage'
+        print(executionstr)
+        result=os.system(executionstr)
+        if result!=0:
+            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    else:
+        print("DDFacet has already been successfully run, skipping")
+
+    
 def do_run_dynspec(field):
     # Run subtract code
     try:
@@ -256,6 +273,7 @@ if __name__=='__main__':
     parser.add_argument('--FullSub', help='Include full field subtraction', action='store_true')
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
+    parser.add_argument('--DoResidVisIm', help='Compute residual vis and image wiith DynSpecMS gtr1 weighting', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
     parser.add_argument('--NoDBSync',help='DDF pipeline parset',type=int,default=0)
@@ -321,7 +339,9 @@ if __name__=='__main__':
         #     tmp = sdb.get_ffr(field,'FullSub')
         #     tmp['status'] == 'Verified'
         #     sdb.set_ffr(tmp)
-
+    if args['DoResidVisIm']:
+        do_residual(field)
+        
     if args['Dynspec']:
         
         do_run_dynspec(field)

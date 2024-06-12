@@ -386,8 +386,7 @@ def SummaryToVersion(summaryFile):
     DFields={"StrDate":'ddf-pipeline completed at ',
                      "v_ddfPipe":'ddf-pipeline version was ',
                      "v_DDF":'DDF version was ',
-                     "v_kMS":'killMS version was ',
-                     "v_DynSpec":'DynSpecMS version was '}
+                     "v_kMS":'killMS version was '}
 
     DOut={}
     for npField in DFields.keys():
@@ -746,7 +745,8 @@ if dokmscal:
 
   colname="DATA_SUB_CORRECTED"
 
-
+if not dosubtract:
+   colname = args['column']
 
 # can manually update mslist for other selection 
 #msfiles   = ascii.read('big-mslist.txt',data_start=0)

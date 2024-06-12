@@ -14,7 +14,7 @@ def request_with_retry(url,rfunction=requests.get):
     done=False
     while not done:
         try:
-            r=rfunction(url,timeout=60)
+            r=rfunction(url,timeout=60,verify=False)
         except requests.exceptions.ReadTimeout:
             print('Timeout fetching URL ',url,': retrying')
             # fuzzy sleep to avoid synchronized retries from multiple clients
@@ -92,10 +92,9 @@ class SDR(object):
         status=files[filename]
         if status!='DUL':
             raise RuntimeError('File not online!')
-        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar)
+        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar,verify=False)
         
     def download_and_stage(self,field,filenames,progress_bar=False):
-        print('Progress bar is',progress_bar)
         field=self.fc(field)
         files=self.get_status(field)
         for f in filenames:

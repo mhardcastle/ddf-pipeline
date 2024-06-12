@@ -14,6 +14,13 @@ def check_flagged(ms):
     tc = t.getcol('FLAG').flatten()
     return float(np.sum(tc))/len(tc)
 
+def check_flags_and_shape(ms):
+    t = pt.table(ms, readonly=True)
+    flags = t.getcol('FLAG')
+    channels=flags.shape[1]
+    tc = flags.flatten()
+    return channels,float(np.sum(tc))/len(tc)
+
 def get_timerange(ms):
     t = pt.table(ms +'/OBSERVATION', readonly=True, ack=False)
     return t.getcell('TIME_RANGE',0)
@@ -22,13 +29,15 @@ def make_list(workdir='.',force=False):
     g=sorted(glob.glob(workdir+'/*.ms'))
     full_mslist=[]
     start_times=[]
+    chanlist=[]
     for ms in g:
-        ff=check_flagged(ms)
+        chans,ff=check_flags_and_shape(ms)
         t0,t1=get_timerange(ms)
-        print(ms,ff)
-        if ff<0.8:
+        print(ms,chans,ff)
+        if ff<0.8 and (len(chanlist)==0 or chans in chanlist):
             full_mslist.append(os.path.basename(ms))
             start_times.append(t0)
+            chanlist.append(chans)
     full_mslist = np.array(full_mslist)
             
     # check for multiple observations

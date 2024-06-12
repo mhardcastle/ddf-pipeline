@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from __future__ import print_function
 import subprocess
 import sys
@@ -26,5 +28,5 @@ def run_log(cmd,logfile,quiet=False):
     return retval
 
 if __name__=='__main__':
-    v=run_log(' '.join(sys.argv[1:]),'test-log.txt',quiet=False)
+    v=run_log(' '.join(sys.argv[2:]),sys.argv[1],quiet=False)
     print('Return value was',v)

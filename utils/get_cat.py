@@ -18,12 +18,12 @@ PSBASE='/data/lofar/panstarrs/healpix'
 def tile(file):
     return hextile(file,CSIZE*0.9)
 
-def download_required(method):
+def download_required(method,image=None):
     if method=='pslocal':
         #pslocal makes the merged file directly
         return ~os.path.isfile(method+'/'+method+'.txt')
             
-    ra_factor,pos=tile(find_fullres_image())
+    ra_factor,pos=tile(image if image else find_fullres_image())
 
     for i,p in enumerate(pos):
         outfile=method+'/'+method+'-'+str(i)+'.vo'
@@ -31,7 +31,7 @@ def download_required(method):
             return True
     return False
 
-def get_cat(method,retries=100):
+def get_cat(method,retries=100,image=None):
 
     cwd=os.getcwd()
     try:
@@ -46,7 +46,7 @@ def get_cat(method,retries=100):
         from astroquery.irsa import Irsa
         Irsa.ROW_LIMIT=1000000
 
-    ra_factor,pos=tile(find_fullres_image())
+    ra_factor,pos=tile(image if image else find_fullres_image())
     print('Downloading catalogues for',len(pos),'sky positions')
     for i,p in enumerate(pos):
         outfile=method+'/'+method+'-'+str(i)+'.vo'

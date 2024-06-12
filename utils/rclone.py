@@ -5,6 +5,7 @@ from __future__ import print_function
 import subprocess
 import os
 import tempfile
+import glob
 
 def splitlines(s):
     l=s.decode().split('\n')
@@ -16,6 +17,7 @@ def splitlines(s):
 class RClone(object):
     def __init__(self, cfg, debug=False):
         # Set up environment variables or sensible defaults
+        # cfg may have wild cards (first found will be used)
         try:
             self.command=os.environ['RCLONE_COMMAND']
         except KeyError:
@@ -26,9 +28,11 @@ class RClone(object):
         except KeyError:
             self.ada_command='ada'
 
-        try:
-            self.config_dir=os.environ['RCLONE_CONFIG_DIR']
-        except KeyError:
+        for config in ['RCLONE_CONFIG_DIR','MACAROON_DIR']:
+            if config in os.environ:
+                self.config_dir=os.environ[config]
+                break
+        else:
             self.config_dir=None
 
         # if no config dir specified, full path should be used
@@ -39,6 +43,12 @@ class RClone(object):
         else:
             self.config_file=cfg
 
+        if '*' in self.config_file:
+            g=glob.glob(self.config_file)
+            if len(g)==0:
+                raise RuntimeError('Config file '+self.config_file+' has wild cards but no match found')
+            else:
+                self.config_file=g[0]
         if not os.path.isfile(self.config_file):
             raise RuntimeError('Config file not found at '+self.config_file)
         self.remote=None

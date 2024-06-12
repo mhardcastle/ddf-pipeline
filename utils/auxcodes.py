@@ -299,7 +299,6 @@ def getpos(ms):
     return name[0],ra*(old_div(180,np.pi)),dec*(old_div(180,np.pi))
 
 def getposim(image):
-    import pyrap.tables as pt
     hdus=fits.open(image)
     ra=hdus[0].header['CRVAL1']
     dec=hdus[0].header['CRVAL2']

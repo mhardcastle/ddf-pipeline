@@ -224,7 +224,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if OuterSpaceTh is not None:
         runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
     if options['use_splitisland']:
-       runcommand += " --SSDClean-MaxIslandSize 100"
+       runcommand += " --SSDClean-MaxIslandSize %s"%options['splitisland_size']
 
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
@@ -276,7 +276,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
 
     if polcubemode:
-        runcommand+=' --Output-Cubes=dD --RIME-PolMode=QU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
+        runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
 
     if not cubemode and not polcubemode:
         runcommand+=' --Freq-NBand=2'
@@ -306,8 +306,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
         else:
             raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
-    if dicomodel_base is None and use_dicomodel:
-        raise RuntimeError('that s wrong')
         
     if threshold is not None:
         runcommand += ' --Deconv-FluxThreshold=%f'%threshold
@@ -455,7 +453,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
-                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None):
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -501,6 +499,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --Weighting Natural'
             else:
                 runcommand+=' --Weighting Briggs --Robust=%f' % robust
+            if UpdateWeights is not None:
+                runcommand+=' --UpdateWeights=%f' %UpdateWeights               
             if uvrange is not None:
                 if wtuv is not None:
                     runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
@@ -514,7 +514,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if PreApplySols:
                 runcommand+=' --PreApplySols=[%s]'%PreApplySols
 
-            runcommand+=' --WeightInCol=IMAGING_WEIGHT'
+            # 25/04/2024: Not in master but in my exp branch, not sure it should be there 
+            # runcommand+=' --WeightInCol=IMAGING_WEIGHT'
             
                 
             if DISettings is None:
@@ -1162,9 +1163,10 @@ def main(o=None):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
-        separator("Merge diffuse emission mask into external mask")
-        merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
-
+        if o['use_maskdiffuse']:
+            separator("Merge diffuse emission mask into external mask")
+            merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+        
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
@@ -1199,9 +1201,14 @@ def main(o=None):
         if o['clusterfile'] is None:
             separator("Cluster the sky model")
             ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
-            clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+            if o['use_maskdiffuse']:
+                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
                       OutClusterCat=ClusterFile,
                       use_makemask_products=True)
+            else:
+                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                      OutClusterCat=ClusterFile,
+                      use_makemask_products=False)
         else:
             ClusterFile=o['clusterfile']
             warn('Using user-specifed cluster file '+ClusterFile)
@@ -1418,7 +1425,8 @@ def main(o=None):
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED_DI"))
+                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
             #              n_dt=1,
@@ -1553,7 +1561,7 @@ def main(o=None):
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
         colname="DATA_DI_CORRECTED"
 
     # ###############################################
@@ -1876,9 +1884,20 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         
+    m=MSList(o['full_mslist'])
+    uobsid = set(m.obsids)
+    
+    for obsid in uobsid:
+        umslist='mslist-%s.txt' % obsid
+        print('Writing ms list for obsids',umslist)
+        with open(umslist,'w') as file:
+            for ms,ob in zip(m.mss,m.obsids):
+                if ob==obsid:
+                    file.write(ms+'\n')
     if o['stokesv']:
-        separator('Stokes V image')
-        ddf_image('image_full_high_stokesV',o['full_mslist'],
+        for obsid in uobsid:
+            separator('Stokes V image for %s'%obsid)
+            ddf_image('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,
                   cleanmode='SSD',ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
@@ -1911,26 +1930,17 @@ def main(o=None):
             from find_bright_offset_sources import find_bright
             bright_exists=find_bright(cutoff=o['bright_threshold'])
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
-        m=MSList(o['full_mslist'])
-        uobsid = set(m.obsids)
-    
+
         for obsid in uobsid:
-            LastImageV="image_full_high_stokesV.dirty.corr.fits"
+            LastImageV="image_full_high_stokesV_%s.dirty.corr.fits"%obsid
             warn('Running ms2dynspec for obsid %s' % obsid)
             umslist='mslist-%s.txt' % obsid
-            print('Writing temporary ms list',umslist)
-            with open(umslist,'w') as file:
-                for ms,ob in zip(m.mss,m.obsids):
-                    if ob==obsid:
-                        file.write(ms+'\n')
-
             g=glob.glob('DynSpec*'+obsid+'*')
             if len(g)>0:
                 warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
             else:
                 DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
                 runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
-
                 
                 if o['bright_threshold'] is not None:
                     runcommand+=' --srclist brightlist.csv'

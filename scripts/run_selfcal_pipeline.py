@@ -3,6 +3,7 @@
 
 import time
 from surveys_db import *
+from db_utils import *
 import sys
 import os
 import glob
