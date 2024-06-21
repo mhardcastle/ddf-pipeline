@@ -9,7 +9,7 @@ from scipy.stats import lognorm
 from scipy import stats
 from scipy.stats._continuous_distns import _distn_names
 from scipy.stats import ks_2samp
-
+from astropy.table import Table
 
 ## ANOTHER SCRIPT TO FIND ENTIRE FILEDS THAT ARE BAD.
 
@@ -46,12 +46,18 @@ def filterarray_outliers(dataarray,niter=20,eps=1e-6):
 # Make facet images
 ds9region = 'image_full_ampphase_di_m.NS.tessel.reg'
 infilename = 'image_full_low_m.app.restored.fits' # Note that in some tests the low res image was both faster to work with and easier to identify bad facets (might not always be true)
+#infilename = 'image_full_ampphase_di_m.NS.app.restored.fits'
 finaloutfilename = 'image_full_low_m_blanked.app.restored.fits' # Also could do high res image here
+maskfile = 'image_full_low_m.mask01.fits'
+cleanmask = fits.open(maskfile)
+cleanmask[0].data[np.where(cleanmask[0].data==1)] = 2
+cleanmask[0].data[np.where(cleanmask[0].data==0)] = 1
+cleanmask[0].data[np.where(cleanmask[0].data==2)] = 0
+
 polylist = convert_regionfile_to_poly(ds9region)
-allastrooffsets = np.load('pslocal-facet_offsets.npy')
+allastrooffsets = Table.read('pslocal-facet_offsets.fits')
 debug = False
 
-template=fits.open(infilename) # will be 4D
 facetdata = {}
 fullfacetdata = {}
 fullfacetextendeddata = {}
@@ -72,8 +78,10 @@ for direction,ds9region in enumerate(polylist):
     template=fits.open(infilename) # will be 4D
     outfilename = 'facet_%s.fits'%direction
     manualmask = r.get_mask(hdu=hduflat)
-
-    fullfacetdata[direction] = hduflat.data[manualmask]
+    manualmask_clean = cleanmask[0].data[0,0,:,:].astype(int) + manualmask.astype(int) - 1
+    manualmask_clean[np.where(manualmask_clean == -1)] = 0
+    manualmask_clean = manualmask_clean.astype(bool)
+    fullfacetdata[direction] = hduflat.data[manualmask_clean]
 
     # Extend the manual mask a bit and remove facet (i.e. get other facet info)
     largemanualmask = nd.gaussian_filter(manualmask.astype(float),sigma=6) # Using a float makes the island of non zero values larger
@@ -81,11 +89,18 @@ for direction,ds9region in enumerate(polylist):
     largemanualmask = largemanualmask.astype(bool)
     fullfacetextendeddata[direction] = hduflat.data[largemanualmask]
     largemanualmask = largemanualmask.astype(int)-manualmask.astype(int)
-
+    largemanualmask = largemanualmask.astype(int)+cleanmask[0].data[0,0,:,:].astype(int)-1
+    largemanualmask[np.where(largemanualmask == -1)] = 0
+    largemanualmask = largemanualmask.astype(bool)
+    
     # make a small manual mask
     smallmanualmask = nd.gaussian_filter(manualmask,sigma=6) # This makes it smaller
     smallmanualmask = manualmask.astype(int)-smallmanualmask.astype(int)
+    smallmanualmask = smallmanualmask.astype(int)+cleanmask[0].data[0,0,:,:].astype(int)-1
+    smallmanualmask[np.where(smallmanualmask == -1)] = 0
+    smallmanualmask = smallmanualmask.astype(bool)
 
+    
     # Write out shifted data
     if debug == True:
         outfile = fits.open(infilename)
@@ -93,8 +108,11 @@ for direction,ds9region in enumerate(polylist):
         outfile.writeto('facet_%s_small.fits'%direction,overwrite=True)
         outfile = fits.open(infilename)
         outfile[0].data[0,0][~largemanualmask.astype(bool)] = np.nan
-        outfile.writeto('facet_%s_large.fits'%direction,overwrite=True) 
-
+        outfile.writeto('facet_%s_large.fits'%direction,overwrite=True)
+        outfile = fits.open(infilename)
+        outfile[0].data[0,0][~manualmask_clean.astype(bool)] = np.nan
+        outfile.writeto('facet_%s_normal.fits'%direction,overwrite=True)
+        
     # Filter data inside and outside facet
     dataarrayin = filterarray_outliers(template[0].data[0,0][smallmanualmask.astype(bool)],niter=20,eps=1e-6)
     dataarrayout = filterarray_outliers(template[0].data[0,0][largemanualmask.astype(bool)],niter=20,eps=1e-6)
@@ -159,6 +177,7 @@ positions = []
 heights = []
 offsets = []
 astrooffsets = []
+astrooffset_errs = []
 dynamicranges = []
 
 for direction in facetdata:
@@ -187,8 +206,10 @@ for direction in facetdata:
     heights.append(height)
     offsets.append(offset)
     dynamicranges.append(dynamicrange)
-    astrooffset = np.sqrt(allastrooffsets[direction][2]**2.0 + allastrooffsets[direction][3]**2.0)
+    astrooffset = np.sqrt(allastrooffsets['RA_offset'][direction]**2.0 + allastrooffsets['DEC_offset'][direction]**2.0)
+    astrooffset_err = np.sqrt(allastrooffsets['RA_error'][direction]**2.0 + allastrooffsets['DEC_error'][direction]**2.0)
     astrooffsets.append(astrooffset)
+    astrooffset_errs.append(astrooffset_err)
     print('Facet %s: std %s, postion %s, hieght %s, noise offset %s, astro offset %s dynamci range %s'%(direction,std,position,height,offset,astrooffset,dynamicrange))
     #print('astro offset',np.sqrt(allastrooffsets[direction][2]**2.0 + allastrooffsets[direction][3]**2.0))
 
@@ -198,6 +219,7 @@ badposition= np.where((abs(positions-np.median(positions)))>3*mad(positions))[0]
 badheight = np.where((abs(heights-np.median(heights)))>3*mad(heights))[0]
 badoffset = np.where((abs(offsets-np.median(offsets)))>3*mad(offsets))[0]
 badastro =  np.where((abs(astrooffsets-np.median(astrooffsets)))>3*mad(astrooffsets))[0]
+badastro_err =  np.where((abs(astrooffset_errs-np.median(astrooffset_errs)))>3*mad(astrooffset_errs))[0]
 baddyncut = np.max([np.median(dynamicranges)- 3*mad(dynamicranges),30])
 baddynamic =  np.where(dynamicranges < baddyncut)[0] # np.where(np.array(dynamicranges) < 30)[0]
 
@@ -210,10 +232,12 @@ print('bad noise position',badposition)
 print('bad noise height',badheight)
 print('bad noise offset',badoffset)
 print('bad astrometry',badastro)
+print('bad astrometry err',badastro_err)
 print('bad dynamic range',baddynamic)
 print('Good dynamic range',gooddynamic)
 print('Facets with std jumps on boundaries',jump_std)
 print('Facets with height jumps on boundaries',jump_height)
+
 for i in range(0,len(polylist)):
     counterbad = 0
     if i in badstd:
@@ -226,6 +250,8 @@ for i in range(0,len(polylist)):
         counterbad +=1
     if i in badastro:
         counterbad +=1
+    if i in badastro_err:
+        counterbad +=1
     if i in baddynamic:
         counterbad +=1
     if i in jump_std and i in badstd:
@@ -234,7 +260,7 @@ for i in range(0,len(polylist)):
         counterbad+=2
     if i in gooddynamic: # Always keep ones with a good dynamic range
         counterbad = 0
-    if counterbad > 4:
+    if counterbad > 5:
         print('Facet %s: %s points'%(i,counterbad))
         allbad.append(i)
 print('Final Bad',allbad)
@@ -256,3 +282,13 @@ for direction,ds9region in enumerate(polylist):
     hduflat.data[manualmask] = np.nan
 hdu[0].data[0,0]= hduflat.data
 hdu.writeto(finaloutfilename,overwrite=True)
+
+
+
+
+saveT = Table()
+saveT = Table(names=('Facet_id','Facet_GausFit_std','Facet_GausFit_xoffset','Facet_GausFit_yoffset','Facet_GausFit_amp','Facet_astro_offset','Facet_astro_err','Facet_dynrange'),dtype=('i4','f8','f8','f8','f8','f8','f8','f8'))
+for direction,ds9region in enumerate(polylist):
+    saveT.add_row((direction,stds[direction],positions[direction],offsets[direction],heights[direction],astrooffsets[direction],astrooffset_errs[direction],dynamicranges[direction]))
+saveT.write('Facet_statistics.fits')
+               
