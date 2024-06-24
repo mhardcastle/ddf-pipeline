@@ -1,3 +1,4 @@
+from __future__ import print_function
 import glob
 from astropy.io import fits
 from astropy.table import Table
@@ -97,7 +98,7 @@ def filter_sources(opencat,majcut):
     print(len(opencat)-len(delete_entries),'after removing <3 snr sources sources')
 
     opencat.remove_rows(delete_entries)
-    print('Size of filterred cat',len(opencat))
+    print('Size of filtered cat',len(opencat))
 
     return opencat
 
@@ -152,11 +153,14 @@ def radial_correction(incatname,inimagename,debug=True):
         binmax = radbins[i+1]
         sourcemin = np.where(separation > binmin)
         sourcemax = np.where(separation < binmax)
-        meetscriterea = np.intersect1d(sourcemin,sourcemax)  
-        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriterea)))
-        medval = np.median(opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea])
+        meetscriteria = np.intersect1d(sourcemin,sourcemax)  
+        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriteria)))
+        if len(meetscriteria)==0:
+            print('Stopping, maybe image is masked?')
+            break
+        medval = np.median(opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria])
         plt.plot((binmin+binmax)/2.0,medval,'g+',markersize=10)
-        plt.plot(separation[meetscriterea],opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea],'b.',alpha=0.1)
+        plt.plot(separation[meetscriteria],opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria],'b.',alpha=0.1)
         xvals.append((binmin+binmax)/2.0)
         yvals.append(medval)
 
@@ -196,10 +200,12 @@ def radial_correction(incatname,inimagename,debug=True):
             print('Bin: %s - %s'%(binmin,binmax))
             sourcemin = np.where(separation > binmin)
             sourcemax = np.where(separation < binmax)
-            meetscriterea = np.intersect1d(sourcemin,sourcemax)  
-            medval = np.median(opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea])
+            meetscriteria = np.intersect1d(sourcemin,sourcemax)
+            if len(meetscriteria)==0:
+                break
+            medval = np.median(opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria])
             plt.plot((binmin+binmax)/2.0,medval,'g+',markersize=10)
-            plt.plot(separation[meetscriterea],opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea],'b.',alpha=0.1)
+            plt.plot(separation[meetscriteria],opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria],'b.',alpha=0.1)
             xvals.append((binmin+binmax)/2.0)
             yvals.append(medval)
         x0 = [0.1,1.0]
@@ -257,27 +263,27 @@ def find_only_compact(incatname,inimagename):
 
         sourcemin = np.where(filt_snr > binmin)
         sourcemax = np.where(filt_snr < binmax)
-        meetscriterea_real = np.intersect1d(sourcemin,sourcemax)  
+        meetscriteria_real = np.intersect1d(sourcemin,sourcemax)  
 
-        # Change binvals dependning on the number of sources
-        # Generally most things fall between -0.5 and 1.5. Ideally want like an average of 30 sources a bit or something.
+        # Change binvals depending on the number of sources
+        # Generally most things fall between -0.5 and 1.5. Ideally want like an average of 30 sources a bin or something.
         # Find binsize that gives 30 as a peak
         possiblebinsize = np.arange(0.05,0.3,0.01)
         for binsize in possiblebinsize:
             binvals = np.arange(-10,10.0,binsize)
             print(binvals)
-            numberbin = np.max(np.histogram(np.array(filt_fratio)[meetscriterea_real],bins=binvals)[0])
+            numberbin = np.max(np.histogram(np.array(filt_fratio)[meetscriteria_real],bins=binvals)[0])
             print(binvals,numberbin)
             if numberbin > 30:
                 break
-        print('Number of sources in compact cat in flux bin',len(meetscriterea_real))
+        print('Number of sources in compact cat in flux bin',len(meetscriteria_real))
         print('Max number at different Total/Int',numberbin)
 
-        plt.hist(np.log(np.array(filt_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,density=True,histtype='step',color='g')
+        plt.hist(np.log(np.array(filt_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='g') # density=True
 
-        distribution = find_bestfit_scipyfunction(np.log(np.array(filt_fratio)[meetscriterea_real]),binvals)
+        distribution = find_bestfit_scipyfunction(np.log(np.array(filt_fratio)[meetscriteria_real]),binvals)
         distribution = getattr(stats,distribution)
-        fitdistrib = distribution.fit(np.log(np.array(filt_fratio)[meetscriterea_real]))
+        fitdistrib = distribution.fit(np.log(np.array(filt_fratio)[meetscriteria_real]))
         plt.plot(binvals,distribution.pdf(binvals,*fitdistrib),alpha=0.2,color='g')
 
         pointSFs = []
@@ -287,13 +293,13 @@ def find_only_compact(incatname,inimagename):
         # Also plot the full LoTSS cat which contains extended sources.
         sourcemin = np.where(full_snr > binmin)
         sourcemax = np.where(full_snr < binmax)
-        meetscriterea_real = np.intersect1d(sourcemin,sourcemax)  
+        meetscriteria_real = np.intersect1d(sourcemin,sourcemax)  
 
-        print('Number of sources in full cat in bin',len(meetscriterea_real))
-        plt.hist(np.log(np.array(full_fratio)[meetscriterea_real]),bins=binvals,alpha=0.5,density=True,histtype='step',color='r')
-        distribution = find_bestfit_scipyfunction(np.log(np.array(full_fratio)[meetscriterea_real]),binvals)
+        print('Number of sources in full cat in bin',len(meetscriteria_real))
+        plt.hist(np.log(np.array(full_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='r') # density=True
+        distribution = find_bestfit_scipyfunction(np.log(np.array(full_fratio)[meetscriteria_real]),binvals)
         distribution = getattr(stats,distribution)
-        fitdistrib = distribution.fit(np.log(np.array(full_fratio)[meetscriterea_real]))
+        fitdistrib = distribution.fit(np.log(np.array(full_fratio)[meetscriteria_real]))
         plt.plot(binvals,distribution.pdf(binvals,*fitdistrib),alpha=0.2,color='r')
 
         # Calculate survival functions

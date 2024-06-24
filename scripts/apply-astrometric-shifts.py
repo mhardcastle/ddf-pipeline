@@ -1,8 +1,15 @@
+#!/usr/bin/env python
+
+# Apply the astrometric offsets to an image
+
+from __future__ import print_function
 import os,sys
-from auxcodes import *
+from auxcodes import convert_regionfile_to_poly,flatten
 import scipy.ndimage as nd
 import numpy as np
-
+from astropy.table import Table
+from astropy.io import fits
+import pyregion
 
 # Use scipy.ndimage.shift
 # First get pixels for each facet with a bit of padding around the edge. Then apply the shift for that particular facet.
@@ -10,7 +17,13 @@ import numpy as np
 # Then add together to make final image. If 2 pixels contribute then average.
 # Make facet images
 
-offsets = np.load('pslocal-facet_offsets.npy')
+try:
+    offsets = np.load('pslocal-facet_offsets.npy')
+except:
+    # we don't have offsets file, try constructing from the table
+    t=Table.read('pslocal-facet_offsets.fits')
+    offsets=np.array([t['RA_offset'],t['DEC_offset'],t['RA_error'],t['DEC_error']]).T
+
 ds9region = 'image_full_ampphase_di_m.NS.tessel.reg'
 infilename = 'image_full_ampphase_di_m.NS.app.restored.fits'
 finaloutname = 'image_full_ampphase_di_m.NS_newshift.app.restored.fits'

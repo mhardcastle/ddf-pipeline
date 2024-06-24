@@ -19,8 +19,7 @@ import numpy as np
 from multiprocessing import Pool
 import sys
 
-def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0,
-                              order='bilinear', blocks=(1000, 1000), parallel=False):
+def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0, order='bilinear', blocks=(1000, 1000), parallel=False):
     """
     For a 2D image, reproject in chunks
     """
@@ -30,6 +29,10 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
 
     if isinstance(order, six.string_types):
         order = ORDER[order]
+
+    # Create output arrays
+    array = np.nan*np.ones(shape_out, dtype='float32')
+    footprint = np.zeros(shape_out, dtype='float32')
 
     # find corners
     xs=[]
@@ -42,38 +45,47 @@ def reproject_interp_chunk_2d(input_data, output_projection, shape_out=None, hdu
         ys.append(yt)
 
     xtmin=int(np.min(xs)/1.1)
-    if xtmin<0: xtmin=0
     xtmax=int(np.max(xs)*1.1)
-    if xtmax>shape_out[1]: xtmax=shape_out[1]
     ytmin=int(np.min(ys)/1.1)
-    if ytmin<0: ytmin=0
     ytmax=int(np.max(ys)*1.1)
-    if ytmax>shape_out[0]: ytmax=shape_out[0]
+    if ((xtmin<0 and xtmax<0) or 
+        (xtmin>shape_out[1] and xtmax>shape_out[1]) or
+        (ytmin<0 and ytmax<0) or
+        (ytmin>shape_out[0] and ytmax>shape_out[0])):
+        print('All of region is outside bounds')
 
-    print(xtmin,xtmax,ytmin,ytmax)
+    else:
+        # cut to bounds
+        if xtmin<0: xtmin=0
+        if xtmax>shape_out[1]: xtmax=shape_out[1]
+        if ytmin<0: ytmin=0
+        if ytmax>shape_out[0]: ytmax=shape_out[0]
 
-    print('There will be',int(round((ytmax-ytmin)/blocks[0])*round((xtmax-xtmin)/blocks[1])),'chunks')
+        print('New bounding box is',xtmin,xtmax,ytmin,ytmax)
+
+        bx=1+round((ytmax-ytmin)/blocks[0])
+        by=1+round((xtmax-xtmin)/blocks[1])
+                 
+        print('There will be',int(bx*by),'chunks')
     
-    # Create output arrays
-    array = np.nan*np.ones(shape_out, dtype='float32')
-    footprint = np.zeros(shape_out, dtype='float32')
-    for imin in range(ytmin, ytmax, blocks[0]):
-        imax = min(imin + blocks[0], array.shape[0])
-        for jmin in range(xtmin, xtmax, blocks[1]):
-            print('.', end=' ')
-            sys.stdout.flush()
-            jmax = min(jmin + blocks[1], array.shape[1])
-            shape_out_sub = (imax - imin, jmax - jmin)
-            wcs_out_sub = wcs_out.deepcopy()
-            wcs_out_sub.wcs.crpix[0] -= jmin
-            wcs_out_sub.wcs.crpix[1] -= imin
-            array_sub, footprint_sub = reproj_interp(array_in, wcs_in, wcs_out_sub,
-                                                            shape_out=shape_out_sub,
-                                                            order=order)
-            array[imin:imax, jmin:jmax] = array_sub
-            footprint[imin:imax, jmin:jmax] = footprint_sub
+        # iterate over chunks
+        for imin in range(ytmin, ytmax, blocks[0]):
+            imax = min(imin + blocks[0], array.shape[0])
+            for jmin in range(xtmin, xtmax, blocks[1]):
+                print('.', end=' ')
+                sys.stdout.flush()
+                jmax = min(jmin + blocks[1], array.shape[1])
+                shape_out_sub = (imax - imin, jmax - jmin)
+                wcs_out_sub = wcs_out.deepcopy()
+                wcs_out_sub.wcs.crpix[0] -= jmin
+                wcs_out_sub.wcs.crpix[1] -= imin
+                array_sub, footprint_sub = reproj_interp(array_in, wcs_in, wcs_out_sub,
+                                                                shape_out=shape_out_sub,
+                                                                order=order)
+                array[imin:imax, jmin:jmax] = array_sub
+                footprint[imin:imax, jmin:jmax] = footprint_sub
 
-    print() 
+        print() 
     return array, footprint
 
 def reproject_exact_chunk_2d(input_data, output_projection, shape_out=None, hdu_in=0,

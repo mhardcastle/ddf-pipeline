@@ -18,6 +18,7 @@ from facet_offsets import RegPoly
 import pyregion
 from surveys_db import use_database,update_status
 from termsize import get_terminal_size_linux
+import multiprocessing as mp
 
 # these are small routines used by more than one part of the pipeline
 
@@ -211,7 +212,8 @@ def polylist_to_string(poly):
     return polystring
 
 def convert_regionfile_to_poly(inregfile):
-    cra,cdec=get_centpos()
+    d=os.path.dirname(inregfile)
+    cra,cdec=get_centpos(d)
     r=RegPoly(inregfile,cra,cdec)
     polystringlist = []
     for p in sorted(list(set(r.plab_int))):
@@ -242,12 +244,12 @@ def get_rms_map(infilename,ds9region,outfilename):
         print('RMS = %s for direction %i'%(rmsval,direction))
     hdu.writeto(outfilename,overwrite=True)
 
-def get_rms_map2(infilename,ds9region,outfilename):
-
+def get_rms_map2(infilename,ds9region,outfilename,**kwargs):
+    # Run MakeMask for a per-pixel noise map
     runcommand = "MakeMask.py --RestoredIm=%s --OutName=rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap=%s.noise"%(infilename,3.0,infilename)
+    run(runcommand,log=None,**kwargs)
 
-    run(runcommand,log=None)
-
+    # Make a per-facet mean
     noisefilename = '%s.noise.fits'%infilename
     polylist = convert_regionfile_to_poly(ds9region)
     template=fits.open(infilename) # will be 4D
@@ -255,13 +257,44 @@ def get_rms_map2(infilename,ds9region,outfilename):
     hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
 
     for direction,ds9region in enumerate(polylist):
-        print(direction,ds9region)
-        r = pyregion.parse(ds9region)
-        manualmask = r.get_mask(hdu=hduflat)
-        rmsval = np.mean(hduflat.data[manualmask])
-        hduflat.data[manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
     template[0].data[0,0]=hduflat.data
+    template.writeto(outfilename,overwrite=True)
+
+def calc_facet_noise(q,hdu,direction,ds9region):
+    print(direction,ds9region)
+    r = pyregion.parse(ds9region)
+    manualmask = r.get_mask(hdu=hdu)
+    rmsval = np.mean(hdu.data[manualmask])
+    facet=np.zeros_like(hdu.data)
+    facet[manualmask]=rmsval
+    q.put((direction,rmsval,facet))
+
+def get_rms_map3(infilename,ds9region,outfilename,**kwargs):
+    # multiproc version of the above
+    # Run MakeMask for a per-pixel noise map
+    noisefilename = '%s.noise.fits'%infilename
+    if not os.path.isfile(noisefilename):
+        runcommand = "MakeMask.py --RestoredIm=%s --OutName=rmsmapmask --Th=%s --Box=50,2 --OutNameNoiseMap=%s.noise"%(infilename,3.0,infilename)
+        run(runcommand,log=None,**kwargs)
+    else:
+        warn('Noise file exists, not making it')
+
+    # Make a per-facet mean
+    polylist = convert_regionfile_to_poly(ds9region)
+    template=fits.open(infilename) # will be 4D
+    hdu=fits.open(noisefilename)
+    hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
+    result=np.zeros_like(hduflat.data)
+    q=mp.Queue()
+    for direction,ds9region in enumerate(polylist):
+        p=mp.Process(target=calc_facet_noise,args=(q,hduflat,direction,ds9region))
+        p.start()
+    while mp.active_children():
+        direction,rmsval,facet=q.get()
+        print('RMS = %s for direction %i'%(rmsval,direction))
+        result+=facet
+    template[0].data[0,0]=result
     template.writeto(outfilename,overwrite=True)
     
 class dotdict(dict):
@@ -304,15 +337,17 @@ def getposim(image):
     dec=hdus[0].header['CRVAL2']
     return ra,dec
 
-def find_fullres_image():
+def find_fullres_image(d=None):
     checklist=['image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di.dirty.fits','image_ampphase1.app.restored.fits','image_dirin_SSD_init.dirty.fits','image_full_ampphase_di_m.NS.app.restored.fits']
+    if d:
+        checklist=[d+'/'+f for f in checklist]
     for f in checklist:
         if os.path.isfile(f):
             return f
     return None
 
-def get_centpos():
-    f=find_fullres_image()
+def get_centpos(d=None):
+    f=find_fullres_image(d)
     if f is not None:
         return getposim(f)
     else:

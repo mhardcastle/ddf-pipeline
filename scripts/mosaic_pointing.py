@@ -2,7 +2,6 @@
 
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
-# Tiered pybds approach develoepd by C. Hale whose script was adapted slightly here to run on mosaics rather than app and int images.
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -85,6 +84,7 @@ if __name__=='__main__':
     parser.add_argument('--do-stokesV',dest='do_stokesV', action='store_true', help='Mosaic stokes V images as well')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
+    parser.add_argument('--apply-shift',dest='apply_shift',action='store_true',help='Apply per-facet shifts from an offset file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
     
@@ -102,6 +102,8 @@ if __name__=='__main__':
     elif args.do_stokesV:
         fname='image_full_high_stokesV.dirty.corr.fits'
         args.no_highres=True
+    elif args.apply_shift:
+        fname='image_full_ampphase_di_m.NS.app.restored.fits'
     else:
         fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
         
@@ -161,8 +163,15 @@ if __name__=='__main__':
 
     # now construct the inputs for make_mosaic
 
-    mos_args=dotdict({'save':True, 'load':True,'exact':False,'use_shifted':True,'find_noise':True})
-    mos_args.astromap_blank=args.astromap_blank
+    mos_args=dotdict({'save':True, 'load':True,'exact':False})
+    if args.apply_shift:
+        mos_args.apply_shift=True
+        mos_args.read_noise=True
+        mos_args.astromap_blank=None
+    else:
+        mos_args.use_shifted=True
+        mos_args.find_noise=True
+        mos_args.astromap_blank=args.astromap_blank
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     mos_args.band=args.band
