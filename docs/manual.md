@@ -86,6 +86,7 @@ will need:
 * py-cpuinfo
 * cfitsio fpack (only if compression required: fpack must be on PATH)
 * DP3 and dysco (for MS compression)
+* radiobeam
 
 Recent versions of numpy and numexpr are important for DDFacet and KillMS.
 

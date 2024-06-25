@@ -92,6 +92,7 @@ if __name__=='__main__':
     mospointingname = args.mospointingname
     pointingdict = read_pointingfile()
     ignorepointings = args.ignorepointings
+    check_convolve=False # check resolution if True
 
     if args.do_wsclean:
         fname='WSCLEAN_low-MFS-image-int.fits'
@@ -101,13 +102,15 @@ if __name__=='__main__':
         args.no_highres=True
     elif args.do_stokesV:
         fname='image_full_high_stokesV.dirty.corr.fits'
+        check_convolve=True
         args.no_highres=True
     elif args.apply_shift:
         fname='image_full_ampphase_di_m.NS.app.restored.fits'
+        check_convolve=True
     else:
         fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
+        check_convolve=True
         
-    
     print('Now searching for results directories')
     cwd=os.getcwd()
 
@@ -121,6 +124,7 @@ if __name__=='__main__':
     mosaicdirs=[]
     missingpointing = False
     scales = []
+    resolutions = []
     sdb = SurveysDB()
     for p in mosaicpointings:
         if p in ignorepointings:
@@ -132,6 +136,12 @@ if __name__=='__main__':
             if os.path.isfile(rd+'/'+fname):
                 print(rd+'/'+fname,'exists!')
                 mosaicdirs.append(rd)
+                # check resolution 
+                if check_convolve:
+                    hdu=fits.open(rd+'/'+fname)
+                    resolutions.append((hdu[0].header['BMAJ'],hdu[0].header['BMIN']))
+                    hdu.close()
+                # check quality
                 try:
                     qualitydict = sdb.get_quality(p)
                     currentdict = sdb.get_field(p)
@@ -163,6 +173,17 @@ if __name__=='__main__':
 
     # now construct the inputs for make_mosaic
 
+    if check_convolve:
+        # We should convolve to a fixed resolution of 9 x 9 arcsec if:
+        # All images do not have the same resolution OR
+        # Any image has a non-circular beam.
+        # This should catch all cases
+        resolutions=np.array(resolutions)
+        different=np.any(resolutions[:,0]-np.mean(resolutions[:,0]))
+        non_circ=not np.all(np.equal(resolutions[:,0],resolutions[:,1]))
+        print('Resolutions are different:',different)
+        print('Some beams are non-circular:',non_circ)
+
     mos_args=dotdict({'save':True, 'load':True,'exact':False})
     if args.apply_shift:
         mos_args.apply_shift=True
@@ -172,6 +193,8 @@ if __name__=='__main__':
         mos_args.use_shifted=True
         mos_args.find_noise=True
         mos_args.astromap_blank=args.astromap_blank
+    if check_convolve and (different or non_circ):
+        mos_args.convolve=9.0
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     mos_args.band=args.band

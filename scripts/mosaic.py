@@ -25,6 +25,7 @@ import pyregion
 import scipy.ndimage as nd
 from copy import deepcopy
 import multiprocessing as mp
+from convolve import do_convolve
 
 def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     print(direction,ds9region)
@@ -178,6 +179,12 @@ def make_mosaic(args):
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
+
+    if args.convolve:
+        orig_intname=intname
+        orig_appname=appname
+        intname=intname.replace('.fits','_convolved.fits')
+        appname=appname.replace('.fits','_convolved.fits')
         
     # astromap blanking if required
     bth=None
@@ -199,7 +206,19 @@ def make_mosaic(args):
     polylists=[]
     for d in args.directories:
         name.append(d.split('/')[-1])
-        hdu=fits.open(d+'/'+intname)
+        infile=d+'/'+intname
+        if not os.path.isfile(infile):
+            if args.convolve:
+                print('Convolved file',infile,'does not exist, making it')
+                do_convolve(d+'/'+orig_intname,float(args.convolve),d+'/'+intname)
+                do_convolve(d+'/'+orig_appname,float(args.convolve),d+'/'+appname)
+            else:
+                raise RuntimeError('Expected file',infile,'does not exist')
+        hdu=fits.open(infile)
+
+        if args.convolve:
+            if hdu[0].header['BMAJ']*3600.0!=float(args.convolve):
+                raise RuntimeError('Resolution of convolved file on disk '+infile+' does not match required')
 
         if args.do_stokesV:
             hdu[0].data[0][0] = hdu[0].data[0][1]
@@ -476,6 +495,7 @@ if __name__=='__main__':
                         help='directory name')
     parser.add_argument('--rootname', dest='rootname', default='', help='Root name for output files, default uses no prefix')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
+    parser.add_argument('--convolve', dest='beamcut', default=None, help='Resolution in arcsec to convolve to')
     parser.add_argument('--band', dest='band', default=None, help='Band number to mosaic, leave unset for full-bw image')
     parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
     parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
