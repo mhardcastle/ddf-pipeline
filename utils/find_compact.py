@@ -148,22 +148,23 @@ def radial_correction(incatname,inimagename,debug=True):
     radbins = np.arange(0.0,5.0,0.2)
     xvals = []
     yvals = []
+    raddeletes = []
     for i in range(0,len(radbins)-1):
         binmin = radbins[i]
         binmax = radbins[i+1]
         sourcemin = np.where(separation > binmin)
         sourcemax = np.where(separation < binmax)
-        meetscriteria = np.intersect1d(sourcemin,sourcemax)  
-        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriteria)))
-        if len(meetscriteria)==0:
-            print('Stopping, maybe image is masked?')
-            break
-        medval = np.median(opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria])
+        meetscriterea = np.intersect1d(sourcemin,sourcemax)
+        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriterea)))
+        if len(meetscriterea) == 0:
+            raddeletes.append(i)
+            continue
+        medval = np.median(opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea])
         plt.plot((binmin+binmax)/2.0,medval,'g+',markersize=10)
         plt.plot(separation[meetscriteria],opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria],'b.',alpha=0.1)
         xvals.append((binmin+binmax)/2.0)
         yvals.append(medval)
-
+    radbins = np.delete(radbins,raddeletes)
     # Fit and apply radial correction
     x0 = [0.1,1.0]
     xfit, flag = scipy.optimize.curve_fit(radial_model,xvals,yvals)
@@ -254,7 +255,7 @@ def find_only_compact(incatname,inimagename):
     yvals = []
 
     plthists = True
-
+    delbin = []
     for i in range(0,len(bins)-1):
         binmin = bins[i]
         binmax = bins[i+1]
@@ -307,13 +308,23 @@ def find_only_compact(incatname,inimagename):
         for j in range(0,len(binvals)-1):
             realSFs.append(distribution.sf(binvals[j],*fitdistrib))
 
+        foundsurvival = False
         for j in range(0,len(binvals)-1):
             if realSFs[j] > 5*pointSFs[j]:
                 plt.plot([binvals[j],binvals[j]],[0,10],'g-') # plotting position at which the real ones are 5 times more likely
                 envelopevals_point.append(binvals[j])
+                print('appending',binvals[j])
+                foundsurvival = True
                 break
+        print(foundsurvival)
+        print(bins)
+        print(envelopevals_point)
+        print('found surival point',foundsurvival)
         print('All-point 5 times val found at %s corresponds to SF of %s and CDF of %s'%(binvals[j],distribution.sf(binvals[j],*fitdistrib),distribution.cdf(binvals[j],*fitdistrib)))
-
+        if foundsurvival != True:
+            print('missed')
+            delbin.append(i)
+            #sys.exit(0)
         fontsize=20
         plt.yticks(fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
@@ -328,9 +339,10 @@ def find_only_compact(incatname,inimagename):
 
     plt.close()
     plt.cla()
-
+    bins = np.delete(bins,delbin)
     binmeans = (bins + np.roll(bins, -1))[:-1] / 2.0
     x0 = [0.7,2.0,105,0.4]
+    print(len(envelopevals_point),len(binmeans),len(bins))
     xfit, flag = scipy.optimize.leastsq(envelope_residuals, x0, args=(envelopevals_point,binmeans))
     resid = envelope_residuals(xfit,binmeans,envelopevals_point)
     chisq = sum(resid*resid)
