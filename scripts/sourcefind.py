@@ -258,35 +258,44 @@ def run_tiered_bdsf(imf,appf,thesh_pix=4.5,label='',catprefix='mosaic'):
     separator('Update Catalogue')
     #-----------------------------------------------------
 
-    dat_srl_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
-    dat_gaul_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
-
     dat_srl_orig=Table.read(imagef[:-5]+'-Default-'+label+'-SupplyMaps.srl.fits')
     dat_gaul_orig=Table.read(imagef[:-5]+'-Default-'+label+'-SupplyMaps.gaul.fits')
+    # Bonny's modification to prevent a rare crash
+    try:
+        dat_srl_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
+        dat_gaul_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
 
-    max_src_id = np.max(dat_gaul_orig['Source_id'])+1
-    max_isl_id = np.max(dat_gaul_orig['Isl_id'])+1
-    max_gaus_id = np.max(dat_gaul_orig['Gaus_id'])+1
+    except FileNotFoundError:
 
-    dat_srl_flagbeam['Source_id']+=max_src_id+1
-    dat_srl_flagbeam['Isl_id']+=max_isl_id+1
+        dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
+        dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
+        dat_srl_final=dat_srl_orig
+        dat_gaul_final=dat_gaul_orig
 
-    dat_gaul_flagbeam['Source_id']+=max_src_id+1
-    dat_gaul_flagbeam['Isl_id']+=max_isl_id+1
-    dat_gaul_flagbeam['Gaus_id']+=max_gaus_id+1
+    else:
+        max_src_id = np.max(dat_gaul_orig['Source_id'])+1
+        max_isl_id = np.max(dat_gaul_orig['Isl_id'])+1
+        max_gaus_id = np.max(dat_gaul_orig['Gaus_id'])+1
+
+        dat_srl_flagbeam['Source_id']+=max_src_id+1
+        dat_srl_flagbeam['Isl_id']+=max_isl_id+1
+
+        dat_gaul_flagbeam['Source_id']+=max_src_id+1
+        dat_gaul_flagbeam['Isl_id']+=max_isl_id+1
+        dat_gaul_flagbeam['Gaus_id']+=max_gaus_id+1
 
     #
 
-    dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
-    dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
+        dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
+        dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
 
-    dat_srl_flagbeam['Flag_beam']=np.ones(len(dat_srl_flagbeam), dtype=int)
-    dat_gaul_flagbeam['Flag_beam']=np.ones(len(dat_gaul_flagbeam), dtype=int)
+        dat_srl_flagbeam['Flag_beam']=np.ones(len(dat_srl_flagbeam), dtype=int)
+        dat_gaul_flagbeam['Flag_beam']=np.ones(len(dat_gaul_flagbeam), dtype=int)
 
     #
 
-    dat_srl_final=vstack([dat_srl_orig, dat_srl_flagbeam])
-    dat_gaul_final=vstack([dat_gaul_orig, dat_gaul_flagbeam])
+        dat_srl_final=vstack([dat_srl_orig, dat_srl_flagbeam])
+        dat_gaul_final=vstack([dat_gaul_orig, dat_gaul_flagbeam])
 
     #-----------------------------------------------------
     separator('Write to disk')
