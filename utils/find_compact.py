@@ -154,12 +154,12 @@ def radial_correction(incatname,inimagename,debug=True):
         binmax = radbins[i+1]
         sourcemin = np.where(separation > binmin)
         sourcemax = np.where(separation < binmax)
-        meetscriterea = np.intersect1d(sourcemin,sourcemax)
-        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriterea)))
-        if len(meetscriterea) == 0:
+        meetscriteria = np.intersect1d(sourcemin,sourcemax)
+        print('Bin: %s deg - %s deg contains %s sources'%(binmin,binmax,len(meetscriteria)))
+        if len(meetscriteria) == 0:
             raddeletes.append(i)
             continue
-        medval = np.median(opencat['Total_flux'][meetscriterea]/opencat['Peak_flux'][meetscriterea])
+        medval = np.median(opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria])
         plt.plot((binmin+binmax)/2.0,medval,'g+',markersize=10)
         plt.plot(separation[meetscriteria],opencat['Total_flux'][meetscriteria]/opencat['Peak_flux'][meetscriteria],'b.',alpha=0.1)
         xvals.append((binmin+binmax)/2.0)
