@@ -51,10 +51,13 @@ def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     newdata=hdu.data[ymin:ymax,xmin:xmax]
     newheader=deepcopy(hdu.header)
     # adjust the header both to shift and to take account of the subregion
-    newheader['CRPIX1']-=xmin
-    newheader['CRPIX2']-=ymin
-    newheader['CRVAL1']-=shift['RA_offset']/3600.0
-    newheader['CRVAL2']-=shift['DEC_offset']/3600.0
+    cellsize=3600*newheader['CDELT2'] # arcsec per pixel
+    #newheader['CRPIX1']-=xmin
+    #newheader['CRPIX2']-=ymin
+    #newheader['CRVAL1']-=shift['RA_offset']/3600.0
+    #newheader['CRVAL2']-=shift['DEC_offset']/3600.0
+    newheader['CRPIX1']-=xmin+shift['RA_offset']/cellsize
+    newheader['CRPIX2']-=ymin-shift['DEC_offset']/cellsize
     shhdu=fits.PrimaryHDU(data=newdata,header=newheader)
     rpm,_=reproj(shhdu,header,hdu_in=0,parallel=False)
     rphdu=fits.PrimaryHDU(header=header,data=rpm)
@@ -63,7 +66,7 @@ def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     q.put(rpm)
 
 
-def do_reproj_mp(reproj,hdu,header,shift=None,polylist=None):
+def do_reproj_mp(reproj,hdu,header,shift=None,polylist=None,badfacet=None):
     # Wrapper around reproj which handles per-facet reprojection if required
     if shift is None:
         return reproj(hdu,header,hdu_in=0,parallel=False)
@@ -71,6 +74,7 @@ def do_reproj_mp(reproj,hdu,header,shift=None,polylist=None):
         rpm=None
         q=mp.Queue()
         for direction,ds9region in enumerate(polylist):
+            if badfacet and direction in badfacet: continue
             p=mp.Process(target=reproj_inner,args=(q,reproj,hdu,header,shift[direction],direction,ds9region))
             p.start()
         while mp.active_children():
@@ -179,7 +183,7 @@ def make_mosaic(args):
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
-
+    
     if args.convolve:
         orig_intname=intname
         orig_appname=appname
@@ -204,6 +208,9 @@ def make_mosaic(args):
     name=[]
     shifts=[]
     polylists=[]
+    badfacets=[]
+    if args.directories is None:
+        raise RuntimeError("At least one directory name must be supplied")
     for d in args.directories:
         name.append(d.split('/')[-1])
         infile=d+'/'+intname
@@ -253,7 +260,15 @@ def make_mosaic(args):
             noisefiles.append(flatten(fits.open(noisename)))
         if args.apply_shift:
             print('Reading the shift file and tessel file')
+            t=Table.read(d+'/pslocal-facet_offsets.fits')
+            bad=(t['RA_peak']/t['RA_peak_error']<2) | (t['DEC_peak']/t['DEC_peak_error']<2)
+            print('Found',np.sum(bad),'bad fits')
+            ra_median=np.median(t[~bad]['RA_offset'])
+            dec_median=np.median(t[~bad]['DEC_offset'])
+            t[bad]['RA_offset']=ra_median
+            t[bad]['DEC_offset']=dec_median
             shifts.append(Table.read(d+'/pslocal-facet_offsets.fits'))
+            
             g=glob.glob(d+'/*.tessel.reg')
             if len(g)==0:
                 raise RuntimeError('apply_shift specified but no tessel file present in '+d)
@@ -263,13 +278,25 @@ def make_mosaic(args):
             shifts.append(None)
             polylists.append(None)
 
+        if args.use_badfacet:
+            badfacetfile=d+'/Badfacets.txt'
+            if os.path.isfile(badfacetfile):
+                print('Reading the bad facet file')
+                lines=open(badfacetfile).readlines()
+                bflist=eval(','.join(lines[1].rstrip().split(',')[1:]))
+                badfacets.append(bflist)
+                print('Adding',len(bflist),'bad facets')
+            else:
+                badfacets.append([])
+        else:
+            badfacets.append(None)
+
     if args.find_noise:
         args.noise=noise
         print('Noise values are:')
         for t,n in zip(name,noise):
             print(t,n)
 
-        
 
     print('Computing noise/beam factors...')
     for i in range(len(app)):
@@ -434,7 +461,7 @@ def make_mosaic(args):
             r=hdu[0].data
         else:
             print('reprojecting...')
-            r, footprint = do_reproj_mp(reproj, hdus[i], header, shift=shifts[i],polylist=polylists[i])
+            r, footprint = do_reproj_mp(reproj, hdus[i], header, shift=shifts[i],polylist=polylists[i],badfacet=badfacets[i])
             r[np.isnan(r)]=0
             hdu = fits.PrimaryHDU(header=header,data=r)
             if args.save: hdu.writeto(outname,overwrite=True)
@@ -447,7 +474,7 @@ def make_mosaic(args):
             mask|=(w>0)
         else:
             print('reprojecting...')
-            w, footprint = do_reproj_mp(reproj, app[i], header, shift=shifts[i],polylist=polylists[i])
+            w, footprint = do_reproj_mp(reproj, app[i], header, shift=shifts[i],polylist=polylists[i],badfacet=badfacets[i])
             mask|=~np.isnan(w)
             w[np.isnan(w)]=0
             hdu = fits.PrimaryHDU(header=header,data=w)
@@ -467,17 +494,14 @@ def make_mosaic(args):
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             try:
                 header[ch]=hdus[0].header[ch]
-            # Exception for Stokes V images where dong have a BMAJ
+            # Exception for Stokes V images which don't have a BMAJ
             except KeyError:
                 print('No entry in header for %s and not creating one'%ch)
 
         header['ORIGIN']='ddf-pipeline '+version()
 
         hdu = fits.PrimaryHDU(header=header,data=isum)
-        if args.do_lowres:
-            mosname='mosaic.fits'
-        else:
-            mosname='mosaic.fits'
+        mosname='mosaic.fits'
         hdu.writeto(rootname+mosname,overwrite=True)
 
         hdu = fits.PrimaryHDU(header=header,data=wsum)
@@ -495,7 +519,7 @@ if __name__=='__main__':
                         help='directory name')
     parser.add_argument('--rootname', dest='rootname', default='', help='Root name for output files, default uses no prefix')
     parser.add_argument('--beamcut', dest='beamcut', default=0.3, help='Beam level to cut at')
-    parser.add_argument('--convolve', dest='beamcut', default=None, help='Resolution in arcsec to convolve to')
+    parser.add_argument('--convolve', default=None, help='Resolution in arcsec to convolve to')
     parser.add_argument('--band', dest='band', default=None, help='Band number to mosaic, leave unset for full-bw image')
     parser.add_argument('--exact', dest='exact', action='store_true', help='Do exact reprojection (slow)')
     parser.add_argument('--save', dest='save', action='store_true', help='Save intermediate images')
@@ -508,6 +532,7 @@ if __name__=='__main__':
     parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--read_noise', action='store_true', help='Read noise from a pre-existing per-facet noise file')
+    parser.add_argument('--use_badfacet', action='store_true', help='Read a bad facet file')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
     parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted vlow images instead of high-res')

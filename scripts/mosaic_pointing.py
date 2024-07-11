@@ -93,6 +93,7 @@ if __name__=='__main__':
     pointingdict = read_pointingfile()
     ignorepointings = args.ignorepointings
     check_convolve=False # check resolution if True
+    use_badfacet=False
 
     if args.do_wsclean:
         fname='WSCLEAN_low-MFS-image-int.fits'
@@ -104,9 +105,11 @@ if __name__=='__main__':
         fname='image_full_high_stokesV.dirty.corr.fits'
         check_convolve=True
         args.no_highres=True
+        use_badfacet=True
     elif args.apply_shift:
         fname='image_full_ampphase_di_m.NS.app.restored.fits'
         check_convolve=True
+        use_badfacet=True
     else:
         fname='image_full_ampphase_di_m.NS_shift.int.facetRestored.fits'
         check_convolve=True
@@ -198,11 +201,14 @@ if __name__=='__main__':
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     mos_args.band=args.band
+    if use_badfacet:
+        mos_args.use_badfacet=True
     if args.do_scaling:
         print('Applying scales',scales)
         mos_args.scale=scales
 
     if not(args.no_highres):
+        print('Making the high-resolution mosaic')
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
 
         mos_args.header=header

@@ -33,7 +33,7 @@ def run_old_bdsf(infile,catprefix='mosaic'):
     img.export_image(outfile=catprefix +'.pybdsfmask.fits',img_type='island_mask',img_format='fits',clobber=True)
     img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
-def run_tiered_bdsf(imf,appf,thesh_pix=4.5,label='',catprefix='mosaic'):
+def run_tiered_bdsf(imf,appf,thresh_pix=4.5,label='',catprefix='mosaic'):
     # Tiered source finding code adapted from Catherine Hale code.
     # For mosaics put imf and appf as the same image
     # For individual pointings imf and appf are int and app images.

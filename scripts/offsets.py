@@ -412,7 +412,7 @@ class Offsets(object):
                 plt.quiver(np.mean(tf['RA']),np.mean(tf['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
                 plt.text(np.mean(tf['RA']),np.mean(tf['DEC']),'1 arcsec',color='green')
 
-        plt.savefig('SKO-'+self.prefix+'.png')
+        plt.savefig('SKO-'+self.prefix+'.pdf')
 
     def offsets_to_facetshift(self,filename):
 
@@ -584,6 +584,7 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     oo.fit_offsets()
     report('Making plots and saving output')
     oo.plot_fits(method+'-fits.pdf')
+    oo.plot_chains(method+'-chains.pdf')
     oo.save_fits_table()
     oo.plot_offsets()
     if 'test' not in o['mode']:
