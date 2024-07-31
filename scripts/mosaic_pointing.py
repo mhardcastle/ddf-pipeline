@@ -87,6 +87,7 @@ if __name__=='__main__':
     parser.add_argument('--apply-shift',dest='apply_shift',action='store_true',help='Apply per-facet shifts from an offset file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
+    parser.add_argument('--ignore_field', type=str, default='', help='Ignore pointings without this DB field set positive')
     
     args = parser.parse_args()
     mospointingname = args.mospointingname
@@ -132,6 +133,9 @@ if __name__=='__main__':
     for p in mosaicpointings:
         if p in ignorepointings:
             continue
+        currentdict = sdb.get_field(p)
+        if args.ignore_field and not currentdict[args.ignore_field]:
+            continue
         print('Wanting to put pointing %s in mosaic'%p)
         for d in args.directories:
             rd=d+'/'+p
@@ -147,7 +151,6 @@ if __name__=='__main__':
                 # check quality
                 try:
                     qualitydict = sdb.get_quality(p)
-                    currentdict = sdb.get_field(p)
                     print(qualitydict)
                     #scale=qualitydict['scale']
                     scale= 1.0/(qualitydict['nvss_scale']/5.9124)
@@ -175,6 +178,7 @@ if __name__=='__main__':
     print('Mosaicing using directories', mosaicdirs)
 
     # now construct the inputs for make_mosaic
+    high_resolution=6.0
 
     if check_convolve:
         # We should convolve to a fixed resolution of 9 x 9 arcsec if:
@@ -198,6 +202,7 @@ if __name__=='__main__':
         mos_args.astromap_blank=args.astromap_blank
     if check_convolve and (different or non_circ):
         mos_args.convolve=9.0
+        high_resolution=9.0
     mos_args.beamcut=args.beamcut
     mos_args.directories=mosaicdirs
     mos_args.band=args.band
@@ -209,12 +214,12 @@ if __name__=='__main__':
 
     if not(args.no_highres):
         print('Making the high-resolution mosaic')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,6.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,high_resolution)
 
         mos_args.header=header
         print('Calling make_mosaic')
         if args.save_header:
-            with open('mosaic-header.pickle','w') as f:
+            with open('mosaic-header.pickle','wb') as f:
                 pickle.dump(header,f)
 
         mosname=make_mosaic(mos_args)
@@ -230,9 +235,10 @@ if __name__=='__main__':
         mos_args.rootname='low'
         mos_args.do_lowres=True
         mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.convolve=None
 
         if args.save_header:
-            with open('low-mosaic-header.pickle','w') as f:
+            with open('low-mosaic-header.pickle','wb') as f:
                 pickle.dump(header,f)
 
         make_mosaic(mos_args)

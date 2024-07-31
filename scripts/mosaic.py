@@ -25,10 +25,12 @@ import pyregion
 import scipy.ndimage as nd
 from copy import deepcopy
 import multiprocessing as mp
+from queue import Empty
 from convolve import do_convolve
+from time import sleep
 
 def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
-    print(direction,ds9region)
+    print('Direction',direction,'starting')
     r = pyregion.parse(ds9region)
     manualmask = r.get_mask(hdu=hdu)
     # Find bounding box
@@ -63,6 +65,7 @@ def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     rphdu=fits.PrimaryHDU(header=header,data=rpm)
     newmask = r.get_mask(hdu=rphdu)
     rpm[~newmask]=0
+    print('Direction',direction,'returning result to queue')
     q.put(rpm)
 
 
@@ -77,11 +80,20 @@ def do_reproj_mp(reproj,hdu,header,shift=None,polylist=None,badfacet=None):
             if badfacet and direction in badfacet: continue
             p=mp.Process(target=reproj_inner,args=(q,reproj,hdu,header,shift[direction],direction,ds9region))
             p.start()
-        while mp.active_children():
-            if rpm is None:
-                rpm=q.get()
+        while True:
+            n=len(mp.active_children())
+            print('In main loop,',n,'active children')
+            if n==0: break
+            try:
+                result=q.get(block=False)
+            except Empty:
+                print('Tick...')
+                sleep(1)
             else:
-                rpm+=q.get()
+                if rpm is None:
+                    rpm=result
+                else:
+                    rpm+=result
         return rpm,None  # footprint is not used
 
 def do_reproj(reproj,hdu,header,shift=None,polylist=None,debug=True):

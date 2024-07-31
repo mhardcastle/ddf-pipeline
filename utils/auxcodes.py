@@ -283,7 +283,7 @@ def get_rms_map3(infilename,ds9region,outfilename,**kwargs):
     # Make a per-facet mean
     polylist = convert_regionfile_to_poly(ds9region)
     template=fits.open(infilename) # will be 4D
-    hdu=fits.open(noisefilename)
+    hdu=fits.open(noisefilename,memmap=False) # read before going multithreaded
     hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
     result=np.zeros_like(hduflat.data)
     q=mp.Queue()
