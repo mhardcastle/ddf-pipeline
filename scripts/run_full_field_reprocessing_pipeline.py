@@ -135,10 +135,17 @@ def redo_cube_headers(incubename,outcubename,stokesparam):
     del data # to clear from memory
 
 
-def do_run_subtract(field):
+def do_run_subtract(field,ObsID=""):
+    FMSlist="big-mslist.txt"
+    if ObsID!="" and ObsID is not None:
+        ll=["%s\n"%l.strip() for l in open("big-mslist.txt","r").readlines() if ObsID in l]
+        FMSlist="big-mslist.%s.txt"%ObsID
+        f=open(FMSlist,"w")
+        f.writelines(ll)
+        f.close()
 
     # Run subtract code
-    executionstr = 'sub-sources-outside-region.py --timeavg=1 --boxfile=fullfield'
+    executionstr = 'sub-sources-outside-region.py --timeavg=1 --boxfile=fullfield --mslist %s'%FMSlist
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
@@ -152,7 +159,7 @@ def do_residual(field):
     except:
         DoRunDDF=True
     if DoRunDDF:
-        executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage'
+        executionstr = 'sub-sources-outside-region.py --timeavg=1 --freqavg=1 --boxfile=fullfield --onlyPredict --AlsoMakeResidualImage --ncpu 90'
         print(executionstr)
         result=os.system(executionstr)
         if result!=0:
@@ -274,7 +281,9 @@ if __name__=='__main__':
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--DoResidVisIm', help='Compute residual vis and image wiith DynSpecMS gtr1 weighting', action='store_true')
+    parser.add_argument('--DownloadOnly', help='Only download the pointing', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
+    parser.add_argument('--ObsID',help='LoTSS ObsID',type=str,default="")
     parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
     parser.add_argument('--NoDBSync',help='DDF pipeline parset',type=int,default=0)
     args = vars(parser.parse_args())
@@ -322,8 +331,11 @@ if __name__=='__main__':
             print('Changing',option,'status to Started')
             update_status(field,option,'Started',time='start_date')
 
+    if args['DownloadOnly']:
+        exit()
+        
     if args['FullSub']:
-        do_run_subtract(field)
+        do_run_subtract(field,args["ObsID"])
 
         # resultfiles = glob.glob('*sub*archive*')
         # resultfilestar = []
