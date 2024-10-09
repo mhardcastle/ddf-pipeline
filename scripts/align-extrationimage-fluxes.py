@@ -80,7 +80,7 @@ def flatten(f):
         else:
             slice.append(0)
         
-    hdu = fits.PrimaryHDU(header=header,data=f[0].data[slice])
+    hdu = fits.PrimaryHDU(header=header,data=f[0].data[tuple(slice)])
     return hdu
 
 
