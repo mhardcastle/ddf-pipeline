@@ -305,7 +305,7 @@ def getposim(image):
     return ra,dec
 
 def find_fullres_image():
-    checklist=['image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.app.restored.fits','image_full_ampphase_di.dirty.fits','image_ampphase1.app.restored.fits','image_dirin_SSD_init.dirty.fits']
+    checklist=['image_full_ampphase_di_m.NS_shift.app.facetRestored.fits','image_full_ampphase_di_m.NS.app.restored.fits','image_full_ampphase_di.dirty.fits','image_ampphase1.app.restored.fits','image_dirin_SSD_init.dirty.fits']
     for f in checklist:
         if os.path.isfile(f):
             return f
