@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
-Copyright (C) 2017-2022 Martin Hardcastle (mjh@extragalactic.info) and others
+Copyright (C) 2017-2024 Martin Hardcastle (mjh@extragalactic.info) and others
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1937,7 +1937,7 @@ def main(o=None):
                 DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
                 runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
                 
-                if o['bright_threshold'] is not None:
+                if o['bright_threshold'] is not None and os.path.isfile('brightlist.csv'):
                     runcommand+=' --srclist brightlist.csv'
                 run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
                 if use_database():
