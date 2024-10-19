@@ -33,10 +33,11 @@ def run_old_bdsf(infile,catprefix='mosaic'):
     img.export_image(outfile=catprefix +'.pybdsfmask.fits',img_type='island_mask',img_format='fits',clobber=True)
     img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
-def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
+def run_tiered_bdsf(imf,appf,thresh_pix=4.5,label='',catprefix='mosaic'):
     # Tiered source finding code adapted from Catherine Hale code.
     # For mosaics put imf and appf as the same image
     # For individual pointings imf and appf are int and app images.
+    # Use thres_pix=4.0 for deep fields and 4.5 for LoTSS fields 
 
     separator('Create Mean 0 map')
     
@@ -72,7 +73,7 @@ def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
 
     restfrq=144000000.0
  
-    img = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
+    img = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=thresh_pix, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
     img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.rms.fits',img_format='fits', img_type='rms', clobber=True)
     img.export_image(outfile=imagef[:-5]+'-Default-'+label+'.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
     img.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'.srl.fits',format='fits', catalog_type='srl', clobber=True)
@@ -172,7 +173,7 @@ def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
     create_pb_image(resid_im_no_brightf, resid_im_no_bright_appf, pbimagef)
     intermediate_products.append(resid_im_no_bright_appf)
     
-    img_resid = bdsf.process_image(resid_im_no_brightf, detection_image=resid_im_no_bright_appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
+    img_resid = bdsf.process_image(resid_im_no_brightf, detection_image=resid_im_no_bright_appf, thresh_isl=3.0, thresh_pix=thresh_pix, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq)
 
     rms_image_withBright_f=resid_im_no_brightf[:-5]+'.rms.fits'
     img_resid.export_image(outfile=rms_image_withBright_f, img_format='fits', img_type='rms', clobber=True)
@@ -187,7 +188,7 @@ def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
     intermediate_products.append(rms_image_withBright_appf)
     create_pb_image(rms_image_withBright_f, rms_image_withBright_appf, pbimagef)
  
-    img_supply = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=4.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf])
+    img_supply = bdsf.process_image(imf, detection_image=appf, thresh_isl=3.0, thresh_pix=thresh_pix, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0, output_opts=True, output_all=False, atrous_do=True, atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5, advanced_opts=True, blank_limit=None, frequency=restfrq, rmsmean_map_filename=[meanf, rms_image_withBright_f], rmsmean_map_filename_det=[meanf, rms_image_withBright_appf])
     img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.rms.fits',img_format='fits', img_type='rms', clobber=True)
     img_supply.export_image(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.resid.fits',img_format='fits', img_type='gaus_resid', clobber=True)
     img_supply.write_catalog(outfile=imagef[:-5]+'-Default-'+label+'-SupplyMaps.srl.fits',format='fits', catalog_type='srl', clobber=True)
@@ -257,35 +258,44 @@ def run_tiered_bdsf(imf,appf,label='',catprefix='mosaic'):
     separator('Update Catalogue')
     #-----------------------------------------------------
 
-    dat_srl_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
-    dat_gaul_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
-
     dat_srl_orig=Table.read(imagef[:-5]+'-Default-'+label+'-SupplyMaps.srl.fits')
     dat_gaul_orig=Table.read(imagef[:-5]+'-Default-'+label+'-SupplyMaps.gaul.fits')
+    # Bonny's modification to prevent a rare crash
+    try:
+        dat_srl_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.srl.fits')
+        dat_gaul_flagbeam=Table.read(int_residf+'-Default-'+label+'-SupplyMaps-FlagBeam.gaul.fits')
 
-    max_src_id = np.max(dat_gaul_orig['Source_id'])+1
-    max_isl_id = np.max(dat_gaul_orig['Isl_id'])+1
-    max_gaus_id = np.max(dat_gaul_orig['Gaus_id'])+1
+    except FileNotFoundError:
 
-    dat_srl_flagbeam['Source_id']+=max_src_id+1
-    dat_srl_flagbeam['Isl_id']+=max_isl_id+1
+        dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
+        dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
+        dat_srl_final=dat_srl_orig
+        dat_gaul_final=dat_gaul_orig
 
-    dat_gaul_flagbeam['Source_id']+=max_src_id+1
-    dat_gaul_flagbeam['Isl_id']+=max_isl_id+1
-    dat_gaul_flagbeam['Gaus_id']+=max_gaus_id+1
+    else:
+        max_src_id = np.max(dat_gaul_orig['Source_id'])+1
+        max_isl_id = np.max(dat_gaul_orig['Isl_id'])+1
+        max_gaus_id = np.max(dat_gaul_orig['Gaus_id'])+1
+
+        dat_srl_flagbeam['Source_id']+=max_src_id+1
+        dat_srl_flagbeam['Isl_id']+=max_isl_id+1
+
+        dat_gaul_flagbeam['Source_id']+=max_src_id+1
+        dat_gaul_flagbeam['Isl_id']+=max_isl_id+1
+        dat_gaul_flagbeam['Gaus_id']+=max_gaus_id+1
 
     #
 
-    dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
-    dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
+        dat_srl_orig['Flag_beam']=np.zeros(len(dat_srl_orig), dtype=int)
+        dat_gaul_orig['Flag_beam']=np.zeros(len(dat_gaul_orig), dtype=int)
 
-    dat_srl_flagbeam['Flag_beam']=np.ones(len(dat_srl_flagbeam), dtype=int)
-    dat_gaul_flagbeam['Flag_beam']=np.ones(len(dat_gaul_flagbeam), dtype=int)
+        dat_srl_flagbeam['Flag_beam']=np.ones(len(dat_srl_flagbeam), dtype=int)
+        dat_gaul_flagbeam['Flag_beam']=np.ones(len(dat_gaul_flagbeam), dtype=int)
 
     #
 
-    dat_srl_final=vstack([dat_srl_orig, dat_srl_flagbeam])
-    dat_gaul_final=vstack([dat_gaul_orig, dat_gaul_flagbeam])
+        dat_srl_final=vstack([dat_srl_orig, dat_srl_flagbeam])
+        dat_gaul_final=vstack([dat_gaul_orig, dat_gaul_flagbeam])
 
     #-----------------------------------------------------
     separator('Write to disk')
