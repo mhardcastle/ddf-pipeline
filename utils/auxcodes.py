@@ -257,7 +257,13 @@ def get_rms_map2(infilename,ds9region,outfilename,**kwargs):
     hduflat = flatten(hdu) # depending on MakeMask version may be 2D or 4D
 
     for direction,ds9region in enumerate(polylist):
+        print(direction,ds9region)
+        r = pyregion.parse(ds9region)
+        manualmask = r.get_mask(hdu=hduflat)
+        rmsval = np.mean(hduflat.data[manualmask])
+        hduflat.data[manualmask] = rmsval
         print('RMS = %s for direction %i'%(rmsval,direction))
+    
     template[0].data[0,0]=hduflat.data
     template.writeto(outfilename,overwrite=True)
 
