@@ -137,7 +137,7 @@ def radial_correction(incatname,inimagename,debug=True):
     for i in range(0,len(cat[1].data)):
         ra,dec = cat[1].data['RA'][i],cat[1].data['DEC'][i]
         cat[1].data['Neighbour_15'][i] = find_nearest_neighbours(cat,ra,dec,15.0)
-    cat.writeto(nearcat,clobber=True)
+    cat.writeto(nearcat,overwrite=True)
     print('Created nearest neighbour cat')
     cat.close()
 

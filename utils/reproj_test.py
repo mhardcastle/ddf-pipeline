@@ -200,4 +200,4 @@ if __name__=='__main__':
 
     hdu=fits.PrimaryHDU(header=header,data=data)
     r,footprint=reproj(hdu, rheader, hdu_in=0, parallel=True)
-    fits.PrimaryHDU(header=rheader,data=r).writeto('output.fits',clobber=True)
+    fits.PrimaryHDU(header=rheader,data=r).writeto('output.fits',overwrite=True)

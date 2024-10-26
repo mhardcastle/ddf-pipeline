@@ -33,7 +33,7 @@ def do_dr_checker(tname,imname,peak=0.1,majlimit=0.003,cutout=60,blank=10,verbos
             print(r['Peak_flux'],offpeak,old_div(r['Peak_flux'],offpeak))
         drlist.append(old_div(r['Peak_flux'],offpeak))
         if write_subims:
-            h.writeto('testim-%i.fits' %i,clobber=True)
+            h.writeto('testim-%i.fits' %i,overwrite=True)
     return np.array(drlist)
 
 
