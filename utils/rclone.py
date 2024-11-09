@@ -6,6 +6,7 @@ import subprocess
 import os
 import tempfile
 import glob
+import json
 
 def splitlines(s):
     l=s.decode().split('\n')
@@ -152,6 +153,20 @@ class RClone(object):
 
         d=self.execute(['lsf',remote+base])
         return [l for l in d['out'] if not exclude_dirs or not l.endswith('/')]
+    
+    def get_fileinfo(self,base='',remote=None):
+        '''
+        wrapper round rclone lsjson that returns a list of file attributes either in the root of the remote or in a specified base directory. If no remote specified use the result of get_remote().
+        '''
+        if remote is None:
+            if self.remote is None:
+                self.get_remote()
+            remote=self.remote
+
+        d=self.execute(['lsjson',remote+base])
+        if d['code']>0:
+            return None
+        return json.loads(''.join(d['out']))
     
     def get_checksum(self,filename):
         ''' Use ada to get the checksum. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
