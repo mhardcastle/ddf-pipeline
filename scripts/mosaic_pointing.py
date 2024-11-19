@@ -147,6 +147,7 @@ if __name__=='__main__':
                 if check_convolve:
                     hdu=fits.open(rd+'/'+fname)
                     resolutions.append((hdu[0].header['BMAJ'],hdu[0].header['BMIN']))
+                    print('For',fname,'appending resolution',np.array(resolutions[-1])*3600)
                     hdu.close()
                 # check quality
                 try:
@@ -186,7 +187,9 @@ if __name__=='__main__':
         # Any image has a non-circular beam.
         # This should catch all cases
         resolutions=np.array(resolutions)
-        different=np.any(resolutions[:,0]-np.mean(resolutions[:,0]))
+        print('Resolution checking')
+        print(resolutions[:,0]-np.mean(resolutions[:,0]))
+        different=np.any(np.abs(resolutions[:,0]-np.mean(resolutions[:,0]))>1e-5)
         non_circ=not np.all(np.equal(resolutions[:,0],resolutions[:,1]))
         print('Resolutions are different:',different)
         print('Some beams are non-circular:',non_circ)
