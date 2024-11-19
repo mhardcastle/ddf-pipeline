@@ -280,7 +280,7 @@ def find_only_compact(incatname,inimagename):
         print('Number of sources in compact cat in flux bin',len(meetscriteria_real))
         print('Max number at different Total/Int',numberbin)
 
-        plt.hist(np.log(np.array(filt_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='g') # density=True
+        plt.hist(np.log(np.array(filt_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='g',density=True) # density=True
 
         distribution = find_bestfit_scipyfunction(np.log(np.array(filt_fratio)[meetscriteria_real]),binvals)
         distribution = getattr(stats,distribution)
@@ -297,7 +297,7 @@ def find_only_compact(incatname,inimagename):
         meetscriteria_real = np.intersect1d(sourcemin,sourcemax)  
 
         print('Number of sources in full cat in bin',len(meetscriteria_real))
-        plt.hist(np.log(np.array(full_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='r') # density=True
+        plt.hist(np.log(np.array(full_fratio)[meetscriteria_real]),bins=binvals,alpha=0.5,histtype='step',color='r',density=True) # density=True
         distribution = find_bestfit_scipyfunction(np.log(np.array(full_fratio)[meetscriteria_real]),binvals)
         distribution = getattr(stats,distribution)
         fitdistrib = distribution.fit(np.log(np.array(full_fratio)[meetscriteria_real]))
@@ -310,6 +310,8 @@ def find_only_compact(incatname,inimagename):
 
         foundsurvival = False
         for j in range(0,len(binvals)-1):
+            if binvals[j] < 0.0:
+                continue
             if realSFs[j] > 5*pointSFs[j]:
                 plt.plot([binvals[j],binvals[j]],[0,10],'g-') # plotting position at which the real ones are 5 times more likely
                 envelopevals_point.append(binvals[j])
