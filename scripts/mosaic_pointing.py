@@ -95,6 +95,8 @@ if __name__=='__main__':
     ignorepointings = args.ignorepointings
     check_convolve=False # check resolution if True
     use_badfacet=False
+    with SurveysDB(readonly=True) as sdb:
+        field_dict=sdb.get_field(mospointingname)
 
     if args.do_wsclean:
         fname='WSCLEAN_low-MFS-image-int.fits'
@@ -129,7 +131,7 @@ if __name__=='__main__':
     missingpointing = False
     scales = []
     resolutions = []
-    sdb = SurveysDB()
+    sdb = SurveysDB(readonly=True)
     for p in mosaicpointings:
         if p in ignorepointings:
             continue
@@ -172,10 +174,10 @@ if __name__=='__main__':
             if not missingpointing and (currentdict['status'] != 'Archived' or currentdict['archive_version'] != 4):
                 print('Pointing',p,'not archived with archive_version 4')
                 missingpointing = True
-    if not(args.no_check) and missingpointing == True:
-        sdb.close()
-        raise RuntimeError('Failed to find a required pointing')
     sdb.close()
+    if not(args.no_check) and missingpointing == True:
+        raise RuntimeError('Failed to find a required pointing')
+
     print('Mosaicing using directories', mosaicdirs)
 
     # now construct the inputs for make_mosaic
@@ -196,7 +198,12 @@ if __name__=='__main__':
 
     mos_args=dotdict({'save':True, 'load':True,'exact':False})
     if args.apply_shift:
-        mos_args.apply_shift=True
+        if np.abs(field_dict['gal_b'])<=10:
+            mos_args.facet_only=True
+            mos_args.apply_shift=False
+        else:
+            mos_args.facet_only=False
+            mos_args.apply_shift=True
         mos_args.read_noise=True
         mos_args.astromap_blank=None
     else:

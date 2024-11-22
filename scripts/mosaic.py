@@ -270,22 +270,34 @@ def make_mosaic(args):
                 g=glob.glob(d+'/*.tessel.reg')
                 get_rms_map3(d+'/'+appname,g[0],noisename,database=False)
             noisefiles.append(flatten(fits.open(noisename)))
-        if args.apply_shift:
-            print('Reading the shift file and tessel file')
-            t=Table.read(d+'/pslocal-facet_offsets.fits')
-            bad=(t['RA_peak']/t['RA_peak_error']<2) | (t['DEC_peak']/t['DEC_peak_error']<2)
-            print('Found',np.sum(bad),'bad fits')
-            ra_median=np.median(t[~bad]['RA_offset'])
-            dec_median=np.median(t[~bad]['DEC_offset'])
-            t[bad]['RA_offset']=ra_median
-            t[bad]['DEC_offset']=dec_median
-            shifts.append(Table.read(d+'/pslocal-facet_offsets.fits'))
-            
+        if args.apply_shift or args.facet_only:
+            print('Reading the tessel file')
             g=glob.glob(d+'/*.tessel.reg')
             if len(g)==0:
                 raise RuntimeError('apply_shift specified but no tessel file present in '+d)
             else:
                 polylists.append(convert_regionfile_to_poly(g[0]))
+            
+            if args.apply_shift:
+                print('Reading the shift file and tessel file')
+                t=Table.read(d+'/pslocal-facet_offsets.fits')
+                bad=(t['RA_peak']/t['RA_peak_error']<2) | (t['DEC_peak']/t['DEC_peak_error']<2)
+                print('Found',np.sum(bad),'bad fits')
+                if np.all(bad):
+                    print('All bad, zeroing out offsets')
+                    t[bad]['RA_offset']=0
+                    t[bad]['DEC_offset']=0
+                else:
+                    print('Replacing bad fits with median shift')
+                    ra_median=np.median(t[~bad]['RA_offset'])
+                    dec_median=np.median(t[~bad]['DEC_offset'])
+                    t[bad]['RA_offset']=ra_median
+                    t[bad]['DEC_offset']=dec_median
+                    shifts.append(t)
+            else:
+                print('Generating a dummy shift file')
+                t=Table([np.zeros(len(polylists[-1])),np.zeros(len(polylists[-1]))],names=('RA_offset','DEC_offset'))
+                shifts.append(t)
         else:
             shifts.append(None)
             polylists.append(None)
@@ -541,6 +553,7 @@ if __name__=='__main__':
     parser.add_argument('--use_shifted', dest='use_shifted', action='store_true', help='Use the shifted images from the pipeline')
     #parser.add_argument('--shift', dest='shift', action='store_true', help='Shift images before mosaicing')
     parser.add_argument('--apply_shift', action='store_true', help='Apply per-facet shift from an offset file')
+    parser.add_argument('--facet_only', action='store_true', help='Do not do per-facet shift, but mosaic per facet')
     parser.add_argument('--no_write', dest='no_write', action='store_true', help='Do not write final mosaic')
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--read_noise', action='store_true', help='Read noise from a pre-existing per-facet noise file')
