@@ -20,7 +20,7 @@ import pickle
 import os,sys
 from sourcefind import run_tiered_bdsf as run_bdsf
 
-def make_header(maxsep,name,ra,dec,cellsize,resolution):
+def make_header(maxsep,name,ra,dec,cellsize,resolution,history=None):
     # construct template FITS header
     header=fits.Header()
     size=(maxsep/2.0)*1.15
@@ -57,6 +57,9 @@ def make_header(maxsep,name,ra,dec,cellsize,resolution):
     header['BZERO']=0
     header['BTYPE']='Intensity'
     header['OBJECT']=name
+    if history is not None:
+        for h in history:
+            header.add_history(h)
     return header,himsize
 
 def blank_mosaic(imname,himsize):
@@ -82,6 +85,7 @@ if __name__=='__main__':
     parser.add_argument('--do-wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted WSCLEAN images')
     parser.add_argument('--do-vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images as well')
     parser.add_argument('--do-stokesV',dest='do_stokesV', action='store_true', help='Mosaic stokes V images as well')
+    parser.add_argument('--record-checksum',dest='record_checksum', action='store_true', help='Store checksum values in history')
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
     parser.add_argument('--apply-shift',dest='apply_shift',action='store_true',help='Apply per-facet shifts from an offset file')
@@ -131,6 +135,10 @@ if __name__=='__main__':
     missingpointing = False
     scales = []
     resolutions = []
+    if args.record_checksum:
+        checksums=[]
+    else:
+        checksums=None
     sdb = SurveysDB(readonly=True)
     for p in mosaicpointings:
         if p in ignorepointings:
@@ -145,6 +153,11 @@ if __name__=='__main__':
             if os.path.isfile(rd+'/'+fname):
                 print(rd+'/'+fname,'exists!')
                 mosaicdirs.append(rd)
+                if args.record_checksum:
+                    with open(rd+'/checksums.txt') as cs:
+                        csl=[l.rstrip() for l in cs.readlines()]
+                    for l in csl:
+                        checksums.append(p+','+l)
                 # check resolution 
                 if check_convolve:
                     hdu=fits.open(rd+'/'+fname)
@@ -224,7 +237,7 @@ if __name__=='__main__':
 
     if not(args.no_highres):
         print('Making the high-resolution mosaic')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,high_resolution)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,high_resolution,history=checksums)
 
         mos_args.header=header
         print('Calling make_mosaic')
@@ -240,7 +253,7 @@ if __name__=='__main__':
 
     if args.do_lowres:
         print('Making the low-resolution mosaic...')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0,history=checksums)
         mos_args.header=header
         mos_args.rootname='low'
         mos_args.do_lowres=True
@@ -259,7 +272,7 @@ if __name__=='__main__':
 
     if args.do_wsclean:
         print('Making the WSCLEAN subtracted mosaic...')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0,history=checksums)
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_wsclean=True
@@ -277,7 +290,7 @@ if __name__=='__main__':
 
     if args.do_vlow:
         print('Making the very low-resolution mosaic...')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],15,60.0,history=checksums)
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_vlow=True
@@ -296,7 +309,7 @@ if __name__=='__main__':
 
     if args.do_stokesV:
         print('Making the stokes V mosaic...')
-        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0)
+        header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],4.5,20.0,history=checksums)
         mos_args.header=header
         mos_args.rootname='stokesV'
         mos_args.do_stokesV=True
