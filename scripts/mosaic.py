@@ -293,7 +293,7 @@ def make_mosaic(args):
                     dec_median=np.median(t[~bad]['DEC_offset'])
                     t[bad]['RA_offset']=ra_median
                     t[bad]['DEC_offset']=dec_median
-                    shifts.append(t)
+                shifts.append(t)
             else:
                 print('Generating a dummy shift file')
                 t=Table([np.zeros(len(polylists[-1])),np.zeros(len(polylists[-1]))],names=('RA_offset','DEC_offset'))
