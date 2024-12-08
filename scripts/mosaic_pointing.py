@@ -10,14 +10,13 @@ from builtins import range
 import argparse
 from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic
 import os
-from auxcodes import getpos,getposim,dotdict
-import glob
+from auxcodes import dotdict
 from mosaic import make_mosaic
 from astropy.io import fits
 import numpy as np
 from surveys_db import SurveysDB
 import pickle
-import os,sys
+import os
 from sourcefind import run_tiered_bdsf as run_bdsf
 
 def make_header(maxsep,name,ra,dec,cellsize,resolution,history=None):

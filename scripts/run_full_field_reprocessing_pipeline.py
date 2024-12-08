@@ -3,27 +3,20 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import range
-from surveys_db import SurveysDB, tag_field, use_database, get_cluster
+from surveys_db import SurveysDB, tag_field, get_cluster
 from parset import option_list
-from options import options,print_options
+from options import options
 import sys
 import os
 import glob
-from astropy.coordinates import SkyCoord
-from astropy import units as u
 from astropy.io import fits
-import time
-from subprocess import call
 from reprocessing_utils import prepare_field,do_rclone_disk_upload,do_rclone_tape_pol_upload
 import argparse
 import threading
 from auxcodes import run,warn,report
-import numpy as np
 import pipeline
 import datetime
 
-from rclone import RClone
 from sdr_wrapper import SDR
 from time import sleep
 

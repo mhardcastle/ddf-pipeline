@@ -1,14 +1,9 @@
-import os,sys
 from auxcodes import *
 import scipy.ndimage as nd
 import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.optimize import curve_fit
-from scipy.stats import skewnorm
-from scipy.stats import lognorm
-from scipy import stats
-from scipy.stats._continuous_distns import _distn_names
-from scipy.stats import ks_2samp
+from scipy.stats._continuous_distns import_distn_names
 from astropy.table import Table
 
 ## ANOTHER SCRIPT TO FIND ENTIRE FILEDS THAT ARE BAD.
@@ -47,7 +42,7 @@ def filterarray_outliers(dataarray,niter=20,eps=1e-6):
         oldrms=rms
     print(dataarray,old_div(np.abs(oldrms-rms),rms)*1E6,old_div(np.abs(oldrms-rms),rms) < eps,eps,rms,oldrms,i)
     return dataarray
-    raise RuntimeError('Failed to converge')
+    raise RuntimeError('Failed to converge') # seems unreachable
 
 
 # Make facet images

@@ -1,16 +1,9 @@
 from __future__ import print_function
-import glob
 from astropy.io import fits
 from astropy.table import Table
 import numpy as np
-import math
-from itertools import chain
-import random
 import matplotlib.pyplot as plt 
-from matplotlib import rc
-from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import scipy
-import os,sys
 from auxcodes import sepn
 # Get all scipy distirubtions as _distn_names
 from scipy.stats._continuous_distns import _distn_names

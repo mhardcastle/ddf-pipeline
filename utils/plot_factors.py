@@ -9,7 +9,6 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 from scipy.optimize import curve_fit
-from astropy.table import Table
 import numpy as np
 import matplotlib.pyplot as plt
 import sys

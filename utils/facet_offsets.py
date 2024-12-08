@@ -5,8 +5,6 @@ from __future__ import division
 from builtins import range
 from builtins import object
 from past.utils import old_div
-from astropy.io import fits
-from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import numpy as np

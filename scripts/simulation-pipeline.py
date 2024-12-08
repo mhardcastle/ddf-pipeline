@@ -1,5 +1,5 @@
 import argparse
-import os,sys
+import os
 from subprocess import call
 import pyrap.tables as pt
 import numpy as np
@@ -9,7 +9,6 @@ import glob
 from astropy.io import ascii
 from astropy.io import fits
 from scipy.signal import convolve2d
-from scipy.ndimage import gaussian_filter
 
 # Simulate a model image from DR2 solutions
 

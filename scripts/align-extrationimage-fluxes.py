@@ -12,14 +12,11 @@
 
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
-from astropy.coordinates import SkyCoord
 from astropy.table import Table
 import argparse
 import os
-import glob
 from astropy.io import fits
 import numpy as np
-import pickle
 import os,sys
 try:
     import bdsf as bdsm
@@ -27,7 +24,6 @@ except ImportError:
     import lofar.bdsm as bdsm
 from crossmatch_utils import *
 import pyregion
-from astropy import wcs
 from astropy.wcs import WCS
 from random import random
 from random import randint
@@ -36,10 +32,8 @@ from numpy import arange
 from numpy import mean
 from numpy import std
 from numpy import absolute
-from sklearn.datasets import make_regression
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import HuberRegressor
-from sklearn.linear_model import RANSACRegressor
 from sklearn.linear_model import TheilSenRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import RepeatedKFold
@@ -88,7 +82,7 @@ def filter_outside_extract(ds9region,infilename,catalogue):
 
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)
-    map=hdu[0].data
+    # map=hdu[0].data
     w = WCS(flatten(hdu).header)
 
     r = pyregion.open(ds9region)
@@ -113,7 +107,7 @@ def filter_inside_extract(ds9region,infilename,catalogue):
 
     hdu=fits.open(infilename)
     hduflat = flatten(hdu)
-    map=hdu[0].data
+    # map=hdu[0].data
     w = WCS(flatten(hdu).header)
 
     r = pyregion.open(ds9region)

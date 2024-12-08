@@ -8,17 +8,12 @@ from builtins import str
 from builtins import range
 from do_polcubes import do_polcubes
 from parset import option_list
-from options import options,print_options
+from options import options
 from make_mslists import make_list
 from auxcodes import run,warn,report
-import casacore.tables as pt
 import os,sys
 import numpy as np
 import argparse
-import pyregion
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.io import ascii
 import glob
 from subprocess import call
 import argparse

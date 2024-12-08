@@ -7,12 +7,10 @@ import numpy as np
 import argparse
 import pyregion
 from astropy.io import fits
-from astropy.wcs import WCS
 from astropy.io import ascii
 import glob
-from subprocess import call
 from fixsymlinks import fixsymlinks
-from auxcodes import die,report,warn,run,flatten
+from auxcodes import run,flatten
 from pipeline import parse_parset
 from reprocessing_utils import *
 import datetime

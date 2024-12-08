@@ -6,7 +6,6 @@ from __future__ import print_function
 from builtins import zip
 import requests
 from lxml import html
-import shutil
 import os.path
 from time import sleep
 import sys

@@ -3,7 +3,6 @@
 from __future__ import print_function
 import glob
 import os
-import pyrap.tables as pt
 
 def average(wildcard='*'):
     mss=glob.glob(wildcard+'.pre-cal.ms')

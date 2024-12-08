@@ -15,7 +15,7 @@ import sys
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
 import astropy.units as u
 
-def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
+def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True): # ra, dec are unused
     """
     Like flatten, but don't flatten. So just make the appropriate slice
     """
@@ -73,7 +73,7 @@ def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
     return hdulist
     
     
-def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
+def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True): # ra, dec are unused
     """ 
     Flatten a fits file so that it becomes a 2D image. Return new header and
     data
