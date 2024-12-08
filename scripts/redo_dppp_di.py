@@ -1,8 +1,5 @@
 from builtins import str
-import numpy as np
-import pyrap.tables as pt
 import  os,sys
-import glob
 from auxcodes import getpos
 
 def redo_dppp_di(o):

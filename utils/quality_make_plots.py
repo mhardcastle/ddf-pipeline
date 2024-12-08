@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
-from crossmatch_utils import separation
 from matplotlib.ticker import NullFormatter
 import numpy.random as npr
 from astropy.table import Table

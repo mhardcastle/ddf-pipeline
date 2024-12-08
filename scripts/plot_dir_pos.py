@@ -4,12 +4,10 @@ from __future__ import print_function
 from __future__ import division
 from past.utils import old_div
 import sys
-import pyrap.tables as pt
 import numpy as np
 import os
 import glob
 import matplotlib.pyplot as plt
-from astropy.io import fits
 from auxcodes import getpos,getposim
 csize=2.5
 import subprocess

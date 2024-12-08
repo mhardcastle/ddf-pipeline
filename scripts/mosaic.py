@@ -9,10 +9,9 @@ from __future__ import division
 from builtins import zip
 from builtins import range
 from pipeline_version import version
-from reproject import reproject_interp,reproject_exact
+from reproject import reproject_exact
 from reproj_test import reproject_interp_chunk_2d
 from auxcodes import die, get_rms, flatten, convert_regionfile_to_poly, get_rms_map3
-import sys
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS

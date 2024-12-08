@@ -15,7 +15,7 @@ from options import options,print_options
 from astropy.io import fits
 from astropy.table import Table
 import bdsf
-from auxcodes import report,get_rms,warn,die,sepn,get_centpos
+from auxcodes import report,get_rms,warn,die,get_centpos
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
 from quality_make_plots import plot_flux_ratios,plot_flux_errors,plot_position_offset
