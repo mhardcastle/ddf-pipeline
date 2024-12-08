@@ -16,7 +16,7 @@ EOF
    export SRC=/usr/local/src
    export RCLONE_CONFIG_DIR=/MACARON
    export DDF_PIPELINE_CATALOGS=/CATALOGS
-   # Since DDF, kMS, and DynspecMS are dev branches we need to do this in order to get the right version number
+   # Since DDF, kMS and DynspecMS are dev branches we need to do this in order to get the right version number
    export KILLMS_DIR=$SRC
    export PYTHONPATH=$KILLMS_DIR:$PYTHONPATH
    export PYTHONPATH=$KILLMS_DIR/DDFacet:$PYTHONPATH
