@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # Run pipeline download/unpack steps followed by the main job
 
-import time
 from surveys_db import *
 from db_utils import *
-import sys
 import os
 import glob
 from astropy.coordinates import SkyCoord
-from astropy import units as u
 
 def check_output_ada(cname):
 	rclonepath = os.environ['RCLONE_CONFIG_DIR']

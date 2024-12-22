@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from __future__ import division
 from past.utils import old_div
 from astropy.table import Table
-from astropy.io import fits
 import numpy as np
 from make_subim import extract_subim
 from crossmatch_utils import select_isolated_sources

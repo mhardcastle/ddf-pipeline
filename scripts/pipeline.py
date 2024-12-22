@@ -26,7 +26,6 @@ standard_library.install_aliases()
 from builtins import zip
 from builtins import str
 from builtins import range
-from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
@@ -34,13 +33,12 @@ import os.path
 from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
 from parset import option_list
 from options import options,print_options
-from shutil import copyfile,rmtree,move
+from shutil import rmtree,move
 import glob
 import pyrap.tables as pt
 from redo_dppp_di import redo_dppp_di
 from modify_mask import modify_mask
 from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
-from histmsamp import find_uvmin,sumdico
 import numpy as np
 from astropy.io import fits
 from pipeline_version import version
