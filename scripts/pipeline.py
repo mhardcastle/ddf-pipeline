@@ -1467,7 +1467,12 @@ def main(o=None):
             warn('No full mslist provided, stopping here')
             summary(o)
             stop(3)
-        
+
+        # small mslist cache not needed from this point so clear it to
+        # save disk space
+        if o['clearcache_end']:
+            clearcache(o['mslist'],o)
+            
         # #########################################################################
         # ###############                  BIG MSLIST               ###############
         # #########################################################################
