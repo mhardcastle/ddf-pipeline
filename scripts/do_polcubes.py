@@ -79,7 +79,7 @@ def do_polcubes(colname,
                 options,catcher):
 
     o=options
-
+    mslists=[]
     m=MSList(o['full_mslist'])
     ufreqs=sorted(set(m.freqs))
     for i,freq in enumerate(ufreqs):
@@ -90,6 +90,7 @@ def do_polcubes(colname,
             if f==freq:
                 fmslist.append(ms)
         mslistname='stokes-mslist-%i.txt' % i
+        mslists.append(mslistname)
         with open(mslistname,'w') as file:
             for ms in fmslist:
                 file.write(ms+'\n')
@@ -165,4 +166,4 @@ def do_polcubes(colname,
             report('Making corrected cube')
             make_cube(freqs,hdus,outfile)
             
-
+    return mslists

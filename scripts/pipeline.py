@@ -1463,16 +1463,16 @@ def main(o=None):
                 stop(2)
 
 
+        # small mslist cache not needed from this point so clear it to
+        # save disk space
+        if o['clearcache_end']:
+            clearcache(o['mslist'],o)
+
         if o['full_mslist'] is None:
             warn('No full mslist provided, stopping here')
             summary(o)
             stop(3)
 
-        # small mslist cache not needed from this point so clear it to
-        # save disk space
-        if o['clearcache_end']:
-            clearcache(o['mslist'],o)
-            
         # #########################################################################
         # ###############                  BIG MSLIST               ###############
         # #########################################################################
@@ -1850,10 +1850,13 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
+        if o['clearcache_end']:
+            full_clearcache(o)
         from do_polcubes import do_polcubes
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
+        pol_mslists=[]
 
         if o['split_polcubes']:
             cubefiles=['image_full_low_StokesQ.cube.dirty.fits','image_full_low_StokesQ.cube.dirty.corr.fits','image_full_low_StokesU.cube.dirty.fits','image_full_low_StokesU.cube.dirty.corr.fits']
@@ -1862,7 +1865,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
-            do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):
@@ -1895,9 +1898,10 @@ def main(o=None):
         
     m=MSList(o['full_mslist'])
     uobsid = set(m.obsids)
-    
+    stokesv_mslists=[]
     for obsid in uobsid:
         umslist='mslist-%s.txt' % obsid
+        stokesv_mslists.append(umslist)
         print('Writing ms list for obsids',umslist)
         with open(umslist,'w') as file:
             for ms,ob in zip(m.mss,m.obsids):
@@ -1971,7 +1975,9 @@ def main(o=None):
         if spectral_mslist is not None:
             extras+=spectral_mslist
         if o['polcubes']:
-            extras+=glob.glob('stokes-mslist*.txt')
+            extras+=pol_mslists
+        if o['stokesv']:
+            extras+=stokesv_mslists
         full_clearcache(o,extras=extras)
     
     if use_database():
