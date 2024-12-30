@@ -551,7 +551,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log'),quiet=options['quiet'])
+            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log'),options=options,quiet=options['quiet'])
 
             # Clip anyway - on IMAGING_WEIGHT by default
             if DISettings is not None:
