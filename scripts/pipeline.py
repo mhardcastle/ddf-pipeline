@@ -641,7 +641,7 @@ def clearcache(mslist,options):
             pass
 
 def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,options=None):
-    if options=None:
+    if options is None:
         options=o
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
