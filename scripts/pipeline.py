@@ -653,7 +653,6 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
-            f.write('%s\n'%(solname))
     else:
         for fname in filenames:
             MSName=os.path.abspath(fname).split("/")[-1]
