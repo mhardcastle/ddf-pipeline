@@ -563,7 +563,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
-                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers)
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options)
         
 
 
@@ -640,11 +640,13 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,options=None):
+    if options=None:
+        options=o
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
-    SolsDir=o["SolsDir"]
+    SolsDir=options["SolsDir"]
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
             solname =fname+'/killMS.'+ddsols+'.sols.npz'
@@ -670,7 +672,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     f.write('%s\n'%(solname))
         
         checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
-        if o['restart'] and os.path.isfile(checkname):
+        if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
             ss='MergeSols.py --SolsFilesIn=solslist_%.2f.txt --SolFileOut=%s '%(start_time,checkname)
@@ -679,22 +681,22 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             run(ss,dryrun=dryrun)
             
         checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
-        if o['restart'] and os.path.isfile(checkname):
+        if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,o['smoothingtype'],o['NCPU_killms']),dryrun=dryrun)
+            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,options['smoothingtype'],options['NCPU_killms']),dryrun=dryrun)
 
         smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
 
         if InterpToMSListFreqs:
             interp_outname="%s_%.2f_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
-            if o['restart'] and os.path.isfile(checkname):
+            if options['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,o['NCPU_killms'])
+                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,options['NCPU_killms'])
                 run(command,dryrun=dryrun)
         
         for i in range(0,len(full_sollist)):
