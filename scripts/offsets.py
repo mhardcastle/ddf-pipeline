@@ -19,10 +19,8 @@ from builtins import object
 from past.utils import old_div
 import matplotlib
 matplotlib.use('Agg')
-from auxcodes import report,run,warn,die,getposim,sepn
-import requests
+from auxcodes import report,warn,getposim
 import os
-from get_cat import get_cat
 import glob
 from astropy.table import Table, vstack, unique
 import numpy as np
@@ -373,7 +371,7 @@ class Offsets(object):
             self.lofar_table=Table.read(lofar_table)
         tf=self.lofar_table
 
-        poly,labels=self.polys,self.labels
+        poly,labels=self.polys,self.labels # labels is unused
 
         basesize=10
         rarange=(np.min(tf['RA']),np.max(tf['RA']))

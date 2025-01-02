@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-from run_extraction_pipeline import create_ds9_region,do_run_extract
+from run_extraction_pipeline import create_ds9_region
 from reprocessing_utils import prepare_field
 import sys
 from astropy.coordinates import SkyCoord,get_icrs_coordinates
