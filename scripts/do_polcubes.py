@@ -98,8 +98,8 @@ def do_polcubes(colname,
             if len(fmslist)>maxc:
                 maxc=len(fmslist)
         ufreqs=[k for k in d if d[k]==maxc]
-        print('Now there are %i frequencies',len(ufreqs))
-        if len(ufreqs>25):
+        print('Now there are %i frequencies' % len(ufreqs))
+        if len(ufreqs)>25:
             die('Too many frequencies for Stokes cube')
                 
     for i,freq in enumerate(ufreqs):
