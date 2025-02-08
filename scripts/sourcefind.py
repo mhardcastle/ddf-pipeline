@@ -347,16 +347,19 @@ def run_tiered_bdsf(imf,appf,thresh_pix=4.5,label='',catprefix='mosaic'):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description='Source finding in a LoTSS pointing')
-    parser.add_argument('--intfile',type=str,help='True flux map')
-    parser.add_argument('--appfile',type=str,help='Apparent flux map')
+    parser.add_argument('--intfile',type=str,help='True flux map (required)')
+    parser.add_argument('--appfile',type=str,help='Apparent flux map (not required)')
+    parser.add_argument('--prefix',type=str,help='Prefix',default='mosaic')
     parser.add_argument('--simple',action='store_true',help='Do the simple source find only')
     args = parser.parse_args()
     print(args)
     if args.simple:
+        if args.appfile:
+            raise NotImplementedError('Appfile does not work for simple source find yet')
         run_old_bdsf(args.intfile)
     else:
         if args.appfile:
-            run_tiered_bdsf(args.intfile,args.appfile)
+            run_tiered_bdsf(args.intfile,args.appfile,catprefix=args.prefix)
         else:
-            run_tiered_bdsf(args.intfile,args.intfile)
+            run_tiered_bdsf(args.intfile,args.intfile,catprefix=args.prefix)
             
