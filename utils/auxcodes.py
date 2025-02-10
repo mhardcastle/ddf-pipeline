@@ -6,9 +6,8 @@ from builtins import range
 from past.utils import old_div
 from builtins import object
 import numpy as np
-from scipy.optimize import leastsq
 import scipy
-import os,sys
+import os
 from pipeline_logging import run_log
 from subprocess import call
 from astropy.io import fits

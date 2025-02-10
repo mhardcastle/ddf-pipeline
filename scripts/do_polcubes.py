@@ -5,10 +5,7 @@ from builtins import zip
 from past.utils import old_div
 import numpy as np
 from pipeline import *
-from pyrap.tables import table
-from auxcodes import getpos,MSList
-from astropy import units as u
-from astropy.coordinates import Angle
+from auxcodes import MSList
 import os
 
 # Utility functions for making the cube

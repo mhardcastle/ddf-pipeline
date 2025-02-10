@@ -2,13 +2,10 @@ from __future__ import print_function
 # MS archiving script contributed by R. van Weeren
 # LOFAR software must be on path and dysco on LD_LIBRARY_PATH
 
-import os, sys
-import glob
+import os
 import argparse
 import casacore.tables as pt
-from casacore.tables.tableutil import makescacoldesc, makearrcoldesc, \
-    makecoldesc, maketabdesc
-import numpy as np
+from casacore.tables.tableutil import makearrcoldesc, maketabdesc
 
 def make_imaging_weight_column(ms):
     

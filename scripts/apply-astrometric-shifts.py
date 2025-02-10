@@ -3,7 +3,6 @@
 # Apply the astrometric offsets to an image
 
 from __future__ import print_function
-import os,sys
 from auxcodes import convert_regionfile_to_poly,flatten
 import scipy.ndimage as nd
 import numpy as np

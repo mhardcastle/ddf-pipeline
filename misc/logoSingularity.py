@@ -8,10 +8,7 @@ except:
         return ss
 
 
-import shutil
-
-from subprocess import check_output
-from subprocess import Popen, PIPE
+from subprocess import PIPE
 import subprocess
 
 def getVersion(Name):
@@ -183,7 +180,7 @@ SHIFT=30
 def Print_v():
     for Name in DicoExe.keys():
 
-        D=DicoExe[Name]
+        # D=DicoExe[Name]
         
         version=getVersion(Name)#.rjust(30," ")
         NameS=Name#.rjust(20," ")

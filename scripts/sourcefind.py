@@ -15,7 +15,7 @@ from shutil import copyfile
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-from auxcodes import warn, report, separator
+from auxcodes import warn, separator
 
 def create_pb_image(imagef_int, imagef_out, pbimagef):
     with fits.open(imagef_int) as dat:
