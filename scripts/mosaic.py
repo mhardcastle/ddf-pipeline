@@ -518,7 +518,7 @@ def make_mosaic(args):
         isum[~mask]=np.nan
         if np.any(np.isnan(isum)):
             # blank small islands -- due to beam errors
-            island_mask=make_blank_mask(isum)
+            island_mask=make_blank_mask(isum,verbose=True)
             isum[island_mask]=np.nan
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             try:
