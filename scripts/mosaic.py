@@ -13,6 +13,7 @@ from reproject import reproject_interp,reproject_exact
 from reproj_test import reproject_interp_chunk_2d
 from auxcodes import die, get_rms, flatten, convert_regionfile_to_poly, get_rms_map3
 import sys
+from bad_pix_filter import make_blank_mask
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS
@@ -473,7 +474,7 @@ def make_mosaic(args):
     # ----------------------------------------
     isum=np.zeros([ysize,xsize],dtype=np.float32)
     wsum=np.zeros_like(isum)
-    mask=np.zeros_like(isum,dtype=np.bool)
+    mask=np.zeros_like(isum,dtype=bool)
 
     print('now making the mosaic')
     for i in range(len(hdus)):
@@ -515,6 +516,9 @@ def make_mosaic(args):
         isum/=wsum
         # mask now contains True where a non-nan region was present in either map
         isum[~mask]=np.nan
+        # blank small islands -- due to beam errors
+        island_mask=make_blank_mask(isum)
+        isum[island_mask]=np.nan
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             try:
                 header[ch]=hdus[0].header[ch]
