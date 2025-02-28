@@ -516,9 +516,10 @@ def make_mosaic(args):
         isum/=wsum
         # mask now contains True where a non-nan region was present in either map
         isum[~mask]=np.nan
-        # blank small islands -- due to beam errors
-        island_mask=make_blank_mask(isum)
-        isum[island_mask]=np.nan
+        if np.any(np.isnan(isum)):
+            # blank small islands -- due to beam errors
+            island_mask=make_blank_mask(isum)
+            isum[island_mask]=np.nan
         for ch in ('BMAJ', 'BMIN', 'BPA'):
             try:
                 header[ch]=hdus[0].header[ch]
