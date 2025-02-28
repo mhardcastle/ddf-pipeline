@@ -61,7 +61,7 @@ def cube_extract(f,ra,dec,x,y,size,hduid=0,verbose=True):
     if verbose:
         print(slice)
 
-    hdu=fits.PrimaryHDU(f[hduid].data[slice],header)
+    hdu=fits.PrimaryHDU(f[hduid].data[tuple(slice)],header)
     copy=('EQUINOX','EPOCH','BMAJ','BMIN','BPA','RESTFRQ','DATE-OBS','TELESCOP','OBJECT','DATE-MAP','ORIGIN')
     for k in copy:
         r=f[hduid].header.get(k)
@@ -136,7 +136,7 @@ def flatten(f,ra,dec,x,y,size,hduid=0,channel=0,freqaxis=3,verbose=True):
     if verbose:
         print(slice)
 
-    hdu=fits.PrimaryHDU(f[hduid].data[slice],header)
+    hdu=fits.PrimaryHDU(f[hduid].data[tuple(slice)],header)
     copy=('EQUINOX','EPOCH','BMAJ','BMIN','BPA','RESTFRQ','DATE-OBS','TELESCOP','OBJECT','DATE-MAP','ORIGIN','BTYPE','BUNIT')
     for k in copy:
         r=f[hduid].header.get(k)
