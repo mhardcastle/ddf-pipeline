@@ -50,8 +50,10 @@ def convert_summary_cfg(option_list,summaryname='summary.txt',newconfigname='tie
                 except KeyError:
                     print('Cannot find option for parameter',option[0],option[1])
                     continue
+            if summary_value == 'None':
+                continue
             print(option,summary_value)
-            newconfig.write('%s=%s\n'%(option,summary_value))
+            newconfig.write('%s=%s\n'%(option[1],summary_value))
     newconfig.close()
 
     o = options(newconfigname,option_list)

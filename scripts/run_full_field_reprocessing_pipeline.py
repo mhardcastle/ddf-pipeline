@@ -22,7 +22,7 @@ from auxcodes import run,warn,report, MSList
 import numpy as np
 import pipeline
 import datetime
-
+from pipeline import ddf_image
 from rclone import RClone
 from sdr_wrapper import SDR
 from time import sleep
@@ -187,14 +187,17 @@ def compress_fits(filename,q):
     command='fpack -q %i %s' % (q,filename)
     run(command)
 
-def do_highres_pol(field):
+def do_highres_pol(outname,field,options=None):
     # Makes a single 6" QU cube for entire field using all epochs
+    uvrange=[o['image_uvmin'],o['uvmax']]
+    ddf_kw = {}
     cubefiles = ['image_full_polhigh_StokesQ.cube.dirty.fits','image_full_polhigh_StokesQ.cube.dirty.corr.fits','image_full_polhigh_StokesU.cube.dirty.fits','image_full_polhigh_StokesU.cube.dirty.corr.fits']
     cthreads=[]
     flist=[]
     ddf_kw = {}
     mslistname='big-mslist.txt'
-    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,1000.0],'image_full_polhigh',mslistname,ddf_kw,beamsize=6.0,imsize=o['imsize'],cellsize=1.5,robust=-0.5,options=o,catcher=None)
+    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',uvrange,outname,mslistname,ddf_kw,beamsize=o['final_psf_arcsec'],imsize=o['imsize'],cellsize=o['cellsize'],robust=o['final_robust'],options=o,catcher=None)
+    #,[0.1,1000.0],'image_full_polhigh',mslistname,ddf_kw,beamsize=6.0,imsize=o['imsize'],cellsize=1.5,robust=-0.5,options=o,catcher=None)
 
     # Redo the headers
     for cubefile in cubefiles:
@@ -223,13 +226,18 @@ def do_highres_pol(field):
         #        #os.remove(f)
     #update_status(None,'Complete')
 
-def do_epoch_pol(outname,mslistname):
+def do_epoch_pol(outname,mslistname,options=None):
 
+    low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+    if o['low_imsize'] is not None:
+        low_imsize=o['low_imsize'] # allow over-ride
+    else:
+        low_imsize=o['imsize']*o['cellsize']/o['low_cell']
     cubefiles = ['%s_StokesQ.cube.dirty.fits'%outname,'%s_StokesQ.cube.dirty.corr.fits'%outname,'%s_StokesU.cube.dirty.fits'%outname,'%s_StokesU.cube.dirty.corr.fits'%outname]
     cthreads=[]
     flist=[]
     ddf_kw = {}
-    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,25.75000],outname,mslistname,ddf_kw,beamsize=20.0,imsize=6000,cellsize=4.5,robust=-0.25,options=o,catcher=None)
+    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',low_uvrange,outname,mslistname,ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=None)
 
     # Redo the headers
     for cubefile in cubefiles:
@@ -259,19 +267,30 @@ def do_epoch_pol(outname,mslistname):
     #update_status(None,'Complete')
 
     
-def do_run_high_v(outname,mslist):
+def do_run_high_v(outname,mslist,options=None):
+    uvrange=[o['image_uvmin'],o['uvmax']]
+    ddf_kw = {}
+    ddf_image(outname,mslist,
+                  cleanmode='SSD',ddsols='[DDS3_full_smoothed,DDS3_full_slow]',
+                  applysols=o['apply_sols'][6],stokes='IV',
+                  AllowNegativeInitHMP=True,
+                  majorcycles=0,robust=o['final_robust'],
+                  colname='DATA',use_dicomodel=False,
+                  uvrange=uvrange,cellsize=o['cellsize'],
+                  peakfactor=0.001,
+                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
+                  catcher=None,options=o,**ddf_kw)
+    #executionstr = 'DDF.py --Parallel-NCPU=12 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=32 --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=0 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.50000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 6.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-PolMode=IV --Output-Mode=Dirty --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.100000,1000.0000] --GAClean-MinSizeInit=10 --Beam-Smooth=1'%(outname,mslist)
 
-    executionstr = 'DDF.py --Parallel-NCPU=12 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=32 --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=0 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.50000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 6.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-PolMode=IV --Output-Mode=Dirty --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.100000,1000.0000] --GAClean-MinSizeInit=10 --Beam-Smooth=1'%(outname,mslist)
-
-    print(executionstr)
-    result=os.system(executionstr)
-    if result!=0:
-        executionstr +=' --Beam-LOFARBeamMode=A'
-        executionstr = executionstr.replace('--Beam-PhasedArrayMode=A','')
-        print(executionstr)
-        result=os.system(executionstr)
-        if result != 0:
-            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+    #print(executionstr)
+    #result=os.system(executionstr)
+    #if result!=0:
+    #    executionstr +=' --Beam-LOFARBeamMode=A'
+    #    executionstr = executionstr.replace('--Beam-PhasedArrayMode=A','')
+    #    print(executionstr)
+    #    result=os.system(executionstr)
+    #    if result != 0:
+    #        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
 def update_status(name,operation,status,time=None,workdir=None,av=None,survey=None):
     # modified from surveys_db.update_status
@@ -297,8 +316,8 @@ if __name__=='__main__':
     parser.add_argument('--EpochPol', help='Create individual epoch QU cube at 20" and 45"', action='store_true')    
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
-    parser.add_argument('--SummaryFile',help='DDF pipeline summary file',action='store_true')
-    parser.add_argument('--NoDBSync',help='DDF pipeline parset',type=int,default=0)
+    parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database',type=int,default=0)
+    parser.add_argument('--NCPU',help='Number of CPU',type=int,default=32)
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     print('Input arguments: ',args)
@@ -335,10 +354,16 @@ if __name__=='__main__':
     else:
         os.chdir(field)
 
-    if args['SummaryFile']:
-        print('Reading summary file')
-        o = convert_summary_cfg(option_list)
-        print(o)
+
+    print('Reading summary file (summary.txt)')
+    if not os.path.exists('summary.txt'):
+        print('Cannot read the summary.txt file - failing')
+        sys.exit(0)
+    o = convert_summary_cfg(option_list)
+    o['NCPU_DDF'] = args['NCPU']
+    o['NCPU_killms'] = args['NCPU']
+    o['colname'] = 'DATA'
+    print(o)
         
     print('Checking big-mslist')
     m=MSList('big-mslist.txt')
@@ -403,7 +428,7 @@ if __name__=='__main__':
     if args['StokesV']:
         for obsid in uobsid:
             print('Stokes V image for %s'%obsid)
-            do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid)
+            do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
 
             resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obis)
             os.system('mkdir V_high_maps')
@@ -421,7 +446,7 @@ if __name__=='__main__':
     if args['HighPol']:
         from do_polcubes import do_polcubes
         os.system('mkdir logs')
-        do_highres_pol(field)
+        do_highres_pol('image_full_polhigh',field,options=o)
         resultfiles = glob.glob('*fz')
         print('Compressed pol cubes',resultfiles)
         os.system('mkdir stokes_highres')
@@ -440,7 +465,7 @@ if __name__=='__main__':
         from do_polcubes import do_polcubes
         os.system('mkdir logs')
         for obsid in uobsid:
-            do_epoch_pol('image_full_low_QU_%s'%obsid,'mslist-%s.txt'%obsid)
+            do_epoch_pol('image_full_low_QU_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
             resultfiles = glob.glob('*fz')
             print('Compressed pol cubes',resultfiles)
             os.system('mkdir stokes_highres')
