@@ -15,10 +15,10 @@ from astropy import units as u
 from astropy.io import fits
 import time
 from subprocess import call
-from reprocessing_utils import prepare_field,do_rclone_disk_upload,do_rclone_tape_pol_upload
+from reprocessing_utils import prepare_field,do_rclone_disk_upload,do_rclone_tape_pol_upload,convert_summary_cfg
 import argparse
 import threading
-from auxcodes import run,warn,report
+from auxcodes import run,warn,report, MSList
 import numpy as np
 import pipeline
 import datetime
@@ -188,12 +188,48 @@ def compress_fits(filename,q):
     run(command)
 
 def do_highres_pol(field):
-
+    # Makes a single 6" QU cube for entire field using all epochs
     cubefiles = ['image_full_polhigh_StokesQ.cube.dirty.fits','image_full_polhigh_StokesQ.cube.dirty.corr.fits','image_full_polhigh_StokesU.cube.dirty.fits','image_full_polhigh_StokesU.cube.dirty.corr.fits']
     cthreads=[]
     flist=[]
     ddf_kw = {}
-    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,1000.0],'image_full_polhigh',ddf_kw,beamsize=6.0,imsize=o['imsize'],cellsize=1.5,robust=-0.5,options=o,catcher=None)
+    mslistname='big-mslist.txt'
+    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,1000.0],'image_full_polhigh',mslistname,ddf_kw,beamsize=6.0,imsize=o['imsize'],cellsize=1.5,robust=-0.5,options=o,catcher=None)
+
+    # Redo the headers
+    for cubefile in cubefiles:
+        stokesparam = cubefile.split('_')[3].split('.')[0].replace('Stokes','')
+        redo_cube_headers(cubefile,cubefile,stokesparam)
+    
+    if o['compress_polcubes']:
+        for cubefile in cubefiles:
+            if o['restart'] and os.path.isfile(cubefile+'.fz'):
+                warn('Compressed cube file '+cubefile+'.fz already exists, not starting compression thread')
+            else:
+                report('Starting compression thread for '+cubefile)
+                thread = threading.Thread(target=compress_fits, args=(cubefile,o['fpack_q']))
+                thread.start()
+                cthreads.append(thread)
+                flist.append(cubefile)
+    if o['compress_polcubes']:
+        # cthreads and flist exist
+        for thread in cthreads:
+            if thread.is_alive():
+                warn('Waiting for a compression thread to finish')
+                thread.join()
+        #if o['delete_compressed']:
+        #    for f in flist:
+        #        warn('Deleting compressed file %s' % f)
+        #        #os.remove(f)
+    #update_status(None,'Complete')
+
+def do_epoch_pol(outname,mslistname):
+
+    cubefiles = ['%s_StokesQ.cube.dirty.fits'%outname,'%s_StokesQ.cube.dirty.corr.fits'%outname,'%s_StokesU.cube.dirty.fits'%outname,'%s_StokesU.cube.dirty.corr.fits'%outname]
+    cthreads=[]
+    flist=[]
+    ddf_kw = {}
+    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',[0.1,25.75000],outname,mslistname,ddf_kw,beamsize=20.0,imsize=6000,cellsize=4.5,robust=-0.25,options=o,catcher=None)
 
     # Redo the headers
     for cubefile in cubefiles:
@@ -223,16 +259,19 @@ def do_highres_pol(field):
     #update_status(None,'Complete')
 
     
+def do_run_high_v(outname,mslist):
 
-    
-def do_run_high_v(field):
-
-    executionstr = 'DDF.py --Parallel-NCPU=12 --Output-Name=image_full_high_stokesV --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=32 --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=0 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.50000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 6.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-PolMode=IV --Output-Mode=Dirty --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.100000,1000.0000] --GAClean-MinSizeInit=10 --Beam-Smooth=1'
+    executionstr = 'DDF.py --Parallel-NCPU=12 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=32 --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=0 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.50000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 6.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-PolMode=IV --Output-Mode=Dirty --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.100000,1000.0000] --GAClean-MinSizeInit=10 --Beam-Smooth=1'%(outname,mslist)
 
     print(executionstr)
     result=os.system(executionstr)
     if result!=0:
-        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
+        executionstr +=' --Beam-LOFARBeamMode=A'
+        executionstr = executionstr.replace('--Beam-PhasedArrayMode=A','')
+        print(executionstr)
+        result=os.system(executionstr)
+        if result != 0:
+            raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
 def update_status(name,operation,status,time=None,workdir=None,av=None,survey=None):
     # modified from surveys_db.update_status
@@ -255,19 +294,16 @@ if __name__=='__main__':
     parser.add_argument('--StokesV', help='Include Stokes V reprocessing', action='store_true')
     parser.add_argument('--FullSub', help='Include full field subtraction', action='store_true')
     parser.add_argument('--HighPol', help='Include full field 6asec QU cube', action='store_true')
+    parser.add_argument('--EpochPol', help='Create individual epoch QU cube at 20" and 45"', action='store_true')    
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
-    parser.add_argument('--Parset',help='DDF pipeline parset',type=str)
+    parser.add_argument('--SummaryFile',help='DDF pipeline summary file',action='store_true')
     parser.add_argument('--NoDBSync',help='DDF pipeline parset',type=int,default=0)
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
-    
-    field = args['Field']
-    if args['Parset']:
-        o = options(args['Parset'],option_list)
-        print(o)
     print('Input arguments: ',args)
 
+    field = args['Field']
 
     with SurveysDB(readonly=True) as sdb:
         sdb.cur.execute('select * from full_field_reprocessing where id="%s"'%field)
@@ -299,6 +335,25 @@ if __name__=='__main__':
     else:
         os.chdir(field)
 
+    if args['SummaryFile']:
+        print('Reading summary file')
+        o = convert_summary_cfg(option_list)
+        print(o)
+        
+    print('Checking big-mslist')
+    m=MSList('big-mslist.txt')
+    print('Looking for different epochs')
+    uobsid = set(m.obsids)
+    epoch_mslists=[]
+    for obsid in uobsid:
+        umslist='mslist-%s.txt' % obsid
+        epoch_mslists.append(umslist)
+        print('Writing ms list for obsids',umslist)
+        with open(umslist,'w') as file:
+            for ms,ob in zip(m.mss,m.obsids):
+                if ob==obsid:
+                    file.write(ms+'\n')
+    
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
         if args[option] and not args["NoDBSync"]:
             print('Changing',option,'status to Started')
@@ -346,12 +401,14 @@ if __name__=='__main__':
 
             
     if args['StokesV']:
-        do_run_high_v(field)
+        for obsid in uobsid:
+            print('Stokes V image for %s'%obsid)
+            do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid)
 
-        resultfiles = glob.glob('image_full_high_stokesV*dirty*.fits')
-        os.system('mkdir V_high_maps')
-        for resultfile in resultfiles:
-            os.system('cp %s V_high_maps'%(resultfile))
+            resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obis)
+            os.system('mkdir V_high_maps')
+            for resultfile in resultfiles:
+                os.system('cp %s V_high_maps'%(resultfile))
         os.system('tar -cvf V_high_maps.tar V_high_maps')
         resultfilestar = ['V_high_maps.tar']
 
@@ -378,3 +435,15 @@ if __name__=='__main__':
             update_status(field,'HighPol','Uploading')
             do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
             update_status(field,'HighPol','Verified',time='end_date')
+
+    if args['EpochPol']:
+        from do_polcubes import do_polcubes
+        os.system('mkdir logs')
+        for obsid in uobsid:
+            do_epoch_pol('image_full_low_QU_%s'%obsid,'mslist-%s.txt'%obsid)
+            resultfiles = glob.glob('*fz')
+            print('Compressed pol cubes',resultfiles)
+            os.system('mkdir stokes_highres')
+            for resultfile in resultfiles:
+                os.system('mv %s stokes_highres/'%(resultfile))
+        os.system('tar -cvf stokes_highres.tar stokes_highres')

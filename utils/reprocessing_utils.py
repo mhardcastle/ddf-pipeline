@@ -16,6 +16,46 @@ from subprocess import call
 from rclone import RClone
 from sdr_wrapper import SDR
 from fixsymlinks import fixsymlinks
+from parset import option_list
+from options import options,print_options
+
+def convert_summary_cfg(option_list,summaryname='summary.txt',newconfigname='tier1-reprocessing.cfg'):
+    summary = open('summary.txt','r')
+    summary_dict = {}
+    print('Summary of the reprocessing pipeline inputs from summary.txt')
+    for line in summary:
+        line = line.replace(" ", "")
+        line = line.strip().split(':')
+        if len(line) != 2:
+            continue
+        summary_dict[line[0]] = line[1]
+        
+    newconfig = open(newconfigname,'w')
+    option_types = []
+    for option in option_list:
+        if option[0] not in option_types:
+            option_types.append(option[0])
+
+
+    for option_type in option_types:
+        newconfig.write('[%s]\n'%option_type)
+        for option in option_list:
+            if option[0] != option_type:
+                continue
+            try:
+                summary_value = summary_dict[option[1]]
+            except KeyError:
+                try:
+                    summary_value = summary_dict[option[0]+'_'+option[1]]
+                except KeyError:
+                    print('Cannot find option for parameter',option[0],option[1])
+                    continue
+            print(option,summary_value)
+            newconfig.write('%s=%s\n'%(option,summary_value))
+    newconfig.close()
+
+    o = options(newconfigname,option_list)
+    return o
 
 def do_rclone_extract_upload(cname,basedir,f,directory):
     '''
