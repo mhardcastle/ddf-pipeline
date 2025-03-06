@@ -389,7 +389,7 @@ if __name__=='__main__':
             update_status(field,option,'Started')#,time='start_date')
 
     if args['FullSub']:
-        #do_run_subtract(field)
+        do_run_subtract(field)
         resultfiles = glob.glob('*sub*archive?')
         if not args["NoDBSync"]:
             resultfilestar = []
