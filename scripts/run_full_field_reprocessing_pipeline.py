@@ -26,6 +26,8 @@ from pipeline import ddf_image
 from rclone import RClone
 from sdr_wrapper import SDR
 from time import sleep
+import pyrap.tables as pt
+
 
 def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
     # stage a dataset from SDR or rclone repos 
@@ -77,22 +79,6 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
         # staging for rclone goes here.
         pass
     
-
-def update_status(name,operation,status,time=None,workdir=None,survey=None):
-    # modified from surveys_db update_status
-    # utility function to just update the status of a ffr entry
-    # name can be None (work it out from cwd), or string (field name)
-
-    with SurveysDB(survey=survey) as sdb:
-        idd=sdb.get_ffr(id,operation)
-        if idd is None:
-            raise RuntimeError('Unable to find database entry for field "%s".' % id)
-        idd['status']=status
-        tag_field(sdb,idd,workdir=workdir)
-        if time is not None and idd[time] is None:
-            idd[time]=datetime.datetime.now()
-        sdb.set_ffr(idd)
-
 def check_cube_format(header):
     try:
         assert header["CTYPE1"].startswith("RA")
@@ -181,6 +167,26 @@ def do_run_dynspec(field):
     else:
         print("All DynSpecMS output exists, skipping... ")    
 
+def transient_image(msfilename,imagename,galactic=False,options=None):
+    t = pt.table(msfilename,readonly=True)
+    numtimes = len(np.unique(t.getcol('TIME')))
+    print(numtimes,msfilename)
+
+    # Create 8s images and 2 min images (assuming time resolution is 8s...). 
+    if galactic:
+        chanout = 16
+    else:
+        chanout = 1
+    if chanout > 1:
+        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
+        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
+    else:
+        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
+        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
+
+    outimages = glob.glob('%s*dirty.fits'%imagename)
+    for outimage in outimages:
+        compress_fits(outimage,o['fpack_q'])
 
 
 def compress_fits(filename,q):
@@ -280,17 +286,7 @@ def do_run_high_v(outname,mslist,options=None):
                   peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=None,options=o,**ddf_kw)
-    #executionstr = 'DDF.py --Parallel-NCPU=12 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=32 --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=0 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-PhasedArrayMode=A --Weight-Robust -0.50000 --Image-NPix=20000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 1.500000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 6.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-PolMode=IV --Output-Mode=Dirty --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.100000,1000.0000] --GAClean-MinSizeInit=10 --Beam-Smooth=1'%(outname,mslist)
 
-    #print(executionstr)
-    #result=os.system(executionstr)
-    #if result!=0:
-    #    executionstr +=' --Beam-LOFARBeamMode=A'
-    #    executionstr = executionstr.replace('--Beam-PhasedArrayMode=A','')
-    #    print(executionstr)
-    #    result=os.system(executionstr)
-    #    if result != 0:
-    #        raise RuntimeError('sub-sources-outside-region.py failed with error code %i' % result)
 
 def update_status(name,operation,status,time=None,workdir=None,av=None,survey=None):
     # modified from surveys_db.update_status
@@ -302,7 +298,7 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
         if idd is None:
             raise RuntimeError('Unable to find database entry for field "%s".' % id)
         idd['status']=status
-        tag_field(sdb,idd,workdir=workdir)
+        #tag_field(sdb,idd,workdir=workdir) # Turned this off as columns are not long enough in DB.
         if time is not None and idd[time] is None:
             idd[time]=datetime.datetime.now()
         sdb.set_ffr(idd)
@@ -318,6 +314,8 @@ if __name__=='__main__':
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database',type=int,default=0)
     parser.add_argument('--NCPU',help='Number of CPU',type=int,default=32)
+    parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
+    parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     print('Input arguments: ',args)
@@ -332,6 +330,12 @@ if __name__=='__main__':
     if len(results)==0:
         raise RuntimeError('Requested field is not in database')
 
+    with SurveysDB(readonly=not update_status) as sdb:
+        fieldinfo=sdb.get_field(field)
+        print('Field info',fieldinfo)
+        if fieldinfo is None:
+            raise RuntimeError('Field',field,'does not exist in the database')
+
     startdir = os.getcwd()
 
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
@@ -340,7 +344,7 @@ if __name__=='__main__':
                 tmp = sdb.get_ffr(field,option)
                 if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
                     print('Status of',option,tmp['status'])
-                    if not args["NoDBSync"]:
+                    if not args["NoDBSync"] and not args['Force']:
                         raise RuntimeError('Field already processing')
 
     if not os.path.exists(startdir+'/'+field):
@@ -381,27 +385,40 @@ if __name__=='__main__':
     
     for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
         if args[option] and not args["NoDBSync"]:
-            print('Changing',option,'status to Started')
-            update_status(field,option,'Started',time='start_date')
+            print('Changing',option,'status to Started','for',field)
+            update_status(field,option,'Started')#,time='start_date')
 
     if args['FullSub']:
-        do_run_subtract(field)
-
-        # resultfiles = glob.glob('*sub*archive*')
-        # resultfilestar = []
-        # for resultfile in resultfiles:
-        #     d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
-        #     if d!=0:
-        #         raise RuntimeError('Tar of %s failed'%resultfile)	
-        #     resultfilestar.append('%s.tar'%resultfile)
-
-        # do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'subtract_pipeline/')
-
-        # with SurveysDB(readonly=False) as sdb:
-        #     tmp = sdb.get_ffr(field,'FullSub')
-        #     tmp['status'] == 'Verified'
-        #     sdb.set_ffr(tmp)
-
+        #do_run_subtract(field)
+        resultfiles = glob.glob('*sub*archive?')
+        if not args["NoDBSync"]:
+            resultfilestar = []
+            for resultfile in resultfiles:
+                d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
+                if d!=0:
+                    raise RuntimeError('Tar of %s failed'%resultfile)	
+                resultfilestar.append('%s.tar'%resultfile)
+            update_status(field,'FullSub','Uploading')
+            result = do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'subtract_pipeline/')
+            if result['code']==0:
+                update_status(field,'FullSub','Verified')#,time='end_date')
+            else:
+                update_status(field,'FullSub','Upload failed')
+        if args['TransientImage']:
+            for resultfile in resultfiles:
+                imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
+                print(resultfile)
+                print(imagefile)
+                if abs(fieldinfo['gal_b']) < 10.0:
+                    transient_image(resultfile,imagefile,galactic=True,options=o)
+                else:
+                    transient_image(resultfile,imagefile,galactic=False,options=o) 
+            os.system('mkdir %s_snapshot_images'%field)
+            os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
+            d=os.system('tar -cvf %s_snapshot_images.tar %s_snapshot_images'%(field,field))
+            if d!=0:
+                raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
+            result = do_rclone_disk_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'subtract_snapshot_images/')
     if args['Dynspec']:
         
         do_run_dynspec(field)
@@ -420,7 +437,7 @@ if __name__=='__main__':
             update_status(field,'DynSpecMS','Uploading')
             result=do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
             if result['code']==0:
-                update_status(field,'DynSpecMS','Verified',time='end_date')
+                update_status(field,'DynSpecMS','Verified')#,time='end_date')
             else:
                 update_status(field,'DynSpecMS','Upload failed')
 
@@ -430,7 +447,7 @@ if __name__=='__main__':
             print('Stokes V image for %s'%obsid)
             do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
 
-            resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obis)
+            resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obsis)
             os.system('mkdir V_high_maps')
             for resultfile in resultfiles:
                 os.system('cp %s V_high_maps'%(resultfile))
@@ -441,7 +458,7 @@ if __name__=='__main__':
         if not args["NoDBSync"]:
             update_status(field,'StokesV','Uploading')
             do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'Stokes_V_imaging')
-            update_status(field,'StokesV','Verified',time='end_date')
+            update_status(field,'StokesV','Verified')#,time='end_date')
 
     if args['HighPol']:
         from do_polcubes import do_polcubes
@@ -459,7 +476,7 @@ if __name__=='__main__':
             print('Starting upload of',resultfilestar)
             update_status(field,'HighPol','Uploading')
             do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
-            update_status(field,'HighPol','Verified',time='end_date')
+            update_status(field,'HighPol','Verified')#,time='end_date')
 
     if args['EpochPol']:
         from do_polcubes import do_polcubes

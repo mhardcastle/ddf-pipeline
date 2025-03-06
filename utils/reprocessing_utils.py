@@ -72,9 +72,9 @@ def do_rclone_disk_upload(cname,basedir,f,directory):
     '''
     Upload results to surf disk
     '''
-    rc=RClone('maca_sksp_disk_subtract.conf',debug=True)
+    rc=RClone('maca_sksp_disk_reproc.conf',debug=True)
     rc.get_remote()
-    print(rc.remote,'maca_sksp_disk_subtract.conf')
+    print(rc.remote,'maca_sksp_disk_reproc.conf')
     return rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
     
 def do_rclone_tape_pol_upload(cname,basedir,f,directory):
