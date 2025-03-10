@@ -188,6 +188,42 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     for outimage in outimages:
         compress_fits(outimage,o['fpack_q'])
 
+def image_vlow(ncpu,wd=None):
+    if wd is not None:
+        os.chdir(wd)
+    run('CleanSHM.py')
+    run('DDF.py --Output-Name=image_full_vlow_nocut --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=4.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=.' % ncpu)
+    vlowmask = make_mask('image_full_vlow_nocut.app.restored.fits',3.0)
+    run('DDF.py --Output-Name=image_full_vlow_nocut_m --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=3.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=. --Predict-InitDicoModel=image_full_vlow_nocut.DicoModel --Mask-External=%s'% (ncpu,vlowmask))
+
+
+def image_vlow_sub(useIDG=False,stringMultiscaleScales = "0,4,8,16,32,64,128,256", stringMultiscaleScalesIDG = "0,4,8,16,32,64",
+                sizePixels=2000,taperGaussian=60.0,beamsize=60.0,scale=15.0,numberOfSubbands=6,uvDistanceMinLambda=0,IDGMode="cpu",name='WSCLEAN_low'):
+
+    g=glob.glob('*.archive?')
+    stringMSs=' '.join(g)
+    print("Imaging with multiscale CLEAN (at low-resolution)...")
+    if (useIDG):
+        # Generate IDG configuration file.
+        print("Generating IDG configuration file...")
+        with open("aconfig.txt", "w") as configurationFile:
+            configurationFile.write("aterms=[beam]\nbeam.differential = true\nbeam.update_interval = 600\nbeam.usechannelfreq = true")
+
+        command = "wsclean -no-update-model-required -size " + str(sizePixels) + " " + str(sizePixels) + " -reorder -weight briggs -0.5 -weighting-rank-filter 3 -clean-border 1 -mgain 0.8 -no-fit-beam -data-column DATA -join-channels -channels-out " + str(numberOfSubbands) + " -padding 1.2 -multiscale -multiscale-scales " + stringMultiscaleScalesIDG + " -auto-mask 3.0 -auto-threshold 2.5 -taper-gaussian " + str(taperGaussian) + "arcsec -circular-beam -beam-size " + str(beamsize) + "arcsec -pol i -name " + name + " -scale " + str(scale) + "arcsec -niter 100000 -minuv-l " + str(uvDistanceMinLambda) + " -use-idg -idg-mode " + IDGMode + " -aterm-kernel-size 16 -aterm-config aconfig.txt " + stringMSs
+    else:
+        command = "wsclean -no-update-model-required -size " + str(sizePixels) + " " + str(sizePixels) + " -reorder -weight briggs -0.5 -weighting-rank-filter 3 -clean-border 1 -mgain 0.8 -no-fit-beam -data-column DATA -join-channels -channels-out " + str(numberOfSubbands) + " -padding 1.2 -multiscale -multiscale-scales " + stringMultiscaleScales + " -auto-mask 3.0 -auto-threshold 2.5 -taper-gaussian " + str(taperGaussian) + "arcsec -circular-beam -beam-size " + str(beamsize) + "arcsec -pol i -name " + name + " -scale " + str(scale) + "arcsec -niter 100000 -minuv-l " + str(uvDistanceMinLambda) + " -baseline-averaging 10.0 " + stringMSs
+
+    print(command)
+    run(command)
+    print('Now correcting for beam...')
+    
+    f='image_full_vlow_nocut_m.app.restored.fits'
+    dapp=fits.open(f)
+    dint=fits.open(f.replace('app','int'))                     
+    beam=dint[0].data/dapp[0].data                    
+    wsuc=fits.open('WSCLEAN_low-MFS-image.fits')
+    wsuc[0].data*=beam[0,0,12:-13,12:-13]                 
+    wsuc.writeto('WSCLEAN_low-MFS-image-int.fits')  
 
 def compress_fits(filename,q):
     command='fpack -q %i %s' % (q,filename)
@@ -316,6 +352,8 @@ if __name__=='__main__':
     parser.add_argument('--NCPU',help='Number of CPU',type=int,default=32)
     parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
+    parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
+    parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub)',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     print('Input arguments: ',args)
@@ -419,6 +457,12 @@ if __name__=='__main__':
             if d!=0:
                 raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
             result = do_rclone_disk_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'subtract_snapshot_images/')
+
+        if args['VLow_sub_image']:
+            image_vlow_sub()
+            
+    if args['VLow_image']:
+        image_vlow(args['NCPU'])
     if args['Dynspec']:
         
         do_run_dynspec(field)
@@ -485,7 +529,7 @@ if __name__=='__main__':
             do_epoch_pol('image_full_low_QU_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
             resultfiles = glob.glob('*fz')
             print('Compressed pol cubes',resultfiles)
-            os.system('mkdir stokes_highres')
+            os.system('mkdir stokes_epochpol')
             for resultfile in resultfiles:
-                os.system('mv %s stokes_highres/'%(resultfile))
-        os.system('tar -cvf stokes_highres.tar stokes_highres')
+                os.system('mv %s stokes_epochpol/'%(resultfile))
+        os.system('tar -cvf stokes_epochpol.tar stokes_epochpol')
