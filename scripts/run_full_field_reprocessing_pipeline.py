@@ -192,9 +192,12 @@ def image_vlow(ncpu,wd=None):
     if wd is not None:
         os.chdir(wd)
     run('CleanSHM.py')
-    run('DDF.py --Output-Name=image_full_vlow_nocut --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=4.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=.' % ncpu)
-    vlowmask = make_mask('image_full_vlow_nocut.app.restored.fits',3.0)
-    run('DDF.py --Output-Name=image_full_vlow_nocut_m --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=3.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=. --Predict-InitDicoModel=image_full_vlow_nocut.DicoModel --Mask-External=%s'% (ncpu,vlowmask))
+    if not os.path.exists('image_full_vlow_nocut.app.restored.fits'):
+        run('DDF.py --Output-Name=image_full_vlow_nocut --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=4.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=.' % ncpu)
+    if not os.path.exists('image_full_vlow_nocut.app.restored.fits.mask.fits'):
+        vlowmask = make_mask('image_full_vlow_nocut.app.restored.fits',3.0)
+    if not os.path.exists('image_full_vlow_nocut_m.app.restored.fits'):
+        run('DDF.py --Output-Name=image_full_vlow_nocut_m --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=3.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=. --Predict-InitDicoModel=image_full_vlow_nocut.DicoModel --Mask-External=%s'% (ncpu,vlowmask))
 
 
 def image_vlow_sub(useIDG=False,stringMultiscaleScales = "0,4,8,16,32,64,128,256", stringMultiscaleScalesIDG = "0,4,8,16,32,64",
@@ -275,16 +278,16 @@ def do_epoch_pol(outname,mslistname,options=None):
         low_imsize=o['low_imsize'] # allow over-ride
     else:
         low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-    cubefiles = ['%s_StokesQ.cube.dirty.fits'%outname,'%s_StokesQ.cube.dirty.corr.fits'%outname,'%s_StokesU.cube.dirty.fits'%outname,'%s_StokesU.cube.dirty.corr.fits'%outname]
+    cubefiles=['%s_QU.cube.dirty.fits'%outname,'%s_QU.cube.dirty.corr.fits'%outname]
     cthreads=[]
     flist=[]
     ddf_kw = {}
     do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',low_uvrange,outname,mslistname,ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=None)
 
     # Redo the headers
-    for cubefile in cubefiles:
-        stokesparam = cubefile.split('_')[3].split('.')[0].replace('Stokes','')
-        redo_cube_headers(cubefile,cubefile,stokesparam)
+    #for cubefile in cubefiles:
+    #    stokesparam = cubefile.split('_')[3].split('.')[0].replace('Stokes','')
+    #    redo_cube_headers(cubefile,cubefile,stokesparam)
     
     if o['compress_polcubes']:
         for cubefile in cubefiles:
@@ -323,6 +326,12 @@ def do_run_high_v(outname,mslist,options=None):
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=None,options=o,**ddf_kw)
 
+def make_mask(imagename,thresh):
+
+    fname=imagename+'.mask.fits'
+    runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
+    run(runcommand)
+    return fname
 
 def update_status(name,operation,status,time=None,workdir=None,av=None,survey=None):
     # modified from surveys_db.update_status
@@ -519,7 +528,7 @@ if __name__=='__main__':
             resultfilestar = ['stokes_highres.tar']
             print('Starting upload of',resultfilestar)
             update_status(field,'HighPol','Uploading')
-            do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
+            do_rclone_tape_highrespol_upload(field,os.getcwd(),resultfilestar,'')
             update_status(field,'HighPol','Verified')#,time='end_date')
 
     if args['EpochPol']:
@@ -527,9 +536,15 @@ if __name__=='__main__':
         os.system('mkdir logs')
         for obsid in uobsid:
             do_epoch_pol('image_full_low_QU_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
-            resultfiles = glob.glob('*fz')
+            resultfiles = glob.glob('*%s*fz'%obsid)
             print('Compressed pol cubes',resultfiles)
             os.system('mkdir stokes_epochpol')
             for resultfile in resultfiles:
                 os.system('mv %s stokes_epochpol/'%(resultfile))
         os.system('tar -cvf stokes_epochpol.tar stokes_epochpol')
+        if not args["NoDBSync"]:
+            resultfilestar = ['stokes_epochpol.tar']
+            print('Starting upload of',resultfilestar)
+            #update_status(field,'HighPol','Uploading')
+            do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
+            #update_status(field,'HighPol','Verified')#,time='end_date')
