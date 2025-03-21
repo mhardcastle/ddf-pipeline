@@ -34,16 +34,6 @@ try:
 except:
     size=0.5
 
-try:
-    freqavg = int(sys.argv[3])
-except:
-    freqavg = 4
-
-try:
-    timeavg = int(sys.argv[4])
-except:
-    timeavg = 2
-
 ra=None
 dec=None
 try:
@@ -122,7 +112,7 @@ for f in fields:
     field=f['Field']
     fdir=startdir+'/'+target+'/'+field
     os.chdir(fdir)
-    executionstr = 'sub-sources-outside-region.py %s -b ../%s.ds9.reg -f %s -t %s -p %s'%(subtractoptions,target,freqavg,timeavg,target)
+    executionstr = 'sub-sources-outside-region.py %s -b ../%s.ds9.reg -p %s'%(subtractoptions,target,target)
     run(executionstr,database=False)
 
 separator('Move subtracted datasets to working directory')
