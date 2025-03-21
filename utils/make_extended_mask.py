@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from builtins import zip
 from astropy.io import fits
 from astropy.wcs import WCS
-from auxcodes import get_rms,get_rms_map2,flatten
+from auxcodes import get_rms,get_rms_map3,flatten
 import scipy.ndimage as nd
 import numpy as np
 import pyregion
@@ -42,7 +42,7 @@ def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=
     if rmsfacet == False:
         rms=get_rms(hdu,ignore_error=True)
     if rmsfacet == True:
-        get_rms_map2(infile,ds9region,prefix+'rms-low.fits')
+        get_rms_map3(infile,ds9region,prefix+'rms-low.fits')
         hdu2=fits.open(prefix+'rms-low.fits')
         rms=hdu2[0].data[0,0,:]
 

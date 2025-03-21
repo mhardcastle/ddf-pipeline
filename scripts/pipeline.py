@@ -181,7 +181,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
 
     if catcher: catcher.check()
 
@@ -279,7 +279,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
 
     if not cubemode and not polcubemode:
-        runcommand+=' --Freq-NBand=2'
+        runcommand+=' --Freq-NBand=%i' % freq_nband
     if stokes:
         runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
 
@@ -414,7 +414,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         runcommand="ClusterCat.py --SourceCat %s --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
     if OutClusterCat is not None:
         runcommand+=" --OutClusterCat %s"%OutClusterCat
-    runcommand+=" --NCluster %i"%o['ndir']
+    runcommand+=" --NCluster %i"%options['ndir']
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 
@@ -483,12 +483,12 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
 
         #checkname=f+'/killMS.'+outsols+'.sols.npz'
-        if o['restart'] and os.path.isfile(checkname):
+        if options['restart'] and os.path.isfile(checkname):
 
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, o['LambdaKF'], o['NCPU_killms'], outsols,colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
             
@@ -506,7 +506,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
                 else:
                     runcommand+=' --UVMinMax=%f,%f' % (uvrange[0], uvrange[1])
-            if o['nobar']:
+            if options['nobar']:
                 runcommand+=' --DoBar=0'
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
@@ -555,7 +555,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             # Clip anyway - on IMAGING_WEIGHT by default
             if DISettings is not None:
@@ -563,11 +563,11 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             else:
                 ClipCol=colname
             runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
-            run(runcommand,dryrun=o['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
+            run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
     if MergeSmooth:
-        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=o['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
-                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers)
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options)
         
 
 
@@ -644,18 +644,19 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,options=None):
+    if options is None:
+        options=o
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
-    SolsDir=o["SolsDir"]
+    SolsDir=options["SolsDir"]
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
             solname =fname+'/killMS.'+ddsols+'.sols.npz'
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
-            f.write('%s\n'%(solname))
     else:
         for fname in filenames:
             MSName=os.path.abspath(fname).split("/")[-1]
@@ -674,7 +675,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     f.write('%s\n'%(solname))
         
         checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
-        if o['restart'] and os.path.isfile(checkname):
+        if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
             ss='MergeSols.py --SolsFilesIn=solslist_%.2f.txt --SolFileOut=%s '%(start_time,checkname)
@@ -683,22 +684,22 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             run(ss,dryrun=dryrun)
             
         checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
-        if o['restart'] and os.path.isfile(checkname):
+        if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,o['smoothingtype'],o['NCPU_killms']),dryrun=dryrun)
+            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,options['smoothingtype'],options['NCPU_killms']),dryrun=dryrun)
 
         smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
 
         if InterpToMSListFreqs:
             interp_outname="%s_%.2f_interp.npz"%(smoothoutname,start_time)
             checkname=interp_outname
-            if o['restart'] and os.path.isfile(checkname):
+            if options['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,o['NCPU_killms'])
+                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,options['NCPU_killms'])
                 run(command,dryrun=dryrun)
         
         for i in range(0,len(full_sollist)):
@@ -1016,13 +1017,22 @@ def main(o=None):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
 
-    if '$$' in o['tgss'] or np.any(['$$' in l for l in o['catalogues']]):
+    lCat=[]
+    if ((o['tgss'] is not None) and ('$$' in o['tgss'])):
         if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
             die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
+        
+    if (o['catalogues'] is not None) and np.any(['$$' in l for l in o['catalogues']]):
+        if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
+            die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
         
-    lCat=o["catalogues"]+[o["tgss"]]
+    lCat=[]
+    if o['catalogues'] is not None:
+        lCat+=o["catalogues"]
+    if o['tgss'] is not None:
+        lCat+=[o["tgss"]]
     for fCat in lCat:
         if not os.path.isfile(fCat):
             die("Catalog %s does not exist"%fCat)
@@ -1459,11 +1469,16 @@ def main(o=None):
                 stop(2)
 
 
+        # small mslist cache not needed from this point so clear it to
+        # save disk space
+        if o['clearcache_end']:
+            clearcache(o['mslist'],o)
+
         if o['full_mslist'] is None:
             warn('No full mslist provided, stopping here')
             summary(o)
             stop(3)
-        
+
         # #########################################################################
         # ###############                  BIG MSLIST               ###############
         # #########################################################################
@@ -1841,10 +1856,13 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
+        if o['clearcache_end']:
+            full_clearcache(o)
         from do_polcubes import do_polcubes
         separator('Stokes Q and U cubes')
         cthreads=[]
         flist=[]
+        pol_mslists=[]
 
         if o['split_polcubes']:
             cubefiles=['image_full_low_StokesQ.cube.dirty.fits','image_full_low_StokesQ.cube.dirty.corr.fits','image_full_low_StokesU.cube.dirty.fits','image_full_low_StokesU.cube.dirty.corr.fits']
@@ -1853,7 +1871,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
-            do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):
@@ -1886,9 +1904,10 @@ def main(o=None):
         
     m=MSList(o['full_mslist'])
     uobsid = set(m.obsids)
-    
+    stokesv_mslists=[]
     for obsid in uobsid:
         umslist='mslist-%s.txt' % obsid
+        stokesv_mslists.append(umslist)
         print('Writing ms list for obsids',umslist)
         with open(umslist,'w') as file:
             for ms,ob in zip(m.mss,m.obsids):
@@ -1962,7 +1981,9 @@ def main(o=None):
         if spectral_mslist is not None:
             extras+=spectral_mslist
         if o['polcubes']:
-            extras+=glob.glob('stokes-mslist*.txt')
+            extras+=pol_mslists
+        if o['stokesv']:
+            extras+=stokesv_mslists
         full_clearcache(o,extras=extras)
     
     if use_database():

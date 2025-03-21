@@ -29,7 +29,10 @@ def download_field(fname,basedir=None,force=False,use_http=False,macaroons=['mac
             if not force:
                 return False
         # get the ids of the observations
-        sdb.cur.execute('select * from observations where field=%s and (status="DI_processed" or status="Archived")',(fname,))
+        if force:
+            sdb.cur.execute('select * from observations where field=%s',(fname,))
+        else:
+            sdb.cur.execute('select * from observations where field=%s and (status="DI_processed" or status="Archived")',(fname,))
         obs=sdb.cur.fetchall()
         if len(obs)>0:
             if not os.path.isdir(workdir):

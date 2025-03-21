@@ -4,7 +4,7 @@
 # Steps are:
 # -1) download optical (or other) data -- do in parallel if possible, so should be done by the time this is run as a script
 # 0) merge the downloads to a single catalogue
-# 1) run pybdsm on the full-res image, filter?
+# 1) run pybdsf on the full-res image, filter?
 # 2) label the catalogue
 # 3) find offsets by matching 
 # 4) fit to offset histograms
@@ -32,20 +32,26 @@ from scipy.special import gammaln
 from facet_offsets import RegPoly
 from astropy.io import fits
 from astropy.wcs import WCS
+from find_compact import *
 import pickle
-try:
-    import bdsf as bdsm
-except ImportError:
-    import lofar.bdsm as bdsm
+import bdsf
+from auxcodes import *
+
 degtorad=np.pi/180.0
 
 import sys
 
 def model(x,norm,sigma,offset,bl,radius=60):
-    return old_div(bl*np.sqrt(radius**2.0-x**2.0),radius)+norm*np.exp(old_div(-(x-offset)**2.0,(2*sigma**2.0)))
+    return bl*np.sqrt(radius**2.0-x**2.0)/radius+norm*np.exp(-(x-offset)**2.0/(2*sigma**2.0))
 
 class Offsets(object):
-    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc',pos=None):
+    def __init__(self,prefix,n=45,cellsize=1.5,imroot=None,fitmethod='mcmc',pos=None,offset_type='pixel'):
+        # If offset_type='radec' we use the old method. If 'pixel' we
+        # project to a defined tangent plane and use that. For
+        # simplicity the projection is the WCS of the full-res image,
+        # so imroot must be set in pixel mode
+        # the code is set up to define methods that will look the same as much as possible but internally work in pixels or ra/dec as appropriate
+        self.offset_type=offset_type
         self.prefix=prefix
         self.n=n
         self.chains=[]
@@ -55,6 +61,20 @@ class Offsets(object):
         self.pos=pos
         if imroot is not None:
             self.read_regfile(imroot+'.tessel.reg')
+        # define methods
+        self.setup_methods()
+
+    def setup_methods(self):
+        if self.offset_type=='radec':
+            self.find_offsets=self.find_offsets_radec
+        elif self.offset_type=='pixel':
+            self.W=WCS(fits.getheader(self.imroot+'.app.restored.fits'))
+            self.find_offsets=self.find_offsets_pixel
+        else:
+            raise RuntimeError('offset_type '+self.offset_type+' is not defined')
+
+    def remove_methods(self):
+        del(self.find_offsets)
 
     def read_regfile(self,regfile):
         if self.pos is None:
@@ -67,12 +87,18 @@ class Offsets(object):
         self.plab=self.r.plab
         self.pli=self.r.plab_int
 
-    def find_offsets(self,tf,ot,sep=1.0):
+    def find_offsets_radec(self,tf,ot,sep=1.0):
+        # tf is the input LOFAR table with facet labels
+        # ot are the comparison sources
+        # sep is separation in arcmin
+        # self.dral and self.ddecl become arrays of separations of local comparison sources from each nearby LOFAR source in the facet
         self.dral=[]
         self.ddecl=[]
+        self.nsources=[]
         self.lofar_table=tf
         for f in range(self.n):
             t=tf[tf['Facet']==f]
+            self.nsources.append(len(t))
             if len(t)==0:
                 print('No sources in facet',f)
                 self.dral.append(None)
@@ -100,6 +126,59 @@ class Offsets(object):
 
                 dral+=list(dra[d2dmask])
                 ddecl+=list(ddec[d2dmask])
+
+            self.dral.append((np.array(dral)).flatten())
+            self.ddecl.append((np.array(ddecl)).flatten())
+
+    def find_offsets_pixel(self,tf,ot,sep=1.0):
+        # as find_offset_radec but we convert to pixels (the output
+        # will be scaled by cellsize, so will be in arcsec)
+        self.dral=[]
+        self.ddecl=[]
+        self.nsources=[]
+        self.lofar_table=tf
+        if self.W.naxis==4:
+            fp=np.array([tf['RA'],tf['DEC'],np.zeros_like(tf['RA']),np.zeros_like(tf['RA'])]).T
+            op=np.array([ot['ra'],ot['dec'],np.zeros_like(ot['ra']),np.zeros_like(ot['ra'])]).T
+        else:
+            fp=np.array([tf['RA'],tf['DEC']]).T
+            op=np.array([ot['ra'],ot['dec']]).T
+        w=self.W.wcs_world2pix(fp,0)
+        tf['x']=w[:,0]*self.cellsize
+        tf['y']=w[:,1]*self.cellsize
+        w2=self.W.wcs_world2pix(op,0)
+        ot['x']=w2[:,0]*self.cellsize
+        ot['y']=w2[:,1]*self.cellsize
+        for f in range(self.n):
+            t=tf[tf['Facet']==f]
+            self.nsources.append(len(t))
+            if len(t)==0:
+                print('No sources in facet',f)
+                self.dral.append(None)
+                self.ddecl.append(None)
+                continue
+            minx=np.min(t['x'])
+            maxx=np.max(t['x'])
+            miny=np.min(t['y'])
+            maxy=np.max(t['y'])
+            otf=ot[(ot['x']>=(minx-sep*60)) & (ot['x']<=(maxx+sep*60)) &
+                   (ot['y']>=(miny-sep*60)) & (ot['y']<=(maxy+sep*60))]
+            print('Facet %2i has %4i LOFAR sources and %6i comparison sources' % (f,len(t),len(otf)))
+
+            dral=[]
+            ddecl=[]
+
+            for r in t:
+                x=r['x']
+                y=r['y']
+                dx=-(x-otf['x']) # for same sense as RA/Dec
+                dy=y-otf['y']
+                d2d=np.sqrt(dx**2.0+dy**2.0)
+
+                d2dmask = d2d<sep*60.0
+
+                dral+=list(dx[d2dmask])
+                ddecl+=list(dy[d2dmask])
 
             self.dral.append((np.array(dral)).flatten())
             self.ddecl.append((np.array(ddecl)).flatten())
@@ -208,6 +287,8 @@ class Offsets(object):
                 self.rae.append([100,100,100,100])
                 self.decr.append([0,0,0,0])
                 self.dece.append([100,100,100,100])
+                self.rah.append(None)
+                self.dech.append(None)
                 pass
             else:
                 h,_=np.histogram(self.dral[i],self.bins)
@@ -222,6 +303,7 @@ class Offsets(object):
                 self.decr.append(p)
                 self.dece.append(perr)
                 print('DEC Offset is ',p[2],'+/-',perr[2])
+                
         self.rar=np.array(self.rar)
         self.rae=np.array(self.rae)
         self.decr=np.array(self.decr)
@@ -230,17 +312,39 @@ class Offsets(object):
     def save_fits(self):
         np.save(self.prefix+'-facet_offsets.npy',np.array([self.rar[:,2],self.decr[:,2],self.rae[:,2],self.dece[:,2]]).T)
 
+    def save_fits_table(self):
+        saveT = Table()
+        saveT['Facet_id']=list(range(0,len(self.rar[:,2])))
+        saveT['N_Sources']=self.nsources
+        saveT['RA_offset'] = self.rar[:,2]
+        saveT['DEC_offset'] = self.decr[:,2]
+        saveT['RA_error'] =  self.rae[:,2]
+        saveT['DEC_error'] =  self.dece[:,2]
+        saveT['RA_peak'] = self.rar[:,0]
+        saveT['DEC_peak'] = self.decr[:,0]
+        saveT['RA_peak_error'] =  self.rae[:,0]
+        saveT['DEC_peak_error'] =  self.dece[:,0]
+        #saveT = Table(names=('Facet_id','RA_offset','DEC_offset','RA_error','DEC_error','RA_peak','DEC_peak','RA_peak_error','DEC_peak_error'),dtype=('i4','f8','f8','f8','f8','f8','f8','f8','f8'))
+        #for facetid in range(0,len(self.rar[:,2])):
+        #    saveT.add_row((facetid,self.rar[facetid,2],self.decr[facetid,2],self.rae[facetid,2],self.dece[facetid,2]))
+        saveT.write(self.prefix+'-facet_offsets.fits',overwrite=True)
+                             
+                                      
+        
     def plot_fits(self,pdffile):
         from matplotlib.backends.backend_pdf import PdfPages
         import matplotlib.pyplot as plt
         with PdfPages(pdffile) as pdf:
             for i in range(self.n):
+                if not np.any(self.rar[i]): continue
                 plt.subplot(2,1,1)
                 plt.plot(self.bcenter,self.rah[i])
                 plt.plot(self.bcenter,model(self.bcenter,*self.rar[i]))
+                plt.plot([self.rae[i],self.rae[i]],[0.0,10.0],'g')
                 plt.subplot(2,1,2)
                 plt.plot(self.bcenter,self.dech[i])
                 plt.plot(self.bcenter,model(self.bcenter,*self.decr[i]))
+                plt.plot([self.dece[i],self.dece[i]],[0.0,10.0],'g')
                 plt.suptitle('Facet '+str(i))
                 pdf.savefig()
                 plt.close()
@@ -308,7 +412,7 @@ class Offsets(object):
                 plt.quiver(np.mean(tf['RA']),np.mean(tf['DEC']),1.0,0.0,units = 'xy', angles='xy', scale=1.0,color='green')
                 plt.text(np.mean(tf['RA']),np.mean(tf['DEC']),'1 arcsec',color='green')
 
-        plt.savefig('SKO-'+self.prefix+'.png')
+        plt.savefig('SKO-'+self.prefix+'.pdf')
 
     def offsets_to_facetshift(self,filename):
 
@@ -357,6 +461,7 @@ class Offsets(object):
         hdus.writeto(outname,overwrite=True)
 
     def save(self,filename):
+        self.remove_methods() # required since the method can't be pickled
         f = open(filename, 'wb')
         pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
         f.close()
@@ -364,7 +469,9 @@ class Offsets(object):
     @staticmethod
     def load(filename):
         with open(filename, 'rb') as f:
-            return pickle.load(f)
+            obj=pickle.load(f)
+        obj.setup_methods()
+        return obj
 
 def merge_cat(rootname,rastr='ra',decstr='dec'):
     g=glob.glob(rootname+'/*.vo')
@@ -386,7 +493,11 @@ def merge_cat(rootname,rastr='ra',decstr='dec'):
     return t2
 
 def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
-    # o is the options file
+    '''
+    Run PyBDSF and find offsets
+    o is the options dictionary
+    image_root specifies a root file name: DDF.py output with .app.*.fits and .int.*.fits will be checked for first and if that does not exist a single image will be used.
+    '''
 
     if o['mode']!='normal' and  o['mode']!='test':
         raise NotImplementedError('Offsets called with mode '+o['mode'])
@@ -415,37 +526,55 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
         image_root+='_shift'
         method+='-test'
 
-    report('Running PyBDSM on LOFAR image, please wait...')
+    report('Running PyBDSF on LOFAR image, please wait...')
     if o['mode']=='test':
         suffix='facetRestored'
     else:
         suffix='restored'
     pbimage=image_root+'.int.'+suffix+'.fits'
     nonpbimage=image_root+'.app.'+suffix+'.fits'
+    if not os.path.isfile(pbimage):
+        # check if we are being run on a plain FITS file
+        pbimage=image_root+'.fits'
+        if not os.path.isfile(pbimage):
+            raise RuntimeError('Cannot find a file with root name '+pbimage)
+        nonpbimage=None
     catfile=image_root+'.offset_cat.fits'
     gaulfile=catfile.replace('cat','gaul')
+    catprefix = image_root+'.offset'
     if os.path.isfile(catfile):
         warn('Catalogue already exists, skipping pybdsf run')
     else:
-        img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None)
+        kwargs={}
+        if nonpbimage:
+            kwargs['detection_image']=nonpbimage
+        img = bdsf.process_image(pbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(150,15), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=False, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, blank_limit=None, frequency=144e6, **kwargs)
         img.write_catalog(outfile=catfile,catalog_type='srl',format='fits',correct_proj='True')
         img.write_catalog(outfile=gaulfile,catalog_type='gaul',format='fits',correct_proj='True')
+        img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
+        img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
+        img.export_image(outfile=catprefix +'.pybdsfmask.fits',img_type='island_mask',img_format='fits',clobber=True)
+        img.write_catalog(outfile=catprefix +'.cat.reg',catalog_type='srl',format='ds9',correct_proj='True')
 
     lofar=Table.read(catfile)
     print(len(lofar),'LOFAR sources before filtering')
-    filter=(lofar['E_RA']*3600.0)<2.0
-    filter&=(lofar['E_DEC']*3600.0)<2.0
-    filter&=(lofar['Maj']*3600.0)<20
-    lofar=lofar[filter]
+    #filter=(lofar['E_RA']*3600.0)<2.0
+    #filter&=(lofar['E_DEC']*3600.0)<2.0
+    #filter&=(lofar['Maj']*3600.0)<20
+    #lofar=lofar[filter]
+    # NEW FILTERING
+    compactcat=catfile.replace('.fits','_radcat_compact.fits')
+    if os.path.isfile(compactcat):
+        warn('Compact catalogue already exists, skipping filter')
+    else:
+        radcorcat = radial_correction(catfile,pbimage)
+        compactcat = find_only_compact(radcorcat,pbimage)
+    lofar = Table.read(compactcat)
     print(len(lofar),'LOFAR sources after filtering')
     regfile=image_root+'.tessel.reg'
-    cra,cdec=getposim(nonpbimage)
+    cra,cdec=getposim(pbimage)
     report('Set up structure')
-    if o['clusterfile'] is None:
-        clusterfile="image_dirin_SSD_m.npy.ClusterCat.npy"
-    else:
-        clusterfile=o['clusterfile']
-    NDir=np.load(clusterfile).shape[0]
+    NDir = len(convert_regionfile_to_poly(regfile))
     oo=Offsets(method,n=NDir,imroot=image_root,cellsize=o['cellsize'],fitmethod=o['fit'],pos=(cra,cdec))
     report('Label table')
     lofar_l=oo.r.add_facet_labels(lofar)
@@ -454,14 +583,16 @@ def do_offsets(o,image_root='image_full_ampphase_di_m.NS'):
     report('Fitting offsets')
     oo.fit_offsets()
     report('Making plots and saving output')
-    #oo.plot_fits(method+'-fits.pdf')
-    oo.save_fits()
+    oo.plot_fits(method+'-fits.pdf')
+    oo.plot_chains(method+'-chains.pdf')
+    oo.save_fits_table()
     oo.plot_offsets()
     if 'test' not in o['mode']:
         oo.save(method+'-fit_state.pickle')
-        report('Making astrometry error map, please wait')
-        oo.make_astrometry_map('astromap.fits',20)
-        oo.offsets_to_facetshift('facet-offset.txt')
+        if 'no_astrometry' not in o:
+            report('Making astrometry error map, please wait')
+            oo.make_astrometry_map('astromap.fits',20)
+        #oo.offsets_to_facetshift('facet-offset.txt')
 
 if __name__=='__main__':
     from options import options

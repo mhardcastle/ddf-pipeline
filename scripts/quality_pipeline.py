@@ -14,10 +14,7 @@ from quality_parset import option_list
 from options import options,print_options
 from astropy.io import fits
 from astropy.table import Table
-try:
-    import bdsf as bdsm
-except ImportError:
-    import lofar.bdsm as bdsm
+import bdsf
 from auxcodes import report,get_rms,warn,die,sepn,get_centpos
 import numpy as np
 from crossmatch_utils import match_catalogues,filter_catalogue,select_isolated_sources,bootstrap
@@ -99,7 +96,7 @@ def sfind_image(catprefix,pbimage,nonpbimage,sfind_pixel_fraction,options=None):
     if options['restart'] and os.path.isfile(catprefix +'.cat.fits'):
         warn('File ' + catprefix +'.cat.fits already exists, skipping source finding step')
     else:
-        img = bdsm.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, ncores=options['NCPU'], blank_limit=None,**kwargs)
+        img = bdsf.process_image(pbimage, detection_image=nonpbimage, thresh_isl=4.0, thresh_pix=5.0, rms_box=(160,50), rms_map=True, mean_map='zero', ini_method='intensity', adaptive_rms_box=True, adaptive_thresh=150, rms_box_bright=(60,15), group_by_isl=False, group_tol=10.0,output_opts=True, output_all=True, atrous_do=True,atrous_jmax=4, flagging_opts=True, flag_maxsize_fwhm=0.5,advanced_opts=True, ncores=options['NCPU'], blank_limit=None, spline_rank=1, **kwargs)
         img.write_catalog(outfile=catprefix +'.cat.fits',catalog_type='srl',format='fits',correct_proj='True')
         img.export_image(outfile=catprefix +'.rms.fits',img_type='rms',img_format='fits',clobber=True)
         img.export_image(outfile=catprefix +'.resid.fits',img_type='gaus_resid',img_format='fits',clobber=True)
@@ -174,7 +171,7 @@ if __name__=='__main__':
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
         
-    # pybdsm source finding
+    # pybdsf source finding
     sfind_image(o['catprefix'],o['pbimage'],o['nonpbimage'],o['sfind_pixel_fraction'],options=o)
 
     # facet labels -- do this now for generality

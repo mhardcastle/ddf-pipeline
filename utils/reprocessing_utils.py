@@ -71,6 +71,10 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operati
             tarfiles=['misc.tar']
         elif Mode=="Imaging+Misc":
             tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
+        elif Mode=="ImageOnly":
+            tarfiles=['images.tar']
+        else:
+            raise RuntimeError('Unknown mode '+Mode+' requested')
 
         if 'download' in operations:
             if verbose: print('Initiating SDR download for field',cname)

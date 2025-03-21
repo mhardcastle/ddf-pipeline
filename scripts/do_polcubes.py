@@ -79,9 +79,29 @@ def do_polcubes(colname,
                 options,catcher):
 
     o=options
-
+    mslists=[]
     m=MSList(o['full_mslist'])
     ufreqs=sorted(set(m.freqs))
+
+    # do a first pass to try to separate out non-matching frequencies
+
+    maxc=0
+    if len(ufreqs)>25:
+        print('There are more than 25 frequencies, filtering')
+        d={}
+        for freq in ufreqs:
+            fmslist=[]
+            for ms,f in zip(m.mss,m.freqs):
+                if f==freq:
+                    fmslist.append(ms)
+            d[freq]=len(fmslist)
+            if len(fmslist)>maxc:
+                maxc=len(fmslist)
+        ufreqs=[k for k in d if d[k]==maxc]
+        print('Now there are %i frequencies' % len(ufreqs))
+        if len(ufreqs)>25:
+            die('Too many frequencies for Stokes cube')
+                
     for i,freq in enumerate(ufreqs):
         print('Image %i: channel map for frequency %.3f MHz' % (i,old_div(freq,1e6)))
         # iterate over frequencies, finding all MS with the same values
@@ -90,6 +110,7 @@ def do_polcubes(colname,
             if f==freq:
                 fmslist.append(ms)
         mslistname='stokes-mslist-%i.txt' % i
+        mslists.append(mslistname)
         with open(mslistname,'w') as file:
             for ms in fmslist:
                 file.write(ms+'\n')
@@ -165,4 +186,4 @@ def do_polcubes(colname,
             report('Making corrected cube')
             make_cube(freqs,hdus,outfile)
             
-
+    return mslists
