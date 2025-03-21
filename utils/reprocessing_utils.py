@@ -59,6 +59,7 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operati
     if not os.path.isdir(f):
         os.makedirs(f)
     s=SDR(target=f)
+    
     try:
         status=s.get_status(cname)
     except RuntimeError:
@@ -156,7 +157,7 @@ def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc",operatio
         if verbose:
             print('Calling sdr/rclone code to download/untar')
         do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode,operations=operations)
-
+        
     if 'fixsymlinks' in operations:
         if verbose: print('Fixing symlinks')
         striparchivename(workdir=processingdir)

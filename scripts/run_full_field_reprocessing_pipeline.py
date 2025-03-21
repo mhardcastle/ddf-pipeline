@@ -332,6 +332,7 @@ if __name__=='__main__':
             update_status(field,option,'Started',time='start_date')
 
     if args['DownloadOnly']:
+        os.system("touch _register.HasDownloaded")
         exit()
         
     if args['FullSub']:
