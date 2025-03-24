@@ -1446,7 +1446,7 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED")
 
-            colname='DATA_DI_CORRECTED_DI' # again
+            colname='DATA_DI_CORRECTED' # again
             CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
                                         cleanmask=CurrentMaskName,cleanmode='SSD',
                                         ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][3],
@@ -1463,7 +1463,7 @@ def main(o=None):
                                         MaxMinorIterInitHMP=10000,
                                         PredictSettings=("Clean","DD_PREDICT"))
 
-            stoppp
+
             if o['exitafter'] == 'ampphase_di':
                 warn('User specified exit after amp-phase plus DI deconvolution.')
                 stop(2)
