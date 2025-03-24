@@ -20,7 +20,7 @@ from parset import option_list
 from options import options,print_options
 
 def convert_summary_cfg(option_list,summaryname='summary.txt',newconfigname='tier1-reprocessing.cfg'):
-    summary = open('summary.txt','r')
+    summary = open(summaryname,'r')
     summary_dict = {}
     print('Summary of the reprocessing pipeline inputs from summary.txt')
     for line in summary:
