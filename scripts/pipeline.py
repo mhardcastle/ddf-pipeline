@@ -54,7 +54,7 @@ except ImportError:
     MyPickle=None
 from surveys_db import use_database,update_status,SurveysDB
 
-def exa_atow_run(commands, slurm, mpi):
+def exa_atow_run(commands, slurm, mpi, run_inside_container):
     if "DDF_PIPELINE_IMAGE" not in list(os.environ.keys()):
         die("You need to define the environment variable DDF_PIPELINE_IMAGE where your DDF Pipeline Singularity image are located")
     if (mpi=='ddfacet' and "DDFACET_MPI_IMAGE" not in list(os.environ.keys())):
@@ -90,13 +90,13 @@ def exa_atow_run(commands, slurm, mpi):
            '--cpus-per-task=20',
            '--time=08:00:00',
         ]
-    elif (mpi=='killms' and slurm==False):
-        run_commands = []
-    else:
+    elif (run_inside_container=='False'):
         run_commands = [
            'singularity',
            'exec'
         ]
+    else:
+        run_commands = []
 
     if (mpi=='ddfacet' and slurm==True):
         mpi_commands = [
@@ -109,9 +109,15 @@ def exa_atow_run(commands, slurm, mpi):
         mpi_commands = [
            f"{SINGULARITY_ALLOWED_DIR}/{DDF_PIPELINE_IMAGE}"
        ]
-    elif (mpi=='ddfacet'):
+    elif (mpi=='ddfacet' and run_inside_container=='False'):
            mpi_commands = [
            DDFACET_MPI_IMAGE,
+           'mpirun',
+           '-n',
+           '2'
+       ]
+    elif (mpi=='ddfacet' and run_inside_container=='True'):
+           mpi_commands = [
            'mpirun',
            '-n',
            '2'
@@ -130,7 +136,7 @@ def exa_atow_run(commands, slurm, mpi):
            '--Container',
            'ddf.sif',
            '--CPath',
-           '"/linkhome/rech/genrnu01/uqp96df/"'
+           '""'
        ]
     else:
        mpi_commands = [
@@ -444,7 +450,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
         if conditional_clearcache:
             clearcache(mslist,options)
-        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
+        exa_atow_run(runcommand, 'False', 'ddfacet', 'True')
+        #run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
 
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
