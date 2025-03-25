@@ -54,6 +54,105 @@ except ImportError:
     MyPickle=None
 from surveys_db import use_database,update_status,SurveysDB
 
+def exa_atow_run(commands, slurm, mpi):
+    if "DDF_PIPELINE_IMAGE" not in list(os.environ.keys()):
+        die("You need to define the environment variable DDF_PIPELINE_IMAGE where your DDF Pipeline Singularity image are located")
+    if (mpi=='ddfacet' and "DDFACET_MPI_IMAGE" not in list(os.environ.keys())):
+        die("You need to define the environment variable DDFACET_MPI_IMAGE where your DDF Pipeline Singularity image with DDFacet MPI version are located")
+    if (slurm==True and "SINGULARITY_ALLOWED_DIR" not in list(os.environ.keys())):
+        die("You need to define the environment variable SINGULARITY_ALLOWED_DIR where your Singularity allowed directory are located")
+
+    SINGULARITY_ALLOWED_DIR = os.getenv("SINGULARITY_ALLOWED_DIR")
+    DDF_PIPELINE_IMAGE = os.getenv("DDF_PIPELINE_IMAGE")
+    DDFACET_MPI_IMAGE = os.getenv("DDFACET_MPI_IMAGE")
+
+    if (slurm==True):
+       run_commands = [
+           'srun',
+           '--pty',
+           '--ntasks=1',
+           '--cpus-per-task=10',
+           '--time=08:00:00',
+           '--hint=nomultithread',
+           '--exclusive',
+           '--interactive',
+           'singularity',
+           'run',
+           '-B/$PWD'
+        ]
+    elif (slurm==True and mpi=='killms'):
+         run_commands = [
+           'srun',
+           '--pty',
+           '--nodes=2',
+           '-mpi=pmix_v3',
+           '--tasks-per-node=1',
+           '--cpus-per-task=20',
+           '--time=08:00:00',
+        ]
+    elif (mpi=='killms' and slurm==False):
+        run_commands = []
+    else:
+        run_commands = [
+           'singularity',
+           'exec'
+        ]
+
+    if (mpi=='ddfacet' and slurm==True):
+        mpi_commands = [
+           f"{SINGULARITY_ALLOWED_DIR}/{DDFACET_MPI_IMAGE}"
+           'mpirun',
+           '-n',
+           '2'
+       ]
+    elif (mpi==None and slurm==True):
+        mpi_commands = [
+           f"{SINGULARITY_ALLOWED_DIR}/{DDF_PIPELINE_IMAGE}"
+       ]
+    elif (mpi=='ddfacet'):
+           mpi_commands = [
+           DDFACET_MPI_IMAGE,
+           'mpirun',
+           '-n',
+           '2'
+       ]
+    elif (mpi=='killms'):
+        mpi_commands = [
+           'python3',
+           '-m',
+           'mpi4py.futures',
+       ]
+        mpi_commands2 = [
+           '--KMDir',
+           'msKill_WorkDir_',
+           '--MSTESTDir',
+           '.',
+           '--Container',
+           'ddf.sif',
+           '--CPath',
+           '"/linkhome/rech/genrnu01/uqp96df/"'
+       ]
+    else:
+       mpi_commands = [
+           DDF_PIPELINE_IMAGE
+       ]
+
+    commands_list = commands.split()
+    run_commands.extend(mpi_commands)
+    run_commands.extend(commands_list)
+    if (mpi=='killms'):
+        run_commands.extend(mpi_commands2)
+    try:
+        print('LAUNCHED COMMAND', ' '.join(run_commands))
+        result = subprocess.run(run_commands, check=True, capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print("STANDARD ERROR:")
+            print(result.stderr)
+    except subprocess.CalledProcessError as e:
+        print("ERROR:", e)
+
+
 def summary(o):
     with open('summary.txt','w') as f:
         ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
