@@ -15,7 +15,7 @@ from astropy import units as u
 from astropy.io import fits
 import time
 from subprocess import call
-from reprocessing_utils import prepare_field,do_rclone_disk_upload,do_rclone_tape_pol_upload,convert_summary_cfg
+from reprocessing_utils import prepare_field,do_rclone_reproc_tape_upload,convert_summary_cfg
 import argparse
 import threading
 from auxcodes import run,warn,report, MSList
@@ -172,17 +172,22 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     numtimes = len(np.unique(t.getcol('TIME')))
     print(numtimes,msfilename)
 
-    # Create 8s images and 2 min images (assuming time resolution is 8s...). 
-    if galactic:
-        chanout = 16
-    else:
-        chanout = 1
-    if chanout > 1:
-        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
-        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
-    else:
-        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
-        os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
+    # Check if output files already exist
+    existingfiles = glob.glob('%s*dirty.fits'%imagename)
+    if len(existingfiles) == numtimes:
+        print('All output files already exist, skipping making images again')
+
+        # Create 8s images and 2 min images (assuming time resolution is 8s...). 
+        if galactic:
+            chanout = 16
+        else:
+            chanout = 1
+        if chanout > 1:
+            os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
+            os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
+        else:
+            os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
+            os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -scale 6asec -size 2200 2200 -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),int(numtimes/15),chanout,imagename,msfilename))
 
     outimages = glob.glob('%s*dirty.fits'%imagename)
     for outimage in outimages:
@@ -229,8 +234,9 @@ def image_vlow_sub(useIDG=False,stringMultiscaleScales = "0,4,8,16,32,64,128,256
     wsuc.writeto('WSCLEAN_low-MFS-image-int.fits')  
 
 def compress_fits(filename,q):
-    command='fpack -q %i %s' % (q,filename)
-    run(command)
+    if not os.path.exists(filename+'.fz'):
+        command='fpack -q %i %s' % (q,filename)
+        run(command)
 
 def do_highres_pol(outname,field,options=None):
     # Makes a single 6" QU cube for entire field using all epochs
@@ -357,36 +363,37 @@ if __name__=='__main__':
     parser.add_argument('--EpochPol', help='Create individual epoch QU cube at 20" and 45"', action='store_true')    
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
-    parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database',type=int,default=0)
+    parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database (put 1 to not update)',type=int,default=0)
     parser.add_argument('--NCPU',help='Number of CPU',type=int,default=32)
     parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
-    parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub)',action='store_true')
+    parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub and VLow_image)',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     print('Input arguments: ',args)
 
     field = args['Field']
 
-    with SurveysDB(readonly=True) as sdb:
-        sdb.cur.execute('select * from full_field_reprocessing where id="%s"'%field)
-        # sdb.cur.execute('select * from fields where status=Verified and id="%s"'%field)
-        results=sdb.cur.fetchall()
-        print('Requested field database:',results)
-    if len(results)==0:
-        raise RuntimeError('Requested field is not in database')
+    if not args['NoDBSync']:
+        with SurveysDB(readonly=True) as sdb:
+            sdb.cur.execute('select * from full_field_reprocessing where id="%s"'%field)
+            # sdb.cur.execute('select * from fields where status=Verified and id="%s"'%field)
+            results=sdb.cur.fetchall()
+            print('Requested field database:',results)
+        if len(results)==0:
+            raise RuntimeError('Requested field is not in database')
 
-    with SurveysDB(readonly=not update_status) as sdb:
-        fieldinfo=sdb.get_field(field)
-        print('Field info',fieldinfo)
-        if fieldinfo is None:
-            raise RuntimeError('Field',field,'does not exist in the database')
+        with SurveysDB(readonly=not update_status) as sdb:
+            fieldinfo=sdb.get_field(field)
+            print('Field info',fieldinfo)
+            if fieldinfo is None:
+                raise RuntimeError('Field',field,'does not exist in the database')
 
     startdir = os.getcwd()
 
-    for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
-        if args[option]:
+    for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
+        if args[option] and not args['NoDBSync']:
             with SurveysDB(readonly=False) as sdb:
                 tmp = sdb.get_ffr(field,option)
                 if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
@@ -398,7 +405,7 @@ if __name__=='__main__':
         os.system('mkdir %s'%field)
         os.chdir(field)
         print('Downloading field',field)
-        for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
+        for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
             if args[option] and not args["NoDBSync"]:
                 update_status(field,option,'Downloading')
         prepare_field(field,startdir +'/'+field)
@@ -430,10 +437,28 @@ if __name__=='__main__':
                 if ob==obsid:
                     file.write(ms+'\n')
     
-    for option in ['StokesV','FullSub','HighPol','DynSpecMS']:
+    for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
         if args[option] and not args["NoDBSync"]:
             print('Changing',option,'status to Started','for',field)
             update_status(field,option,'Started')#,time='start_date')
+
+    if args['VLow_image']: 
+        image_vlow(args['NCPU'])
+        OutDir = '%s_low_images'%field
+        os.system('mkdir %s'%OutDir)
+        resultfiles = glob.glob('image_full_vlow_nocut*')
+        for resultfile in resultfiles:
+            os.system('cp %s %s'%(resultfile,OutDir))
+        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+        resultfilestar = ['%s.tar'%OutDir]
+        if not args["NoDBSync"]:
+            update_status(field,'VLow_image','Uploading')
+            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_imaging/')
+            if result['code']==0:
+                update_status(field,'VLow_image','Verified')
+            else:
+                update_status(field,'VLow_image','Upload failed')
+
 
     if args['FullSub']:
         do_run_subtract(field)
@@ -446,38 +471,60 @@ if __name__=='__main__':
                     raise RuntimeError('Tar of %s failed'%resultfile)	
                 resultfilestar.append('%s.tar'%resultfile)
             update_status(field,'FullSub','Uploading')
-            result = do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'subtract_pipeline/')
+            result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
             if result['code']==0:
                 update_status(field,'FullSub','Verified')#,time='end_date')
             else:
                 update_status(field,'FullSub','Upload failed')
-        if args['TransientImage']:
-            for resultfile in resultfiles:
-                imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
-                print(resultfile)
-                print(imagefile)
-                if abs(fieldinfo['gal_b']) < 10.0:
-                    transient_image(resultfile,imagefile,galactic=True,options=o)
-                else:
-                    transient_image(resultfile,imagefile,galactic=False,options=o) 
-            os.system('mkdir %s_snapshot_images'%field)
-            os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
-            d=os.system('tar -cvf %s_snapshot_images.tar %s_snapshot_images'%(field,field))
-            if d!=0:
-                raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
-            result = do_rclone_disk_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'subtract_snapshot_images/')
 
-        if args['VLow_sub_image']:
-            image_vlow_sub()
-            
-    if args['VLow_image']:
-        image_vlow(args['NCPU'])
+    if args['TransientImage']:
+        if not args['FullSub']:
+            print('Source subtraction (--FullSub) is needed to do TransientImage')
+            sys.exit(0)
+        for resultfile in resultfiles:
+            imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
+            print(resultfile)
+            print(imagefile)
+            if abs(fieldinfo['gal_b']) < 10.0:
+                transient_image(resultfile,imagefile,galactic=True,options=o)
+            else:
+                transient_image(resultfile,imagefile,galactic=False,options=o) 
+        os.system('mkdir %s_snapshot_images'%field)
+        os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
+        d=os.system('tar -cvf %s_snapshot_images.tar %s_snapshot_images'%(field,field))
+        if d!=0:
+            raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
+        if not args['NoDBSync']:
+            result = do_rclone_reproc_tape_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'Subtracted_snapshot_images/')
+            if result['code']==0:
+                update_status(field,'TransientImage','Verified')#,time='end_date')
+            else:
+                update_status(field,'TransientImage','Upload failed')
+
+    if args['VLow_sub_image']:
+        if not args['FullSub'] or not args['VLow_image']:
+            print('Both source subtraction (--FullSub) and low resolution imaging (--VLow_image) are needed to make the VLow_sub_image')
+            sys.exit(0)
+        image_vlow_sub() # The image_vlow_sub is dependent on the image_vlow having already been run and the source subtraction
+        OutDir = '%s_low_sub_images'%field
+        os.system('mkdir %s'%OutDir)
+        resultfiles = glob.glob('WSCLEAN_low*')
+        for resultfile in resultfiles:
+            os.system('cp %s %s'%(resultfile,OutDir))
+        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+        resultfilestar = ['%s.tar'%OutDir]
+        if not args["NoDBSync"]:
+            update_status(field,'VLow_sub_image','Uploading')
+            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_sub_imaging/')
+            if result['code']==0:
+                update_status(field,'VLow_sub_image','Verified')
+            else:
+                update_status(field,'VLow_sub_image','Upload failed')
+
+
     if args['Dynspec']:
-        
         do_run_dynspec(field)
-        
         pipeline.ingest_dynspec()
-
         OutDir="DynSpecs_%s"%field
         os.system("mkdir -p %s"%OutDir)
         resultfiles = glob.glob('DynSpecs_*.tgz')
@@ -485,10 +532,9 @@ if __name__=='__main__':
             os.system('cp %s %s'%(resultfile,OutDir))
         os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
         resultfilestar = ['%s.tar'%OutDir]
-
         if not args["NoDBSync"]:
             update_status(field,'DynSpecMS','Uploading')
-            result=do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'DynSpecMS_reprocessing')
+            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'DynSpecMS/')
             if result['code']==0:
                 update_status(field,'DynSpecMS','Verified')#,time='end_date')
             else:
@@ -505,12 +551,10 @@ if __name__=='__main__':
             for resultfile in resultfiles:
                 os.system('cp %s V_high_maps'%(resultfile))
         os.system('tar -cvf V_high_maps.tar V_high_maps')
-        resultfilestar = ['V_high_maps.tar']
-
-            
+        resultfilestar = ['V_high_maps.tar']            
         if not args["NoDBSync"]:
             update_status(field,'StokesV','Uploading')
-            do_rclone_disk_upload(field,os.getcwd(),resultfilestar,'Stokes_V_imaging')
+            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'StokesV_imaging/')
             update_status(field,'StokesV','Verified')#,time='end_date')
 
     if args['HighPol']:
@@ -528,7 +572,7 @@ if __name__=='__main__':
             resultfilestar = ['stokes_highres.tar']
             print('Starting upload of',resultfilestar)
             update_status(field,'HighPol','Uploading')
-            do_rclone_tape_highrespol_upload(field,os.getcwd(),resultfilestar,'')
+            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_highres')
             update_status(field,'HighPol','Verified')#,time='end_date')
 
     if args['EpochPol']:
@@ -545,6 +589,6 @@ if __name__=='__main__':
         if not args["NoDBSync"]:
             resultfilestar = ['stokes_epochpol.tar']
             print('Starting upload of',resultfilestar)
-            #update_status(field,'HighPol','Uploading')
-            do_rclone_tape_pol_upload(field,os.getcwd(),resultfilestar,'')
-            #update_status(field,'HighPol','Verified')#,time='end_date')
+            update_status(field,'EpochPol','Uploading')
+            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_Epoch')
+            update_status(field,'EpochPol','Verified')#,time='end_date')
