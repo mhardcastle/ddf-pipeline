@@ -16,6 +16,48 @@ from subprocess import call
 from rclone import RClone
 from sdr_wrapper import SDR
 from fixsymlinks import fixsymlinks
+from parset import option_list
+from options import options,print_options
+
+def convert_summary_cfg(option_list,summaryname='summary.txt',newconfigname='tier1-reprocessing.cfg'):
+    summary = open(summaryname,'r')
+    summary_dict = {}
+    print('Summary of the reprocessing pipeline inputs from summary.txt')
+    for line in summary:
+        line = line.replace(" ", "")
+        line = line.strip().split(':')
+        if len(line) != 2:
+            continue
+        summary_dict[line[0]] = line[1]
+        
+    newconfig = open(newconfigname,'w')
+    option_types = []
+    for option in option_list:
+        if option[0] not in option_types:
+            option_types.append(option[0])
+
+
+    for option_type in option_types:
+        newconfig.write('[%s]\n'%option_type)
+        for option in option_list:
+            if option[0] != option_type:
+                continue
+            try:
+                summary_value = summary_dict[option[1]]
+            except KeyError:
+                try:
+                    summary_value = summary_dict[option[0]+'_'+option[1]]
+                except KeyError:
+                    print('Cannot find option for parameter',option[0],option[1])
+                    continue
+            if summary_value == 'None':
+                continue
+            print(option,summary_value)
+            newconfig.write('%s=%s\n'%(option[1],summary_value))
+    newconfig.close()
+
+    o = options(newconfigname,option_list)
+    return o
 
 def do_rclone_extract_upload(cname,basedir,f,directory):
     '''
@@ -30,9 +72,18 @@ def do_rclone_disk_upload(cname,basedir,f,directory):
     '''
     Upload results to surf disk
     '''
-    rc=RClone('maca_sksp_disk_subtract.conf',debug=True)
+    rc=RClone('maca_sksp_disk_reproc.conf',debug=True)
     rc.get_remote()
-    print(rc.remote,'maca_sksp_disk_subtract.conf')
+    print(rc.remote,'maca_sksp_disk_reproc.conf')
+    return rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
+
+def do_rclone_reproc_tape_upload(cname,basedir,f,directory):
+    '''
+    Upload results to surf disk
+    '''
+    rc=RClone('maca_sksp_tape_reproc.conf',debug=True)
+    rc.get_remote()
+    print(rc.remote,'maca_sksp_tape_reproc.conf')
     return rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
     
 def do_rclone_tape_pol_upload(cname,basedir,f,directory):
