@@ -54,6 +54,21 @@ except ImportError:
     MyPickle=None
 from surveys_db import use_database,update_status,SurveysDB
 
+try :
+    import socket
+    import atexit
+    sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+    sock.connect('/var/tmp/dool_tags')
+    def dool_close():  sock.close()
+    def dool_set(n):   sock.send(b'+%s;' % n)
+    def dool_unset(n): sock.send(b'-%s;' % n)
+    atexit.register(dool_close)
+except Exception as e:
+    loggger.warning(r'Dool socket error : %s' % str(e))
+    def dool_close():  pass
+    def dool_set(n):   pass
+    def dool_unset(n): pass
+
 def summary(o):
     with open('summary.txt','w') as f:
         ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
@@ -159,6 +174,7 @@ def parse_parset(parsets,use_headings=False):
         return {}
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
+    dool_set(b'ddfshift')
     if catcher: catcher.check()
     if options is None:
         options=o # attempt to get global if it exists
@@ -179,10 +195,10 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
             print('would have run',runcommand)
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
-
+    dool_unset(b'ddfshift')
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
-
+    dool_set(b'ddfimage')
     if catcher: catcher.check()
 
     # saveimages lists _additional_ images to save
@@ -353,10 +369,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
             fname=os.system("touch %s"%fname)
+    dool_unset(b'ddfimage')
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
     # cellsize specifies which option value to get this from
+    dool_set(b'make_external_mask')
     if options is None:
         options=o # attempt to get global
 
@@ -382,10 +400,9 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
         if options['extended_size'] is not None and extended_use is not None:
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
-
+    dool_unset(b'make_external_mask')
 
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
-
     if os.path.isfile(OutClusterCat):
         warn('File %s already exists, skipping clustering step'%OutClusterCat)
         return
@@ -420,8 +437,8 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     runcommand+=" --NCluster %i"%options['ndir']
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
-
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
+    dool_set(b'make_mask')
     if catcher: catcher.check()
 
     # mask_use specifies a mask file to use
@@ -448,6 +465,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
                     merge_mask(fname,mask,fname)
             else:
                 merge_mask(fname,external_mask,fname)
+    dool_unset(b'make_mask')            
     return fname
             
 
@@ -457,7 +475,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
-
+    dool_set(b'killms_data')
     if options is None:
         options=o # attempt to get global if it exists
 
@@ -574,7 +592,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         
 
 
-
+    dool_unset(b'killms_data')
     return outsols
 
 def compress_fits(filename,q):
