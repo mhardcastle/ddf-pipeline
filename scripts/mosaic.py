@@ -516,7 +516,8 @@ def make_mosaic(args):
         isum/=wsum
         # mask now contains True where a non-nan region was present in either map
         isum[~mask]=np.nan
-        if np.any(np.isnan(isum)):
+
+        if np.sum(np.isnan(isum))>100:
             # blank small islands -- due to beam errors
             island_mask=make_blank_mask(isum,verbose=True)
             isum[island_mask]=np.nan
