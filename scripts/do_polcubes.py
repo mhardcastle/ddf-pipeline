@@ -73,14 +73,14 @@ def make_cube_stokes(freqs,hdus,outfile,stokesparam):
 
 def do_polcubes(colname,
                 CurrentDDkMSSolName,
-		uvrange,imageoutname,
+		uvrange,imageoutname,mslistname,
 		ddf_kw,
                 beamsize,imsize,cellsize,robust,
                 options,catcher):
 
     o=options
     mslists=[]
-    m=MSList(o['full_mslist'])
+    m=MSList(mslistname)
     ufreqs=sorted(set(m.freqs))
 
     # do a first pass to try to separate out non-matching frequencies
