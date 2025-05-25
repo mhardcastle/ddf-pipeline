@@ -175,7 +175,7 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     existingfiles = glob.glob('%s*dirty.fits'%imagename)
     if len(existingfiles) == numtimes:
         print('All output files already exist, skipping making images again')
-
+    else:
         # Create 8s images and 2 min images (assuming time resolution is 8s...). 
         if galactic:
             chanout = 16
@@ -366,6 +366,7 @@ if __name__=='__main__':
     parser.add_argument('--NCPU',help='Number of CPU (0 for all)',type=int,default=0)
     parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
+    parser.add_argument('--IgnorePrerequisites',help='Ignore sequence prerequisites, e.g. if the data already exist',action='store_true')
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub and VLow_image)',action='store_true')
     args = vars(parser.parse_args())
@@ -478,9 +479,10 @@ if __name__=='__main__':
                 update_status(field,'FullSub','Upload failed')
 
     if args['TransientImage']:
-        if not args['FullSub']:
+        if not args['FullSub'] and not args['IgnorePrerequisites']:
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
+        resultfiles = glob.glob('*sub*archive?')
         for resultfile in resultfiles:
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
