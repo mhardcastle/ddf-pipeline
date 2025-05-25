@@ -20,14 +20,13 @@ import argparse
 import threading
 from auxcodes import run,warn,report, MSList
 import numpy as np
-import pipeline
 import datetime
-from pipeline import ddf_image
+from pipeline import ingest_dynspec,ddf_image
 from rclone import RClone
 from sdr_wrapper import SDR
 from time import sleep
+from getcpus import getcpus
 import pyrap.tables as pt
-
 
 def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
     # stage a dataset from SDR or rclone repos 
@@ -349,7 +348,7 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
         if idd is None:
             raise RuntimeError('Unable to find database entry for field "%s".' % id)
         idd['status']=status
-        #tag_field(sdb,idd,workdir=workdir) # Turned this off as columns are not long enough in DB.
+        tag_field(sdb,idd,workdir=workdir) # Turned this off as columns are not long enough in DB.
         if time is not None and idd[time] is None:
             idd[time]=datetime.datetime.now()
         sdb.set_ffr(idd)
@@ -364,13 +363,14 @@ if __name__=='__main__':
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database (put 1 to not update)',type=int,default=0)
-    parser.add_argument('--NCPU',help='Number of CPU',type=int,default=32)
+    parser.add_argument('--NCPU',help='Number of CPU (0 for all)',type=int,default=0)
     parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub and VLow_image)',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
+    if args['NCPU']==0: args['NCPU']=getcpus()
     print('Input arguments: ',args)
 
     field = args['Field']
@@ -440,7 +440,7 @@ if __name__=='__main__':
     for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
         if args[option] and not args["NoDBSync"]:
             print('Changing',option,'status to Started','for',field)
-            update_status(field,option,'Started')#,time='start_date')
+            update_status(field,option,'Started',time='start_date')
 
     if args['VLow_image']: 
         image_vlow(args['NCPU'])
@@ -524,7 +524,7 @@ if __name__=='__main__':
 
     if args['Dynspec']:
         do_run_dynspec(field)
-        pipeline.ingest_dynspec()
+        ingest_dynspec()
         OutDir="DynSpecs_%s"%field
         os.system("mkdir -p %s"%OutDir)
         resultfiles = glob.glob('DynSpecs_*.tgz')
@@ -546,7 +546,7 @@ if __name__=='__main__':
             print('Stokes V image for %s'%obsid)
             do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
 
-            resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obsis)
+            resultfiles = glob.glob('image_full_high_stokesV_%s*dirty*.fits'%obsid)
             os.system('mkdir V_high_maps')
             for resultfile in resultfiles:
                 os.system('cp %s V_high_maps'%(resultfile))
