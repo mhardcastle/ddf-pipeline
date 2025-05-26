@@ -194,6 +194,24 @@ def filechecker(clustercat, dicomask, indico, h5sols, HMPmodelfits, uselowres):
      raise IOError(h5sols + ' does not exist')  
   return
 
+def addcol(t, incol, outcol, write_outcol=False, dysco=False):
+    """ Add a new column to a MS. """
+    if outcol not in t.colnames():
+        logging.info('Adding column: ' + outcol)
+        coldmi = t.getdminfo(incol)
+        if dysco:
+            coldmi['NAME'] = 'Dysco' + outcol
+        else:
+            coldmi['NAME'] = outcol
+        try:
+            t.addcols(makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
+        except:
+            coldmi['TYPE'] = "StandardStMan"  # DyscoStMan"
+            t.addcols(makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
+    if (outcol != incol) and write_outcol:
+        # copy over the columns
+        taql("UPDATE $t SET " + outcol + "=" + incol)
+
 def addextraweights(msfiles):
    '''
    Adds the column WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT from IMAGING_WEIGHT from DR2
@@ -204,9 +222,10 @@ def addextraweights(msfiles):
      ts  = pt.table(ms, readonly=False)
      colnames = ts.colnames()
      if 'WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT' not in colnames:
-       desc = ts.getcoldesc('WEIGHT_SPECTRUM')
-       desc['name']='WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT'
-       ts.addcols(desc)
+       # desc = ts.getcoldesc('WEIGHT_SPECTRUM')
+       # desc['name']='WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT'
+       # ts.addcols(desc)
+       addcol(ts, 'WEIGHT_SPECTRUM', 'WEIGHT_SPECTRUM_FROM_IMAGING_WEIGHT')
        ts.close() # to write results
 
      else:
@@ -857,9 +876,10 @@ for observation in range(number_of_unique_obsids(msfiles)):
             t  = pt.table(currentmsoutconcat, readonly=False)
 
             print('Adding WEIGHT_SPECTRUM_SOLVE') 
-            desc = t.getcoldesc('WEIGHT_SPECTRUM')
-            desc['name']='WEIGHT_SPECTRUM_SOLVE'
-            t.addcols(desc)
+            #desc = t.getcoldesc('WEIGHT_SPECTRUM')
+            #desc['name']='WEIGHT_SPECTRUM_SOLVE'
+            #t.addcols(desc)
+            addcol(t, 'WEIGHT_SPECTRUM', 'WEIGHT_SPECTRUM_SOLVE')
 
             t2 = pt.table(currentmsoutconcat + '.tmpweight', readonly=True)
             imweights = t2.getcol('WEIGHT_SPECTRUM')
