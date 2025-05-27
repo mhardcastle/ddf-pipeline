@@ -356,6 +356,22 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
             idd[time]=datetime.datetime.now()
         sdb.set_ffr(idd)
 
+def get_galactic_coords(msfile):
+    """Return galactic longitude and latitude (degrees) from an MS file."""
+    import pyrap.tables as pt
+    from astropy.coordinates import SkyCoord
+    import astropy.units as u
+
+    with pt.table(msfile + '/FIELD', readonly=True) as field_table:
+        phase_dir = field_table.getcol('PHASE_DIR')[0, 0]  # shape: (n_fields, 1, 2)
+        ra_rad, dec_rad = phase_dir
+        ra_deg = ra_rad * 180.0 / np.pi
+        dec_deg = dec_rad * 180.0 / np.pi
+
+    skycoord = SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg, frame='icrs')
+    gal = skycoord.galactic
+    return gal.l.deg, gal.b.deg
+
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Reprocessing LoTSS fields')
@@ -373,7 +389,6 @@ if __name__=='__main__':
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
     parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
-    parser.add_argument('--Skip_prepare',help='Skip the preparation step (e.g. if just wanted to download the fullsub and process',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
@@ -407,42 +422,41 @@ if __name__=='__main__':
                     if not args["NoDBSync"] and not args['Force']:
                         raise RuntimeError('Field already processing')
 
-    if not args['Skip_prepare']:
-        if not os.path.exists(startdir+'/'+field):
-            os.system('mkdir %s'%field)
-            os.chdir(field)
-            print('Downloading field',field)
-            for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
-                if args[option] and not args["NoDBSync"]:
-                    update_status(field,option,'Downloading')
-            prepare_field(field,startdir +'/'+field)
-        else:
-            os.chdir(field)
+    if not os.path.exists(startdir+'/'+field):
+        os.system('mkdir %s'%field)
+        os.chdir(field)
+        print('Downloading field',field)
+        for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
+            if args[option] and not args["NoDBSync"]:
+                update_status(field,option,'Downloading')
+        prepare_field(field,startdir +'/'+field)
+    else:
+        os.chdir(field)
 
 
-        print('Reading summary file (summary.txt)')
-        if not os.path.exists('summary.txt'):
-            print('Cannot read the summary.txt file - failing')
-            sys.exit(0)
-        o = convert_summary_cfg(option_list)
-        o['NCPU_DDF'] = args['NCPU']
-        o['NCPU_killms'] = args['NCPU']
-        o['colname'] = 'DATA'
-        print(o)
-            
-        print('Checking big-mslist')
-        m=MSList('big-mslist.txt')
-        print('Looking for different epochs')
-        uobsid = set(m.obsids)
-        epoch_mslists=[]
-        for obsid in uobsid:
-            umslist='mslist-%s.txt' % obsid
-            epoch_mslists.append(umslist)
-            print('Writing ms list for obsids',umslist)
-            with open(umslist,'w') as file:
-                for ms,ob in zip(m.mss,m.obsids):
-                    if ob==obsid:
-                        file.write(ms+'\n')
+    print('Reading summary file (summary.txt)')
+    if not os.path.exists('summary.txt'):
+        print('Cannot read the summary.txt file - failing')
+        sys.exit(0)
+    o = convert_summary_cfg(option_list)
+    o['NCPU_DDF'] = args['NCPU']
+    o['NCPU_killms'] = args['NCPU']
+    o['colname'] = 'DATA'
+    print(o)
+        
+    print('Checking big-mslist')
+    m=MSList('big-mslist.txt')
+    print('Looking for different epochs')
+    uobsid = set(m.obsids)
+    epoch_mslists=[]
+    for obsid in uobsid:
+        umslist='mslist-%s.txt' % obsid
+        epoch_mslists.append(umslist)
+        print('Writing ms list for obsids',umslist)
+        with open(umslist,'w') as file:
+            for ms,ob in zip(m.mss,m.obsids):
+                if ob==obsid:
+                    file.write(ms+'\n')
     
     for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
         if args[option] and not args["NoDBSync"]:
@@ -481,7 +495,8 @@ if __name__=='__main__':
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
             print(imagefile)
-            if abs(fieldinfo['gal_b']) < 10.0:
+            gal_l, gal_b = get_galactic_coords(resultfiles[0])
+            if abs(gal_b) < 10.0:
                 transient_image(resultfile,imagefile,galactic=True,options=o)
             else:
                 transient_image(resultfile,imagefile,galactic=False,options=o) 
