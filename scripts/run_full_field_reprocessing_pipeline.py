@@ -207,6 +207,9 @@ def image_vlow(ncpu,wd=None):
 def image_vlow_sub(useIDG=False,stringMultiscaleScales = "0,4,8,16,32,64,128,256", stringMultiscaleScalesIDG = "0,4,8,16,32,64",
                 sizePixels=2000,taperGaussian=60.0,beamsize=60.0,scale=15.0,numberOfSubbands=6,uvDistanceMinLambda=0,IDGMode="cpu",name='WSCLEAN_low'):
 
+    os.system('rm -rf *.archive?')
+    print('Subtracting at low resolution')
+    run('sub-sources-outside-region.py -b fullfield -p SUB -c DATA --uselowres -t 8 -f 5')
     g=glob.glob('*.archive?')
     stringMSs=' '.join(g)
     print("Imaging with multiscale CLEAN (at low-resolution)...")
@@ -368,7 +371,7 @@ if __name__=='__main__':
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
     parser.add_argument('--IgnorePrerequisites',help='Ignore sequence prerequisites, e.g. if the data already exist',action='store_true')
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
-    parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean (only possible when doing FullSub and VLow_image)',action='store_true')
+    parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
@@ -443,24 +446,6 @@ if __name__=='__main__':
             print('Changing',option,'status to Started','for',field)
             update_status(field,option,'Started',time='start_date')
 
-    if args['VLow_image']: 
-        image_vlow(args['NCPU'])
-        OutDir = '%s_low_images'%field
-        os.system('mkdir %s'%OutDir)
-        resultfiles = glob.glob('image_full_vlow_nocut*')
-        for resultfile in resultfiles:
-            os.system('cp %s %s'%(resultfile,OutDir))
-        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
-        resultfilestar = ['%s.tar'%OutDir]
-        if not args["NoDBSync"]:
-            update_status(field,'VLow_image','Uploading')
-            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_imaging/')
-            if result['code']==0:
-                update_status(field,'VLow_image','Verified')
-            else:
-                update_status(field,'VLow_image','Upload failed')
-
-
     if args['FullSub']:
         do_run_subtract(field)
         resultfiles = glob.glob('*sub*archive?')
@@ -474,7 +459,7 @@ if __name__=='__main__':
             update_status(field,'FullSub','Uploading')
             result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
             if result['code']==0:
-                update_status(field,'FullSub','Verified')#,time='end_date')
+                update_status(field,'FullSub','Verified',time='end_date')
             else:
                 update_status(field,'FullSub','Upload failed')
 
@@ -499,30 +484,9 @@ if __name__=='__main__':
         if not args['NoDBSync']:
             result = do_rclone_reproc_tape_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'Subtracted_snapshot_images/')
             if result['code']==0:
-                update_status(field,'TransientImage','Verified')#,time='end_date')
+                update_status(field,'TransientImage','Verified',time='end_date')
             else:
                 update_status(field,'TransientImage','Upload failed')
-
-    if args['VLow_sub_image']:
-        if not args['FullSub'] or not args['VLow_image']:
-            print('Both source subtraction (--FullSub) and low resolution imaging (--VLow_image) are needed to make the VLow_sub_image')
-            sys.exit(0)
-        image_vlow_sub() # The image_vlow_sub is dependent on the image_vlow having already been run and the source subtraction
-        OutDir = '%s_low_sub_images'%field
-        os.system('mkdir %s'%OutDir)
-        resultfiles = glob.glob('WSCLEAN_low*')
-        for resultfile in resultfiles:
-            os.system('cp %s %s'%(resultfile,OutDir))
-        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
-        resultfilestar = ['%s.tar'%OutDir]
-        if not args["NoDBSync"]:
-            update_status(field,'VLow_sub_image','Uploading')
-            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_sub_imaging/')
-            if result['code']==0:
-                update_status(field,'VLow_sub_image','Verified')
-            else:
-                update_status(field,'VLow_sub_image','Upload failed')
-
 
     if args['Dynspec']:
         do_run_dynspec(field)
@@ -538,7 +502,7 @@ if __name__=='__main__':
             update_status(field,'DynSpecMS','Uploading')
             result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'DynSpecMS/')
             if result['code']==0:
-                update_status(field,'DynSpecMS','Verified')#,time='end_date')
+                update_status(field,'DynSpecMS','Verified',time='end_date')
             else:
                 update_status(field,'DynSpecMS','Upload failed')
 
@@ -557,7 +521,7 @@ if __name__=='__main__':
         if not args["NoDBSync"]:
             update_status(field,'StokesV','Uploading')
             do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'StokesV_imaging/')
-            update_status(field,'StokesV','Verified')#,time='end_date')
+            update_status(field,'StokesV','Verified',time='end_date')
 
     if args['HighPol']:
         from do_polcubes import do_polcubes
@@ -575,7 +539,7 @@ if __name__=='__main__':
             print('Starting upload of',resultfilestar)
             update_status(field,'HighPol','Uploading')
             do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_highres')
-            update_status(field,'HighPol','Verified')#,time='end_date')
+            update_status(field,'HighPol','Verified',time='end_date')
 
     if args['EpochPol']:
         from do_polcubes import do_polcubes
@@ -593,4 +557,40 @@ if __name__=='__main__':
             print('Starting upload of',resultfilestar)
             update_status(field,'EpochPol','Uploading')
             do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_Epoch')
-            update_status(field,'EpochPol','Verified')#,time='end_date')
+            update_status(field,'EpochPol','Verified',time='end_date')
+
+    if args['VLow_image']: 
+        image_vlow(args['NCPU'])
+        OutDir = '%s_low_images'%field
+        os.system('mkdir %s'%OutDir)
+        resultfiles = glob.glob('image_full_vlow_nocut*')
+        for resultfile in resultfiles:
+            os.system('cp %s %s'%(resultfile,OutDir))
+        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+        resultfilestar = ['%s.tar'%OutDir]
+        if not args["NoDBSync"]:
+            update_status(field,'VLow_image','Uploading')
+            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_imaging/')
+            if result['code']==0:
+                update_status(field,'VLow_image','Verified',time='end_date')
+            else:
+                update_status(field,'VLow_image','Upload failed')
+
+
+    if args['VLow_sub_image']:
+        image_vlow_sub() # does a new subtraction so must be run last
+        OutDir = '%s_low_sub_images'%field
+        os.system('mkdir %s'%OutDir)
+        resultfiles = glob.glob('WSCLEAN_low*')
+        for resultfile in resultfiles:
+            os.system('cp %s %s'%(resultfile,OutDir))
+        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+        resultfilestar = ['%s.tar'%OutDir]
+        if not args["NoDBSync"]:
+            update_status(field,'VLow_sub_image','Uploading')
+            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_sub_imaging/')
+            if result['code']==0:
+                update_status(field,'VLow_sub_image','Verified',time='end_date')
+            else:
+                update_status(field,'VLow_sub_image','Upload failed')
+
