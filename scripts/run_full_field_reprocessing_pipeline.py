@@ -390,7 +390,9 @@ if __name__=='__main__':
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
     parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
     parser.add_argument('--Skip_DataPrepare',help='Do not download the uv-data (if e.g. working on downloaded subtracted data)',action='store_true')
+    parser.add_argument('--DoDatabaseOps',help='Do the operations specified in the database (in this case field directory should exist and operations to do should have status other than Verified)',action='store_true')
     args = vars(parser.parse_args())
+            
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
     print('Input arguments: ',args)
@@ -405,13 +407,22 @@ if __name__=='__main__':
             print('Requested field database:',results)
         if len(results)==0:
             raise RuntimeError('Requested field is not in database')
-
-        with SurveysDB(readonly=not update_status) as sdb:
+        
+        with SurveysDB(readonly=True) as sdb:
             fieldinfo=sdb.get_field(field)
             print('Field info',fieldinfo)
             if fieldinfo is None:
                 raise RuntimeError('Field',field,'does not exist in the database')
 
+        if args['DoDatabaseOps']:
+            for r in results:
+                if r['status']=='Verified': continue
+                if r['clustername']!=get_cluster():
+                    raise RuntimeError('Trying to run non-local fields??')
+                print('Enabling operation',r['operation'])
+                args[r['operation']]=True
+    stop
+                
     startdir = os.getcwd()
 
     for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
