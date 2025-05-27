@@ -389,6 +389,7 @@ if __name__=='__main__':
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
     parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
+    parser.add_argument('--Skip_DataPrepare',help='Do not download the uv-data (if e.g. working on downloaded subtracted data)',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
@@ -429,7 +430,11 @@ if __name__=='__main__':
         for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
             if args[option] and not args["NoDBSync"]:
                 update_status(field,option,'Downloading')
-        prepare_field(field,startdir +'/'+field)
+        if not args['Skip_DataPrepare']:
+            prepare_field(field,startdir +'/'+field)
+        else:
+            prepare_field(field,startdir + '/' + field,Mode='Misc',operations=['download','untar'])
+
     else:
         os.chdir(field)
 
@@ -444,19 +449,20 @@ if __name__=='__main__':
     o['colname'] = 'DATA'
     print(o)
         
-    print('Checking big-mslist')
-    m=MSList('big-mslist.txt')
-    print('Looking for different epochs')
-    uobsid = set(m.obsids)
-    epoch_mslists=[]
-    for obsid in uobsid:
-        umslist='mslist-%s.txt' % obsid
-        epoch_mslists.append(umslist)
-        print('Writing ms list for obsids',umslist)
-        with open(umslist,'w') as file:
-            for ms,ob in zip(m.mss,m.obsids):
-                if ob==obsid:
-                    file.write(ms+'\n')
+    if not args['Skip_DataPrepare']:
+        print('Checking big-mslist')
+        m=MSList('big-mslist.txt')
+        print('Looking for different epochs')
+        uobsid = set(m.obsids)
+        epoch_mslists=[]
+        for obsid in uobsid:
+            umslist='mslist-%s.txt' % obsid
+            epoch_mslists.append(umslist)
+            print('Writing ms list for obsids',umslist)
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
     
     for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
         if args[option] and not args["NoDBSync"]:
