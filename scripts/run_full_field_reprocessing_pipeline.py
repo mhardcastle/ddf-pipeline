@@ -15,7 +15,7 @@ from astropy import units as u
 from astropy.io import fits
 import time
 from subprocess import call
-from reprocessing_utils import prepare_field,do_rclone_reproc_tape_upload,convert_summary_cfg
+from reprocessing_utils import prepare_field,do_rclone_reproc_tape_upload,convert_summary_cfg,do_rclone_reproc_tape_download
 import argparse
 import threading
 from auxcodes import run,warn,report, MSList
@@ -372,6 +372,8 @@ if __name__=='__main__':
     parser.add_argument('--IgnorePrerequisites',help='Ignore sequence prerequisites, e.g. if the data already exist',action='store_true')
     parser.add_argument('--VLow_image',help='Image the data at very low resolution with DDFacet',action='store_true')
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
+    parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
+    parser.add_argument('--Skip_prepare',help='Skip the preparation step (e.g. if just wanted to download the fullsub and process',action='store_true')
     args = vars(parser.parse_args())
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
@@ -405,63 +407,70 @@ if __name__=='__main__':
                     if not args["NoDBSync"] and not args['Force']:
                         raise RuntimeError('Field already processing')
 
-    if not os.path.exists(startdir+'/'+field):
-        os.system('mkdir %s'%field)
-        os.chdir(field)
-        print('Downloading field',field)
-        for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
-            if args[option] and not args["NoDBSync"]:
-                update_status(field,option,'Downloading')
-        prepare_field(field,startdir +'/'+field)
-    else:
-        os.chdir(field)
+    if not args['Skip_prepare']:
+        if not os.path.exists(startdir+'/'+field):
+            os.system('mkdir %s'%field)
+            os.chdir(field)
+            print('Downloading field',field)
+            for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
+                if args[option] and not args["NoDBSync"]:
+                    update_status(field,option,'Downloading')
+            prepare_field(field,startdir +'/'+field)
+        else:
+            os.chdir(field)
 
 
-    print('Reading summary file (summary.txt)')
-    if not os.path.exists('summary.txt'):
-        print('Cannot read the summary.txt file - failing')
-        sys.exit(0)
-    o = convert_summary_cfg(option_list)
-    o['NCPU_DDF'] = args['NCPU']
-    o['NCPU_killms'] = args['NCPU']
-    o['colname'] = 'DATA'
-    print(o)
-        
-    print('Checking big-mslist')
-    m=MSList('big-mslist.txt')
-    print('Looking for different epochs')
-    uobsid = set(m.obsids)
-    epoch_mslists=[]
-    for obsid in uobsid:
-        umslist='mslist-%s.txt' % obsid
-        epoch_mslists.append(umslist)
-        print('Writing ms list for obsids',umslist)
-        with open(umslist,'w') as file:
-            for ms,ob in zip(m.mss,m.obsids):
-                if ob==obsid:
-                    file.write(ms+'\n')
+        print('Reading summary file (summary.txt)')
+        if not os.path.exists('summary.txt'):
+            print('Cannot read the summary.txt file - failing')
+            sys.exit(0)
+        o = convert_summary_cfg(option_list)
+        o['NCPU_DDF'] = args['NCPU']
+        o['NCPU_killms'] = args['NCPU']
+        o['colname'] = 'DATA'
+        print(o)
+            
+        print('Checking big-mslist')
+        m=MSList('big-mslist.txt')
+        print('Looking for different epochs')
+        uobsid = set(m.obsids)
+        epoch_mslists=[]
+        for obsid in uobsid:
+            umslist='mslist-%s.txt' % obsid
+            epoch_mslists.append(umslist)
+            print('Writing ms list for obsids',umslist)
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
     
     for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
         if args[option] and not args["NoDBSync"]:
             print('Changing',option,'status to Started','for',field)
             update_status(field,option,'Started',time='start_date')
 
+    if args['Download_FullSub']:
+        do_rclone_reproc_tape_download(field,'./','Subtracted_data',verbose=False)
+
     if args['FullSub']:
-        do_run_subtract(field)
-        resultfiles = glob.glob('*sub*archive?')
-        if not args["NoDBSync"]:
-            resultfilestar = []
-            for resultfile in resultfiles:
-                d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
-                if d!=0:
-                    raise RuntimeError('Tar of %s failed'%resultfile)	
-                resultfilestar.append('%s.tar'%resultfile)
-            update_status(field,'FullSub','Uploading')
-            result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
-            if result['code']==0:
-                update_status(field,'FullSub','Verified',time='end_date')
-            else:
-                update_status(field,'FullSub','Upload failed')
+        if args['Download_FullSub']:
+            print('Full subtracted data already downloaded, skipping source subtraction')
+        else:
+            do_run_subtract(field)
+            resultfiles = glob.glob('*sub*archive?')
+            if not args["NoDBSync"]:
+                resultfilestar = []
+                for resultfile in resultfiles:
+                    d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
+                    if d!=0:
+                        raise RuntimeError('Tar of %s failed'%resultfile)	
+                    resultfilestar.append('%s.tar'%resultfile)
+                update_status(field,'FullSub','Uploading')
+                result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
+                if result['code']==0:
+                    update_status(field,'FullSub','Verified',time='end_date')
+                else:
+                    update_status(field,'FullSub','Upload failed')
 
     if args['TransientImage']:
         if not args['FullSub'] and not args['IgnorePrerequisites']:

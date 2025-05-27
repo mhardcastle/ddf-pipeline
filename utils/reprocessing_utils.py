@@ -85,6 +85,25 @@ def do_rclone_reproc_tape_upload(cname,basedir,f,directory):
     rc.get_remote()
     print(rc.remote,'maca_sksp_tape_reproc.conf')
     return rc.multicopy(basedir,f,rc.remote+directory+'/'+cname)
+
+
+def do_rclone_reproc_tape_download(cname,f,directory,verbose=False):
+    '''
+    Download required data from field cname into location f
+    '''
+    rc=RClone('maca_sksp_tape_reproc.conf',debug=True)
+    rc.get_remote()
+    files=rc.get_files(directory+'/' + cname)
+    print(files)
+    tarfiles=None
+    if files:
+        tarfiles = [fl for fl in files]
+        
+    if tarfiles is not None:
+        d=rc.multicopy(rc.remote+directory+'/' + cname,tarfiles,f)
+
+    untar(f,tarfiles,verbose=verbose)
+
     
 def do_rclone_tape_pol_upload(cname,basedir,f,directory):
     '''
