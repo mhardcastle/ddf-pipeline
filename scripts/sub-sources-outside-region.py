@@ -204,13 +204,13 @@ def addcol(t, incol, outcol, write_outcol=False, dysco=False):
         else:
             coldmi['NAME'] = outcol
         try:
-            t.addcols(makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
+            t.addcols(pt.makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
         except:
             coldmi['TYPE'] = "StandardStMan"  # DyscoStMan"
-            t.addcols(makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
+            t.addcols(pt.makecoldesc(outcol, t.getcoldesc(incol)), coldmi)
     if (outcol != incol) and write_outcol:
         # copy over the columns
-        taql("UPDATE $t SET " + outcol + "=" + incol)
+        pt.taql("UPDATE $t SET " + outcol + "=" + incol)
 
 def addextraweights(msfiles):
    '''
