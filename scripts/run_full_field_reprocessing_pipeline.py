@@ -421,7 +421,6 @@ if __name__=='__main__':
                     raise RuntimeError('Trying to run non-local fields??')
                 print('Enabling operation',r['operation'])
                 args[r['operation']]=True
-    stop
                 
     startdir = os.getcwd()
 

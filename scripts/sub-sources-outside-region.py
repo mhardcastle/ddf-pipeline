@@ -197,7 +197,7 @@ def filechecker(clustercat, dicomask, indico, h5sols, HMPmodelfits, uselowres):
 def addcol(t, incol, outcol, write_outcol=False, dysco=False):
     """ Add a new column to a MS. """
     if outcol not in t.colnames():
-        logging.info('Adding column: ' + outcol)
+        print('Adding column: ' + outcol)
         coldmi = t.getdminfo(incol)
         if dysco:
             coldmi['NAME'] = 'Dysco' + outcol
