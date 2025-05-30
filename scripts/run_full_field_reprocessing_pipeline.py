@@ -356,6 +356,15 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
             idd[time]=datetime.datetime.now()
         sdb.set_ffr(idd)
 
+def get_next():
+    with SurveysDB() as sdb:
+        sdb.cur.execute('select distinct id,priority from full_field_reprocessing where status="Not started" order by priority desc')
+        results=sdb.cur.fetchall()
+    if len(results)==0:
+        return None
+    else:
+        return results[0]['id']
+        
 def get_galactic_coords(msfile):
     """Return galactic longitude and latitude (degrees) from an MS file."""
     import pyrap.tables as pt
@@ -390,14 +399,20 @@ if __name__=='__main__':
     parser.add_argument('--VLow_sub_image',help='Image the source subtracted data at very low resolution with WSClean',action='store_true')
     parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
     parser.add_argument('--Skip_DataPrepare',help='Do not download the uv-data (if e.g. working on downloaded subtracted data)',action='store_true')
-    parser.add_argument('--DoDatabaseOps',help='Do the operations specified in the database (in this case field directory should exist and operations to do should have status other than Verified)',action='store_true')
+    parser.add_argument('--DoDatabaseOps',help='Do the operations specified in the database (in this case operations to do should have status other than Verified)',action='store_true')
+    parser.add_argument('--GetNext',help='Get the next field to do in the database, and do that (combine with DoDatabaseOps)',action='store_true')
     args = vars(parser.parse_args())
             
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
     print('Input arguments: ',args)
-
-    field = args['Field']
+    if args['GetNext']:
+        field=get_next()
+        print('Selected field is',field)
+        if not field:
+            raise RuntimeError('Cannot find a field to do!')
+    else:
+        field = args['Field']
 
     if not args['NoDBSync']:
         with SurveysDB(readonly=True) as sdb:
@@ -417,7 +432,7 @@ if __name__=='__main__':
         if args['DoDatabaseOps']:
             for r in results:
                 if r['status']=='Verified': continue
-                if r['clustername']!=get_cluster():
+                if r['clustername']!=get_cluster() and r['clustername'] is not None:
                     raise RuntimeError('Trying to run non-local fields??')
                 print('Enabling operation',r['operation'])
                 args[r['operation']]=True
@@ -474,10 +489,10 @@ if __name__=='__main__':
                     if ob==obsid:
                         file.write(ms+'\n')
     
-    for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
-        if args[option] and not args["NoDBSync"]:
-            print('Changing',option,'status to Started','for',field)
-            update_status(field,option,'Started',time='start_date')
+    #for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
+    #    if args[option] and not args["NoDBSync"]:
+    #        print('Changing',option,'status to Started','for',field)
+    #        update_status(field,option,'Started',time='start_date')
 
     if args['Download_FullSub']:
         do_rclone_reproc_tape_download(field,'./','Subtracted_data',verbose=False)
@@ -486,6 +501,7 @@ if __name__=='__main__':
         if args['Download_FullSub']:
             print('Full subtracted data already downloaded, skipping source subtraction')
         else:
+            if not args["NoDBSync"]: update_status(field,'FullSub','Started',time='start_date')
             do_run_subtract(field)
             resultfiles = glob.glob('*sub*archive?')
             if not args["NoDBSync"]:
@@ -503,10 +519,11 @@ if __name__=='__main__':
                     update_status(field,'FullSub','Upload failed')
 
     if args['TransientImage']:
-        if not args['FullSub'] and not args['IgnorePrerequisites']:
+        if not args["NoDBSync"]: update_status(field,'TransientImage','Started',time='start_date')
+        resultfiles = glob.glob('*sub*archive?')
+        if len(resultfiles)==0:
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
-        resultfiles = glob.glob('*sub*archive?')
         for resultfile in resultfiles:
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
@@ -529,6 +546,7 @@ if __name__=='__main__':
                 update_status(field,'TransientImage','Upload failed')
 
     if args['Dynspec']:
+        if not args["NoDBSync"]: update_status(field,'DynSpecMS','Started',time='start_date')
         do_run_dynspec(field)
         ingest_dynspec()
         OutDir="DynSpecs_%s"%field
@@ -548,6 +566,7 @@ if __name__=='__main__':
 
             
     if args['StokesV']:
+        if not args["NoDBSync"]: update_status(field,'StokesV','Started',time='start_date')
         for obsid in uobsid:
             print('Stokes V image for %s'%obsid)
             do_run_high_v('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,options=o)
@@ -564,6 +583,7 @@ if __name__=='__main__':
             update_status(field,'StokesV','Verified',time='end_date')
 
     if args['HighPol']:
+        if not args["NoDBSync"]: update_status(field,'HighPol','Started',time='start_date')
         from do_polcubes import do_polcubes
         os.system('mkdir logs')
         do_highres_pol('image_full_polhigh',field,options=o)
@@ -582,6 +602,8 @@ if __name__=='__main__':
             update_status(field,'HighPol','Verified',time='end_date')
 
     if args['EpochPol']:
+        if not args["NoDBSync"]: update_status(field,'EpochPol','Started',time='start_date')
+
         from do_polcubes import do_polcubes
         os.system('mkdir logs')
         for obsid in uobsid:
@@ -599,7 +621,8 @@ if __name__=='__main__':
             do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_Epoch')
             update_status(field,'EpochPol','Verified',time='end_date')
 
-    if args['VLow_image']: 
+    if args['VLow_image']:
+        if not args["NoDBSync"]: update_status(field,'VLow_image','Started',time='start_date')
         image_vlow(args['NCPU'])
         OutDir = '%s_low_images'%field
         os.system('mkdir %s'%OutDir)
@@ -618,6 +641,7 @@ if __name__=='__main__':
 
 
     if args['VLow_sub_image']:
+        if not args["NoDBSync"]: update_status(field,'VLow_sub_image','Started',time='start_date')
         image_vlow_sub() # does a new subtraction so must be run last
         OutDir = '%s_low_sub_images'%field
         os.system('mkdir %s'%OutDir)
