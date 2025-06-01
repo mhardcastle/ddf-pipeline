@@ -463,6 +463,12 @@ if __name__=='__main__':
     else:
         os.chdir(field)
 
+    # should be downloaded and ready to go, set status to Queued now,
+    # then each operation will be set to started as we go
+    for option in ['StokesV','FullSub','HighPol','DynSpecMS','EpochPol','TransientImage','VLow_image','VLow_sub_image']:
+        if args[option] and not args["NoDBSync"]:
+            update_status(field,option,'Queued')
+
 
     print('Reading summary file (summary.txt)')
     if not os.path.exists('summary.txt'):
