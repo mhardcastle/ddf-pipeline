@@ -530,6 +530,7 @@ if __name__=='__main__':
         if len(resultfiles)==0:
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
+        os.system('mkdir %s_snapshot_images'%field)
         for resultfile in resultfiles:
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
@@ -539,8 +540,7 @@ if __name__=='__main__':
                 transient_image(resultfile,imagefile,galactic=True,options=o)
             else:
                 transient_image(resultfile,imagefile,galactic=False,options=o) 
-        os.system('mkdir %s_snapshot_images'%field)
-        os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
+            os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
         d=os.system('tar -cvf %s_snapshot_images.tar %s_snapshot_images'%(field,field))
         if d!=0:
             raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
