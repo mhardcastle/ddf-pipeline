@@ -551,7 +551,7 @@ if __name__=='__main__':
             else:
                 update_status(field,'TransientImage','Upload failed')
 
-    if args['Dynspec']:
+    if args['Dynspec'] or args['DynSpecMS']:
         if not args["NoDBSync"]: update_status(field,'DynSpecMS','Started',time='start_date')
         do_run_dynspec(field)
         ingest_dynspec()
