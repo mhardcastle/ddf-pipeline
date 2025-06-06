@@ -76,7 +76,41 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
 
     else:
         # staging for rclone goes here.
-        pass
+        macaroon='maca_sksp_tape_DDF.conf'
+        directory='archive/'
+        rc=RClone(macaroon,debug=True)
+        files=rc.get_files(directory+cname)
+        if verbose: print('Initiating rclone/ADA stage for field',cname)
+        if Mode=="Imaging":
+            tarfiles=['images.tar']+[f for f in files if 'uv' in f]
+        elif Mode=="Misc":
+            tarfiles=['misc.tar']
+        elif Mode=="Imaging+Misc":
+            tarfiles=['images.tar','misc.tar',"stokes_small.tar"]+[f for f in files if 'uv' in f]
+        to_stage=[]
+        for f in tarfiles:
+            staged=rc.check_stage(directory+cname+'/'+f)
+            if 'ONLINE' not in staged:
+                to_stage.append(f)
+                rc.stage(directory+cname+'/'+f)
+
+        if verbose:
+            print('Waiting for files to be online:')
+            while True:
+                count=0
+                for f in to_stage:
+                    staged=rc.check_stage(directory+cname+'/'+f)
+                    if 'ONLINE' in staged:
+                        count+=1
+                if verbose:
+                    print('%i/%i... ' % (count,len(to_stage)),end='')
+                    sys.stdout.flush()
+                if count==len(to_stage):
+                    if verbose: print()
+                    break
+                else:
+                    sleep(30)
+        
     
 def check_cube_format(header):
     try:
@@ -198,8 +232,10 @@ def image_vlow(ncpu,wd=None):
     run('CleanSHM.py')
     if not os.path.exists('image_full_vlow_nocut.app.restored.fits'):
         run('DDF.py --Output-Name=image_full_vlow_nocut --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=4.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=.' % ncpu)
-    if not os.path.exists('image_full_vlow_nocut.app.restored.fits.mask.fits'):
+    vlowmask='image_full_vlow_nocut.app.restored.fits.mask.fits'
+    if not os.path.exists(vlowmask):
         vlowmask = make_mask('image_full_vlow_nocut.app.restored.fits',3.0)
+        
     if not os.path.exists('image_full_vlow_nocut_m.app.restored.fits'):
         run('DDF.py --Output-Name=image_full_vlow_nocut_m --Data-MS=big-mslist.txt --Deconv-PeakFactor 0.001000 --Data-ColName DATA --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=2 --Deconv-Mode SSD --Beam-Model=LOFAR --Beam-LOFARBeamMode=A --Weight-Robust -0.20000 --Image-NPix=2000 --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell 15.00000 --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --GAClean-RMSFactorInitHMP 1.000000 --GAClean-MaxMinorIterInitHMP 10000.000000 --GAClean-AllowNegativeInitHMP True --DDESolutions-SolsDir=SOLSDIR --Cache-Weight=reset --Output-Mode=Clean --Output-RestoringBeam 60.000000 --Weight-ColName="IMAGING_WEIGHT" --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=3.00 --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=AP --DDESolutions-DDModeDeGrid=AP --DDESolutions-DDSols=[DDS3_full_smoothed,DDS3_full_slow] --Selection-UVRangeKm=[0.000000,7.0] --GAClean-MinSizeInit=10 --Beam-Smooth=1 --Debug-Pdb=never --Cache-DirWisdomFFTW=. --Predict-InitDicoModel=image_full_vlow_nocut.DicoModel --Mask-External=%s'% (ncpu,vlowmask))
 
