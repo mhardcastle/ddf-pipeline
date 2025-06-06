@@ -509,7 +509,7 @@ if __name__=='__main__':
         else:
             if not args["NoDBSync"]: update_status(field,'FullSub','Started',time='start_date')
             do_run_subtract(field)
-            resultfiles = glob.glob('*sub*archive?')
+            resultfiles = glob.glob('*object*sub*archive?')
             if not args["NoDBSync"]:
                 resultfilestar = []
                 for resultfile in resultfiles:
@@ -526,7 +526,7 @@ if __name__=='__main__':
 
     if args['TransientImage']:
         if not args["NoDBSync"]: update_status(field,'TransientImage','Started',time='start_date')
-        resultfiles = glob.glob('*sub*archive?')
+        resultfiles = glob.glob('*object*sub*archive?')
         if len(resultfiles)==0:
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
