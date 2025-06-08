@@ -110,6 +110,9 @@ class SDR(object):
             files=self.get_status(field)
             count=0
             for f in filenames:
+                if f not in files:
+                    print('Error, files do not match original list -- skipping',f)
+                    continue
                 if files[f]=='DUL':
                     count+=1
             print('%i/%i... ' % (count,len(filenames)),end='')
