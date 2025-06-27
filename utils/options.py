@@ -31,7 +31,8 @@ def options(optlist,option_list):
             optstring=o[2:]
             result=re.match('(\w*)-(\w*)\s*=\s*(.*)',optstring)
             if result is None:
-                print('Cannot parse option',optstring)
+                print('Cannot parse option (maybe your forgot the = sign)',optstring)
+                
             else:
                 cmdlineset.append(result.groups())
         else:

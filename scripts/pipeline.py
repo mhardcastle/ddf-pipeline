@@ -64,7 +64,7 @@ try :
     def dool_unset(n): sock.send(b'-%s;' % n)
     atexit.register(dool_close)
 except Exception as e:
-    loggger.warning(r'Dool socket error : %s' % str(e))
+    print(r'Dool socket error : %s' % str(e))
     def dool_close():  pass
     def dool_set(n):   pass
     def dool_unset(n): pass
@@ -179,9 +179,14 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     if options is None:
         options=o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
+    DDF_DIR=os.environ['DDF_DIR']
+    #import shutil
+    #program_path = shutil.which("DDF.py")
+    #DDF_DIR="/".join(shutil.which("DDF.py").split('/')[:-3])
+    keywords=parse_parset([DDF_DIR+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+    
     cache_dir=find_cache_dir(options)
+    
     if dicomodel is None:
         dicomodel=imagename+'.DicoModel'
     runcommand='DDF.py '+imagename+'.parset --Misc-ConserveMemory=1  --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+dicomodel+' --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
@@ -208,8 +213,14 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if options is None:
         options=o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
+    DDF_DIR=os.environ['DDF_DIR']
+    
+    import shutil
+    program_path = shutil.which("DDF.py")
+    DDF_DIR="/".join(shutil.which("DDF.py").split('/')[:-3])
+    
+    keywords=parse_parset([DDF_DIR+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+
     if HMPsize is None:
         HMPsize=options['HMPsize']
     if do_decorr is None:
@@ -231,11 +242,33 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
+    PrefixMPI=""
     if(options['mpi_ddfacet']):
-        runcommand = "mpirun -n %i DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(options['mpi_ddfacet_nodes'],imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
-    else :
-        runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)        
-    
+        cwd = os.getcwd()
+        LocDDF_exec_inContainer="/usr/local/src/DDFacet/DDFacet/"
+        Loc_Container="/home/cyril.tasse/DDFSingularity/ddf_dev_np1.22.4.mpi.sif"
+        
+        try:
+            nNodes=int(options['mpi_ddfacet_nodes'])
+            sNodes="-np %i"%nNodes
+        except:
+            LNodes=str(options['mpi_ddfacet_nodes']).split(",")
+            nNodes=len(LNodes)
+            HostName=socket.gethostname()
+            LName=[HostName]
+            for ThisNodeName in LNodes:
+                if HostName in ThisNodeName: continue
+                LName.append(ThisNodeName)
+            
+            LNodes=["%s:1"%nameNode for nameNode in LName]
+            sNodes=",".join(LNodes)
+            sNodes="-np %i --host %s"%(nNodes,sNodes)
+
+            
+        PrefixMPI="mpirun %s -wdir %s singularity exec %s python %s"%(sNodes,cwd,Loc_Container,LocDDF_exec_inContainer)
+        
+    runcommand = "%sDDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(PrefixMPI,imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
+
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
     if AllowNegativeInitHMP:
@@ -247,6 +280,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
+
+
 
     if 'Beam-PhasedArrayMode' in keywords: # incompatible change
         runcommand+=' --Beam-PhasedArrayMode=A'
@@ -364,6 +399,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
         if conditional_clearcache:
             clearcache(mslist,options)
+
+        #runcommand="""mpirun -np 2 --host nancep11.obs-nancay.fr:1,nancep10.obs-nancay.fr:1 -wdir /data/cyril.tasse/TestDDFPipeMPI singularity exec -B/home -B/data /home/cyril.tasse/DDFSingularity/ddf_dev_np1.22.4.mpi.sif python /usr/local/src/DDFacet/DDFacet/DDF.py /home/cyril.tasse/image_dirin_SSD_init.parset --Output-Name image_dirin_SSD_init_mpi --Parallel-NCPU 90 --Data-MS /home/cyril.tasse/mslist.txt --Cache-Reset 1"""
+            
         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
 
         # Ugly way to see if predict has been already done
@@ -1081,6 +1119,7 @@ def main(o=None):
     # before we check imaging weights, because that will create empty
     # versions of e.g. CORRECTED_DATA
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    
     t = pt.table(mslist[0])
     try:
         dummy=t.getcoldesc(colname)
@@ -2021,6 +2060,7 @@ if __name__=='__main__':
         sys.exit(1)
 
     o=options(sys.argv[1:],option_list)
+
     if MyPickle is not None:
         MyPickle.Save(o, "ddf-pipeline.last")
 
