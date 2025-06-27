@@ -1931,7 +1931,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
-            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',o['full_mslist'],ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):
@@ -1950,7 +1950,7 @@ def main(o=None):
             warn('Compressed vlow QU cube product exists, not making new images')
         else:
             vlow_uvrange=[o['image_uvmin'],1.6]
-            do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
+            do_polcubes(colname,CurrentDDkMSSolName,vlow_uvrange,'image_full_vlow',o['full_mslist'],ddf_kw,beamsize=o['vlow_psf_arcsec'],imsize=o['vlow_imsize'],cellsize=o['vlow_cell'],robust=o['vlow_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):

@@ -6,6 +6,7 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 import numpy as np
+from tqdm import tqdm
 
 def bootstrap(data,function,iters):
     result=np.zeros(iters)
@@ -24,9 +25,13 @@ def filter_catalogue(t,c_ra,c_dec,radius):
     r=separation(c_ra,c_dec,t['RA'],t['DEC'])
     return t[r<radius]
 
-def select_isolated_sources(t,radius):
+def select_isolated_sources(t,radius,progress=False):
     t['NN_dist']=np.nan
-    for r in t:
+    if progress:
+        iterable=tqdm(t)
+    else:
+        iterable=t
+    for r in iterable:
         dist=3600.0*separation(r['RA'],r['DEC'],t['RA'],t['DEC'])
         # dist=np.sqrt((np.cos(c_dec*np.pi/180.0)*(t['RA']-r['RA']))**2.0+(t['DEC']-r['DEC'])**2.0)*3600.0
         dist.sort()

@@ -42,6 +42,8 @@ try:
 except:
     pass
 
+print('Inputs to extraction. Size %s, RA %s, Dec %s, Name %s, subtract options %s'%(size,ra,dec,target,subtractoptions))
+
 if ra is None:
     if 'ILTJ' in target:
         s=target[4:]

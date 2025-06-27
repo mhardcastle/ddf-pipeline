@@ -177,3 +177,24 @@ class RClone(object):
         if self.debug:
             print('Output was:\n'+t)
         return t.split()[1].replace('ADLER32=','')
+
+    def stage(self,filename):
+        ''' Use ada to stage a file. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
+        command=self.ada_command+' --tokenfile '+self.config_file+' --stage %s'% filename
+        if self.debug:
+            print('Running '+command)
+        t = os.popen(command).read()
+        if self.debug:
+            print('Output was:\n'+t)
+
+    def check_stage(self,filename):
+        ''' Use ada to check the status of a filename. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. Returns a status string. For staged fields this will contain the string 'ONLINE'.'''
+        command=self.ada_command+' --tokenfile '+self.config_file+' --longlist %s'% filename
+        if self.debug:
+            print('Running '+command)
+        t = os.popen(command).read()
+        if self.debug:
+            print('Output was:\n'+t)
+        return t
+    
+
