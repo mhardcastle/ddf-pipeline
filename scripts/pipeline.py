@@ -246,8 +246,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if(options['mpi_ddfacet']):
         cwd = os.getcwd()
         LocDDF_exec_inContainer="/usr/local/src/DDFacet/DDFacet/"
-        Loc_Container="/home/cyril.tasse/DDFSingularity/ddf_dev_np1.22.4.mpi.sif"
-        
+        Loc_Container=options['mpi_Apptainer_container'] #"/home/cyril.tasse/DDFSingularity/ddf_dev_np1.22.4.mpi.sif"
         try:
             nNodes=int(options['mpi_ddfacet_nodes'])
             sNodes="-np %i"%nNodes
