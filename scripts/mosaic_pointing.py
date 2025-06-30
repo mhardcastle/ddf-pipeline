@@ -89,6 +89,7 @@ if __name__=='__main__':
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
     parser.add_argument('--apply-shift',dest='apply_shift',action='store_true',help='Apply per-facet shifts from an offset file')
+    parser.add_argument('--use_scalefactor',action='store_true',help='Apply scaling factors from a file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
     parser.add_argument('--ignore_field', type=str, default='', help='Ignore pointings without this DB field set positive')
@@ -150,7 +151,7 @@ if __name__=='__main__':
         for d in args.directories:
             rd=d+'/'+p
             print(rd)
-            if os.path.isfile(rd+'/'+fname):
+            if os.path.isfile(rd+'/'+fname) and (not args.use_scalefactor or os.path.isfile(rd+'/'+fname.replace('.fits','.scalefactors.fits'))):
                 print(rd+'/'+fname,'exists!')
                 mosaicdirs.append(rd)
                 if args.record_checksum:
@@ -235,6 +236,12 @@ if __name__=='__main__':
         print('Applying scales',scales)
         mos_args.scale=scales
 
+    if args.use_scalefactor:
+        print('Using a scale factor')
+        mos_args.use_scalefactor=True
+    else:
+        mos_args.use_scalefactor=False
+        
     if not(args.no_highres):
         print('Making the high-resolution mosaic')
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,high_resolution,history=checksums)

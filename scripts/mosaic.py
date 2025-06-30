@@ -196,7 +196,10 @@ def make_mosaic(args):
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
-    
+
+    if args.use_scalefactor:
+        sfname=appname.replace('.fits','.scalefactors.fits')
+        
     if args.convolve:
         orig_intname=intname
         orig_appname=appname
@@ -262,6 +265,11 @@ def make_mosaic(args):
         else:
                 app.append(flatten(fits.open(imagefilename)))
 
+        if args.use_scalefactor:
+            print('Applying scale factor',d+'/'+sfname)
+            sfimg=flatten(fits.open(d+'/'+sfname))
+            app[-1].data*=sfimg.data
+                
         if bth:
             astromaps.append(flatten(fits.open(d+'/astromap.fits')))
 
@@ -564,6 +572,7 @@ if __name__=='__main__':
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--read_noise', action='store_true', help='Read noise from a pre-existing per-facet noise file')
     parser.add_argument('--use_badfacet', action='store_true', help='Read a bad facet file')
+    parser.add_argument('--use_scalefactor', action='store_true', help='Read a scale factor image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
     parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted vlow images instead of high-res')
