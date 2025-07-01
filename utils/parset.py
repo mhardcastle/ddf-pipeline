@@ -119,5 +119,4 @@ option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                 ( 'inputmodel',  'basedicomodel',str,None,'Input dicomodel for calibration'),
                 ( 'inputmodel',  'basemaskname',str,None,'Input mask for calibration'),
                 ( 'inputmodel',  'baseimagename',str,None,'Input image for calibration'),
-	        ( 'mpi', 'mpi_ddfacet', bool, False,'Usage of DDFacet MPI'),
-                ( 'mpi', 'mpi_ddfacet_nodes', int, 1,'Number of nodes for DDFacet MPI'))
+                ( 'mpi', 'ddf_nproc', int, 1,'Number of processes for DDFacet MPI execution'))
