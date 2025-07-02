@@ -1,9 +1,20 @@
 from builtins import str
 import numpy as np
-import pyrap.tables as pt
+try:
+    import pyrap.tables as pt
+    
+except ImportError:
+    pt = None
+    print("WARNING: pyrap.tables is not installed. Some features will not work outside the container. Cause: standalone deployment on MACOS")
+    
 import  os,sys
 import glob
-from auxcodes import getpos
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from auxcodes import getpos
+else:
+    from utils.auxcodes import getpos
 
 def redo_dppp_di(o):
         mslist_name = o['full_mslist']

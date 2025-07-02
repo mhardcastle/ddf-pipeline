@@ -1,5 +1,11 @@
 from __future__ import absolute_import
-from getcpus import getcpus
+import os
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from getcpus import getcpus
+else:
+    from utils.getcpus import getcpus
 
 option_list = ( ( 'machine', 'NCPU_DDF', int, getcpus(),
                   'Number of CPUS to use for DDF'),

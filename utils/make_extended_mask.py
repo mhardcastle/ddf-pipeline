@@ -3,7 +3,13 @@ from __future__ import absolute_import
 from builtins import zip
 from astropy.io import fits
 from astropy.wcs import WCS
-from auxcodes import get_rms,get_rms_map3,flatten
+import os
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from auxcodes import get_rms,get_rms_map3,flatten
+else:
+    from utils.auxcodes import get_rms,get_rms_map3,flatten
 import scipy.ndimage as nd
 import numpy as np
 import pyregion

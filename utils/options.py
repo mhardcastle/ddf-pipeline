@@ -12,7 +12,12 @@ except ImportError:
 import os
 import re
 import sys
-from termsize import get_terminal_size_linux
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from termsize import get_terminal_size_linux
+else:
+    from utils.termsize import get_terminal_size_linux
 
 def options(optlist,option_list):
 
