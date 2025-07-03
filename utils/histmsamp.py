@@ -7,15 +7,10 @@ from __future__ import division
 from builtins import range
 from past.utils import old_div
 import os
-
+import pyrap.tables as pt
+import numpy as np
+from astropy.io import fits
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
-
-try:
-    import pyrap.tables as pt
-    
-except ImportError:
-    pt = None
-    print("WARNING: pyrap.tables is not installed. Some features will not work outside the container. Cause: standalone deployment on MACOS")
 
 def sumdico(rootname):
 

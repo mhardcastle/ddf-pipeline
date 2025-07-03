@@ -14,10 +14,11 @@ pyerfa==2.0.1.5
 PyMySQL==1.1.1
 PyNaCl==1.5.0
 pyparsing==3.2.3
-pyrap==0.0.5
 pyregion==2.3.0
+python-casacore==3.7.1
 PyYAML==6.0.2
 scipy==1.15.3
+six==1.17.0
 sshtunnel==0.4.0
 treepick==0.1.4
 yorn==0.0.6

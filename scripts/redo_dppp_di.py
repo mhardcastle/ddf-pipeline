@@ -1,12 +1,6 @@
 from builtins import str
 import numpy as np
-try:
-    import pyrap.tables as pt
-    
-except ImportError:
-    pt = None
-    print("WARNING: pyrap.tables is not installed. Some features will not work outside the container. Cause: standalone deployment on MACOS")
-    
+import pyrap.tables as pt
 import  os,sys
 import glob
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"

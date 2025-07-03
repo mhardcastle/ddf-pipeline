@@ -24,25 +24,39 @@ from __future__ import absolute_import
 from __future__ import division
 
 from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
 from past.utils import old_div
 import sys,os
+if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
+    sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
+
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+import os.path
 
 if not LOCAL_DEV:
     standard_library.install_aliases()
     from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
     from parset import option_list
     from options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from redo_dppp_di import redo_dppp_di
     from modify_mask import modify_mask
     from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
     from histmsamp import find_uvmin,sumdico
+    import numpy as np
     from astropy.io import fits
     from pipeline_version import version
-    from redo_dppp_di import redo_dppp_di
     from surveys_db import use_database,update_status,SurveysDB
-
+    __version__=version()
+    import datetime
+    import threading
 
 
 else:
@@ -50,34 +64,21 @@ else:
     from utils.auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
     from utils.parset import option_list
     from utils.options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from scripts.redo_dppp_di import redo_dppp_di
     from utils.modify_mask import modify_mask
     from utils.make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
     from utils.histmsamp import find_uvmin,sumdico
+    import numpy as np
+    from astropy.io import fits
     from utils.pipeline_version import version
-    from scripts.redo_dppp_di import redo_dppp_di
     from others.surveys_db import use_database,update_status,SurveysDB
 
-try:
-    import pyrap.tables as pt
-    
-except ImportError:
-    pt = None
-    print("WARNING: pyrap.tables is not installed. Some features will not work outside the container. Cause: standalone deployment on MACOS")
-
-from builtins import zip
-from builtins import str
-from builtins import range
-import numpy as np
-
-if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
-    sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
-import os.path
-from shutil import copyfile,rmtree,move
-import glob
-
-__version__=version()
-import datetime
-import threading
+    __version__=version()
+    import datetime
+    import threading
 
 try:
     from killMS.Other import MyPickle
