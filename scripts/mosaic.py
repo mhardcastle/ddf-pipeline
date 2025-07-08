@@ -268,6 +268,7 @@ def make_mosaic(args):
         if args.use_scalefactor:
             print('Applying scale factor',d+'/'+sfname)
             sfimg=flatten(fits.open(d+'/'+sfname))
+            hdus[-1].data*=sfimg.data
             app[-1].data*=sfimg.data
                 
         if bth:
