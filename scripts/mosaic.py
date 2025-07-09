@@ -246,14 +246,6 @@ def make_mosaic(args):
         if args.do_stokesV:
             hdu[0].data[0][0] = hdu[0].data[0][1]
 
-        if args.find_noise:
-            print('Estimating noise for', d+'/' + intname)
-            if args.do_vlow or args.do_wsclean:
-                noise.append(get_rms(hdu,boxsize=500,niter=50))
-            elif args.do_lowres:
-                noise.append(get_rms(hdu,boxsize=1500))
-            else:
-                noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
 
         imagefilename=d+'/'+appname
@@ -270,6 +262,15 @@ def make_mosaic(args):
             sfimg=flatten(fits.open(d+'/'+sfname))
             hdus[-1].data*=sfimg.data
             app[-1].data*=sfimg.data
+                
+        if args.find_noise:
+            print('Estimating noise for', d+'/' + intname)
+            if args.do_vlow or args.do_wsclean:
+                noise.append(get_rms(hdus[-1],boxsize=500,niter=50))
+            elif args.do_lowres:
+                noise.append(get_rms(hdus[-1],boxsize=1500))
+            else:
+                noise.append(get_rms(hdus[-1]))
                 
         if bth:
             astromaps.append(flatten(fits.open(d+'/astromap.fits')))
