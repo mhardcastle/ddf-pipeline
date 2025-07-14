@@ -32,8 +32,6 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
     # stage a dataset from SDR or rclone repos 
     # this should really live in reprocessing_utils and share code with do_sdr_and_rclone_download -- low-level stage functionality should be moved to sdr_wrapper
     # as with that function cname is the field name, f is the processing directory
-    if not os.path.isdir(f):
-        os.makedirs(f)
     s=SDR(target=f)
     try:
         files=s.get_status(cname)
