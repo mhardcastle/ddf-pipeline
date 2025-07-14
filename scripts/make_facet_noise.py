@@ -26,7 +26,7 @@ for appname in ['image_full_ampphase_di_m.NS.app.restored.fits','image_full_low_
             hdu_scalefactor=fits.open(scalefactor)
             hdu_orig[0].data*=hdu_scalefactor[0].data
             hdu_orig.writeto(scalefactor_applied,overwrite=True)
-            appname=scalefactor_applied
+        appname=scalefactor_applied
         
     noisename=appname.replace('.fits','_facetnoise.fits')
     if not os.path.isfile(noisename):
@@ -43,7 +43,6 @@ if decl<=14:
         do_convolve('image_full_ampphase_di_m.NS.int.model.fits',9.0,outfile=convname,scale=False,restore_image='image_full_ampphase_di_m.NS.int.residual.fits',intimage=filename,appimage=filename.replace('.int','.app'))
 
     appname='image_full_ampphase_di_m.NS.app.restored_convolved.fits'
-    scalefactor=appname.replace('.fits','.scalefactors.fits')
     if os.path.isfile(scalefactor):
         scalefactor_applied=appname.replace('.fits','.scaled.fits')
         if not os.path.isfile(scalefactor_applied):
@@ -51,7 +50,7 @@ if decl<=14:
             hdu_scalefactor=fits.open(scalefactor)
             hdu_orig[0].data*=hdu_scalefactor[0].data
             hdu_orig.writeto(scalefactor_applied,overwrite=True)
-            appname=scalefactor_applied
+        appname=scalefactor_applied
 
     noisename=appname.replace('.fits','_facetnoise.fits')
     if not os.path.isfile(noisename):
