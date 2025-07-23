@@ -223,6 +223,7 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     outimages = glob.glob('%s*dirty.fits'%imagename)
     for outimage in outimages:
         compress_fits(outimage,o['fpack_q'])
+        os.remove(outimage)
 
 def image_vlow(ncpu,wd=None):
     if wd is not None:
