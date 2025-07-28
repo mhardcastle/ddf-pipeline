@@ -259,9 +259,12 @@ def make_mosaic(args):
 
         if args.use_scalefactor:
             print('Applying scale factor',d+'/'+sfname)
-            sfimg=flatten(fits.open(d+'/'+sfname))
-            hdus[-1].data*=sfimg.data
-            app[-1].data*=sfimg.data
+            if os.path.isfile(d+'/'+sfname):
+                sfimg=flatten(fits.open(d+'/'+sfname))
+                hdus[-1].data*=sfimg.data
+                app[-1].data*=sfimg.data
+            else:
+                print('Scale factor image not found, not scaling image')
                 
         if args.find_noise:
             print('Estimating noise for', d+'/' + intname)

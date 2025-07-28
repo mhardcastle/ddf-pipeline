@@ -264,7 +264,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='low'
         mos_args.do_lowres=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
         mos_args.convolve=None
 
         if args.save_header:
@@ -283,7 +283,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_wsclean=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('vlow-mosaic-header.pickle','w') as f:
@@ -301,7 +301,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_vlow=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('vlow-mosaic-header.pickle','w') as f:
@@ -320,7 +320,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='stokesV'
         mos_args.do_stokesV=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('stokesV-mosaic-header.pickle','w') as f:

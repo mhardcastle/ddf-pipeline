@@ -28,10 +28,11 @@ from time import sleep
 from getcpus import getcpus
 import pyrap.tables as pt
 
-def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
+def stage_field(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30):
     # stage a dataset from SDR or rclone repos 
     # this should really live in reprocessing_utils and share code with do_sdr_and_rclone_download -- low-level stage functionality should be moved to sdr_wrapper
     # as with that function cname is the field name, f is the processing directory
+    timer=0
     s=SDR(target=f)
     try:
         files=s.get_status(cname)
@@ -58,6 +59,8 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
             print('Waiting for files to be online:')
         
         while True:
+            if timeout is not None and timer>timeout:
+                raise RuntimeError('Timer exceeded')
             files=s.get_status(cname)
             count=0
             for f in tarfiles:
@@ -70,7 +73,8 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
                 if verbose: print()
                 break
             else:
-                sleep(30)
+                sleep(sleeptime)
+                timer+=sleeptime
 
     else:
         # staging for rclone goes here.
@@ -95,6 +99,8 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
         if verbose:
             print('Waiting for files to be online:')
             while True:
+                if timeout is not None and timer>timeout:
+                    raise RuntimeError('Timer exceeded')
                 count=0
                 for f in to_stage:
                     staged=rc.check_stage(directory+cname+'/'+f)
@@ -108,6 +114,7 @@ def stage_field(cname,f,verbose=False,Mode='Imaging+Misc'):
                     break
                 else:
                     sleep(30)
+                    timer+=sleeptime
         
     
 def check_cube_format(header):
@@ -478,7 +485,7 @@ if __name__=='__main__':
         if args[option] and not args['NoDBSync']:
             with SurveysDB(readonly=False) as sdb:
                 tmp = sdb.get_ffr(field,option)
-                if tmp['status'] not in ['Not started','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
+                if tmp['status'] not in ['Not started','Staging','Staged','Downloaded','Unpacked','Queued'] or (tmp['clustername'] is not None and tmp['clustername']!=get_cluster()):
                     print('Status of',option,tmp['status'])
                     if not args["NoDBSync"] and not args['Force']:
                         raise RuntimeError('Field already processing')
