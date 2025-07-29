@@ -151,7 +151,7 @@ if __name__=='__main__':
         for d in args.directories:
             rd=d+'/'+p
             print(rd)
-            if os.path.isfile(rd+'/'+fname) and (not args.use_scalefactor or os.path.isfile(rd+'/'+fname.replace('.fits','.scalefactors.fits'))):
+            if os.path.isfile(rd+'/'+fname):
                 print(rd+'/'+fname,'exists!')
                 mosaicdirs.append(rd)
                 if args.record_checksum:
