@@ -9,6 +9,7 @@ import sys
 from auxcodes import report
 import argparse
 from scipy.signal import medfilt2d
+import numpy as np
 
 def do_convolve(filename,resolution,outfile=None,scale=True,restore_image=None,intimage=None,appimage=None,appout=None):
     '''Convolve FITS file filename to resolution resolution and save to
@@ -30,7 +31,8 @@ def do_convolve(filename,resolution,outfile=None,scale=True,restore_image=None,i
         hdu_int=fits.open(intimage,memmap=False)
         hdu_app=fits.open(appimage,memmap=False)
         report('Making smooth beam image')
-        beam=hdu_app[0].data[0,0]/hdu_int[0].data[0,0]
+        with np.errstate(divide='ignore'):
+            beam=hdu_app[0].data[0,0]/hdu_int[0].data[0,0]
         beam=medfilt2d(beam)
         hdu_int.close()
         hdu_app.close()
