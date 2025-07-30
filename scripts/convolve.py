@@ -56,13 +56,13 @@ def do_convolve(filename,resolution,outfile=None,scale=True,restore_image=None,i
     ifft_mp = lambda a: scipy.fft.ifftn(a, workers=-1)
 
     smoothed_data_gauss = convolve_fft(image, gauss_kern, allow_huge=True, fftn=fft_mp, ifftn=ifft_mp)
-    report('Scaling')
+    report('Scaling convolved image')
     hdu[0].data[0,0]=smoothed_data_gauss*rr
     hdu[0].header.update(new_b.to_header_keywords())
-    report('Restoring to residual')
     if restore_image is not None:
+        report('Restoring to residual')
         hdu2=fits.open(restore_image)
-    hdu[0].data+=hdu2[0].data
+        hdu[0].data+=hdu2[0].data
     report('Write to disk')
     if outfile is None:
         outfile=filename.replace('.fits','_convolved.fits')

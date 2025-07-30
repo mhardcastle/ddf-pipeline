@@ -233,8 +233,9 @@ def make_mosaic(args):
         if not os.path.isfile(infile):
             if args.convolve:
                 print('Convolved file',infile,'does not exist, making it')
-                do_convolve(d+'/'+orig_intname,float(args.convolve),d+'/'+intname)
-                do_convolve(d+'/'+orig_appname,float(args.convolve),d+'/'+appname)
+                do_convolve(d+'/'+orig_intname.replace('restored','model'),float(args.convolve),outfile=d+'/'+intname,appout=d+'/'+appname,scale=False,restore_image=d+'/'+orig_intname.replace('restored','residual'),intimage=d+'/'+orig_intname,appimage=d+'/'+orig_appname)
+                #do_convolve(d+'/'+orig_intname,float(args.convolve),d+'/'+intname)
+                #do_convolve(d+'/'+orig_appname,float(args.convolve),d+'/'+appname)
             else:
                 raise RuntimeError('Expected file',infile,'does not exist')
         hdu=fits.open(infile)
