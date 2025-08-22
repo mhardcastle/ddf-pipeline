@@ -211,16 +211,19 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     numtimes = len(np.unique(t.getcol('TIME')))
     print(numtimes,msfilename)
 
-    # Check if output files already exist
-    existingfiles = glob.glob('%s*dirty.fits'%imagename)
+    # Check if (compressed!) output files already exist
+    if galactic:
+        chanout = 16
+        template='%s*-MFS-dirty.fits.fz'
+    else:
+        chanout = 1
+        template='%s*-dirty.fits.fz'
+
+    existingfiles = glob.glob(template%imagename)
     if len(existingfiles) == numtimes:
         print('All output files already exist, skipping making images again')
     else:
         # Create 8s images and 2 min images (assuming time resolution is 8s...). 
-        if galactic:
-            chanout = 16
-        else:
-            chanout = 1
         if chanout > 1:
             os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_8sec %s'%(numtimes,numtimes,chanout,imagename,msfilename))
             os.system('wsclean -make-psf -intervals-out %s -padding 1.6 -interval 0 %s -auto-threshold 5 -channels-out %s -deconvolution-channels 3 -fit-spectral-pol 3 -scale 6asec -size 2200 2200 -join-channels -minuv-l 50 -maxuv-l 5000 -mgain 0.8 -multiscale -niter 0 -nmiter 0 -no-update-model-required -parallel-deconvolution 1500 -no-reorder -taper-gaussian 40asec -use-wgridder -weight briggs -0.25 -name %s_2min %s'%(int(numtimes/15),numtimes,chanout,imagename,msfilename))
@@ -574,7 +577,10 @@ if __name__=='__main__':
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
         resultdir=field+'_snapshot_images'
-        os.mkdir(resultdir)
+        try:
+            os.mkdir(resultdir)
+        except FileExistsError:
+            pass # should only happen on a restart, and then files moved in there should be kept
         for resultfile in resultfiles:
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
