@@ -27,6 +27,7 @@ from sdr_wrapper import SDR
 from time import sleep
 from getcpus import getcpus
 import pyrap.tables as pt
+import shutil
 
 def stage_field(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30):
     # stage a dataset from SDR or rclone repos 
@@ -572,7 +573,8 @@ if __name__=='__main__':
         if len(resultfiles)==0:
             print('Source subtraction (--FullSub) is needed to do TransientImage')
             sys.exit(0)
-        os.system('mkdir %s_snapshot_images'%field)
+        resultdir=field+'_snapshot_images'
+        os.mkdir(resultdir)
         for resultfile in resultfiles:
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
@@ -581,9 +583,12 @@ if __name__=='__main__':
             if abs(gal_b) < 10.0:
                 transient_image(resultfile,imagefile,galactic=True,options=o)
             else:
-                transient_image(resultfile,imagefile,galactic=False,options=o) 
-            os.system('mv %s*dirty.fits.fz %s_snapshot_images'%(imagefile,field))
-        d=os.system('tar -cvf %s_snapshot_images.tar %s_snapshot_images'%(field,field))
+                transient_image(resultfile,imagefile,galactic=False,options=o)
+            g=glob.glob(imagefile+'*dirty.fits.fz')
+            assert(g)
+            for f in g:
+                shutil.move(f,resultdir)
+        d=os.system('tar -cvf %s_snapshot_images.tar %s'%(field,resultdir))
         if d!=0:
             raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
         if not args['NoDBSync']:
