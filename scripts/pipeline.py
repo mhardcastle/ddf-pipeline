@@ -841,7 +841,7 @@ def ingest_dynspec(obsid='*'):
     with SurveysDB() as sdb:
         sdb.cur.execute('lock table spectra write')
         field=os.path.basename(os.getcwd())
-        g=glob.glob('DynSpecs_'+obsid)
+        g=glob.glob('*DynSpecs_'+obsid)
         for f in g:
             if '.tgz' in f:
                 continue

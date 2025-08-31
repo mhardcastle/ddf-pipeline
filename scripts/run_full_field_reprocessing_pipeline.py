@@ -610,7 +610,10 @@ if __name__=='__main__':
         ingest_dynspec()
         OutDir="DynSpecs_%s"%field
         os.system("mkdir -p %s"%OutDir)
-        resultfiles = glob.glob('DynSpecs_*.tgz')
+        resultfiles = glob.glob('*DynSpecs_*.tgz')
+        if not resultfiles:
+            update_status(field,'DynSpecMS','Failed')
+            raise RuntimeError('Failed to find any results file from DynSpecMS!')
         for resultfile in resultfiles:
             os.system('cp %s %s'%(resultfile,OutDir))
         os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
