@@ -167,6 +167,18 @@ class RClone(object):
         if d['code']>0:
             return None
         return json.loads(''.join(d['out']))
+
+    def delete(self,filename='',remote=None):
+        '''
+        delete the single file filename, using the default remote if none is specified
+        '''
+        if remote is None:
+            if self.remote is None:
+                self.get_remote()
+            remote=self.remote
+
+        d=self.execute(['delete',remote+filename])
+        return d
     
     def get_checksum(self,filename):
         ''' Use ada to get the checksum. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
