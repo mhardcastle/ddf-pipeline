@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 from time import sleep,time
 
-def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True,retry_size=0,auth=None):
+def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True,retry_size=0,auth=None,max_sleep=None):
     '''Download a file from URL url to file filename.  Optionally, specify
     a tuple of HTTP response codes in catch_codes where we will back
     off and retry rather than failing.
@@ -27,10 +27,10 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
     exist, and the code will attempt to complete the download.
 
     if progress_bar is set then a TQDM progress bar is displayed (not
-    the default since normally this is not used interactively.
+    the default since normally this is not used interactively).
 
     '''
-    
+    sleepcount=0
     downloaded=False
     retrying_partial=force_retry_partial
     if force_retry_partial:
@@ -57,6 +57,9 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                     print('Unexpected response code received!')
                     print(response.headers)
                     if response.status_code in catch_codes:
+                        sleepcount+=1
+                        if maxsleep and sleepcount>maxsleep:
+                            raise RuntimeError('Maximum retry count exceeded')
                         print('Retrying in %i seconds' % retry_interval)
                         sleep(retry_interval)
                         continue
@@ -80,11 +83,17 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                     pmin,pmax=[int(v) for v in bits[0].split('-')]
                     psize=pmax-pmin+1
             except requests.exceptions.ConnectionError:
-                print('Connection error! sleeping 30 seconds before retry...')
-                sleep(30)
+                print('Connection error! sleeping %i seconds before retry...' % retry_interval)
+                sleepcount+=1
+                if maxsleep and sleepcount>maxsleep:
+                    raise RuntimeError('Maximum retry count exceeded')
+                sleep(retry_interval)
             except (requests.exceptions.Timeout,requests.exceptions.ReadTimeout):
-                print('Timeout! sleeping 30 seconds before retry...')
-                sleep(30)
+                print('Timeout! sleeping %i seconds before retry...' % retry_interval)
+                sleepcount+=1
+                if maxsleep and sleepcount>maxsleep:
+                    raise RuntimeError('Maximum retry count exceeded')
+                sleep(retry_interval)
             else:
                 connected=True
         try:
@@ -125,14 +134,22 @@ def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=Fa
                 downloaded=True
 
         except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,requests.exceptions.ChunkedEncodingError):
-            print('Connection error! sleeping 30 seconds before retry...')
+            print('Connection error!')
             if retry_partial:
                 fsize=os.path.getsize(filename)
-                retrying_partial=True
-                selected_range=(fsize,)
-                print('Retry partial range is:',selected_range)
-
-            sleep(30) # back to the connection
+                if esize>fsize: # sometimes we can get a connection error at the end
+                    retrying_partial=True
+                    selected_range=(fsize,)
+                    print('Retry partial range is:',selected_range)
+                else:
+                    print('File appears to be intact.')
+                    downloaded=True
+            if not downloaded:
+                print('Sleeping %i seconds before retry...' % retry_interval)
+                sleepcount+=1
+                if maxsleep and sleepcount>maxsleep:
+                    raise RuntimeError('Maximum retry count exceeded')
+                sleep(retry_interval) # back to the connection
 
     del response
     return downloaded
