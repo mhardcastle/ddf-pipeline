@@ -123,37 +123,53 @@ def untar(f,tarfiles,verbose=False):
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)
 
-def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
-    ''' download tar files from field cname to location f. Try SDR and if that doesn't work try rclone. '''
+def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar'],order=['rclone','SDR']):
+    ''' download tar files from field cname to location f and optionally untar. Use rclone and SDR in an order specified by the user '''
     if not os.path.isdir(f):
         os.makedirs(f)
+
+    for step in order:
+        if verbose:
+            print('Trying step',step)
+        download={'rclone':do_rclone_download,'SDR':do_sdr_download}[step]
+        try:
+            download(cname,f,verbose=verbose,Mode=Mode,operations=operations)
+            success=True
+        except RuntimeError as e:
+            print('Error',e,'caught')
+            success=False
+        if success:
+            break
+    else:
+        raise RuntimeError('Unable to download from any source')
+
+def do_sdr_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     s=SDR(target=f)
+    # next line will raise a RuntimeError if directory is not present
     try:
         status=s.get_status(cname)
-    except RuntimeError:
-        status=None
-    if status:
-        if Mode=="Imaging":
-            tarfiles=['images.tar','uv.tar']
-        elif Mode=="Misc":
-            tarfiles=['misc.tar']
-        elif Mode=="Imaging+Misc":
-            tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
-        elif Mode=="ImageOnly":
-            tarfiles=['images.tar']
-        else:
-            raise RuntimeError('Unknown mode '+Mode+' requested')
-
-        if 'download' in operations:
-            if verbose: print('Initiating SDR download for field',cname)
-            s.download_and_stage(cname,tarfiles,progress_bar=verbose)
-        if 'untar' in operations:
-            #tarfiles = glob.glob('*tar')
-            untar(f,tarfiles,verbose=verbose)
+    except:
+        raise RuntimeError('Failed to find SDR data')
+    if Mode=="Imaging":
+        tarfiles=['images.tar','uv.tar']
+    elif Mode=="Misc":
+        tarfiles=['misc.tar']
+    elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
+    elif Mode=="ImageOnly":
+        tarfiles=['images.tar']
     else:
-        if verbose: print('Trying rclone download for field',cname)
-        do_rclone_download(cname,f,verbose=verbose,Mode=Mode,operations=operations)
+        raise NotImplementedError('Unknown mode '+Mode+' requested')
 
+    if 'download' in operations:
+        if verbose: print('Initiating SDR download for field',cname)
+        s.download_and_stage(cname,tarfiles,progress_bar=verbose)
+    if 'untar' in operations:
+        #tarfiles = glob.glob('*tar')
+        untar(f,tarfiles,verbose=verbose)
+ 
+
+        
 def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     '''
     Download required data from field cname into location f
@@ -176,6 +192,8 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['do
                 tarfiles=[fl for fl in files if 'misc.tar'==fl]
             elif Mode=="Imaging+Misc":
                 tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
+            else:
+                raise NotImplementedError('Unknown mode requested')
             
         if 'download' in operations and tarfiles is not None:
             d=rc.multicopy(rc.remote+directory+cname,tarfiles,f)
@@ -186,7 +204,8 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['do
             break # out of loop to unpack
         
     else:
-        raise RuntimeError('Failed to download from any source')
+        raise RuntimeError('Failed to find rclone data')
+    
     #tarfiles = glob.glob('*tar')
     if 'untar' in operations and tarfiles is not None:
         untar(f,tarfiles,verbose=verbose)
