@@ -152,6 +152,8 @@ class RClone(object):
             remote=self.remote
 
         d=self.execute(['lsf',remote+base])
+        if d['code']!=0 or d['err']:
+            raise RuntimeError('lsf returned error '+' '.join(d['err']))
         return [l for l in d['out'] if not exclude_dirs or not l.endswith('/')]
     
     def get_fileinfo(self,base='',remote=None):

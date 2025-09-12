@@ -28,95 +28,6 @@ from time import sleep
 from getcpus import getcpus
 import pyrap.tables as pt
 import shutil
-
-def stage_field(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30):
-    # stage a dataset from SDR or rclone repos 
-    # this should really live in reprocessing_utils and share code with do_sdr_and_rclone_download -- low-level stage functionality should be moved to sdr_wrapper
-    # as with that function cname is the field name, f is the processing directory
-    timer=0
-    s=SDR(target=f)
-    try:
-        files=s.get_status(cname)
-    except RuntimeError:
-        files=None
-    if files:
-        if verbose: print('Initiating SDR stage for field',cname)
-        if Mode=="Imaging":
-            tarfiles=['images.tar','uv.tar']
-        elif Mode=="Misc":
-            tarfiles=['misc.tar']
-        elif Mode=="Imaging+Misc":
-            tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
-
-        # code adapted from download_and_stage
-        for f in tarfiles:
-            if f not in files:
-                raise RuntimeError('File not found!')
-            else:
-                if files[f]=='OFL':
-                    s.stage(cname,f)
-
-        if verbose:
-            print('Waiting for files to be online:')
-        
-        while True:
-            if timeout is not None and timer>timeout:
-                raise RuntimeError('Timer exceeded')
-            files=s.get_status(cname)
-            count=0
-            for f in tarfiles:
-                if files[f]=='DUL':
-                    count+=1
-            if verbose:
-                print('%i/%i... ' % (count,len(tarfiles)),end='')
-                sys.stdout.flush()
-            if count==len(tarfiles):
-                if verbose: print()
-                break
-            else:
-                sleep(sleeptime)
-                timer+=sleeptime
-
-    else:
-        # staging for rclone goes here.
-        macaroon='maca_sksp_tape_DDF.conf'
-        directory='archive/'
-        rc=RClone(macaroon,debug=True)
-        files=rc.get_files(directory+cname)
-        if verbose: print('Initiating rclone/ADA stage for field',cname)
-        if Mode=="Imaging":
-            tarfiles=['images.tar']+[f for f in files if 'uv' in f]
-        elif Mode=="Misc":
-            tarfiles=['misc.tar']
-        elif Mode=="Imaging+Misc":
-            tarfiles=['images.tar','misc.tar',"stokes_small.tar"]+[f for f in files if 'uv' in f]
-        to_stage=[]
-        for f in tarfiles:
-            staged=rc.check_stage(directory+cname+'/'+f)
-            if 'ONLINE' not in staged:
-                to_stage.append(f)
-                rc.stage(directory+cname+'/'+f)
-
-        if verbose:
-            print('Waiting for files to be online:')
-            while True:
-                if timeout is not None and timer>timeout:
-                    raise RuntimeError('Timer exceeded')
-                count=0
-                for f in to_stage:
-                    staged=rc.check_stage(directory+cname+'/'+f)
-                    if 'ONLINE' in staged:
-                        count+=1
-                if verbose:
-                    print('%i/%i... ' % (count,len(to_stage)),end='')
-                    sys.stdout.flush()
-                if count==len(to_stage):
-                    if verbose: print()
-                    break
-                else:
-                    sleep(30)
-                    timer+=sleeptime
-        
     
 def check_cube_format(header):
     try:
@@ -158,7 +69,6 @@ def redo_cube_headers(incubename,outcubename,stokesparam):
     cube_shape = (1,hdu.data.shape[0], hdu.data.shape[1], hdu.data.shape[2])
     fits.writeto(outcubename, data.reshape(cube_shape), header, overwrite=True)
     del data # to clear from memory
-
 
 def do_run_subtract(field):
 

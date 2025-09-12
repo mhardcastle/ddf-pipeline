@@ -94,7 +94,7 @@ def do_rclone_reproc_tape_download(cname,f,directory,verbose=False):
     rc=RClone('maca_sksp_tape_reproc.conf',debug=True)
     rc.get_remote()
     files=rc.get_files(directory+'/' + cname)
-    print(files)
+    if verbose: print(files)
     tarfiles=None
     if files:
         tarfiles = [fl for fl in files]
@@ -123,6 +123,103 @@ def untar(f,tarfiles,verbose=False):
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)
 
+def stage_field_SDR(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30):
+    timer=0
+    s=SDR(target=f)
+    # Next line raises RuntimeError if files don't exist
+    files=s.get_status(cname)
+    if verbose: print('Initiating SDR stage for field',cname)
+    if Mode=="Imaging":
+        tarfiles=['images.tar','uv.tar']
+    elif Mode=="Misc":
+        tarfiles=['misc.tar']
+    elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
+
+    for f in tarfiles:
+        if f not in files:
+            raise RuntimeError(f'File {f} not found!')
+        else:
+            if files[f]=='OFL':
+                s.stage(cname,f)
+
+    if verbose:
+        print('Waiting for files to be online:')
+
+    while True:
+        if timeout is not None and timer>timeout:
+            raise RuntimeError('Timer exceeded')
+        files=s.get_status(cname)
+        count=0
+        for f in tarfiles:
+            if files[f]=='DUL':
+                count+=1
+        if verbose:
+            print('%i/%i... ' % (count,len(tarfiles)),end='')
+            sys.stdout.flush()
+        if count==len(tarfiles):
+            if verbose: print()
+            break
+        else:
+            sleep(sleeptime)
+            timer+=sleeptime
+
+def stage_field_rclone(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30,
+                       macaroon='maca_sksp_tape_DDF.conf', directory='archive/'):
+    rc=RClone(macaroon,debug=True)
+    # Next line raises RuntimeError if directory does not exist
+    files=rc.get_files(directory+cname)
+    if verbose: print('Initiating rclone/ADA stage for field',cname)
+    if Mode=="Imaging":
+        tarfiles=['images.tar']+[f for f in files if 'uv' in f]
+    elif Mode=="Misc":
+        tarfiles=['misc.tar']
+    elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','misc.tar',"stokes_small.tar"]+[f for f in files if 'uv' in f]
+    to_stage=[]
+    for f in tarfiles:
+        staged=rc.check_stage(directory+cname+'/'+f)
+        if 'ONLINE' not in staged:
+            to_stage.append(f)
+            rc.stage(directory+cname+'/'+f)
+
+    if verbose:
+        print('Waiting for files to be online:')
+        while True:
+            if timeout is not None and timer>timeout:
+                raise RuntimeError('Timer exceeded')
+            count=0
+            for f in to_stage:
+                staged=rc.check_stage(directory+cname+'/'+f)
+                if 'ONLINE' in staged:
+                    count+=1
+            if verbose:
+                print('%i/%i... ' % (count,len(to_stage)),end='')
+                sys.stdout.flush()
+            if count==len(to_stage):
+                if verbose: print()
+                break
+            else:
+                sleep(sleeptime)
+                timer+=sleeptime
+        
+def stage_field(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30,order=['rclone','SDR']):
+    ''' Wrapper around staging for rclone and SDR. Try them in the specified order '''
+    for step in order:
+        if verbose:
+            print('Stage: Trying step',step)
+        stage={'rclone':stage_field_rclone,'SDR':stage_field_SDR}[step]
+        try:
+            stage(cname,f,verbose=verbose,Mode=Mode,timeout=timeout,sleeptime=sleeptime)
+            success=True
+        except RuntimeError as e:
+            print('Error',e,'caught')
+            success=False
+        if success:
+            break
+    else:
+        raise RuntimeError('Unable to stage from any source')
+
 def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar'],order=['rclone','SDR']):
     ''' download tar files from field cname to location f and optionally untar. Use rclone and SDR in an order specified by the user '''
     if not os.path.isdir(f):
@@ -130,7 +227,7 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operati
 
     for step in order:
         if verbose:
-            print('Trying step',step)
+            print('Download: Trying step',step)
         download={'rclone':do_rclone_download,'SDR':do_sdr_download}[step]
         try:
             download(cname,f,verbose=verbose,Mode=Mode,operations=operations)
@@ -167,8 +264,6 @@ def do_sdr_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['downl
     if 'untar' in operations:
         #tarfiles = glob.glob('*tar')
         untar(f,tarfiles,verbose=verbose)
- 
-
         
 def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     '''
