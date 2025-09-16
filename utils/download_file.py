@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 from time import sleep,time
 
-def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True,retry_size=0,auth=None,max_sleep=None):
+def download_file(url,filename,catch_codes=(),retry_interval=60,retry_partial=False,selected_range=None,force_retry_partial=False,chunk_size=8192,progress_bar=False,verify=True,retry_size=0,auth=None,maxsleep=None):
     '''Download a file from URL url to file filename.  Optionally, specify
     a tuple of HTTP response codes in catch_codes where we will back
     off and retry rather than failing.
