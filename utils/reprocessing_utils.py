@@ -18,6 +18,7 @@ from sdr_wrapper import SDR
 from fixsymlinks import fixsymlinks
 from parset import option_list
 from options import options,print_options
+from time import sleep
 
 def convert_summary_cfg(option_list,summaryname='summary.txt',newconfigname='tier1-reprocessing.cfg'):
     summary = open(summaryname,'r')
@@ -166,6 +167,7 @@ def stage_field_SDR(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleep
 
 def stage_field_rclone(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30,
                        macaroon='maca_sksp_tape_DDF.conf', directory='archive/'):
+    timer=0
     rc=RClone(macaroon,debug=True)
     # Next line raises RuntimeError if directory does not exist
     files=rc.get_files(directory+cname)

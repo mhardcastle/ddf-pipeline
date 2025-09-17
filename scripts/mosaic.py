@@ -29,6 +29,7 @@ import multiprocessing as mp
 from queue import Empty
 from convolve import do_convolve
 from time import sleep
+from scipy.signal import medfilt2d
 
 def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     print('Direction',direction,'starting')
@@ -341,6 +342,7 @@ def make_mosaic(args):
     for i in range(len(app)):
         np.seterr(divide='ignore')
         app[i].data=np.divide(app[i].data,hdus[i].data)
+        app[i].data=medfilt2d(app[i].data)
         app[i].data[app[i].data<threshold]=0
  # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
         if args.noise is not None:

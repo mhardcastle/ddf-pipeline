@@ -3,9 +3,7 @@
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
 
-from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import division
 from builtins import range
 import argparse
 from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic

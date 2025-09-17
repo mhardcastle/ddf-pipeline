@@ -23,8 +23,6 @@ import numpy as np
 import datetime
 from pipeline import ingest_dynspec,ddf_image
 from rclone import RClone
-from sdr_wrapper import SDR
-from time import sleep
 from getcpus import getcpus
 import pyrap.tables as pt
 import shutil
