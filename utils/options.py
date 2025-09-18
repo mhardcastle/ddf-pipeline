@@ -25,7 +25,7 @@ def options(optlist,option_list):
     # section names are used in the output dict only if names are not unique
 
     odict = {}
-    config=configparser.SafeConfigParser()
+    config=configparser.RawConfigParser()
     filenames=[]
     cmdlineset=[]
     if isinstance(optlist,str):
