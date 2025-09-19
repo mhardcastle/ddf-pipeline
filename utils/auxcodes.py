@@ -9,15 +9,26 @@ import numpy as np
 from scipy.optimize import leastsq
 import scipy
 import os,sys
-from pipeline_logging import run_log
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from pipeline_logging import run_log
+    from facet_offsets import RegPoly
+    from surveys_db import use_database,update_status
+    from termsize import get_terminal_size_linux
+
+else:
+    from utils.pipeline_logging import run_log
+    from utils.facet_offsets import RegPoly
+    from others.surveys_db import use_database,update_status
+    from utils.termsize import get_terminal_size_linux
+
 from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
 import signal
-from facet_offsets import RegPoly
 import pyregion
-from surveys_db import use_database,update_status
-from termsize import get_terminal_size_linux
 import multiprocessing as mp
 
 # these are small routines used by more than one part of the pipeline

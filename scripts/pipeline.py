@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
+
+
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
@@ -30,44 +32,58 @@ from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
-from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
-from parset import option_list
-from options import options,print_options
-from shutil import copyfile,rmtree,move
-import glob
-import pyrap.tables as pt
-from redo_dppp_di import redo_dppp_di
-from modify_mask import modify_mask
-from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
-from histmsamp import find_uvmin,sumdico
-import numpy as np
-from astropy.io import fits
-from pipeline_version import version
-__version__=version()
-import datetime
-import threading
+
+if not LOCAL_DEV:
+    standard_library.install_aliases()
+    from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
+    from parset import option_list
+    from options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from redo_dppp_di import redo_dppp_di
+    from modify_mask import modify_mask
+    from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
+    from histmsamp import find_uvmin,sumdico
+    import numpy as np
+    from astropy.io import fits
+    from pipeline_version import version
+    from surveys_db import use_database,update_status,SurveysDB
+    __version__=version()
+    import datetime
+    import threading
+
+
+else:
+    print("Using local dev")
+    from utils.auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
+    from utils.parset import option_list
+    from utils.options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from scripts.redo_dppp_di import redo_dppp_di
+    from utils.modify_mask import modify_mask
+    from utils.make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
+    from utils.histmsamp import find_uvmin,sumdico
+    import numpy as np
+    from astropy.io import fits
+    from utils.pipeline_version import version
+    from others.surveys_db import use_database,update_status,SurveysDB
+
+    __version__=version()
+    import datetime
+    import threading
 
 try:
     from killMS.Other import MyPickle
 except ImportError:
     MyPickle=None
-from surveys_db import use_database,update_status,SurveysDB
-
-try :
-    import socket
-    import atexit
-    sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
-    sock.connect('/var/tmp/dool_tags')
-    def dool_close():  sock.close()
-    def dool_set(n):   sock.send(b'+%s;' % n)
-    def dool_unset(n): sock.send(b'-%s;' % n)
-    atexit.register(dool_close)
-except Exception as e:
-    loggger.warning(r'Dool socket error : %s' % str(e))
-    def dool_close():  pass
-    def dool_set(n):   pass
-    def dool_unset(n): pass
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -510,7 +526,11 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            kms_nproc = int(options.get('kms_nproc', 1))
+            if kms_nproc > 1:
+                runcommand = "kMS-MPI.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            else:
+                runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
             
@@ -1147,7 +1167,6 @@ def main(o=None):
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
         full_clearcache(o)
-
     # ##########################################################
     if o['redo_DI']:
         separator('Redo DI correction')
@@ -1162,6 +1181,8 @@ def main(o=None):
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
         #o['imsize']=NPixSmall
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
+    # debug
+    killms_data(mslist="mslist.txt",colname="CORRECTED_DATA", dicomodel="TestImage.DicoModel",dt=1, outsols="DDS0",imagename="TestImage")
 
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
