@@ -381,3 +381,12 @@ the `--directories` argument which contain standard pipeline
 output. You can also determine the noise from the image with the
 `--find_noise` option.
 
+## Usage on Jean Zay
+
+git clone https://github.com/mhardcastle/ddf-pipeline.git
+cd ddf-pipeline
+git checkout my-branch remote/origin/my-branch
+pip install -r requirements.txt
+export DDF_PIPELINE_CATALOGS=~/CATALOGS
+export DDF_LOCAL_DEV=1
+module load python
