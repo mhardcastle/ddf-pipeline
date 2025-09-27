@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
+import subprocess
 
 if not LOCAL_DEV:
     standard_library.install_aliases()
@@ -84,6 +85,30 @@ try:
     from killMS.Other import MyPickle
 except ImportError:
     MyPickle=None
+
+def run_standalone(commands):
+    run_commands = [
+        'srun',
+        '--nodes=1',
+        '--ntasks=1',
+        '--cpus-per-task=5',
+        '--time=01:00:00',
+        '--hint=nomultithread',
+        'singularity',
+        'run',
+        '/lustre/fsn1/singularity/images/udd71uc/ddf.sif'
+    ]
+    commands_list = commands.split()
+    run_commands.extend(commands_list)
+    try:
+        print('LAUNCHED COMMAND', ' '.join(run_commands))
+        result = subprocess.run(run_commands, check=True, capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print("STANDARD ERROR:")
+            print(result.stderr)
+    except subprocess.CalledProcessError as e:
+        print("ERROR:", e.stderr)
 
 def summary(o):
     with open('summary.txt','w') as f:
@@ -190,7 +215,6 @@ def parse_parset(parsets,use_headings=False):
         return {}
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
-    dool_set(b'ddfshift')
     if catcher: catcher.check()
     if options is None:
         options=o # attempt to get global if it exists
@@ -211,10 +235,8 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
             print('would have run',runcommand)
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
-    dool_unset(b'ddfshift')
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
-    dool_set(b'ddfimage')
     if catcher: catcher.check()
 
     # saveimages lists _additional_ images to save
@@ -386,12 +408,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
             fname=os.system("touch %s"%fname)
-    dool_unset(b'ddfimage')
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
     # cellsize specifies which option value to get this from
-    dool_set(b'make_external_mask')
     if options is None:
         options=o # attempt to get global
 
@@ -417,7 +437,6 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
         if options['extended_size'] is not None and extended_use is not None:
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
-    dool_unset(b'make_external_mask')
 
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
     if os.path.isfile(OutClusterCat):
@@ -455,7 +474,6 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
-    dool_set(b'make_mask')
     if catcher: catcher.check()
 
     # mask_use specifies a mask file to use
@@ -482,7 +500,6 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
                     merge_mask(fname,mask,fname)
             else:
                 merge_mask(fname,external_mask,fname)
-    dool_unset(b'make_mask')            
     return fname
             
 
@@ -492,7 +509,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
-    dool_set(b'killms_data')
     if options is None:
         options=o # attempt to get global if it exists
 
@@ -613,7 +629,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
         
 
 
-    dool_unset(b'killms_data')
     return outsols
 
 def compress_fits(filename,q):
@@ -1113,7 +1128,6 @@ def main(o=None):
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
-
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')
@@ -1181,8 +1195,6 @@ def main(o=None):
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
         #o['imsize']=NPixSmall
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
-    # debug
-    killms_data(mslist="mslist.txt",colname="CORRECTED_DATA", dicomodel="TestImage.DicoModel",dt=1, outsols="DDS0",imagename="TestImage")
 
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
@@ -1294,7 +1306,8 @@ def main(o=None):
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
             stop(2)
-
+        print('stop before kms')
+        return
         if not o['skip_di']:
             separator("DI CAL")
             ########################
@@ -1313,10 +1326,9 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED",
             #              ReinitWeights=True)
-
             colname="DATA_DI_CORRECTED"
 
-
+            
             _=ddf_image('image_dirin_SSD_m_c_di',o['mslist'],
                         cleanmask=CurrentMaskName,cleanmode='SSD',
                         majorcycles=0,robust=o['image_robust'],

@@ -69,6 +69,22 @@ def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
+    run_commands = [
+        'srun',
+        '--nodes=1',
+        '--ntasks=1',
+        '--cpus-per-task=40',
+        '--time=05:00:00',
+        '--hint=nomultithread',
+        'singularity',
+        'run',
+        '-B',
+        '/lustre/fsn1/projects/rech/doz/udd71uc/small/small/:/linkhome/rech/genrnu01/$USER/',
+        '/lustre/fsn1/singularity/images/udd71uc/ddf.sif'
+    ]
+    commands_list = s.split()
+    run_commands.extend(commands_list)
+    s = ' '.join(run_commands)
     report('Running: '+s)
     if not dryrun:
         if log is None:

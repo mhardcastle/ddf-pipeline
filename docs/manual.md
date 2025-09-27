@@ -388,7 +388,14 @@ git clone https://github.com/mhardcastle/ddf-pipeline.git
 cd ddf-pipeline
 git checkout my-branch remote/origin/my-branch
 pip install -r requirements.txt
+salloc --cpus-per-task=40 --hint=nomultithread --time=12:00:00
+cd /lustre/fsn1/projects/rech/doz/udd71uc/small/small
+module load python
+module load singularity
 export DDF_PIPELINE_CATALOGS=~/CATALOGS
 export DDF_LOCAL_DEV=1
-module load python
+export DATA_DIR=/lustre/fsn1/projects/rech/doz/udd71uc/small/small
+export DDF_IMAGE_NAME=ddf.sif
+export DDF_DIR=/usr/local/src
+python3 /lustre/fsn1/projects/rech/doz/udd71uc/ddf-pipeline/scripts/pipeline.py /lustre/fsn1/projects/rech/doz/udd71uc/ddf-pipeline/examples/tier1-minimal.cfg --image-imsize=5000
 ```
