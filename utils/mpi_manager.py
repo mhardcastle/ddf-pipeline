@@ -33,8 +33,6 @@ class MSSet():
         self.DicoNodes=DicoNodes
         self.ListMS=Lmslist
         
-
-
 def testFunc(*args,**kwargs):
     host = MPI.Get_processor_name()
     print(host,args,kwargs)

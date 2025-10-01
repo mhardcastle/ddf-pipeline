@@ -1152,10 +1152,11 @@ def main(o=None):
     SetMS=mpi_manager.MSSet(o['mslist'])
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS)
     checkColName(o)
-    stoppp
     
     # Clear the shared memory
-    run('CleanSHM.py',dryrun=o['dryrun'])    
+    run('CleanSHM.py',dryrun=o['dryrun'], parallel=MPI_Manager)    
+
+    stoppp
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')

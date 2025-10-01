@@ -30,6 +30,7 @@ from astropy.wcs import WCS
 import signal
 import pyregion
 import multiprocessing as mp
+import mpi_manager
 
 # these are small routines used by more than one part of the pipeline
 
@@ -68,10 +69,20 @@ def report(s):
 def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None):
+    if mpiManager is not None and mpiManager.UseMPI:
+        # s="%s %s"%(mpi_manager.givePrefixRunCommandFork(),s)
+        jobs=[]
+        print(f"ListNodesBeingUsed: {mpiManager.ListNodesBeingUsed}")
+        for h in mpiManager.ListNodesBeingUsed:
+            jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database), {}])
+        print(f"run: {jobs}")
+        mpi_manager.callParallel(jobs)
+    else:
+        run_serial(s,procees, dryrun, log, quiet, database)
+
     
-    # s="%s %s"%(mpi_manager.givePrefixRunCommandFork(),s)
-    
+def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
     report('Running: '+s)
     if not dryrun:
         if log is None:
