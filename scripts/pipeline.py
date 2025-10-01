@@ -38,6 +38,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
 import subprocess
+import mpi_manager
+global SetMS
 
 if not LOCAL_DEV:
     standard_library.install_aliases()
@@ -156,8 +158,23 @@ def find_cache_dir(options):
         cache_dir='.'
     return cache_dir
 
-def check_imaging_weight(mslist_name):
+def check_imaging_weight(MSSet):
+    with MPIPoolExecutor() as executor:
+        nodename = MPI.Get_processor_name()
 
+        # filter listms on node
+        
+        
+        image = executor.submit(check_image_weigth, ms)
+        
+
+    
+    DicoNode={}
+    for DicoMS in ListMS:
+        Node=DicoMS.get("Node",None)
+        DicoNode[Node]
+    
+    
     # returns a boolean that says whether it did something
     result=False
     error=False
@@ -269,10 +286,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    PrefixMPI=""
-    ddf_nproc = int(options.get('ddf_nproc', 1))
-    if ddf_nproc > 1:
-        PrefixMPI = "mpirun -n %i "%(ddf_nproc)
 
     runcommand = "%sDDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(PrefixMPI,imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
 
@@ -621,6 +634,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             f_=f.replace("/","_")
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
+            
             # Clip anyway - on IMAGING_WEIGHT by default
             if DISettings is not None:
                 ClipCol=DISettings[-1]
@@ -1076,7 +1090,6 @@ def subtractOuterSquare(o):
             catcher=catcher)
 
 
-import mpi_manager
 
 def checkColName(o):
     # Check if the column exists in one MS. Important to do this
@@ -1084,8 +1097,7 @@ def checkColName(o):
     # versions of e.g. CORRECTED_DATA
     colname=o['colname']
     # mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    ListMS=mpi_manager.unpackMSList(o['mslist'])
-    t = pt.table(ListMS[0]["MSName"])
+    t = pt.table(SetMS.ListDicoMS[0]["MSName"])
     try:
         dummy=t.getcoldesc(colname)
     except RuntimeError:
@@ -1136,9 +1148,11 @@ def main(o=None):
 
     # Set column name for first steps
     colname=o['colname']
-
-
+    global SetMS
+    SetMS=mpi_manager.MSSet(o['mslist'])
+    MPI_Manager=mpi_manager.mpi_manager(o,SetMS)
     checkColName(o)
+    stoppp
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    

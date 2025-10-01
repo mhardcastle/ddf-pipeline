@@ -69,7 +69,7 @@ def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
-
+    
     # s="%s %s"%(mpi_manager.givePrefixRunCommandFork(),s)
     
     report('Running: '+s)
