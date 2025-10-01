@@ -1076,6 +1076,24 @@ def subtractOuterSquare(o):
             catcher=catcher)
 
 
+import mpi_manager
+
+def checkColName(o):
+    # Check if the column exists in one MS. Important to do this
+    # before we check imaging weights, because that will create empty
+    # versions of e.g. CORRECTED_DATA
+    colname=o['colname']
+    # mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    ListMS=mpi_manager.unpackMSList(o['mslist'])
+    t = pt.table(ListMS[0]["MSName"])
+    try:
+        dummy=t.getcoldesc(colname)
+    except RuntimeError:
+        dummy=None
+    t.close()
+    if dummy is None:
+        die('Dataset does not contain the column "%s"' % colname)
+
 def main(o=None):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
@@ -1119,18 +1137,8 @@ def main(o=None):
     # Set column name for first steps
     colname=o['colname']
 
-    # Check if the column exists in one MS. Important to do this
-    # before we check imaging weights, because that will create empty
-    # versions of e.g. CORRECTED_DATA
-    mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    t = pt.table(mslist[0])
-    try:
-        dummy=t.getcoldesc(colname)
-    except RuntimeError:
-        dummy=None
-    t.close()
-    if dummy is None:
-        die('Dataset does not contain the column "%s"' % colname)
+
+    checkColName(o)
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
