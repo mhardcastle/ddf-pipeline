@@ -1098,8 +1098,8 @@ def checkColName(o):
     # before we check imaging weights, because that will create empty
     # versions of e.g. CORRECTED_DATA
     colname=o['colname']
-    # mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    t = pt.table(SetMS.ListDicoMS[0]["MSName"])
+    mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    t = pt.table(mslist[0])
     try:
         dummy=t.getcoldesc(colname)
     except RuntimeError:

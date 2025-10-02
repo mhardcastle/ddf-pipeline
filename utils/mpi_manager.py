@@ -1,6 +1,7 @@
 from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+import itertools
 
 size = MPI.COMM_WORLD.size
 
@@ -11,35 +12,43 @@ class MSSet():
     def __init__(self,mslist):
         self.file_nodes_mslist=mslist
         # for MPI use
-        ListMS=[]
         mslist=[s.strip() for s in open(mslist).readlines()]
-
+        
+        nodes2ms = {}
         for iMS,sMS in enumerate(mslist):
-            DicoMS={}
-            if ":" in sMS:
-                Node,MSName=sMS.split(":")
-                DicoMS["Node"]=Node
-                DicoMS["MSName"]=MSName
-            else:
-                DicoMS["Node"]=None
-                DicoMS["MSName"]=sMS
-            ListMS.append(DicoMS)
-    
-        DicoNodes={}
-        Lmslist=[]
-        for MS in ListMS:
-            ThisNode=MS["Node"]
-            L=DicoNodes.get(ThisNode,[])
-            L.append(MS["MSName"])
-            DicoNodes[ThisNode]=L
-            Lmslist.append(MS["MSName"])
+            terms=sMS.split(":")
+            msname=terms[1:] or terms[0]
+            node=terms[0] if terms[1:] else None
+            print(node, msname)
+
+            l=nodes2ms.get(node,[])
+            l.append(msname)
+            nodes2ms[node]=l
             
-        self.ListDicoMS=ListMS
-        self.DicoNodes2ListMS=DicoNodes
-        self.ListMS=Lmslist
-        
-        
-        
+        print(nodes2ms)
+        if nodes2ms[None] and len(nodes2ms) == 1:
+            # get all node names because None have been specified
+            fns=[]
+            with MPIPoolExecutor() as executor:
+                fns.append(executor.submit(get_node_name))
+            self.ListNodesBeingUsed=[MPI.Get_processor_name()]
+            for f in fns:
+                self.ListNodesBeingUsed.append(f.result())
+            print(f"{self.ListNodesBeingUsed}")
+            mslist=list(zip(itertools.cycle(self.ListNodesBeingUsed), nodes2ms[None]))
+            del nodes2ms[None]
+            
+            print(mslist)
+            for node,ms in mslist:
+                l=nodes2ms.get(node,[])
+                l.append(ms)
+                nodes2ms[node] = l
+                
+            print(nodes2ms)
+
+        self.DicoNodes=nodes2ms
+        self.ListNodesBeingUsed = nodes2ms.keys()
+
 def testFunc(*args,**kwargs):
     host = MPI.Get_processor_name()
     print(host,args,kwargs)
@@ -100,14 +109,22 @@ def callParallel(ListJobs):
                 print(f"e: {e}")
     return Lres0
         
+# import itertools
+# a= [7, 8, 4, 5, 9, 10]
+# b= [1, 5, 6]
+# 
+# # Zipping using cycle
+# res= list(zip(a, itertools.cycle(b)))
+# print(res)
+def get_node_name():
+    return MPI.Get_processor_name()
+
 class mpi_manager():
     def __init__(self,options_cfg,MSSet):
         self.options=options_cfg
         self.MSSet=MSSet
-        self.ListDicoMS=MSSet.ListDicoMS
-        self.ListNodesBeingUsed=sorted(list(set([MS.get("Node",None) for MS in self.ListDicoMS])))
-        if self.ListNodesBeingUsed==[None]:
-            self.ListNodesBeingUsed=None
+        self.ListNodesBeingUsed=MSSet.ListNodesBeingUsed
+
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         if self.ddf_nproc > 1 or self.ListNodesBeingUsed:
