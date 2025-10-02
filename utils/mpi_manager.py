@@ -77,6 +77,7 @@ def testParallel():
     
 def filterHost(RunOnHost,func, args, kwargs):
     host = MPI.Get_processor_name()
+    print(f"filterHost: {RunOnHost} != {host}")
     if RunOnHost != host: return None
     return func(*args,**kwargs)
     
@@ -85,7 +86,10 @@ def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
     print(masterNode)
     LJobMasterNode=[]
-    with MPIPoolExecutor() as executor:
+    print(f"callParallel: {ListJobs}")
+    Lres0=[]
+    with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+#    with MPIPoolExecutor() as executor:
         Lres=[]
         print("Pool",masterNode)
         
@@ -97,16 +101,16 @@ def callParallel(ListJobs):
                 f1=executor.submit(filterHost, host ,func, args, kwargs)
                 Lres.append(f1)
                 
-        Lres0=[]
         for func,args,kwargs in LJobMasterNode:
             Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
             try:
-                res.result()
+                #res.result()
                 Lres0.append(res.result())
             except Exception as e:
                 print(f"e: {e}")
+    print(f"callParallel: ok ({Lres0})")
     return Lres0
         
 # import itertools
