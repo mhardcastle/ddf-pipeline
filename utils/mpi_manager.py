@@ -46,7 +46,7 @@ class MSSet():
                 
             print(nodes2ms)
 
-        self.DicoNodes=nodes2ms
+        self.DicoNodes2ListMS=nodes2ms
         self.ListNodesBeingUsed = nodes2ms.keys()
 
 def testFunc(*args,**kwargs):

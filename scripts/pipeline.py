@@ -1157,8 +1157,9 @@ def main(o=None):
     checkColName(o)
     
     # Clear the shared memory
-    import DDFacet.CleanSHM
-    run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
+    #import DDFacet.CleanSHM
+    #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
+    run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
     stoppp
     
     # Pipeline started!

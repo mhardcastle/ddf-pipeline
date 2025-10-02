@@ -82,7 +82,7 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
 
     
 def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
-    report('Running: '+s)
+    report(f"Running: {s}")
     if not dryrun:
         if log is None:
             retval=call(s,shell=True)
