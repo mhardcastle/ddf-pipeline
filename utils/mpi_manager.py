@@ -120,16 +120,18 @@ def get_node_name():
     return MPI.Get_processor_name()
 
 class mpi_manager():
-    def __init__(self,options_cfg,MSSet):
+    def __init__(self,options_cfg,MSSet, FullMSSet):
         self.options=options_cfg
         self.MSSet=MSSet
-        self.ListNodesBeingUsed=MSSet.ListNodesBeingUsed
+        self.FullMSSet=FullMSSet
+        self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed
 
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         if self.ddf_nproc > 1 or self.ListNodesBeingUsed:
             self.UseMPI=True
         self.createRemoteLocal_mslist()
+        self.createRemoteLocal_fullmslist()
         
     def givePrefixDDF(self):
         if not self.UseMPI: return ""
@@ -151,6 +153,17 @@ class mpi_manager():
                 f.write("%s\n"%msname)
             f.close()
             self.DicoNode2mslist[Node]=FName
+
+    def createRemoteLocal_fullmslist(self):
+        self.DicoNode2fullmslist={}
+        for Node in self.FullMSSet.DicoNodes2ListMS.keys():
+            Listms=self.FullMSSet.DicoNodes2ListMS[Node]
+            FName="local_%s_full_mslist.txt"%Node
+            f=open(FName,"w")
+            for msname in Listms:
+                f.write("%s\n"%msname)
+            f.close()
+            self.DicoNode2fullmslist[Node]=FName
 
     
     def givePrefixDDF_mpirun(self,use_singularity=True):

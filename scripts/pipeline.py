@@ -42,6 +42,8 @@ import subprocess
 import mpi_manager
 global SetMS
 
+import copy # deepcopy
+
 if not LOCAL_DEV:
     standard_library.install_aliases()
     from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
@@ -159,9 +161,17 @@ def find_cache_dir(options):
         cache_dir='.'
     return cache_dir
 
-def check_imaging_weight(MSSet):
+def check_imaging_weight_mpi(MPI_Manager,o):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2mslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            ListJobs.append((Node,check_imaging_weight,(oc["mslist"],),{}))
         
+    mpi_manager.callParallel(ListJobs)
 
+def check_imaging_weight(mslist_name):
     # returns a boolean that says whether it did something
     result=False
     error=False
@@ -273,8 +283,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-
-    runcommand = "%sDDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(PrefixMPI,imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
+    # TODO generate runcommand per node
+    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
 
         
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
@@ -405,7 +415,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     else:
         if conditional_clearcache:
             clearcache(mslist,options)
-        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
+        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
 
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
@@ -790,20 +800,16 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
     return outname
 
-def full_clearcache_mpi(o,MPI_Manager,extras=None):
+def full_clearcache_mpi(MPI_Manager,o,extras=None):
     ListJobs=[]
     if o is not None:
-        for Node in MPI_Manager.DicoNode2mslist.keys():
+        for Node in MPI_Manager.DicoNode2fullmslist.keys():
             oc=copy.deepcopy(o)
-            oc["mslist.txt"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             ListJobs.append((Node,full_clearcache,(oc,extras),{}))
-    
         
-    #ListJobs=[["nancep10.obs-nancay.fr",full_clearcache,(o10,),{}],
-    #          ["nancep11.obs-nancay.fr",full_clearcache,(o11,),{}] ]
-    MPI_Manager.callParallel(ListJobs)
-        
-
+    mpi_manager.callParallel(ListJobs)
 
 def full_clearcache(o,extras=None):
     clearcache(o['mslist'],o)
@@ -813,6 +819,17 @@ def full_clearcache(o,extras=None):
     if extras is not None:
         for mslist in extras:
             clearcache(mslist,o)
+
+def redo_dppp_di_mpi(MPI_Manager,o):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2fullmslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+            ListJobs.append((Node,redo_dppp_di,(oc,),{}))
+        
+    mpi_manager.callParallel(ListJobs)
 
 def subtract_data(mslist,col1,col2):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
@@ -1091,7 +1108,13 @@ def subtractOuterSquare(o):
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
             catcher=catcher)
 
-
+def checkColName_mpi(MPI_Manager, o):
+    listJobs = []
+    for node in MPI_Manager.DicoNode2mslist.keys():
+        o_ = copy.deepcopy(o)
+        o_["mslist"] = MPI_Manager.DicoNode2mslist[node]
+        listJobs.append((node, checkColName, (o_,), {}))
+    mpi_manager.callParallel(listJobs)
 
 def checkColName(o):
     # Check if the column exists in one MS. Important to do this
@@ -1102,11 +1125,14 @@ def checkColName(o):
     t = pt.table(mslist[0])
     try:
         dummy=t.getcoldesc(colname)
-    except RuntimeError:
+    except RuntimeError as e:
+        print(f"e: {e}")
         dummy=None
     t.close()
     if dummy is None:
         die('Dataset does not contain the column "%s"' % colname)
+    else:
+        print('Dataset %s does contain the column "%s"' %(mslist[0],colname))
 
 def main(o=None):
     if o is None and MyPickle is not None:
@@ -1152,15 +1178,18 @@ def main(o=None):
     colname=o['colname']
     global SetMS
     SetMS=mpi_manager.MSSet(o['mslist'])
+    FullSetMS=mpi_manager.MSSet(o['full_mslist'])
 
-    MPI_Manager=mpi_manager.mpi_manager(o,SetMS)
-    checkColName(o)
+    MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+    if MPI_Manager.UseMPI:
+        checkColName_mpi(MPI_Manager, o)
+    else:
+        checkColName(o)
     
     # Clear the shared memory
     #import DDFacet.CleanSHM
     #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
     run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
-    stoppp
     
     # Pipeline started!
     if use_database():
@@ -1210,8 +1239,15 @@ def main(o=None):
         os.mkdir(o['logging'])
        
     # Check imaging weights -- needed before DDF
-    full_clearcache(o)
-    new=check_imaging_weight(o['mslist'])
+    if MPI_Manager.UseMPI:
+        full_clearcache_mpi(MPI_Manager, o)
+    else:
+        full_clearcache(o)
+
+    if MPI_Manager.UseMPI:
+        new=check_imaging_weight_mpi(MPI_Manager, o)
+    else:
+        new=check_imaging_weight(o['mslist'])
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to
@@ -1219,15 +1255,18 @@ def main(o=None):
         # stored per dataset. If we are redoing, cache needs to be removed
         full_clearcache(o)
 
-    stoppp
     # ##########################################################
     if o['redo_DI']:
         separator('Redo DI correction')
-        redo_dppp_di(o)
+        if MPI_Manager.UseMPI:
+            redo_dppp_di_mpi(MPI_Manager, o)
+        else:
+            redo_dppp_di(o)
 
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
+        stopp
         subtractOuterSquare(o)
         colname="DATA_SUB"
         #ReduceFactor=o['fact_reduce_field']
@@ -1241,8 +1280,8 @@ def main(o=None):
         # Initial dirty image to allow an external (TGSS) mask to be made
         separator("Initial dirty")
         ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
-                  apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
+                reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
+                apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
 
         separator("External mask")
         external_mask='external_mask.fits'
