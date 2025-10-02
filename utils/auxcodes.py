@@ -71,15 +71,14 @@ def warn(s):
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None):
     if mpiManager is not None and mpiManager.UseMPI:
-        # s="%s %s"%(mpi_manager.givePrefixRunCommandFork(),s)
         jobs=[]
-        print(f"ListNodesBeingUsed: {mpiManager.ListNodesBeingUsed}")
         for h in mpiManager.ListNodesBeingUsed:
             jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database), {}])
         print(f"run: {jobs}")
-        mpi_manager.callParallel(jobs)
+        res=mpi_manager.callParallel(jobs)
+        print(res)
     else:
-        run_serial(s,procees, dryrun, log, quiet, database)
+        run_serial(s,proceed, dryrun, log, quiet, database)
 
     
 def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):

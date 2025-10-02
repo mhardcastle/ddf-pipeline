@@ -37,40 +37,23 @@ def testFunc(*args,**kwargs):
     host = MPI.Get_processor_name()
     print(host,args,kwargs)
     
+import os
 def testParallel():
     ListJobs=[["nancep10.obs-nancay.fr",testFunc,(5,),{"e":6}],
               ["nancep10.obs-nancay.fr",testFunc,(9,),{"f":6}],
               ["nancep11.obs-nancay.fr",testFunc,(77,),{"g":88}],
               ]
+    ListJobs=[["cw10055",os.system,("CleanSHM.py"), {}],
+              ["cw10057",os.system,("CleanSHM.py"), {}],
+              ]
     
     callParallel(ListJobs)
     
-def filterHost(RunOnHost,func,*args,**kwargs):
+def filterHost(RunOnHost,func, args, kwargs):
     host = MPI.Get_processor_name()
     if RunOnHost != host: return None
-    func(*args,**kwargs)
+    return func(*args,**kwargs)
     
-
-# from mpi4py import MPI
-# comm = MPI.COMM_WORLD
-# rank = comm.Get_rank()
-# if __name__ == '__main__':
-#     if rank == 0:
-#         print("main on 0")
-#         fn(mslists)
-#     else:
-#         fn(mslists)
-
-# ListJobs=[["nancep10.obs-nancay.fr",testFunc,(5,),{"e":6}],
-#           ["nancep10.obs-nancay.fr",testFunc,(9,),{"f":6}],
-#           ["nancep11.obs-nancay.fr",testFunc,(77,),{"g":88}],
-#           ]
-
-# ListJobs=[["nancep10.obs-nancay.fr",run,(5,),{"e":6}],
-#           ["nancep10.obs-nancay.fr",testFunc,(9,),{"f":6}],
-#           ["nancep11.obs-nancay.fr",testFunc,(77,),{"g":88}],
-#           ]
-
 
 def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
@@ -79,10 +62,10 @@ def callParallel(ListJobs):
         Lres=[]
         for Job in ListJobs:
             host,func,args,kwargs=Job
-            if host==masterNode:
-                LJobMasterNode.append((func,args,kwargs))
+            if host == masterNode:
+                LJobMasterNode.append([func,args,kwargs])
             else:
-                f1=executor.submit(filterHost,host,func, *args,**kwargs)
+                f1=executor.submit(filterHost, host ,func, args, kwargs)
                 Lres.append(f1)
                 
         Lres0=[]
@@ -90,7 +73,11 @@ def callParallel(ListJobs):
             Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
-            Lres0.append(res.result())
+            try:
+                res.result()
+                Lres0.append(res.result())
+            except Exception as e:
+                print(f"e: {e}")
     return Lres0
         
 class mpi_manager():

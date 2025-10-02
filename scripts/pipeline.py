@@ -1154,7 +1154,7 @@ def main(o=None):
     checkColName(o)
     
     # Clear the shared memory
-    run('CleanSHM.py',dryrun=o['dryrun'], parallel=MPI_Manager)    
+    run('CleanSHM.py',dryrun=o['dryrun'], mpiManager=MPI_Manager)    
 
     stoppp
     # Pipeline started!
