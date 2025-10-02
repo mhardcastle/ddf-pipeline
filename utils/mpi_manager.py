@@ -4,6 +4,9 @@ from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
 
 size = MPI.COMM_WORLD.size
 
+
+
+
 class MSSet():
     def __init__(self,mslist):
         self.file_nodes_mslist=mslist
@@ -55,6 +58,11 @@ def testParallel():
     ListJobs=[["nancep10.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
               ["nancep11.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
               ]
+
+    import DDFacet.CleanSHM
+    ListJobs=[["nancep10.obs-nancay.fr",DDFacet.CleanSHM.driver,(), {}],
+              ["nancep11.obs-nancay.fr",DDFacet.CleanSHM.driver,(), {}],
+              ]
     
     callParallel(ListJobs)
     
@@ -66,9 +74,12 @@ def filterHost(RunOnHost,func, args, kwargs):
 
 def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
+    print(masterNode)
     LJobMasterNode=[]
     with MPIPoolExecutor() as executor:
         Lres=[]
+        print("Pool",masterNode)
+        
         for Job in ListJobs:
             host,func,args,kwargs=Job
             if host == masterNode:
@@ -176,5 +187,13 @@ class mpi_manager():
     def scpGather(self,FileName):
         pass    
 
+def ftest(x):
+    print(x)
+    
 if __name__=="__main__":
+    # masterNode = MPI.Get_processor_name()
     testParallel()
+    # with MPIPoolExecutor() as executor:
+    #     f1=executor.submit(filterHost, "nancep10.obs-nancay.fr" ,ftest, (10,),{})
+    #     filterHost("nancep11.obs-nancay.fr" ,ftest, (11,),{})
+    #     f1.result()
