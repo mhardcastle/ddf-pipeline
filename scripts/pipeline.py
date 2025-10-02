@@ -38,6 +38,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
 import subprocess
+
 import mpi_manager
 global SetMS
 
@@ -159,22 +160,8 @@ def find_cache_dir(options):
     return cache_dir
 
 def check_imaging_weight(MSSet):
-    with MPIPoolExecutor() as executor:
-        nodename = MPI.Get_processor_name()
-
-        # filter listms on node
-        
-        
-        image = executor.submit(check_image_weigth, ms)
         
 
-    
-    DicoNode={}
-    for DicoMS in ListMS:
-        Node=DicoMS.get("Node",None)
-        DicoNode[Node]
-    
-    
     # returns a boolean that says whether it did something
     result=False
     error=False
@@ -803,6 +790,21 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
     return outname
 
+def full_clearcache_mpi(o,MPI_Manager,extras=None):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2mslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist.txt"]=MPI_Manager.DicoNode2mslist[Node]
+            ListJobs.append((Node,full_clearcache,(oc,extras),{}))
+    
+        
+    #ListJobs=[["nancep10.obs-nancay.fr",full_clearcache,(o10,),{}],
+    #          ["nancep11.obs-nancay.fr",full_clearcache,(o11,),{}] ]
+    MPI_Manager.callParallel(ListJobs)
+        
+
+
 def full_clearcache(o,extras=None):
     clearcache(o['mslist'],o)
     clearcache('temp_mslist.txt',o)
@@ -1150,19 +1152,22 @@ def main(o=None):
     colname=o['colname']
     global SetMS
     SetMS=mpi_manager.MSSet(o['mslist'])
+
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS)
     checkColName(o)
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'], mpiManager=MPI_Manager)    
-
     stoppp
+    
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')
     
     if o['redofrom']:
-
+        # not ported yet to mpi manager
+        stoppp
+        
         if not os.path.isdir(o['archive_dir']):
             os.mkdir(o['archive_dir'])
 
@@ -1203,6 +1208,7 @@ def main(o=None):
         os.mkdir(o['logging'])
        
     # Check imaging weights -- needed before DDF
+    full_clearcache(o)
     new=check_imaging_weight(o['mslist'])
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
@@ -1210,6 +1216,8 @@ def main(o=None):
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
         full_clearcache(o)
+
+    stoppp
     # ##########################################################
     if o['redo_DI']:
         separator('Redo DI correction')

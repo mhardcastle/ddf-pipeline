@@ -70,7 +70,7 @@ def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None):
-    if mpiManager is not None and mpiManager.UseMPI:
+    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1:
         jobs=[]
         for h in mpiManager.ListNodesBeingUsed:
             jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database), {}])

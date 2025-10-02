@@ -2,13 +2,15 @@ from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
 
+size = MPI.COMM_WORLD.size
+
 class MSSet():
     def __init__(self,mslist):
         self.file_nodes_mslist=mslist
         # for MPI use
         ListMS=[]
         mslist=[s.strip() for s in open(mslist).readlines()]
-        
+
         for iMS,sMS in enumerate(mslist):
             DicoMS={}
             if ":" in sMS:
@@ -26,12 +28,14 @@ class MSSet():
             ThisNode=MS["Node"]
             L=DicoNodes.get(ThisNode,[])
             L.append(MS["MSName"])
-            DicoNodes[Node]=L
+            DicoNodes[ThisNode]=L
             Lmslist.append(MS["MSName"])
             
         self.ListDicoMS=ListMS
-        self.DicoNodes=DicoNodes
+        self.DicoNodes2ListMS=DicoNodes
         self.ListMS=Lmslist
+        
+        
         
 def testFunc(*args,**kwargs):
     host = MPI.Get_processor_name()
@@ -43,8 +47,13 @@ def testParallel():
               ["nancep10.obs-nancay.fr",testFunc,(9,),{"f":6}],
               ["nancep11.obs-nancay.fr",testFunc,(77,),{"g":88}],
               ]
-    ListJobs=[["cw10055",os.system,("CleanSHM.py"), {}],
-              ["cw10057",os.system,("CleanSHM.py"), {}],
+    
+    ListJobs=[["cw10055",os.system,("CleanSHM.py",), {}],
+              ["cw10057",os.system,("CleanSHM.py",), {}],
+              ]
+    
+    ListJobs=[["nancep10.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
+              ["nancep11.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
               ]
     
     callParallel(ListJobs)
@@ -92,7 +101,8 @@ class mpi_manager():
         self.UseMPI=False
         if self.ddf_nproc > 1 or self.ListNodesBeingUsed:
             self.UseMPI=True
-            
+        self.createRemoteLocal_mslist()
+        
     def givePrefixDDF(self):
         if not self.UseMPI: return ""
         
@@ -103,6 +113,17 @@ class mpi_manager():
         elif srun_singularity:
             pass
                 
+    def createRemoteLocal_mslist(self):
+        self.DicoNode2mslist={}
+        for Node in self.MSSet.DicoNodes2ListMS.keys():
+            Listms=self.MSSet.DicoNodes2ListMS[Node]
+            FName="local_%s_mslist.txt"%Node
+            f=open(FName,"w")
+            for msname in Listms:
+                f.write("%s\n"%msname)
+            f.close()
+            self.DicoNode2mslist[Node]=FName
+
     
     def givePrefixDDF_mpirun(self,use_singularity=True):
 
