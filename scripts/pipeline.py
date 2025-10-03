@@ -414,19 +414,23 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             print('would have run',runcommand)
     else:
         if conditional_clearcache:
+            # TODO
+            #if MPI_Manager.UseMPI:
+            #    clearcache_mpi(MPI_Manager, mslist, options)
+            #else:
             clearcache(mslist,options)
             
         if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1:
             jobs=[]
             for h in mpiManager.ListNodesBeingUsed:
-                s = runcommand
                 log=logfilename('DDF-'+imagename+'-'+h+'.log')
-                jobs.append([h, run_serial, (s,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
+                jobs.append([h, run_serial, (runcommand,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
             print(f"run: {jobs}")
             res=mpi_manager.callParallel(jobs)
             print(res)
 
         else:
+            runcommand+=" --Parallel-UseMPI=False"
             run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
 
         # Ugly way to see if predict has been already done
@@ -521,7 +525,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
         if verbose:
             print('Would have run',runcommand)
     else:
-        run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
+        run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
             if isinstance(external_mask,list) or isinstance(external_mask,tuple):
                 for mask in external_mask:
@@ -1298,8 +1302,6 @@ def main(o=None):
                 reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
                 apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
 
-        stopp
-
         separator("External mask")
         external_mask='external_mask.fits'
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
@@ -1314,7 +1316,7 @@ def main(o=None):
                                            peakfactor=0.01,rms_factor=3,
                                            colname=colname,clusterfile=None,automask=True,
                                            automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher)
+                                           uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
     
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
@@ -1326,7 +1328,9 @@ def main(o=None):
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
             merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+            stopp
         
+        stopp
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
@@ -1334,6 +1338,7 @@ def main(o=None):
                               external_mask=external_mask,
                               catcher=catcher)
     
+        stopp
     
         separator("Continue deconvolution")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
@@ -1351,6 +1356,7 @@ def main(o=None):
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
                                            PredictSettings=None)
+        stopp
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
