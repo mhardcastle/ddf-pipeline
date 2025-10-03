@@ -431,7 +431,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
         else:
             runcommand+=" --Parallel-UseMPI=False"
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
+            run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
 
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
@@ -484,7 +484,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         
     runcommand+=" --bdsm_thresh_isl %f --bdsm_thresh_pix %f"%(options['clustering_threshold'],options['clustering_threshold'])
     
-    run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
+    run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 
     Name=imagename.split(".app.restored.fits")[0]
@@ -503,7 +503,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     if OutClusterCat is not None:
         runcommand+=" --OutClusterCat %s"%OutClusterCat
     runcommand+=" --NCluster %i"%options['ndir']
-    run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
+    run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
     if catcher: catcher.check()
@@ -1205,7 +1205,7 @@ def main(o=None):
     # Clear the shared memory
     #import DDFacet.CleanSHM
     #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
-    run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
+    run("env DDF_USE_MPI=1 CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
     
     # Pipeline started!
     if use_database():
@@ -1328,17 +1328,13 @@ def main(o=None):
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
             merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
-            stopp
         
-        stopp
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
                               o['thresholds'][0],
                               external_mask=external_mask,
                               catcher=catcher)
-    
-        stopp
     
         separator("Continue deconvolution")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
@@ -1355,8 +1351,7 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=None)
-        stopp
+                                           PredictSettings=None, mpiManager=MPI_Manager)
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
@@ -1402,7 +1397,7 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           PredictSettings=None, mpiManager=MPI_Manager)
 
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
@@ -1418,6 +1413,7 @@ def main(o=None):
                         catcher=catcher,
                         dt=o['dt_di'],
                         DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+            stopp
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,
