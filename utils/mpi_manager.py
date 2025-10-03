@@ -3,7 +3,7 @@ from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
 import itertools
 
-size = MPI.COMM_WORLD.size
+MPIsize = MPI.COMM_WORLD.size
 
 
 
@@ -26,7 +26,8 @@ class MSSet():
             nodes2ms[node]=l
             
         print(nodes2ms)
-        if nodes2ms[None] and len(nodes2ms) == 1:
+        
+        if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
             fns=[]
             with MPIPoolExecutor() as executor:

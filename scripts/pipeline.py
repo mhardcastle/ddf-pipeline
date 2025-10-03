@@ -416,7 +416,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         if conditional_clearcache:
             clearcache(mslist,options)
             
-        if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1:
+        if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPIsize>1:
             jobs=[]
             for h in mpiManager.ListNodesBeingUsed:
                 s = runcommand
@@ -1298,7 +1298,7 @@ def main(o=None):
                 reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
                 apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
 
-        stopp
+
 
         separator("External mask")
         external_mask='external_mask.fits'
@@ -1401,8 +1401,7 @@ def main(o=None):
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
             stop(2)
-        print('stop before kms')
-        return
+            
         if not o['skip_di']:
             separator("DI CAL")
             ########################
