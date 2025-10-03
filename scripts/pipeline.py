@@ -202,6 +202,7 @@ def parse_parset(parsets,use_headings=False):
     keywords={}
     for parset in parsets:
         if os.path.isfile(parset):
+            warn(f"{parset} does exist")
             break
     else:
         parset=None
@@ -233,7 +234,10 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     if options is None:
         options=o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+    import DDFacet.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
         
     cache_dir=find_cache_dir(options)
     if dicomodel is None:
@@ -260,8 +264,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if options is None:
         options=o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
+    import DDFacet.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
+         
     if HMPsize is None:
         HMPsize=options['HMPsize']
     if do_decorr is None:
@@ -546,11 +553,11 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
     cache_dir=find_cache_dir(options)
 
-    if 'KILLMS_DIR' in os.environ:
-        # different versions have different locations for the parset, so check them all
-        keywords=parse_parset([os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg',os.environ['KILLMS_DIR']+'/killMS/Parset/DefaultParset.cfg'])
-    else:
-        keywords={}
+    # different versions have different locations for the parset, so check them all
+    import killMS.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(killMS.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
     
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
