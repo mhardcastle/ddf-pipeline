@@ -78,7 +78,7 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
         res=mpi_manager.callParallel(jobs)
         print(res)
     else:
-        run_serial(s, proceed, dryrun, log, quiet, database)
+        run_serial("env DDF_USE_MPI=0 "+s, proceed, dryrun, log, quiet, database)
 
     
 def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):

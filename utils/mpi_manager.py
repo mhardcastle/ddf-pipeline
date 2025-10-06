@@ -92,6 +92,7 @@ def callParallel(ListJobs):
         
         for Job in ListJobs:
             host,func,args,kwargs=Job
+            #print(f"callParallel: {host} {func} {args} {kwargs}")
             print(f"callParallel: {host} {func}")
             if host == masterNode:
                 LJobMasterNode.append([func,args,kwargs])
