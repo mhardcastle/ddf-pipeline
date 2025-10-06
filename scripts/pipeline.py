@@ -543,11 +543,29 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
             
 
 
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
-                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None, mpiManager=None):
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None, mpiManager=None, mslist_str=""):
+    ListJobs=[]
+    if o is not None:
+        for Node in mpiManager.DicoNode2mslist.keys():
+            mslist_ = None
+            if mslist_str == "mslist":
+                mslist_=mpiManager.DicoNode2mslist[Node]
+            elif mslist_str == "full_mslist":
+                mslist_=mpiManager.DicoNode2fullmslist[Node]
+            else:
+                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+            ListJobs.append((Node,killms_data,(imagename,mslist_,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,MergeSmooth,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights),{}))
+        
+    mpi_manager.callParallel(ListJobs)
+
     pass
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
@@ -659,7 +677,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
+            run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             
             # Clip anyway - on IMAGING_WEIGHT by default
@@ -668,7 +686,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             else:
                 ClipCol=colname
             runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
+            run("env DDF_USE_MPI=0 "+runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
@@ -1416,18 +1434,26 @@ def main(o=None):
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
             stop(2)
-        print('stop before kms')
-        return
+
         if not o['skip_di']:
             separator("DI CAL")
             ########################
-            killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                        niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                        catcher=catcher,
-                        dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
-            stopp
+            if MPI_Manager.UseMPI:
+                killms_data_mpi('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                            niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                            catcher=catcher,
+                            dt=o['dt_di'],
+                            DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
+            else:
+                killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                            niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                            catcher=catcher,
+                            dt=o['dt_di'],
+                            DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+            print('stop after kms')
+            return
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,
