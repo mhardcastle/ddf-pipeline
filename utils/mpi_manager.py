@@ -72,11 +72,13 @@ def testParallel():
     
     callParallel(ListJobs)
     
-def filterHost(RunOnHost,func, args, kwargs):
+def filterHost(jobs):
     host = MPI.Get_processor_name()
-    print(f"filterHost: {RunOnHost} != {host}")
-    if RunOnHost != host: return None
-    return func(*args,**kwargs)
+    res=[]
+    for RunOnHost, func, args, kwargs in jobs:
+        if RunOnHost == host:
+            res.append(func(*args,**kwargs))
+    return res
     
 
 def callParallel(ListJobs):
@@ -89,19 +91,15 @@ def callParallel(ListJobs):
         #mpi_comm_executor = MPICommExecutor(MPI.COMM_WORLD, root=0)
         Lres=[]
         print("Pool",masterNode)
+        for worker in range(MPI.COMM_WORLD.size-1):
+            # submit remote jobs
+            f1=executor.submit(filterHost, ListJobs)
+            Lres.append(f1)
         
-        for Job in ListJobs:
-            host,func,args,kwargs=Job
-            #print(f"callParallel: {host} {func} {args} {kwargs}")
-            print(f"callParallel: {host} {func}")
+        # run local jobs
+        for host,func,args,kwargs in ListJobs:
             if host == masterNode:
-                LJobMasterNode.append([func,args,kwargs])
-            else:
-                f1=executor.submit(filterHost, host ,func, args, kwargs)
-                Lres.append(f1)
-                
-        for func,args,kwargs in LJobMasterNode:
-            Lres0.append(func(*args,**kwargs))
+                Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
             try:
