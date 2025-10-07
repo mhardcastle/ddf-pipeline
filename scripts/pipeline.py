@@ -542,6 +542,30 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     return fname
             
 
+def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+                uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None,
+                mpiManager=None, mslist_str=""
+                ):
+    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1 and mslist_str != "":
+        return killms_data_mpi(
+                imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,MergeSmooth,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
+                mpiManager, mslist_str
+        )[0]
+    else:
+        return killms_data_serial(
+                imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,MergeSmooth,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
+        )
 
 def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
@@ -572,7 +596,7 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
         
     return outsols
 
-def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
@@ -1439,21 +1463,13 @@ def main(o=None):
         if not o['skip_di']:
             separator("DI CAL")
             ########################
-            if MPI_Manager.UseMPI:
-                killms_data_mpi('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                            niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                            catcher=catcher,
-                            dt=o['dt_di'],
-                            options=o, # required to get the global variable o
-                            DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
-            else:
-                killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                            niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                            catcher=catcher,
-                            dt=o['dt_di'],
-                            DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+            killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
+                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                        niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                        catcher=catcher,
+                        dt=o['dt_di'],
+                        options=o, # required to get the global variable o
+                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,
@@ -1515,29 +1531,17 @@ def main(o=None):
 
         separator("DD calibration")
         CurrentDDkMSSolName=None
-        if MPI_Manager.UseMPI:
-            CurrentDDkMSSolName=killms_data_mpi(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    clusterfile=ClusterFile,
-                                    CovQ=0.02,
-                                    niterkf=o['NIterKF'][1],
-                                    #CovQ=0.1,
-                                    #niterkf=6,
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
-                                    catcher=catcher,NChanSols=o['NChanSols'],
-                                    options=o, # required to get the global variable o
-                                    MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
-        else:
-            CurrentDDkMSSolName=killms_data(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                    clusterfile=ClusterFile,
-                                    CovQ=0.02,
-                                    niterkf=o['NIterKF'][1],
-                                    #CovQ=0.1,
-                                    #niterkf=6,
-                                    uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
-                                    catcher=catcher,NChanSols=o['NChanSols'],
-                                    MergeSmooth=o['smoothing'])
+        CurrentDDkMSSolName=killms_data_mpi(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
+                                dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                clusterfile=ClusterFile,
+                                CovQ=0.02,
+                                niterkf=o['NIterKF'][1],
+                                #CovQ=0.1,
+                                #niterkf=6,
+                                uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
+                                catcher=catcher,NChanSols=o['NChanSols'],
+                                options=o, # required to get the global variable o
+                                MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
 
         # ##########################################################
         # run bootstrap, and change the column name if it runs
@@ -1578,27 +1582,16 @@ def main(o=None):
         CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
 
         separator("DD calibration")
-        if MPI_Manager.UseMPI:
-            CurrentDDkMSSolName=killms_data_mpi('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                            CovQ=0.02,
-                                            clusterfile=ClusterFile,
-                                            niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                            dt=o['dt_slow'],
-                                            catcher=catcher,NChanSols=o['NChanSols'],
-                                            EvolutionSolFile=CurrentDDkMSSolName,
-                                    options=o, # required to get the global variable o
-                                    MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
-        else:
-            CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                            dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                            CovQ=0.02,
-                                            clusterfile=ClusterFile,
-                                            niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                            dt=o['dt_slow'],
-                                            catcher=catcher,NChanSols=o['NChanSols'],
-                                            EvolutionSolFile=CurrentDDkMSSolName,
-                                            MergeSmooth=o['smoothing'])
+        CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
+                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        CovQ=0.02,
+                                        clusterfile=ClusterFile,
+                                        niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                        dt=o['dt_slow'],
+                                        catcher=catcher,NChanSols=o['NChanSols'],
+                                        EvolutionSolFile=CurrentDDkMSSolName,
+                                options=o, # required to get the global variable o
+                                MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
         ##############################################
 
         separator("AmpPhase deconv")
@@ -1621,9 +1614,6 @@ def main(o=None):
             warn('User specified exit after amp-phase deconvolution.')
             stop(2)
             
-        print("stop")
-        exit(11)
-
         separator("Make Mask")
         CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
@@ -1661,6 +1651,9 @@ def main(o=None):
                         catcher=catcher,
                         dt=o['dt_di'],
                         DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+
+            print("stop")
+            exit(11)
 
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
