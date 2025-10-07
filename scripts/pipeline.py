@@ -1059,7 +1059,7 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
     else:
         subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
 
-def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str="")
+def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str=""):
     ListJobs=[]
     if mslist_str != "":
         for Node in mpiManager.DicoNode2mslist.keys():
@@ -1070,11 +1070,11 @@ def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB"
                 mslist_=mpiManager.DicoNode2fullmslist[Node]
             else:
                 raise RuntimeError(f'Unknown mslist string ({mslist_str})')
-            ListJobs.append((Node,subtract_vis_serial,(mslist_,colname_a,colname_b,out_colname), {})
+            ListJobs.append((Node,subtract_vis_serial,(mslist_,colname_a,colname_b,out_colname), {}))
         
     res=mpi_manager.callParallel(ListJobs)
 
-def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB")
+def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
     f=open(mslist)
     mslist=f.readlines()
