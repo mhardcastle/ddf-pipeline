@@ -1052,7 +1052,29 @@ def ingest_dynspec(obsid='*'):
         
     
 
-def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
+def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
+                 mpiManager=None, mslist_str=""):
+    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1 and mslist_str != "":
+        subtract_vis_mpi(mslist,colname_a,colname_b,out_colname, mpiManager, mslist_str)
+    else:
+        subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
+
+def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str="")
+    ListJobs=[]
+    if mslist_str != "":
+        for Node in mpiManager.DicoNode2mslist.keys():
+            mslist_ = None
+            if mslist_str == "mslist":
+                mslist_=mpiManager.DicoNode2mslist[Node]
+            elif mslist_str == "full_mslist":
+                mslist_=mpiManager.DicoNode2fullmslist[Node]
+            else:
+                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+            ListJobs.append((Node,subtract_vis_serial,(mslist_,colname_a,colname_b,out_colname), {})
+        
+    res=mpi_manager.callParallel(ListJobs)
+
+def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB")
     from pyrap.tables import table
     f=open(mslist)
     mslist=f.readlines()
@@ -1073,7 +1095,7 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
         t.close()
     
 
-def subtractOuterSquare(o):
+def subtractOuterSquare(o, mpiManager=None):
     
     wide_imsize=o['wide_imsize']
     NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
@@ -1111,7 +1133,7 @@ def subtractOuterSquare(o):
                 imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
                 apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                 smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],
-                catcher=catcher)
+                catcher=catcher, mpiManager=MPI_Manager)
 
 
     external_mask='wide_external_mask.fits'
@@ -1129,7 +1151,7 @@ def subtractOuterSquare(o):
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,
             reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
-            catcher=catcher)
+            catcher=catcher, mpiManager=MPI_Manager)
 
 
     # predict outside the central rectangle
@@ -1153,7 +1175,7 @@ def subtractOuterSquare(o):
                   imsize=o['wide_imsize'],cellsize=o['wide_cell'],
                   use_dicomodel=True,catcher=catcher,
                   PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),
-                  dicomodel_base='image_full_wide_im')
+                  dicomodel_base='image_full_wide_im', mpiManager=MPI_Manager)
         os.system("touch %s"%FileHasPredicted)
 
 
@@ -1163,7 +1185,8 @@ def subtractOuterSquare(o):
     if o['restart'] and os.path.isfile(FileHasSubtracted):
         warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
     else:
-        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
+        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB",
+                     mpiManager=MPI_Manager, mslist_str='full_mslist')
         os.system("touch %s"%FileHasSubtracted)
 
 
@@ -1179,7 +1202,7 @@ def subtractOuterSquare(o):
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
-            catcher=catcher)
+            catcher=catcher, mpiManager=MPI_Manager)
 
 def checkColName_mpi(MPI_Manager, o):
     listJobs = []
@@ -1343,7 +1366,7 @@ def main(o=None):
     # subtract outer square
     if o['do_wide']:
         stopp
-        subtractOuterSquare(o)
+        subtractOuterSquare(o, mpiManager=MPI_Manager)
         colname="DATA_SUB"
         #ReduceFactor=o['fact_reduce_field']
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
@@ -1650,7 +1673,9 @@ def main(o=None):
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0,
+                        mpiManager=MPI_Manager, mslist_str='mslist'
+                        )
 
             print("stop")
             exit(11)
@@ -1680,7 +1705,7 @@ def main(o=None):
                                         #AllowNegativeInitHMP=True,
                                         MaxMinorIterInitHMP=10000,
                                         PredictSettings=("Clean","DD_PREDICT"),
-                                           mpiManager=MPI_Manager
+                                        mpiManager=MPI_Manager
                                                )
 
 
@@ -1756,7 +1781,9 @@ def main(o=None):
                                     catcher=catcher,
                                     NChanSols=o['NChanSols'],
                                     # EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=o['smoothing'])
+                                    MergeSmooth=o['smoothing'],
+                                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                    )
     
     # ##########################################################
     # make the extended mask if required and possible
@@ -1779,7 +1806,7 @@ def main(o=None):
                 apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
                 dicomodel_base=CurrentBaseDicoModelName,
                 catcher=catcher,
-                ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
+                ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"), mpiManager=MPI_Manager)
 
         separator("Compute DI calibration (full mslist)")
         # cubical_data(o['full_mslist'],
@@ -1796,7 +1823,9 @@ def main(o=None):
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0,
+                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                    )
         colname="DATA_DI_CORRECTED"
 
     # ###############################################
@@ -1831,7 +1860,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
-              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw, mpiManager=MPI_Manager)
 
     if o['exitafter'] == 'fullampphase':
         warn('User specified exit after image_ampphase.')
@@ -1860,7 +1889,7 @@ def main(o=None):
                                        apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,
-                                       MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
+                                       MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw, mpiManager=MPI_Manager)
 
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
@@ -1878,7 +1907,9 @@ def main(o=None):
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
                                     MergeSmooth=o['smoothing'],
-                                    dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                    dt=o['dt_fast'],catcher=catcher,
+                                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                    )#,EvolutionSolFile=CurrentDDkMSSolName)
 
     if o['do_very_slow']:
         separator("Very slow amplitude smooth (full mslist)")
@@ -1896,7 +1927,9 @@ def main(o=None):
                                         SkipSmooth=True,MergeSmooth=True,
                                         SigmaFilterOutliers=o['sigma_clip'],
                                         dt=o['dt_very_slow'],catcher=catcher,
-                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed,
+                                        mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                        )#,EvolutionSolFile=CurrentDDkMSSolName)
 
         CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
     
@@ -1931,7 +1964,7 @@ def main(o=None):
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
                   imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher)
+                  catcher=catcher, mpiManager=MPI_Manager)
 
         make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
@@ -1945,7 +1978,7 @@ def main(o=None):
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
               smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',
-              catcher=catcher)
+              catcher=catcher, mpiManager=MPI_Manager)
 
 
         if o['restart'] and os.path.isfile('full-mask-low.fits'):
@@ -1979,7 +2012,7 @@ def main(o=None):
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
               smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
-              catcher=catcher,rms_factor=o['final_rmsfactor'])
+              catcher=catcher,rms_factor=o['final_rmsfactor'], mpiManager=MPI_Manager)
         external_mask='external_mask_ext-deep.fits'
         if os.path.isfile(external_mask):
             warn('Deep external mask already exists, skipping creation')
@@ -2032,7 +2065,7 @@ def main(o=None):
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
               apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
               PredictSettings=("Clean","DD_PREDICT"),
-              **ddf_kw)
+              **ddf_kw, mpiManager=MPI_Manager)
 
     # check for the offset files
     if o['method'] is not None:
@@ -2063,6 +2096,8 @@ def main(o=None):
             
     spectral_mslist=None
     if o['spectral_restored']:
+        #TODO mpi
+        stopp
         import do_spectral_restored
         separator('Spectral restored images')
         spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
@@ -2076,6 +2111,8 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
+        # TODO mpi
+        stopp
         if o['clearcache_end']:
             full_clearcache(o)
         from do_polcubes import do_polcubes
@@ -2122,6 +2159,7 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         
+    # TODO mpi
     m=MSList(o['full_mslist'])
     uobsid = set(m.obsids)
     stokesv_mslists=[]
@@ -2145,7 +2183,7 @@ def main(o=None):
                   uvrange=uvrange,cellsize=o['cellsize'],
                   peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher,**ddf_kw)
+                  catcher=catcher,**ddf_kw, mpiManager=MPI_Manager)
 
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist
@@ -2204,7 +2242,10 @@ def main(o=None):
             extras+=pol_mslists
         if o['stokesv']:
             extras+=stokesv_mslists
-        full_clearcache(o,extras=extras)
+        if MPI_Manager.UseMPI:
+            full_clearcache_mpi(MPI_Manager, o, extras=extras)
+        else:
+            full_clearcache(o,extras=extras)
     
     if use_database():
         update_status(None,'Complete',time='end_date',av=4)
