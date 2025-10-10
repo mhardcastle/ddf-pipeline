@@ -290,7 +290,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    # TODO generate runcommand per node
     runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
     runcommand += " --Data-MS=%s"%mslist
         
@@ -421,11 +420,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             print('would have run',runcommand)
     else:
         if conditional_clearcache:
-            # TODO
-            #if MPI_Manager.UseMPI:
-            #    clearcache_mpi(MPI_Manager, mslist, options)
-            #else:
-            clearcache(mslist,options)
+            if MPI_Manager.UseMPI:
+                clearcache_mpi(MPI_Manager, mslist, options)
+            else:
+                clearcache(mslist,options)
             
         if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1:
             jobs=[]
@@ -770,6 +768,21 @@ def mvglob(path,dest):
             else:
                 os.remove(real_dst)
         move(f,dest)
+
+def clearcache_mpi(MPI_Manager,mslist, o):
+    ListJobs=[]
+    for Node in MPI_Manager.DicoNode2mslist.keys():
+        mslist_ = None
+        if mslist_str == "mslist":
+            mslist_=mpiManager.DicoNode2mslist[Node]
+        elif mslist_str == "full_mslist":
+            mslist_=mpiManager.DicoNode2fullmslist[Node]
+        else:
+            raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+        oc=copy.deepcopy(o)
+        ListJobs.append((Node,clearcache,(mslist_,oc),{}))
+        
+    mpi_manager.callParallel(ListJobs)
 
 def clearcache(mslist,options):
     cachedir=find_cache_dir(options)
@@ -1456,7 +1469,10 @@ def main(o=None):
 
         #########################
         if o['clearcache'] or new or o['redofrom']:
-            clearcache(o['mslist'],o)
+            if MPI_Manager.UseMPI:
+                clearcache_mpi(MPI_Manager, 'mslist', options)
+            else:
+                clearcache(o['mslist'],o)
 
         separator("Deconv clustered DI image")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
@@ -1717,7 +1733,10 @@ def main(o=None):
         # small mslist cache not needed from this point so clear it to
         # save disk space
         if o['clearcache_end']:
-            clearcache(o['mslist'],o)
+            if MPI_Manager.UseMPI:
+                clearcache_mpi(MPI_Manager, 'mslist', options)
+            else:
+                clearcache(o['mslist'],o)
 
         if o['full_mslist'] is None:
             warn('No full mslist provided, stopping here')
