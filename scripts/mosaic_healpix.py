@@ -233,7 +233,7 @@ if __name__=='__main__':
                 print('Resolutions are different:',different)
                 print('Some beams are non-circular:',non_circ)
 
-        mos_args=dotdict({'save':True, 'load':True,'exact':False})
+        mos_args=dotdict({'save':True, 'load':True,'exact':False,'use_imcrop':True})
         centre=hp.healpix_to_skycoord(healpix)
         if args.apply_shift:
             if np.abs(centre.galactic.b.value)<=10:

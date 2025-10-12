@@ -362,7 +362,7 @@ def make_mosaic(args):
         app[i].data=medfilt2d(app[i].data)
         app[i].data[app[i].data<threshold]=0
 
-        if args.imcrop and imcrop is not None:
+        if args.use_imcrop and imcrop is not None:
             print('Applying imcrop')
             imcrop*=1.5/cellsize # defined in 1.5 arcsec pixels
             imsize,_=app[i].data.shape
