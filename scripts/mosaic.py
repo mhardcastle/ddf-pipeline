@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+!/usr/bin/env python
 
 # Mosaic final images
 
@@ -173,15 +173,19 @@ def make_mosaic(args):
     else:
         reproj=reproject_interp_chunk_2d
 
+    cellsize=1.5
     if args.do_vlow:
         intname='image_full_vlow_nocut_m.int.restored.fits'
         appname='image_full_vlow_nocut_m.app.restored.fits'
+        cellsize=15
     elif args.do_wsclean:
         intname='WSCLEAN_low-MFS-image-int.fits'
         appname='WSCLEAN_low-MFS-image.fits'
+        cellsize=15
     elif args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
+        cellsize=4.5
     elif args.do_stokesV:
         intname='image_full_high_stokesV.dirty.corr.fits'
         appname='image_full_high_stokesV.dirty.fits'
@@ -283,6 +287,7 @@ def make_mosaic(args):
         if args.read_noise:
             noisename=d+'/'+appname.replace('.fits','_facetnoise.fits')
             if not os.path.isfile(noisename):
+                print('Noise map',noisename,'does not exist, creating it')
                 g=glob.glob(d+'/*.tessel.reg')
                 get_rms_map3(d+'/'+appname,g[0],noisename,database=False)
             noisefiles.append(flatten(fits.open(noisename)))
@@ -331,6 +336,18 @@ def make_mosaic(args):
         else:
             badfacets.append(None)
 
+        if args.use_imcrop:
+            imcropfile=d+'/imcrop.txt'
+            if os.path.isfile(imcropfile):
+                print('Reading the image crop file')
+                # File contains one number, which is the dimension in
+                # pixels of the valid sub-image. The rest should be
+                # zero-weighted
+                lines=open(imcropfile).readlines()
+                imcrop=int(lines[0].rstrip())
+            else:
+                imcrop=None
+
     if args.find_noise:
         args.noise=noise
         print('Noise values are:')
@@ -344,7 +361,20 @@ def make_mosaic(args):
         app[i].data=np.divide(app[i].data,hdus[i].data)
         app[i].data=medfilt2d(app[i].data)
         app[i].data[app[i].data<threshold]=0
- # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
+
+        if args.imcrop and imcrop is not None:
+            print('Applying imcrop')
+            imcrop*=1.5/cellsize # defined in 1.5 arcsec pixels
+            imsize,_=app[i].data.shape
+            if imsize>imcrop:
+                minxy=(imsize-imcrop)/2
+                maxxy=minxy+imcrop
+            app[i][:minxy,:]=0
+            app[i][maxxy:,:]=0
+            app[i][:,:minxy]=0
+            app[i][:,maxxy:]=0
+        
+        # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
         if args.noise is not None:
             app[i].data/=args.noise[i]
         elif noisefiles:
@@ -580,6 +610,7 @@ if __name__=='__main__':
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--read_noise', action='store_true', help='Read noise from a pre-existing per-facet noise file')
     parser.add_argument('--use_badfacet', action='store_true', help='Read a bad facet file')
+    parser.add_argument('--use_imcrop', action='store_true', help='Read a crop file')
     parser.add_argument('--use_scalefactor', action='store_true', help='Read a scale factor image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
