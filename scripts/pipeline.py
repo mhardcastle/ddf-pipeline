@@ -594,7 +594,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                     NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
                 runcommand+=' --BeamMode LOFAR'
-                if 'PhasedArrayMode' in keywords: # incompatible change
+                print(f"{keywords}")
+                if 'Beam-PhasedArrayMode' in keywords: # incompatible change
                     runcommand+=' --PhasedArrayMode=A'
                 else:
                     runcommand+=' --LOFARBeamMode=A'
@@ -1327,8 +1328,8 @@ def main(o=None):
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
             stop(2)
-        print('stop before kms')
-        return
+
+
         if not o['skip_di']:
             separator("DI CAL")
             ########################
