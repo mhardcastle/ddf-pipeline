@@ -6,10 +6,8 @@ try:
 except:
     MPIsize = 0
 
+
 import itertools
-
-
-
 
 
 class MSSet():
@@ -30,11 +28,11 @@ class MSSet():
             nodes2ms[node]=l
             
         print(nodes2ms)
-        
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
             fns=[]
             with MPIPoolExecutor() as executor:
+                fns=[]
                 fns.append(executor.submit(get_node_name))
             self.ListNodesBeingUsed=[MPI.Get_processor_name()]
             for f in fns:
@@ -91,15 +89,17 @@ def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
     print(masterNode)
     LJobMasterNode=[]
-    print(f"callParallel: {ListJobs}")
     Lres0=[]
-    with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-#    with MPIPoolExecutor() as executor:
+    with MPIPoolExecutor() as executor:
+    #with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+        #mpi_comm_executor = MPICommExecutor(MPI.COMM_WORLD, root=0)
         Lres=[]
         print("Pool",masterNode)
         
         for Job in ListJobs:
             host,func,args,kwargs=Job
+            #print(f"callParallel: {host} {func} {args} {kwargs}")
+            print(f"callParallel: {host} {func}")
             if host == masterNode:
                 LJobMasterNode.append([func,args,kwargs])
             else:
@@ -115,6 +115,7 @@ def callParallel(ListJobs):
                 Lres0.append(res.result())
             except Exception as e:
                 print(f"e: {e}")
+        #MPI.COMM_WORLD.Barrier()
     print(f"callParallel: ok ({Lres0})")
     return Lres0
         

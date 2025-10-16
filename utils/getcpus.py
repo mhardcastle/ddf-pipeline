@@ -11,6 +11,7 @@ def getcpus():
         lines=len(open(nodefile).readlines())
         return lines
     elif slurmcpus:
-        return int(slurmcpus)
+        # if multiple node: 256(x2)
+        return int(slurmcpus.split("(")[0])
     else:
         return get_physical_cpus()
