@@ -1,9 +1,13 @@
-from mpi4py.futures import MPIPoolExecutor
-from mpi4py import MPI
-from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+try:
+    from mpi4py.futures import MPIPoolExecutor
+    from mpi4py import MPI
+    from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+    MPIsize = MPI.COMM_WORLD.size
+except:
+    MPIsize = 0
+
 import itertools
 
-MPIsize = MPI.COMM_WORLD.size
 
 
 
@@ -133,7 +137,7 @@ class mpi_manager():
 
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
-        if self.ddf_nproc > 1 or self.ListNodesBeingUsed:
+        if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
