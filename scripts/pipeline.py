@@ -1444,7 +1444,8 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=None, mpiManager=MPI_Manager)
+                                           PredictSettings=None,
+                                           mpiManager=MPI_Manager)
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
@@ -1493,7 +1494,7 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=None,
+                                           PredictSettings=("Clean","DD_PREDICT"),
                                            mpiManager=MPI_Manager)
 
         if o['exitafter'] == 'dirin':
