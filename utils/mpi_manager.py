@@ -8,6 +8,7 @@ except:
 
 
 import itertools
+import os
 
 
 class MSSet():
@@ -34,7 +35,7 @@ class MSSet():
             with MPIPoolExecutor() as executor:
                 fns=[]
                 fns.append(executor.submit(get_node_name))
-            self.ListNodesBeingUsed=[MPI.Get_processor_name()]
+            self.ListNodesBeingUsed=[f"{MPI.Get_processor_name()}@0"]
             for f in fns:
                 self.ListNodesBeingUsed.append(f.result())
             print(f"{self.ListNodesBeingUsed}")
@@ -67,26 +68,30 @@ def testParallel():
               ["cw10057",os.system,("CleanSHM.py",), {}],
               ]
     
-    ListJobs=[["nancep10.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
-              ["nancep11.obs-nancay.fr",os.system,("CleanSHM.py",), {}],
+    ListJobs=[["nancep10.obs-nancay.fr@0",os.system,("CleanSHM.py",), {}],
+              ["nancep11.obs-nancay.fr@0",os.system,("CleanSHM.py",), {}],
               ]
 
     import DDFacet.CleanSHM
-    ListJobs=[["nancep10.obs-nancay.fr",DDFacet.CleanSHM.driver,(), {}],
-              ["nancep11.obs-nancay.fr",DDFacet.CleanSHM.driver,(), {}],
+    ListJobs=[["cw10042@0",DDFacet.CleanSHM.driver,(), {}],
+              ["cw10042@1",DDFacet.CleanSHM.driver,(), {}],
               ]
     
     callParallel(ListJobs)
     
-def filterHost(RunOnHost,func, args, kwargs):
+def filterHost(jobs):
     host = MPI.Get_processor_name()
-    print(f"filterHost: {RunOnHost} != {host}")
-    if RunOnHost != host: return None
-    return func(*args,**kwargs)
+    localrank = os.environ.get("SLURM_LOCALID", "0")
+    res=[]
+    for RunOnHost, func, args, kwargs in jobs:
+        if RunOnHost == f"{host}@{localrank}":
+            res.append(func(*args,**kwargs))
+    return res
     
 
 def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
+    localrank = os.environ.get("SLURM_LOCALID", "0")
     print(masterNode)
     LJobMasterNode=[]
     Lres0=[]
@@ -95,24 +100,21 @@ def callParallel(ListJobs):
         #mpi_comm_executor = MPICommExecutor(MPI.COMM_WORLD, root=0)
         Lres=[]
         print("Pool",masterNode)
+        for worker in range(MPI.COMM_WORLD.size-1):
+            # submit remote jobs
+            f1=executor.submit(filterHost, ListJobs)
+            Lres.append(f1)
         
-        for Job in ListJobs:
-            host,func,args,kwargs=Job
-            #print(f"callParallel: {host} {func} {args} {kwargs}")
-            print(f"callParallel: {host} {func}")
-            if host == masterNode:
-                LJobMasterNode.append([func,args,kwargs])
-            else:
-                f1=executor.submit(filterHost, host ,func, args, kwargs)
-                Lres.append(f1)
-                
-        for func,args,kwargs in LJobMasterNode:
-            Lres0.append(func(*args,**kwargs))
+        # run local jobs
+        for host,func,args,kwargs in ListJobs:
+            if host == f"{masterNode}@{localrank}":
+            #if host == masterNode:
+                Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
             try:
                 #res.result()
-                Lres0.append(res.result())
+                Lres0.extend(res.result())
             except Exception as e:
                 print(f"e: {e}")
         #MPI.COMM_WORLD.Barrier()
@@ -127,7 +129,8 @@ def callParallel(ListJobs):
 # res= list(zip(a, itertools.cycle(b)))
 # print(res)
 def get_node_name():
-    return MPI.Get_processor_name()
+    localrank = os.environ.get("SLURM_LOCALID", "0")
+    return f"{MPI.Get_processor_name()}@{localrank}"
 
 class mpi_manager():
     def __init__(self,options_cfg,MSSet, FullMSSet):
@@ -174,52 +177,6 @@ class mpi_manager():
                 f.write("%s\n"%msname)
             f.close()
             self.DicoNode2fullmslist[Node]=FName
-
-    
-    def givePrefixDDF_mpirun(self,use_singularity=True):
-
-        # MPI case
-        cwd = os.getcwd()
-        LocDDF_exec_inContainer="/usr/local/src/DDFacet/DDFacet/"
-        Loc_Container=self.options['mpi_Singularity_cmd'] # "singularity exec -B/data -B/home /home/cyril.tasse/DDFSingularity/ddf_dev_np1.22.4.mpi.sif"
-        
-        try:
-            nNodes=int(options['mpi_ddfacet_nodes'])
-            sNodes="-np %i"%nNodes
-        except:
-            LNodes=str(options['mpi_ddfacet_nodes']).split(",")
-            nNodes=len(LNodes)
-            HostName=socket.gethostname()
-            LName=[HostName]
-            for ThisNodeName in LNodes:
-                if HostName in ThisNodeName: continue
-                LName.append(ThisNodeName)
-            LNodes=["%s:1"%nameNode for nameNode in LName]
-            sNodes=",".join(LNodes)
-            sNodes="-np %i --host %s"%(nNodes,sNodes)
-        PrefixMPI="mpirun %s -wdir %s %s python %s"%(sNodes,cwd,Loc_Container,LocDDF_exec_inContainer)
-        return PrefixMPI
-
-
-    def givePrefixRunCommandFork(self):
-        if not self.mpi_enable: return ""
-        run_commands = [
-            'srun',
-            '--nodes=1',
-            '--ntasks=1',
-            '--cpus-per-task=40',
-            '--time=05:00:00',
-            '--hint=nomultithread',
-            'singularity',
-            'run',
-            '-B',
-            '/lustre/fsn1/projects/rech/doz/udd71uc/small/small/:/linkhome/rech/genrnu01/$USER/',
-            '/lustre/fsn1/singularity/images/udd71uc/ddf.sif'
-        ]
-        commands_list = s.split()
-        run_commands.extend(commands_list)
-        s = ' '.join(run_commands)
-        pass
 
     def scpScatter(self,FileName):
         pass
