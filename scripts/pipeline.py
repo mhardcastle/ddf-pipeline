@@ -290,7 +290,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
+    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax %f --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,options['wmax'],saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
     runcommand += " --Data-MS=%s"%mslist
         
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
@@ -425,7 +425,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             else:
                 clearcache(mslist,options)
             
-        if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1:
+        if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPIsize>1:
             jobs=[]
             for h in mpiManager.ListNodesBeingUsed:
                 log=logfilename('DDF-'+imagename+'-'+h+'.log')
@@ -632,7 +632,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
 
             # check for option to stop pdb call and use it if present
             
@@ -1498,7 +1498,6 @@ def main(o=None):
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
             stop(2)
-
         if not o['skip_di']:
             separator("DI CAL")
             ########################

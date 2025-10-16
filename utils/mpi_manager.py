@@ -1,9 +1,15 @@
-from mpi4py import MPI
-from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+try:
+    from mpi4py.futures import MPIPoolExecutor
+    from mpi4py import MPI
+    from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+    MPIsize = MPI.COMM_WORLD.size
+except:
+    MPIsize = 0
+
+
 import itertools
 import os
 
-size = MPI.COMM_WORLD.size
 
 class MSSet():
     def __init__(self,mslist):
@@ -23,7 +29,7 @@ class MSSet():
             nodes2ms[node]=l
             
         print(nodes2ms)
-        if None in nodes2ms and len(nodes2ms) == 1:
+        if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
             fns=[]
             with MPIPoolExecutor() as executor:
@@ -135,7 +141,7 @@ class mpi_manager():
 
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
-        if self.ddf_nproc > 1 or self.ListNodesBeingUsed:
+        if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
