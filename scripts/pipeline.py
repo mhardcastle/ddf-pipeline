@@ -1493,7 +1493,8 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=None, mpiManager=MPI_Manager)
+                                           PredictSettings=None,
+                                           mpiManager=MPI_Manager)
 
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
@@ -1692,8 +1693,6 @@ def main(o=None):
                         mpiManager=MPI_Manager, mslist_str='mslist'
                         )
 
-            print("stop")
-            exit(11)
 
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
