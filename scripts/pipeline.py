@@ -700,8 +700,6 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            print(runcommand)
-            stoppp
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             
@@ -1397,21 +1395,26 @@ def main(o=None):
                 reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
                 apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
 
-        separator("External mask")
-        external_mask='external_mask.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-        
+        external_mask=None
+        if not o["force_disable_extmask"]:
+            separator("External mask")
+            external_mask='external_mask.fits'
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+            
         if o['external_fits_mask'] is not None:
             merge_mask(external_mask,o['external_fits_mask'],external_mask)
-
+            print(external_mask)
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
                                            majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                            peakfactor=0.01,rms_factor=3,
-                                           colname=colname,clusterfile=None,automask=True,
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
+                                           colname=colname,
+                                           clusterfile=None,automask=True,
+                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],
+                                           use_weightspectrum=o['use_weightspectrum'],
+                                           uvrange=uvrange,catcher=catcher,
+                                           mpiManager=MPI_Manager)
     
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
@@ -1420,8 +1423,16 @@ def main(o=None):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
+        
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
+            print(external_mask)
+            print(external_mask)
+            print(external_mask)
+            print(external_mask)
+            print(external_mask)
+            print(external_mask)
+            print(external_mask)
             merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
         
         # make a mask from the final image
@@ -1512,7 +1523,7 @@ def main(o=None):
                         dt=o['dt_di'],
                         options=o, # required to get the global variable o
                         DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
-            stoppp
+
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,

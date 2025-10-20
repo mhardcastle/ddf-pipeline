@@ -27,6 +27,11 @@ def add_manual_mask(infile,ds9region,outfile):
     hdu.writeto(outfile,overwrite=True)
 
 def merge_mask(in1,in2,outfile):
+
+    if in1 is None or in2 is None:
+        return
+        
+        
     hdu1=fits.open(in1)
     hdu2=fits.open(in2)
 
