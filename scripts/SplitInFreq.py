@@ -24,7 +24,7 @@ def split(MSName):
     for iMS in range(nMS):
         ch0,ch1=chEdges[iMS],chEdges[iMS+1]
         nchThis=ch1-ch0
-        ss="DP3 %s msin=%s msout=%s.ch%i_%i.ms msin.startchan=%i msin.nchan=%i"%(TemplateName,MSName,MSName,ch0,ch1,ch0,nchThis)
+        ss="DP3 %s msin=%s msout=%s.chunk%03i.ms msin.startchan=%i msin.nchan=%i"%(TemplateName,MSName,MSName,iMS,ch0,nchThis)
         print("===============================================")
         print(ss)
         os.system(ss)
