@@ -1,4 +1,4 @@
-!/usr/bin/env python
+#!/usr/bin/env python
 
 # Mosaic final images
 
@@ -230,6 +230,7 @@ def make_mosaic(args):
     shifts=[]
     polylists=[]
     badfacets=[]
+    imcropsizes=[]
     if args.directories is None:
         raise RuntimeError("At least one directory name must be supplied")
     for d in args.directories:
@@ -347,6 +348,7 @@ def make_mosaic(args):
                 imcrop=int(lines[0].rstrip())
             else:
                 imcrop=None
+            imcropsizes.append(imcrop)
 
     if args.find_noise:
         args.noise=noise
@@ -362,17 +364,19 @@ def make_mosaic(args):
         app[i].data=medfilt2d(app[i].data)
         app[i].data[app[i].data<threshold]=0
 
-        if args.use_imcrop and imcrop is not None:
-            print('Applying imcrop')
-            imcrop*=1.5/cellsize # defined in 1.5 arcsec pixels
+        if args.use_imcrop and imcropsizes[i] is not None:
+            imcrop=int(imcropsizes[i]*0.95*1.5/cellsize) # defined in 1.5 arcsec pixels
+            print('Applying imcrop, size =',imcrop)
             imsize,_=app[i].data.shape
             if imsize>imcrop:
-                minxy=(imsize-imcrop)/2
+                minxy=int((imsize-imcrop)/2)
                 maxxy=minxy+imcrop
-            app[i][:minxy,:]=0
-            app[i][maxxy:,:]=0
-            app[i][:,:minxy]=0
-            app[i][:,maxxy:]=0
+                app[i].data[:minxy,:]=0
+                app[i].data[maxxy:,:]=0
+                app[i].data[:,:minxy]=0
+                app[i].data[:,maxxy:]=0
+            else:
+                print('** imcrop size is larger than actual size!')
         
         # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
         if args.noise is not None:
