@@ -89,6 +89,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backports-shutil-get-terminal-size"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/9c/368086faa9c016efce5da3e0e13ba392c9db79e3ab740b763fe28620b18b/backports.shutil_get_terminal_size-1.0.0.tar.gz", hash = "sha256:713e7a8228ae80341c70586d1cc0a8caa5207346927e23d09dcbcaf18eadec80", size = 4279, upload-time = "2014-08-19T18:42:49.082Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/cd/1750d6c35fe86d35f8562091737907f234b78fdffab42b29c72b1dd861f4/backports.shutil_get_terminal_size-1.0.0-py2.py3-none-any.whl", hash = "sha256:0975ba55054c15e346944b38956a4c9cbee9009391e41b86c68990effb8c1f64", size = 6497, upload-time = "2014-08-19T18:42:51.908Z" },
+]
+
+[[package]]
 name = "bcrypt"
 version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -144,6 +153,30 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/41/19be9fe17e4ffc5d10b7b67f10e459fc4eee6ffe9056a88de511920cfd8d/bcrypt-4.3.0-pp311-pypy311_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:bdc6a24e754a555d7316fa4774e64c6c3997d27ed2d1964d55920c7c227bc4ce", size = 280513, upload-time = "2025-02-28T01:24:02.243Z" },
     { url = "https://files.pythonhosted.org/packages/aa/73/05687a9ef89edebdd8ad7474c16d8af685eb4591c3c38300bb6aad4f0076/bcrypt-4.3.0-pp311-pypy311_pp73-manylinux_2_34_aarch64.whl", hash = "sha256:55a935b8e9a1d2def0626c4269db3fcd26728cbff1e84f0341465c31c4ee56d8", size = 274685, upload-time = "2025-02-28T01:24:04.512Z" },
     { url = "https://files.pythonhosted.org/packages/63/13/47bba97924ebe86a62ef83dc75b7c8a881d53c535f83e2c54c4bd701e05c/bcrypt-4.3.0-pp311-pypy311_pp73-manylinux_2_34_x86_64.whl", hash = "sha256:57967b7a28d855313a963aaea51bf6df89f833db4320da458e5b3c5ab6d4c938", size = 280110, upload-time = "2025-02-28T01:24:05.896Z" },
+]
+
+[[package]]
+name = "bdsf"
+version = "1.13.0.post2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "astropy" },
+    { name = "backports-shutil-get-terminal-size" },
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/09/324edf8c52ccd5cc3d21676af2510a1428f05e48f32d00c8cdfd6f9a0775/bdsf-1.13.0.post2.tar.gz", hash = "sha256:2a91647fcdb1f6574958312d85decd4529a10e710926f11300a2388f4c9e25cd", size = 367875, upload-time = "2025-04-10T16:47:01.127Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/59/733096aed7c0284093cb7e551a52843a7076563a47c98c0f2658a9e57f1d/bdsf-1.13.0.post2-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:36359595c952cefafc9771ce833a967d871285a65d2b397ec0d52fd72af2c0bf", size = 3085976, upload-time = "2025-04-10T16:46:37.844Z" },
+    { url = "https://files.pythonhosted.org/packages/66/6d/bd1712cdab122557d55993b3607f211a9d3efcd6b5d6d4a92fa624b7617c/bdsf-1.13.0.post2-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:d78354bedfcf882596e7a9c3d2e55a9a22422609625b4d1808aa0b6fea0a6839", size = 2368364, upload-time = "2025-04-10T16:46:40.064Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/1e/261768776fcb518fcb39c9a10780a767decd18dc3e164c1c942586aab0b8/bdsf-1.13.0.post2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e73ef76fd76bc6ab59c0455d528582d7c4849ece3b955b20085df97cdfc154e6", size = 1873790, upload-time = "2025-04-10T16:46:41.479Z" },
+    { url = "https://files.pythonhosted.org/packages/67/0a/7260638989402b954a318aebbf6040371a90e198b27cf4da2c1facc40052/bdsf-1.13.0.post2-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:6291877f8fd7dd29ad4b7fbf59c19196787ed8368b3b6320739ff75c6b5f9d26", size = 3085682, upload-time = "2025-04-10T16:46:43.927Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/22/1ffbecbda1551d34a42f3db985b2ac477142f66442d487378cd0799a810d/bdsf-1.13.0.post2-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:93189bce68ad432fc413c74b21c737fca1b8e8f98d762eded46bf418f3ccdcf2", size = 2368139, upload-time = "2025-04-10T16:46:45.629Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/ab/8ae4c3ec6acd8abf2791a961d340061a2d76ebb70cc0c2ea31420a508606/bdsf-1.13.0.post2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3fe72d966e1609870348cb0a6c4d82fb16db1785ae22f273305c8e81b7356b09", size = 1875673, upload-time = "2025-04-10T16:46:47.247Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/f8/a5bd5aff69ce25146d26fdc768487290aa0f8ec449d9cbcede98d1d33235/bdsf-1.13.0.post2-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:b8fa616f5de49514f522a3cc812de40974ce0c7dee6c2fe3db277ef4f146d597", size = 3085937, upload-time = "2025-04-10T16:46:49.006Z" },
+    { url = "https://files.pythonhosted.org/packages/20/7f/bfd3a4788dd5400cec20d09f83c4d10e7ac486af807c90471917a28afa12/bdsf-1.13.0.post2-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:58201c0931ecddad697a085decb6aa571e45c5cbff05beeb00721064ddbb2d42", size = 2364036, upload-time = "2025-04-10T16:46:50.909Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/9a/744f2fb915479bf2b5a8bc006f8d7090e43af52f4558f7d514414b075045/bdsf-1.13.0.post2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a1fb4708aa79db275b2c69da988239317215eceaf34566c34e41834883bddea2", size = 1810822, upload-time = "2025-04-10T16:46:52.443Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/7b/7375b748b7411b625b15dfc187b1c57ee9cfac4eb05d7de12e41a4adf749/bdsf-1.13.0.post2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d32ecca7fa8fff5e72d9637dc45bfbd5627752b6e132538d8b2e63dc167667b4", size = 1810882, upload-time = "2025-05-08T16:22:04.997Z" },
 ]
 
 [[package]]
@@ -671,6 +704,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "ddfacet" },
     { name = "future" },
+    { name = "killms" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "paramiko" },
@@ -698,8 +732,9 @@ requires-dist = [
     { name = "bcrypt", specifier = "==4.3.0" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "cryptography", specifier = "==45.0.5" },
-    { name = "ddfacet" },
+    { name = "ddfacet", git = "file:///home/dguibert/code/DDFacet?rev=58e758d08f9ce108dc60d6ae3f17d4079fef6387" },
     { name = "future", specifier = "==1.0.0" },
+    { name = "killms", git = "file:///home/dguibert/code/killMS?rev=76975d727a1eecd42ae35e58e54a9881c35f490e" },
     { name = "numpy" },
     { name = "packaging", specifier = "==25.0" },
     { name = "paramiko", specifier = "==3.5.1" },
@@ -723,7 +758,7 @@ requires-dist = [
 [[package]]
 name = "ddfacet"
 version = "0.8.0.0"
-source = { git = "file:///home/dguibert/code/DDFacet#58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
+source = { git = "file:///home/dguibert/code/DDFacet?rev=58e758d08f9ce108dc60d6ae3f17d4079fef6387#58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
 dependencies = [
     { name = "astlib" },
     { name = "astropy" },
@@ -759,58 +794,6 @@ dependencies = [
     { name = "toml" },
     { name = "tqdm" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "astlib", specifier = ">=0.8.0,<=0.11.10" },
-    { name = "astropy", specifier = ">=3.0" },
-    { name = "bdsf", marker = "python_full_version >= '3.8' and python_full_version < '3.10' and extra == 'kms-support'", specifier = ">1.8.15,<=1.10.1" },
-    { name = "bdsf", marker = "python_full_version >= '3.10' and extra == 'kms-support'", specifier = ">1.8.15,<=1.11.1" },
-    { name = "codex-africanus", extras = ["dask"], specifier = "<=0.3.5" },
-    { name = "configparser", specifier = ">=3.7.1,<=6.0.0" },
-    { name = "cython", specifier = ">=0.25.2,<=0.29.30" },
-    { name = "dask", extras = ["array"], specifier = "<=2023.5.0" },
-    { name = "dask-ms", extras = ["xarray"], marker = "extra == 'alternate-data-backends'", specifier = "<=0.2.20" },
-    { name = "deap", specifier = ">=1.0.1,<=1.4.1" },
-    { name = "ephem", specifier = ">=3.7.6.0" },
-    { name = "fasteners", marker = "extra == 'mpi-support'", specifier = "<=0.19" },
-    { name = "ipdb", specifier = ">=0.10.3,<=0.13.13" },
-    { name = "matplotlib", specifier = ">=2.0.0,<=3.8.2" },
-    { name = "meqtrees-cattery", marker = "extra == 'fits-beam-support'", specifier = "<=1.7.9" },
-    { name = "montblanc", marker = "extra == 'dft-support'", specifier = ">=0.6.1,<=0.7.3.2" },
-    { name = "mpi4py", marker = "extra == 'mpi-support'", specifier = "==3.1.5" },
-    { name = "nose", marker = "python_full_version >= '3' and python_full_version < '3.9' and extra == 'testing-requirements'", specifier = ">=1.3.7" },
-    { name = "numexpr", specifier = ">=2.6.2,<=2.9.0" },
-    { name = "numpy", marker = "python_full_version >= '3.8' and python_full_version < '3.10'", specifier = ">=1.15.1,<=1.22.4" },
-    { name = "numpy", marker = "python_full_version >= '3.10'", specifier = ">=1.15.1,<=1.26" },
-    { name = "owlcat", marker = "extra == 'testing-requirements'", specifier = ">=1.7.5" },
-    { name = "pandas", specifier = ">=0.23.3,<=2.0.3" },
-    { name = "polygon3", specifier = ">=3.0.8" },
-    { name = "prettytable", specifier = ">=0.7.2,<=3.9.0" },
-    { name = "psutil", specifier = ">=5.2.2" },
-    { name = "ptyprocess", specifier = ">=0.5,<=0.7.0" },
-    { name = "py-cpuinfo", specifier = ">=3.2.0,<=9.0.0" },
-    { name = "pybind11", specifier = ">=2.2.2,<=2.11.1" },
-    { name = "pyfftw" },
-    { name = "pylru", specifier = ">=1.1.0,<=1.2.1" },
-    { name = "pymoresane", marker = "extra == 'moresane-support'", specifier = ">=0.3.0" },
-    { name = "pynose", marker = "python_full_version >= '3.9' and extra == 'testing-requirements'", specifier = ">=1.4.8" },
-    { name = "python-casacore", specifier = ">=3.0.0" },
-    { name = "pywavelets", specifier = "<=1.4.1" },
-    { name = "regions", specifier = "<=0.5" },
-    { name = "ruamel-yaml", specifier = ">=0.15.92,<=0.18.6" },
-    { name = "scipy", specifier = ">=1.3.3" },
-    { name = "sharedarray", marker = "python_full_version >= '3.8' and python_full_version < '3.10'", specifier = ">=3.2.0,<=3.2.1" },
-    { name = "sharedarray", marker = "python_full_version >= '3.10'", specifier = ">=3.2.0,<=3.2.4" },
-    { name = "six", specifier = ">=1.12.0" },
-    { name = "skyproj", specifier = "<=1.2.3" },
-    { name = "tables", specifier = ">=3.6.0,<=3.9.2" },
-    { name = "tensorflow", marker = "python_full_version >= '3.10' and extra == 'dft-support'", specifier = "==2.12.0" },
-    { name = "toml", specifier = ">=0.10.2" },
-    { name = "tqdm", specifier = "<=4.64.0" },
-    { name = "xarray", marker = "extra == 'alternate-data-backends'", specifier = "<=2023.12.0" },
-]
-provides-extras = ["dft-support", "moresane-support", "fits-beam-support", "kms-support", "mpi-support", "alternate-data-backends", "testing-requirements"]
 
 [[package]]
 name = "deap"
@@ -1133,6 +1116,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/72/3a/79a912fbd4d8dd6fbb02bf69afd3bb72cf0c729bb3063c6f4498603db17a/jedi-0.19.2.tar.gz", hash = "sha256:4770dc3de41bde3966b02eb84fbcf557fb33cce26ad23da12c742fb50ecb11f0", size = 1231287, upload-time = "2024-11-11T01:41:42.873Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/5a/9cac0c82afec3d09ccd97c8b6502d48f165f9124db81b4bcb90b4af974ee/jedi-0.19.2-py2.py3-none-any.whl", hash = "sha256:a8ef22bde8490f57fe5c7681a3c83cb58874daf72b4784de3cce5b6ef6edb5b9", size = 1572278, upload-time = "2024-11-11T01:41:40.175Z" },
+]
+
+[[package]]
+name = "killms"
+version = "0.1.0"
+source = { git = "file:///home/dguibert/code/killMS?rev=76975d727a1eecd42ae35e58e54a9881c35f490e#76975d727a1eecd42ae35e58e54a9881c35f490e" }
+dependencies = [
+    { name = "bdsf" },
+    { name = "ddfacet" },
 ]
 
 [[package]]

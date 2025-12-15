@@ -16,6 +16,7 @@ dependencies = [
     "cryptography==45.0.5",
     "ddfacet",
     "future==1.0.0",
+    "killms",
     "numpy", #==2.2.6",
     "packaging==25.0",
     "paramiko==3.5.1",
@@ -47,4 +48,8 @@ packages = [
 ]
 
 [tool.uv.sources]
-ddfacet = { path = "../DDFacet" }
+#ddfacet = { git = "https://github.com/cyriltasse/DDFacet", rev = "79cab91b83bf611476d0d779334fb5c81d29530a" }
+#killms = { git = "https://github.com/cyriltasse/killMS", rev = "b7aa9d4b1d0c929286863cfc0eac32edbcd2cb48" }
+ddfacet = { git = "file:///home/dguibert/code/DDFacet", rev = "58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
+killms = { git = "file:///home/dguibert/code/killMS", rev = "76975d727a1eecd42ae35e58e54a9881c35f490e" }
+#ddfacet = { path = "../DDFacet" }

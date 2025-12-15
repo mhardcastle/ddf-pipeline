@@ -93,6 +93,18 @@
             pybind11 = [ ];
           };
         });
+        killms = _prev.killms.overrideAttrs (old: {
+          cmakeFlags = [
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+          ];
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+            # add all build-system.requires manually here (https://github.com/astral-sh/uv/issues/5190)
+            cmake = [ ];
+            setuptools = [ ];
+            numpy = [ ];
+            pybind11 = [ ];
+          };
+        });
         #montblanc = _prev.montblanc.overrideAttrs (old: {
         #  buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
         #    setuptools = [ ];
