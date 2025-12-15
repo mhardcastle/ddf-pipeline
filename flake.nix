@@ -62,8 +62,81 @@
           buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem { setuptools = [ ]; };
         });
                               };
+
       in {
-      };
+        # Implement build fixups here.
+        # Note that uv2nix is _not_ using Nixpkgs buildPythonPackage.
+        # It's using https://pyproject-nix.github.io/pyproject.nix/build.html
+        astlib = _prev.astlib.overrideAttrs(old: {
+          NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem { setuptools = [ ]; };
+        });
+        mpi4py = _prev.mpi4py .overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem { setuptools = [ ]; }
+                        ++ [ _prev.pkgs.openmpi ];
+        });
+        numba= _prev.numba.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ _prev.pkgs.onetbb ];
+        });
+        astro-pyxis = _prev.astro-pyxis.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+            setuptools = [ ];
+            six = [ ];
+          };
+        });
+        ddfacet = _prev.ddfacet.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+            # add all build-system.requires manually here (https://github.com/astral-sh/uv/issues/5190)
+            scikit-build-core = [ ];
+            cmake = [ ];
+            numpy = [];
+            pybind11 = [ ];
+          };
+        });
+        #montblanc = _prev.montblanc.overrideAttrs (old: {
+        #  buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+        #    setuptools = [ ];
+        #    tensorflow = [ ];
+        #  };
+        #});
+        #tensorflow-io-gcs-filesystem = _prev.tensorflow-io-gcs-filesystem.overrideAttrs (old: {
+        #  buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+        #    setuptools = [ ];
+        #  } ++ [
+        #    _prev.pkgs.libtensorflow
+        #  ];
+        #});
+        sharedarray = _prev.sharedarray.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+            setuptools = [ ];
+            numpy = [ ];
+          };
+        });
+        pyfftw = _prev.pyfftw.overrideAttrs (old: {
+          NIX_LDFLAGS="-L${_prev.pkgs.fftw.out}/lib -L${_prev.pkgs.fftwFloat.out}/lib -L${_prev.pkgs.fftwLongDouble.out}/lib";
+          NIX_CFLAGS_COMPILE="-I${_prev.pkgs.fftw.dev}/include -I${_prev.pkgs.fftwFloat.dev}/include -I${_prev.pkgs.fftwLongDouble.dev}/include";
+          buildInputs = (old.buildInputs or [ ]) ++ _final.resolveBuildSystem {
+            setuptools = [ ];
+            numpy = [ ];
+            scipy = [ ];
+          }
+          ++ [
+            _prev.pkgs.fftw
+            _prev.pkgs.fftwFloat
+            _prev.pkgs.fftwLongDouble
+            ];
+        });
+      }
+        // (withSetupTools "astro-kittens")
+        // (withSetupTools "kittens")
+        // (withSetupTools "meqtrees-cattery")
+        // (withSetupTools "owlcat")
+        // (withSetupTools "donfig")
+        // (withSetupTools "hypercube")
+        // (withSetupTools "polygon3")
+        // (withSetupTools "purr")
+        // (withSetupTools "pymoresane")
+        ;
 
       # This example is only using x86_64-linux
       pkgs = nixpkgs.legacyPackages.x86_64-linux;

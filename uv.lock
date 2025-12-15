@@ -698,7 +698,7 @@ requires-dist = [
     { name = "bcrypt", specifier = "==4.3.0" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "cryptography", specifier = "==45.0.5" },
-    { name = "ddfacet", directory = "../DDFacet" },
+    { name = "ddfacet" },
     { name = "future", specifier = "==1.0.0" },
     { name = "numpy" },
     { name = "packaging", specifier = "==25.0" },
@@ -723,7 +723,7 @@ requires-dist = [
 [[package]]
 name = "ddfacet"
 version = "0.8.0.0"
-source = { directory = "../DDFacet" }
+source = { git = "file:///home/dguibert/code/DDFacet#58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
 dependencies = [
     { name = "astlib" },
     { name = "astropy" },
