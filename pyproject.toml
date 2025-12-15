@@ -1,0 +1,7 @@
+[project]
+name = "ddf-pipeline"
+version = "0.1.0"
+description = "Pipeline to carry out several iterations of direction-dependent self-calibration on your LOFAR imaging data using DDFacet and KillMS"
+authors = [ ]
+requires-python = ">=3.10"
+dependencies = []
