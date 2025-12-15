@@ -92,7 +92,10 @@ def typename(s):
 
 def print_options(option_list):
     import textwrap
-    from auxcodes import bcolors
+    if not LOCAL_DEV:
+        from auxcodes import bcolors
+    else:
+        from utils.auxcodes import bcolors
     # expected to be called if a config file is not specified. Print a
     # list of options
     option_list=sorted(option_list,key=lambda x:x[1])

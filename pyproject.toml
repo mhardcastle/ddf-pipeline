@@ -1,3 +1,7 @@
+[build-system]
+requires = ['hatchling', 'editables']
+build-backend = 'hatchling.build'
+
 [project]
 name = "ddf-pipeline"
 version = "0.1.0"
@@ -29,4 +33,14 @@ dependencies = [
     "sshtunnel==0.4.0",
     "treepick==0.1.4",
     "yorn==0.0.6",
+]
+
+[project.scripts]
+"pipeline.py" = "scripts.pipeline:driver"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+         "others",
+         "utils",
+         "scripts",
 ]

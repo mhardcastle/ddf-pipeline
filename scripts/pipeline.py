@@ -39,7 +39,6 @@ LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
 import subprocess
 
-import mpi_manager
 global SetMS
 
 import copy # deepcopy
@@ -63,6 +62,7 @@ if not LOCAL_DEV:
     __version__=version()
     import datetime
     import threading
+    import mpi_manager
 
 
 else:
@@ -81,6 +81,7 @@ else:
     from astropy.io import fits
     from utils.pipeline_version import version
     from others.surveys_db import use_database,update_status,SurveysDB
+    from utils import mpi_manager
 
     __version__=version()
     import datetime
@@ -2285,7 +2286,7 @@ def main(o=None):
         
     return
 
-if __name__=='__main__':
+def driver():
     # Main loop
     report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
@@ -2298,3 +2299,6 @@ if __name__=='__main__':
         MyPickle.Save(o, "ddf-pipeline.last")
 
     main(o)
+
+if __name__=='__main__':
+    driver

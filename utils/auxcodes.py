@@ -17,12 +17,14 @@ if not LOCAL_DEV:
     from facet_offsets import RegPoly
     from surveys_db import use_database,update_status
     from termsize import get_terminal_size_linux
+    import mpi_manager
 
 else:
     from utils.pipeline_logging import run_log
     from utils.facet_offsets import RegPoly
     from others.surveys_db import use_database,update_status
     from utils.termsize import get_terminal_size_linux
+    from utils import mpi_manager
 
 from subprocess import call
 from astropy.io import fits
@@ -30,7 +32,6 @@ from astropy.wcs import WCS
 import signal
 import pyregion
 import multiprocessing as mp
-import mpi_manager
 
 # these are small routines used by more than one part of the pipeline
 

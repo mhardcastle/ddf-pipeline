@@ -219,7 +219,7 @@ wheels = [
 [[package]]
 name = "ddf-pipeline"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "astropy" },
     { name = "astropy-iers-data" },
