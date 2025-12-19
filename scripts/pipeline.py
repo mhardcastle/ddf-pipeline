@@ -302,6 +302,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if options['use_splitisland']:
        runcommand += " --SSDClean-MaxIslandSize %s"%options['splitisland_size']
 
+    if options['AutoFlagNyquist']:
+       runcommand += " --Selection-AutoFlagNyquist 1"
+
+
+       
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
 
@@ -420,12 +425,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             print('would have run',runcommand)
     else:
         if conditional_clearcache:
-            if MPI_Manager.UseMPI:
-                clearcache_mpi(MPI_Manager, mslist, options)
+            if mpiManager is not None and mpiManager.UseMPI:
+                clearcache_mpi(mpiManager, mslist, options)
             else:
                 clearcache(mslist,options)
             
-        if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPIsize>1:
+        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
             jobs=[]
             for h in mpiManager.ListNodesBeingUsed:
                 log=logfilename('DDF-'+imagename+'-'+h+'.log')
@@ -638,6 +643,12 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
+
+            if "Actions-NChains" in keywords:
+                NChains=3
+                if DISettings is not None:
+                    NChains=options['NCPU_killms']//4
+                runcommand+=' --NChains %i'%NChains
                 
             if robust is None:
                 runcommand+=' --Weighting Natural'
