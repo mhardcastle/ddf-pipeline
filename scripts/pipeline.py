@@ -645,6 +645,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 runcommand+=' --DebugPdb=0'
 
             if "Actions-NChains" in keywords:
+                NChains=1
                 NChains=3
                 if DISettings is not None:
                     NChains=options['NCPU_killms']//4
@@ -716,7 +717,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             
             # Clip anyway - on IMAGING_WEIGHT by default
             if DISettings is not None:
-                ClipCol=DISettings[-1]
+                ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
             else:
                 ClipCol=colname
             runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
@@ -1309,7 +1310,7 @@ def main(o=None):
     # Clear the shared memory
     #import DDFacet.CleanSHM
     #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
-    run("env DDF_USE_MPI=1 CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
+    run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
     
     # Pipeline started!
     if use_database():
@@ -1565,6 +1566,8 @@ def main(o=None):
                         MaxMinorIterInitHMP=10000,
                         PredictSettings=None, mpiManager=MPI_Manager)
 
+
+            
             CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
                                             cleanmask=CurrentMaskName,cleanmode=DeconvMode,
                                             majorcycles=1,robust=o['image_robust'],
