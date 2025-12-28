@@ -9,7 +9,11 @@ except:
 
 import itertools
 import os
+from DDFacet.Other import ModColor
+WIDTH_PROMPT=90
 
+NFS_MODE=True
+NFS_MODE=False
 
 class MSSet():
     def __init__(self,mslist):
@@ -19,40 +23,44 @@ class MSSet():
         
         nodes2ms = {}
         for iMS,sMS in enumerate(mslist):
-            terms=sMS.split(":")
-            msname=terms[1:] or terms[0]
-            node=terms[0] if terms[1:] else None
-            print(node, msname)
-
+            if ":" in sMS:
+                node,msname=sMS.split(":")
+            else:
+                node,msname=None,sMS
             l=nodes2ms.get(node,[])
             l.append(msname)
             nodes2ms[node]=l
             
-        print(nodes2ms)
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
             fns=[]
             with MPIPoolExecutor() as executor:
                 fns=[]
                 fns.append(executor.submit(get_node_name))
-            self.ListNodesBeingUsed=[f"{MPI.Get_processor_name()}@0"]
+
+            # # CT: This was breaking stuff in nancap - not sure what the logic is
+            # self.ListNodesBeingUsed=[f"{MPI.Get_processor_name()}@0"]
+            self.ListNodesBeingUsed=[MPI.Get_processor_name()]
             for f in fns:
                 self.ListNodesBeingUsed.append(f.result())
-            print(f"{self.ListNodesBeingUsed}")
+                
             mslist=list(zip(itertools.cycle(self.ListNodesBeingUsed), nodes2ms[None]))
             del nodes2ms[None]
             
-            print(mslist)
             for node,ms in mslist:
                 l=nodes2ms.get(node,[])
                 l.append(ms)
                 nodes2ms[node] = l
-                
-            print(nodes2ms)
 
+        import pprint
         self.DicoNodes2ListMS=nodes2ms
-        self.ListNodesBeingUsed = nodes2ms.keys()
+        self.ListNodesBeingUsed = list(nodes2ms.keys())
+        
+        print(ModColor.Str(" Data set distribution ".center(WIDTH_PROMPT,"="),col="blue"))
+        print(ModColor.Str((" %s "%(str(self.ListNodesBeingUsed))).center(WIDTH_PROMPT,"="),col="blue"))
+        pprint.pp(self.DicoNodes2ListMS)
 
+        
 def testFunc(*args,**kwargs):
     host = MPI.Get_processor_name()
     print(host,args,kwargs)
@@ -84,22 +92,28 @@ def filterHost(jobs):
     localrank = os.environ.get("SLURM_LOCALID", "0")
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
-        if RunOnHost == f"{host}@{localrank}":
+        #if RunOnHost == f"{host}@{localrank}":
+        if RunOnHost == f"{host}":
+            print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
             res.append(func(*args,**kwargs))
+        else:
+            print("  [skip] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
     return res
     
 
 def callParallel(ListJobs):
     masterNode = MPI.Get_processor_name()
+    print()
+    print("".center(WIDTH_PROMPT,"="))
+    print(ModColor.Str(" CALL PARALLEL ".center(WIDTH_PROMPT,"="),col="blue"))
+    print(ModColor.Str((" Master node: %s "%masterNode).center(WIDTH_PROMPT,"="),col="blue"))
     localrank = os.environ.get("SLURM_LOCALID", "0")
-    print(masterNode)
     LJobMasterNode=[]
     Lres0=[]
     with MPIPoolExecutor() as executor:
     #with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         #mpi_comm_executor = MPICommExecutor(MPI.COMM_WORLD, root=0)
         Lres=[]
-        print("Pool",masterNode)
         for worker in range(MPI.COMM_WORLD.size-1):
             # submit remote jobs
             f1=executor.submit(filterHost, ListJobs)
@@ -107,8 +121,9 @@ def callParallel(ListJobs):
         
         # run local jobs
         for host,func,args,kwargs in ListJobs:
-            if host == f"{masterNode}@{localrank}":
-            #if host == masterNode:
+            #if host == f"{masterNode}@{localrank}":
+            if host == masterNode:
+                print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,masterNode,str(func),str(args),str(kwargs)))
                 Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
@@ -119,6 +134,9 @@ def callParallel(ListJobs):
                 print(f"e: {e}")
         #MPI.COMM_WORLD.Barrier()
     print(f"callParallel: ok ({Lres0})")
+    # print(" END callParallel ".center(WIDTH_PROMPT,"="))
+    # print("".center(WIDTH_PROMPT,"="))
+    print()
     return Lres0
         
 # import itertools
@@ -129,8 +147,9 @@ def callParallel(ListJobs):
 # res= list(zip(a, itertools.cycle(b)))
 # print(res)
 def get_node_name():
-    localrank = os.environ.get("SLURM_LOCALID", "0")
-    return f"{MPI.Get_processor_name()}@{localrank}"
+    # localrank = os.environ.get("SLURM_LOCALID", "0")
+    # return f"{MPI.Get_processor_name()}@{localrank}"
+    return MPI.Get_processor_name()
 
 class mpi_manager():
     def __init__(self,options_cfg,MSSet, FullMSSet):
@@ -138,9 +157,12 @@ class mpi_manager():
         self.MSSet=MSSet
         self.FullMSSet=FullMSSet
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed
-
+        self.DicoNodes2WorkDir={}
+        self.WorkDir=os.getcwd()
+                
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
+        self.MPIsize=MPIsize
         if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
         self.createRemoteLocal_mslist()
@@ -158,6 +180,7 @@ class mpi_manager():
                 
     def createRemoteLocal_mslist(self):
         self.DicoNode2mslist={}
+        print(self.MSSet.DicoNodes2ListMS)
         for Node in self.MSSet.DicoNodes2ListMS.keys():
             Listms=self.MSSet.DicoNodes2ListMS[Node]
             FName="local_%s_mslist.txt"%Node
@@ -166,7 +189,8 @@ class mpi_manager():
                 f.write("%s\n"%msname)
             f.close()
             self.DicoNode2mslist[Node]=FName
-
+            self.scpScatter(FName,Node)
+            
     def createRemoteLocal_fullmslist(self):
         self.DicoNode2fullmslist={}
         for Node in self.FullMSSet.DicoNodes2ListMS.keys():
@@ -177,9 +201,14 @@ class mpi_manager():
                 f.write("%s\n"%msname)
             f.close()
             self.DicoNode2fullmslist[Node]=FName
+            self.scpScatter(FName,Node)
 
-    def scpScatter(self,FileName):
-        pass
+    def scpScatter(self,FileName,NodeDest="all"):
+        if NodeDest=="all":
+            for Node in self.ListNodesBeingUsed:
+                os.system("scp -r %s %s:%s"%(FileName,Node,self.WorkDir))
+        else:
+            os.system("scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir))
 
     def scpGather(self,FileName):
         pass    

@@ -69,7 +69,7 @@ def report(s):
 def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None):
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None, mpi_disabled_in_serial_call=True):
     if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPIsize>1:
         jobs=[]
         for h in mpiManager.ListNodesBeingUsed:
@@ -78,8 +78,10 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
         res=mpi_manager.callParallel(jobs)
         print(res)
     else:
-        
-        run_serial("env DDF_FORCE_NOT_USE_MPI=1 "+s, proceed, dryrun, log, quiet, database)
+        ss=s
+        if mpi_disabled_in_serial_call:
+            ss="env DDF_FORCE_NOT_USE_MPI=1 "+s
+        run_serial(ss, proceed, dryrun, log, quiet, database)
 
     
 def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):

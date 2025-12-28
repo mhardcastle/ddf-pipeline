@@ -23,6 +23,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
+import os
+
 from future import standard_library
 standard_library.install_aliases()
 from builtins import zip
@@ -429,23 +431,21 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
                 clearcache_mpi(mpiManager, mslist, options)
             else:
                 clearcache(mslist,options)
-            
-        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
-            jobs=[]
-            for h in mpiManager.ListNodesBeingUsed:
-                log=logfilename('DDF-'+imagename+'-'+h+'.log')
-                jobs.append([h, run_serial, (runcommand,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
-            print(f"run: {jobs}")
-            res=mpi_manager.callParallel(jobs)
-            print(res)
 
-        else:
-            runcommand+=" --Parallel-UseMPI=False"
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
+        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
+            #mpiManager=mpiManager,
+            mpi_disabled_in_serial_call=False)
+            
+        # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+        #     pass
+        # else:
+        #     runcommand+=" --Parallel-UseMPI=False"
+        #     run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
 
         # Ugly way to see if predict has been already done
         if PredictSettings is not None:
             fname=os.system("touch %s"%fname)
+            
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
@@ -585,7 +585,7 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 mslist_=mpiManager.DicoNode2fullmslist[Node]
             else:
                 raise RuntimeError(f'Unknown mslist string ({mslist_str})')
-            ListJobs.append((Node,killms_data,(imagename,mslist_,outsols,clusterfile,colname,niterkf,dicomodel,
+            ListJobs.append((Node,killms_data_serial,(imagename,mslist_,outsols,clusterfile,colname,niterkf,dicomodel,
                 uvrange,wtuv,robust,catcher,dt,options,
                 SolverType,PolMode,False,NChanSols,
                 DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
@@ -903,6 +903,7 @@ def full_clearcache_mpi(MPI_Manager,o,extras=None):
     if o is not None:
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
             oc=copy.deepcopy(o)
+            print("MPI_Manager.DicoNode2mslist.keys",MPI_Manager.DicoNode2mslist.keys())
             oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
             oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             ListJobs.append((Node,full_clearcache,(oc,extras),{}))
@@ -1243,6 +1244,7 @@ def checkColName(o):
     # versions of e.g. CORRECTED_DATA
     colname=o['colname']
     mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    print("mslist[0]",o['mslist'],mslist)
     t = pt.table(mslist[0])
     try:
         dummy=t.getcoldesc(colname)
@@ -1311,7 +1313,7 @@ def main(o=None):
     #import DDFacet.CleanSHM
     #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)    
     run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)    
-    
+
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')
@@ -2301,6 +2303,7 @@ def main(o=None):
 
 if __name__=='__main__':
     # Main loop
+    
     report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
         warn('pipeline.py must be called with at least one parameter file or a command-line\noption list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
