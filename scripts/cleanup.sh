@@ -14,7 +14,8 @@ rm last*
 rm mask*
 rm external_mask*
 rm -r logs
-rm *.cfg
 rm -r *.ddfcache
-archive_old_solutions.py $DDFACET_DIR/ddf-pipeline/tier1.cfg
+# commented this as it was removing the parset
+# rm *.cfg
+# archive_old_solutions.py $DDFACET_DIR/ddf-pipeline/tier1.cfg
 remove_columns.py big-mslist.txt

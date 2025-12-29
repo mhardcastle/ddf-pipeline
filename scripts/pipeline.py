@@ -432,10 +432,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             else:
                 clearcache(mslist,options)
 
+        #runcommand="ls"
         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
-            #mpiManager=mpiManager,
+            mpiManager=mpiManager,
             mpi_disabled_in_serial_call=False)
-            
+        #stoppp
         # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
         #     pass
         # else:
@@ -524,6 +525,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 
     if options['dryrun']: return
     fname=imagename+'.mask.fits'
+
+    
     runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
     if OutMaskExtended is not None:
         runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
@@ -542,6 +545,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
                     merge_mask(fname,mask,fname)
             else:
                 merge_mask(fname,external_mask,fname)
+
+
     return fname
             
 
@@ -552,7 +557,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None,
                 mpiManager=None, mslist_str=""
                 ):
-    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1 and mslist_str != "":
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
         return killms_data_mpi(
                 imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
                 uvrange,wtuv,robust,catcher,dt,options,
@@ -1166,6 +1171,8 @@ def subtractOuterSquare(o, mpiManager=None):
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
     
     make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
+
+
     
     ddf_image('image_full_wide_im',o['mslist'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
@@ -1418,7 +1425,10 @@ def main(o=None):
             
         if o['external_fits_mask'] is not None:
             merge_mask(external_mask,o['external_fits_mask'],external_mask)
-            print(external_mask)
+
+        if MPI_Manager.UseMPI and external_mask is not None:
+            MPI_Manager.scpScatter(external_mask)
+            
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode=DeconvMode,
@@ -1441,13 +1451,6 @@ def main(o=None):
         
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
-            print(external_mask)
-            print(external_mask)
-            print(external_mask)
-            print(external_mask)
-            print(external_mask)
-            print(external_mask)
-            print(external_mask)
             merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
         
         # make a mask from the final image
@@ -1457,6 +1460,10 @@ def main(o=None):
                               external_mask=external_mask,
                               catcher=catcher)
     
+        if MPI_Manager.UseMPI and external_mask is not None:
+            MPI_Manager.scpScatter(CurrentMaskName)
+            MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
+            
         separator("Continue deconvolution")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
                                            cleanmask=CurrentMaskName,cleanmode=DeconvMode,
@@ -1503,6 +1510,11 @@ def main(o=None):
             else:
                 clearcache(o['mslist'],o)
 
+        if MPI_Manager.UseMPI and external_mask is not None:
+            MPI_Manager.scpScatter(ClusterFile)
+            MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
+            
+            
         separator("Deconv clustered DI image")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
                                            cleanmask=CurrentMaskName,
@@ -1538,7 +1550,7 @@ def main(o=None):
                         dt=o['dt_di'],
                         options=o, # required to get the global variable o
                         DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
-
+            stoppp
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,

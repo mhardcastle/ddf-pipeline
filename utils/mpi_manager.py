@@ -97,7 +97,8 @@ def filterHost(jobs):
             print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
             res.append(func(*args,**kwargs))
         else:
-            print("  [skip] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
+            # print("  [skip] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
+            pass
     return res
     
 
@@ -123,7 +124,7 @@ def callParallel(ListJobs):
         for host,func,args,kwargs in ListJobs:
             #if host == f"{masterNode}@{localrank}":
             if host == masterNode:
-                print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,masterNode,str(func),str(args),str(kwargs)))
+                print("  [local %s]: %s(%s,%s)"%(host,str(func),str(args),str(kwargs)))
                 Lres0.append(func(*args,**kwargs))
                 
         for res in Lres:
@@ -159,12 +160,18 @@ class mpi_manager():
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
+        self.MainHost = MPI.Get_processor_name()
                 
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         self.MPIsize=MPIsize
         if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
+
+        # Scatter mslist and big-mslist.txt
+        self.scpScatter(MSSet.file_nodes_mslist)
+        self.scpScatter(FullMSSet.file_nodes_mslist)
+
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
         
@@ -206,9 +213,16 @@ class mpi_manager():
     def scpScatter(self,FileName,NodeDest="all"):
         if NodeDest=="all":
             for Node in self.ListNodesBeingUsed:
-                os.system("scp -r %s %s:%s"%(FileName,Node,self.WorkDir))
+                if Node==self.MainHost:
+                    continue
+                ss="scp -r %s %s:%s"%(FileName,Node,self.WorkDir)
+                print("[Scatter] %s"%ss)
+                os.system("%s &>/dev/null"%ss)
         else:
-            os.system("scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir))
+            if NodeDest==self.MainHost: return
+            ss="scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir)            
+            print("[Scatter] %s"%ss)
+            os.system("%s &>/dev/null"%ss)
 
     def scpGather(self,FileName):
         pass    

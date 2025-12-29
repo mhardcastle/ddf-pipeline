@@ -5,6 +5,7 @@
 from __future__ import print_function
 import sys
 import pyrap.tables as pt
+import os
 
 def remove_columns(mslist_name,colnames=['SCALED_DATA']):
     if mslist_name.endswith('.ms'):
@@ -12,6 +13,11 @@ def remove_columns(mslist_name,colnames=['SCALED_DATA']):
     else:
         mslist=[s.strip() for s in open(mslist_name).readlines()]
     for ms in mslist:
+        if ":" in ms:
+            ms=ms.split(":")[1]
+        if not os.path.exists(ms):
+            print("MS file %s does not exist, skipping"%ms)
+            continue
         t = pt.table(ms)
         cpresent = t.colnames()
         t.close()
