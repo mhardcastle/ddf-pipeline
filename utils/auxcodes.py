@@ -56,6 +56,7 @@ def separator(s):
     print("%s%s %s %s%s"%(bcolors.FAIL,sep,s,sep,bcolors.ENDC))
     print()
 
+
     
 def die(s,database=True):
     print(bcolors.FAIL+s+bcolors.ENDC)

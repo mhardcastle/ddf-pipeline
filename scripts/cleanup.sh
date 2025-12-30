@@ -15,7 +15,15 @@ rm mask*
 rm external_mask*
 rm -r logs
 rm -r *.ddfcache
+rm -r SOLSDIR
+rm MaskDiffuse.pickle Noise*fits MaskDiffuse.reg MaskDiffuse.fits
+
+rm *.last
+rm local_*.txt
+rm pop.myPickle
 # commented this as it was removing the parset
 # rm *.cfg
 # archive_old_solutions.py $DDFACET_DIR/ddf-pipeline/tier1.cfg
 remove_columns.py big-mslist.txt
+CleanSHM.py
+rm -rf /tmp/*
