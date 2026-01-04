@@ -16,8 +16,10 @@ rm external_mask*
 rm -r logs
 rm -r *.ddfcache
 rm -r SOLSDIR
+rm DD*.npz
 rm MaskDiffuse.pickle Noise*fits MaskDiffuse.reg MaskDiffuse.fits
-
+rm Predict_*
+rm _has*
 rm *.last
 rm local_*.txt
 rm pop.myPickle
@@ -26,4 +28,4 @@ rm pop.myPickle
 # archive_old_solutions.py $DDFACET_DIR/ddf-pipeline/tier1.cfg
 remove_columns.py big-mslist.txt
 CleanSHM.py
-rm -rf /tmp/*
+#rm -rf /tmp/*

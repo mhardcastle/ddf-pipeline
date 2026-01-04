@@ -10,6 +10,9 @@ except:
 import itertools
 import os
 from DDFacet.Other import ModColor
+import pprint
+from pathlib import Path
+
 WIDTH_PROMPT=90
 
 NFS_MODE=True
@@ -21,6 +24,7 @@ class MSSet():
         # for MPI use
         mslist=[s.strip() for s in open(mslist).readlines()]
         
+        self.DicoMSName2Node = {}
         nodes2ms = {}
         for iMS,sMS in enumerate(mslist):
             if ":" in sMS:
@@ -30,6 +34,7 @@ class MSSet():
             l=nodes2ms.get(node,[])
             l.append(msname)
             nodes2ms[node]=l
+            self.DicoMSName2Node[msname]=node
             
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
@@ -52,9 +57,10 @@ class MSSet():
                 l.append(ms)
                 nodes2ms[node] = l
 
-        import pprint
         self.DicoNodes2ListMS=nodes2ms
         self.ListNodesBeingUsed = list(nodes2ms.keys())
+        
+        
         
         print(ModColor.Str(" Data set distribution ".center(WIDTH_PROMPT,"="),col="blue"))
         print(ModColor.Str((" %s "%(str(self.ListNodesBeingUsed))).center(WIDTH_PROMPT,"="),col="blue"))
@@ -174,7 +180,10 @@ class mpi_manager():
 
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
-        
+
+    def callParallel(self,*args,**kwargs):
+        return callParallel(*args,**kwargs)
+    
     def givePrefixDDF(self):
         if not self.UseMPI: return ""
         
@@ -217,15 +226,56 @@ class mpi_manager():
                     continue
                 ss="scp -r %s %s:%s"%(FileName,Node,self.WorkDir)
                 print("[Scatter] %s"%ss)
-                os.system("%s &>/dev/null"%ss)
+                os.system("%s > /dev/null 2>&1"%ss)
+                os.system("%s > /dev/null 2>&1"%ss)
         else:
             if NodeDest==self.MainHost: return
             ss="scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir)            
             print("[Scatter] %s"%ss)
-            os.system("%s &>/dev/null"%ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+            #os.system("%s"%ss)
 
-    def scpGather(self,FileName):
-        pass    
+    def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
+        SolsDir=self.options["SolsDir"]
+        AbsSolsDir=os.path.abspath(SolsDir)
+        for Node in self.ListNodesBeingUsed:
+            if Node==self.MainHost: return
+            LMS=self.FullMSSet.DicoNodes2ListMS[Node]
+            for MSName in LMS:
+                MSName = Path(MSName).name # if MSName is given with full path
+                os.system("mkdir -p %s/%s"%(SolsDir,MSName))
+                ss="scp -r %s:%s/%s/\\*.%s.\\* %s/%s/%s"%(Node,AbsSolsDir,MSName,SolName,self.WorkDir,SolsDir,MSName)
+                print("[Gather] %s"%ss)
+                os.system("%s > /dev/null 2>&1"%ss)
+                #os.system("%s"%ss)
+                
+    def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
+        
+        SolsDir=self.options["SolsDir"]
+        AbsSolsDir=os.path.abspath(SolsDir)
+        Node=self.FullMSSet.DicoMSName2Node[MSName]
+        
+        MSName = Path(MSName).name # if MSName is given with full path
+        os.system("mkdir -p %s/%s"%(SolsDir,MSName))
+        if Node!=self.MainHost:
+            ss="scp -r %s %s:%s"%(SmoothSolName,Node,self.WorkDir)
+            print("[Scatter Sols] %s"%ss)
+            #os.system("%s &>/dev/null"%ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+        
+        ss="ssh %s rm %s"%(Node,SolsAliasName)
+        print(ss)
+        os.system("%s > /dev/null 2>&1"%ss)
+        
+        ss="ssh %s ln -s %s %s"%(Node,SmoothSolName,SolsAliasName)
+        print(ss)
+        os.system("%s > /dev/null 2>&1"%ss)
+                
+
+    # def createLink(self):
+    #     os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
+
+                
 
 def ftest(x):
     print(x)

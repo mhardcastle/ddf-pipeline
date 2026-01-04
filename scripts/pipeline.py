@@ -163,12 +163,17 @@ def find_cache_dir(options):
         cache_dir='.'
     return cache_dir
 
-def check_imaging_weight_mpi(MPI_Manager,o):
+def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
     ListJobs=[]
     if o is not None:
         for Node in MPI_Manager.DicoNode2mslist.keys():
             oc=copy.deepcopy(o)
-            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            if mslist_str=='mslist':
+                oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            elif mslist_str=='full_mslist':
+                oc["mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+            else:
+                stoppp
             ListJobs.append((Node,check_imaging_weight,(oc["mslist"],),{}))
         
     mpi_manager.callParallel(ListJobs)
@@ -292,7 +297,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s  --Deconv-FluxThreshold %f --Beam-Model=%s --Weight-Robust %f --Image-NPix=%i --CF-wmax %f --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,options['flux_threshold'],options['BeamModel'],robust,imsize,options['wmax'],saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
+    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s  --Deconv-FluxThreshold %f --Beam-Model=%s --Weight-Robust %f --Image-NPix=%i --CF-wmax %f --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 0"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,options['flux_threshold'],options['BeamModel'],robust,imsize,options['wmax'],saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
     runcommand += " --Data-MS=%s"%mslist
         
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
@@ -436,8 +441,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             mpiManager=mpiManager,
             mpi_disabled_in_serial_call=False)
         #stoppp
-        # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
-        #     pass
+        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+            mpiManager.scpScatter("%s.DicoModel"%imagename)
+            
         # else:
         #     runcommand+=" --Parallel-UseMPI=False"
         #     run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'], mpiManager=mpiManager)
@@ -448,7 +454,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             
     return imagename
         
-def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
+def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize',
+                       mpiManager=None):
     # cellsize specifies which option value to get this from
     if options is None:
         options=o # attempt to get global
@@ -475,6 +482,7 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
         if options['extended_size'] is not None and extended_use is not None:
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
+            
 
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
     if os.path.isfile(OutClusterCat):
@@ -559,17 +567,16 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
     if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
         SolsDir=options["SolsDir"]
         os.system("mkdir -p %s"%SolsDir)
-        options=copy.deepcopy(options)
-        SolsDir=os.path.abspath("SOLSDIR")
-        options["SolsDir"]="%s:%s"%(mpiManager.MainHost,SolsDir)
-        return killms_data_mpi(
+        
+        rep=killms_data_mpi(
                 imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
                 uvrange,wtuv,robust,catcher,dt,options,
                 SolverType,PolMode,MergeSmooth,NChanSols,
                 DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
                 mpiManager, mslist_str
-        )[0]
+        )
+        return rep
     else:
         return killms_data_serial(
                 imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
@@ -601,10 +608,12 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights),{ }))
         
     res=mpi_manager.callParallel(ListJobs)
-
+    
+    mpiManager.scpGatherSolutions(outsols)
+    
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
-                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options)
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options,mpiManager=mpiManager)
         
     return outsols
 
@@ -708,6 +717,8 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
                 _,_,ModelColName,_=DISettings
+                import socket
+                print(socket.gethostname(),f,colname,ModelColName)
                 _,dt_give,_,n_df_give=give_dt_dnu(f,
                                         DataCol=colname,
                                         ModelCol=ModelColName,
@@ -790,20 +801,20 @@ def mvglob(path,dest):
                 os.remove(real_dst)
         move(f,dest)
 
-def clearcache_mpi(MPI_Manager,mslist, o):
+def clearcache_mpi(MPI_Manager,mslist_str, o):
     ListJobs=[]
     for Node in MPI_Manager.DicoNode2mslist.keys():
         mslist_ = None
         if mslist_str == "mslist":
-            mslist_=mpiManager.DicoNode2mslist[Node]
+            mslist_=MPI_Manager.DicoNode2mslist[Node]
         elif mslist_str == "full_mslist":
-            mslist_=mpiManager.DicoNode2fullmslist[Node]
+            mslist_=MPI_Manager.DicoNode2fullmslist[Node]
         else:
             raise RuntimeError(f'Unknown mslist string ({mslist_str})')
         oc=copy.deepcopy(o)
         ListJobs.append((Node,clearcache,(mslist_,oc),{}))
         
-    mpi_manager.callParallel(ListJobs)
+    MPI_Manager.callParallel(ListJobs)
 
 def clearcache(mslist,options):
     cachedir=find_cache_dir(options)
@@ -825,10 +836,11 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,options=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,
+                     options=None,mpiManager=None):
     if options is None:
         options=o
-    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
     SolsDir=options["SolsDir"]
@@ -895,11 +907,14 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     os.unlink(symsolname)
 
                 if not SkipSmooth:
-                    os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
+                    SolName=os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time))
+                    os.symlink(SolName,symsolname)
                 else:
-                    os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
+                    SolName=os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time))
+                    os.symlink(SolName,symsolname)
                     
-                    
+                mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
+
         if SkipSmooth:
             outname = ddsols + '_merged'
         else:
@@ -1393,7 +1408,7 @@ def main(o=None):
         full_clearcache(o)
 
     if MPI_Manager.UseMPI:
-        new=check_imaging_weight_mpi(MPI_Manager, o)
+        new=check_imaging_weight_mpi(MPI_Manager, o,mslist_str="mslist")
     else:
         new=check_imaging_weight(o['mslist'])
         
@@ -1481,7 +1496,6 @@ def main(o=None):
     
         if MPI_Manager.UseMPI and external_mask is not None:
             MPI_Manager.scpScatter(CurrentMaskName)
-            MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
             
         separator_mpi("Continue deconvolution")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
@@ -1531,8 +1545,7 @@ def main(o=None):
 
         if MPI_Manager.UseMPI and external_mask is not None:
             MPI_Manager.scpScatter(ClusterFile)
-            MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
-            
+         
             
         separator_mpi("Deconv clustered DI image")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
@@ -1570,7 +1583,7 @@ def main(o=None):
                         dt=o['dt_di'],
                         options=o, # required to get the global variable o
                         DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
-            stoppp
+
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,
@@ -1582,7 +1595,7 @@ def main(o=None):
             #              ReinitWeights=True)
             colname="DATA_DI_CORRECTED"
 
-            
+
             _=ddf_image('image_dirin_SSD_m_c_di',o['mslist'],
                         cleanmask=CurrentMaskName,cleanmode=DeconvMode,
                         majorcycles=0,robust=o['image_robust'],
@@ -1627,11 +1640,14 @@ def main(o=None):
                                     external_mask=external_mask,
                                     catcher=catcher)
 
+            MPI_Manager.scpScatter(CurrentMaskName)
             if o['exitafter'] == 'dirin_di':
                 warn('User specified exit after image_dirin with DI calibration.')
                 stop(2)
 
 
+
+        
         separator_mpi("DD calibration")
         CurrentDDkMSSolName=None
         CurrentDDkMSSolName=killms_data(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
@@ -1645,7 +1661,7 @@ def main(o=None):
                                 catcher=catcher,NChanSols=o['NChanSols'],
                                 options=o, # required to get the global variable o
                                 MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
-
+        
         # ##########################################################
         # run bootstrap, and change the column name if it runs
         if o['bootstrap']:
@@ -1656,7 +1672,6 @@ def main(o=None):
             if o['exitafter'] == 'bootstrap':
                 warn('User specified exit after bootstrap.')
                 stop(2)
-
 
         separator_mpi("PhaseOnly deconv")
         print('Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName)
@@ -1676,6 +1691,7 @@ def main(o=None):
                                            mpiManager=MPI_Manager
                                            )
 
+
         if o['exitafter'] == 'phase':
             warn('User specified exit after phase-only deconvolution.')
             stop(2)
@@ -1683,7 +1699,8 @@ def main(o=None):
         separator_mpi("Mask for deeper deconv")
         CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
-
+        MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
+        
         separator_mpi("DD calibration")
         CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
                                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
@@ -1720,6 +1737,7 @@ def main(o=None):
         separator_mpi("Make Mask")
         CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+        MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
         
         if not o['skip_di']:
             separator_mpi("Second DI calibration")
@@ -1750,6 +1768,7 @@ def main(o=None):
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                         #clusterfile=ClusterFile,
+                        options=o, # required to get the global variable o
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
@@ -1796,9 +1815,10 @@ def main(o=None):
         # save disk space
         if o['clearcache_end']:
             if MPI_Manager.UseMPI:
-                clearcache_mpi(MPI_Manager, 'mslist', options)
+                clearcache_mpi(MPI_Manager, 'mslist', o)
             else:
                 clearcache(o['mslist'],o)
+                
 
         if o['full_mslist'] is None:
             warn('No full mslist provided, stopping here')
@@ -1810,7 +1830,10 @@ def main(o=None):
         # #########################################################################
 
         # check full mslist imaging weights
-        check_imaging_weight(o['full_mslist'])
+        if MPI_Manager.UseMPI:
+            check_imaging_weight_mpi(MPI_Manager, o,mslist_str="full_mslist")
+        else:
+            check_imaging_weight(o['full_mslist'])
 
         if o['bootstrap']:
             colname='SCALED_DATA'
@@ -1824,10 +1847,12 @@ def main(o=None):
             separator_mpi("Make Mask")
             CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
             CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
+            MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
             CurrentImageName= 'image_ampphase1_di'
         else:
             CurrentImageName = 'image_ampphase1'
 
+        
     else:
         # alternative branch of massive if!
         if o['clusterfile'] is None:
@@ -1854,6 +1879,7 @@ def main(o=None):
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
+                                    options=o, # required to get the global variable o
                                     niterkf=o['NIterKF'][4],
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
@@ -1900,6 +1926,7 @@ def main(o=None):
         #              OutColName="DATA_DI_CORRECTED")
         killms_data('Predict_DDS2',o['full_mslist'],'DIS2_full',colname=colname,
                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                    options=o, # required to get the global variable o
                     clusterfile=ClusterFile,
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
@@ -1975,11 +2002,14 @@ def main(o=None):
     separator_mpi("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName,ImageName+'_masked.DicoModel',catcher=catcher)
+    MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
+    MPI_Manager.scpScatter(CurrentMaskName)
             
     separator_mpi("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data(ImageName,
                                     o['full_mslist'],'DDS3_full',
                                     colname=colname,
+                                    options=o, # required to get the global variable o
                                     clusterfile=ClusterFile,
                                     dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                     niterkf=o['NIterKF'][6],
@@ -2002,6 +2032,7 @@ def main(o=None):
                                         SolverType="KAFCA",
                                         clusterfile=ClusterFile,
                                         dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        options=o, # required to get the global variable o
                                         uvrange=[o['uvmin_very_slow'],1000.],
                                         wtuv=o['wtuv'],
                                         robust=o['solutions_robust'],
@@ -2239,7 +2270,8 @@ def main(o=None):
                         thread.start()
                         cthreads.append(thread)
                         flist.append(cubefile)
-        
+    
+    return    
     # TODO mpi
     m=MSList(o['full_mslist'])
     uobsid = set(m.obsids)
