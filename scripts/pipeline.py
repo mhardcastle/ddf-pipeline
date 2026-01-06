@@ -433,10 +433,19 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             print('would have run',runcommand)
     else:
         if conditional_clearcache:
-            if mpiManager is not None and mpiManager.UseMPI:
+            if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1:
                 clearcache_mpi(mpiManager, mslist, options)
             else:
                 clearcache(mslist,options)
+            
+        if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1:
+            jobs=[]
+            for h in mpiManager.ListNodesBeingUsed:
+                log=logfilename('DDF-'+imagename+'-'+h+'.log')
+                jobs.append([h, run_serial, (runcommand,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
+            print(f"run: {jobs}")
+            res=mpi_manager.callParallel(jobs)
+            print(res)
 
         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
             mpiManager=mpiManager,
@@ -1105,7 +1114,7 @@ def ingest_dynspec(obsid='*'):
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
                  mpiManager=None, mslist_str=""):
-    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.size>1 and mslist_str != "":
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1 and mslist_str != "":
         subtract_vis_mpi(mslist,colname_a,colname_b,out_colname, mpiManager, mslist_str)
     else:
         subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
@@ -1284,9 +1293,10 @@ def checkColName(o):
     else:
         print('Dataset %s does contain the column "%s"' %(mslist[0],colname))
 
-def main(o=None):
+def main(o):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
+    print(f"{o}")
 
     
     lCat=[]
@@ -1668,6 +1678,7 @@ def main(o=None):
         if o['bootstrap']:
             separator_mpi("Bootstrap")
             report('Running bootstrap')
+            # FIXME run in parallel (to run ddFacet in parallel)
             run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
             colname=colname+'_SCALED' # DI corrected, scaled
             if o['exitafter'] == 'bootstrap':
@@ -2375,11 +2386,14 @@ def driver():
         print_options(option_list)
         sys.exit(1)
 
+    global o
     o=options(sys.argv[1:],option_list)
     if MyPickle is not None:
         MyPickle.Save(o, "ddf-pipeline.last")
-
+        
+    print(f"{o}")
     main(o)
 
 if __name__=='__main__':
-    driver
+    driver()
+ 

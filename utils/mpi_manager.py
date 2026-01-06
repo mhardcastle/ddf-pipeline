@@ -163,7 +163,7 @@ class mpi_manager():
         self.options=options_cfg
         self.MSSet=MSSet
         self.FullMSSet=FullMSSet
-        self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed
+        self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
         self.MainHost = MPI.Get_processor_name()
@@ -171,6 +171,7 @@ class mpi_manager():
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         self.MPIsize=MPIsize
+
         if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
 
@@ -209,15 +210,16 @@ class mpi_manager():
             
     def createRemoteLocal_fullmslist(self):
         self.DicoNode2fullmslist={}
-        for Node in self.FullMSSet.DicoNodes2ListMS.keys():
-            Listms=self.FullMSSet.DicoNodes2ListMS[Node]
-            FName="local_%s_full_mslist.txt"%Node
-            f=open(FName,"w")
-            for msname in Listms:
-                f.write("%s\n"%msname)
-            f.close()
-            self.DicoNode2fullmslist[Node]=FName
-            self.scpScatter(FName,Node)
+        if self.FullMSSet:
+            for Node in self.FullMSSet.DicoNodes2ListMS.keys():
+                Listms=self.FullMSSet.DicoNodes2ListMS[Node]
+                FName="local_%s_full_mslist.txt"%Node
+                f=open(FName,"w")
+                for msname in Listms:
+                    f.write("%s\n"%msname)
+                f.close()
+                self.DicoNode2fullmslist[Node]=FName
+                self.scpScatter(FName,Node)
 
     def scpScatter(self,FileName,NodeDest="all"):
         if NodeDest=="all":

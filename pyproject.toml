@@ -35,10 +35,13 @@ dependencies = [
     "sshtunnel==0.4.0",
     "treepick==0.1.4",
     "yorn==0.0.6",
+    
+    "python-casacore", # lofar
 ]
 
 [project.scripts]
 "pipeline.py" = "scripts.pipeline:driver"
+"bootstrap.py" = "scripts.bootstrap:driver"
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -46,6 +49,10 @@ packages = [
          "utils",
          "scripts",
 ]
+
+# https://hatch.pypa.io/1.9/config/build/#dev-mode
+[tool.hatch.build]
+dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
 
 [tool.uv.sources]
 #ddfacet = { git = "https://github.com/cyriltasse/DDFacet", rev = "79cab91b83bf611476d0d779334fb5c81d29530a" }

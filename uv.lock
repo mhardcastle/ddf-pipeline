@@ -746,6 +746,7 @@ requires-dist = [
     { name = "pynacl", specifier = "==1.5.0" },
     { name = "pyparsing", specifier = "==3.2.3" },
     { name = "pyregion", specifier = "==2.3.0" },
+    { name = "python-casacore" },
     { name = "python-casacore", specifier = "==3.7.1" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "scipy", specifier = "==1.15.3" },
