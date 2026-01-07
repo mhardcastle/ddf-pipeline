@@ -923,7 +923,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     SolName=os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time))
                     os.symlink(SolName,symsolname)
                     
-                mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
+                if(mpiManager is not None): mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
 
         if SkipSmooth:
             outname = ddsols + '_merged'

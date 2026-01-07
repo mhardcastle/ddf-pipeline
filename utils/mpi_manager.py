@@ -265,14 +265,14 @@ class mpi_manager():
             #os.system("%s &>/dev/null"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
         
-        ss="ssh %s rm %s"%(Node,SolsAliasName)
-        print(ss)
-        os.system("%s > /dev/null 2>&1"%ss)
-        
-        ss="ssh %s ln -s %s %s"%(Node,SmoothSolName,SolsAliasName)
-        print(ss)
-        os.system("%s > /dev/null 2>&1"%ss)
-                
+            ss="ssh %s rm -f %s"%(Node,SolsAliasName)
+            print(ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+            
+            ss="ssh %s ln -s %s %s"%(Node,SmoothSolName,SolsAliasName)
+            print(ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+                    
 
     # def createLink(self):
     #     os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
