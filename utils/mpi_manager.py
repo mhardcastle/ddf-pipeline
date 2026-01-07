@@ -95,10 +95,12 @@ def testParallel():
     
 def filterHost(jobs):
     host = MPI.Get_processor_name()
-    localrank = os.environ.get("SLURM_LOCALID", "0")
+    print("FilterHost : %s"%host)
+    #localrank = os.environ.get("SLURM_LOCALID", "0")
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
         #if RunOnHost == f"{host}@{localrank}":
+        
         if RunOnHost == f"{host}":
             print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
             res.append(func(*args,**kwargs))
