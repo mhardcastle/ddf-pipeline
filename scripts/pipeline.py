@@ -437,29 +437,18 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             else:
                 clearcache(mslist,options)
 
-        #runcommand="DDF.py -h"
-        #os.system("mpirun --prefix /soft/openmpi-4.1.6 -np 2 -x DDF_PIPELINE_CATALOGS -x DDF_LOCAL_DEV -x PATH -x VIRTUAL_ENV -x LD_LIBRARY_PATH -x PYTHONPATH -wdir /local/tasse/TestVE -host node081:1,node082:1 /home/tasse/VE_MPI/sources/DDFacet/DDFacet/DDF.py -h")
-        #stoppp
-        runcommand="""MPI4PY_RC_INITIALIZE=0 /home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; mpi4py.rc.initialize = False; from mpi4py import MPI; print(MPI.Get_processor_name())" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; mpi4py.rc.initialize = False; from mpi4py import MPI; MPI.Init(); print(MPI.Get_processor_name())" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; mpi4py.rc.initialize = False; from mpi4py import MPI" """
-
-        import pprint
-        pprint.pprint(dict(os.environ))
-
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; import os; print(os.environ)" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import os,pprint; pprint.pprint(dict(os.environ))" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; mpi4py.rc.initialize = False; from mpi4py import MPI; MPI.Init(); print(MPI.Get_processor_name())" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "import mpi4py; mpi4py.rc.initialize = False; from mpi4py import MPI" """
-        runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "from mpi4py import MPI; print(MPI.Get_processor_name())" """
-        run(runcommand,dryrun=options['dryrun'],
+        # runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "from mpi4py import MPI; print(MPI.Get_processor_name())" """
+        # run(runcommand,dryrun=options['dryrun'],
+        #     mpiManager=mpiManager,
+        #     mpi_disabled_in_serial_call=False)
+        # stoppp
+        
+        run(runcommand,
+            # dryrun=options['dryrun'],
+            # log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
             mpiManager=mpiManager,
             mpi_disabled_in_serial_call=False)
-        stoppp
-        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
-            mpiManager=mpiManager,
-            mpi_disabled_in_serial_call=False)
-        stoppp
+
         if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
             mpiManager.scpScatter("%s.DicoModel"%imagename)
             
