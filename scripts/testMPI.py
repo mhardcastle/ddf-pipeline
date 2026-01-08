@@ -12,8 +12,8 @@ def test_bcast():
     print("i=",i)
     os.system("mpirun --version")
     jsum=MPI.COMM_WORLD.allreduce(i, MPI.SUM)
-    # j= MPI.COMM_WORLD.bcast(i, root=0)
-    print("(rank %i) j=%i"%(MPI.COMM_WORLD.rank,j))
+    j= MPI.COMM_WORLD.bcast(i, root=0)
+    print("(rank %i) j=%i sumj=%i"%(MPI.COMM_WORLD.rank,j,jsum))
 
 
 def test_init(MPI_Manager):
