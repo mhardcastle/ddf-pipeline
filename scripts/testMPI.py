@@ -10,19 +10,13 @@ def test_bcast():
     print("(rank %i) j=%i"%(MPI.COMM_WORLD.rank,j))
 
 
-def test_init():
-    SetMS=mpi_manager.MSSet("mslist.txt")
-    FullSetMS=mpi_manager.MSSet("big-mslist.txt")
-    MPI_Manager=mpi_manager.mpi_manager({},SetMS, FullSetMS)
+def test_init(MPI_Manager):
     runcommand="""python -c "from mpi4py import MPI; print(MPI.Get_processor_name())" """
     run(runcommand,
         mpiManager=MPI_Manager,
         mpi_disabled_in_serial_call=False)
 
-def test_run_bcast():
-    SetMS=mpi_manager.MSSet("mslist.txt")
-    FullSetMS=mpi_manager.MSSet("big-mslist.txt")
-    MPI_Manager=mpi_manager.mpi_manager({},SetMS, FullSetMS)
+def test_run_bcast(MPI_Manager):
     runcommand="""python %s bcast """%(__file__)
     run(runcommand,
         mpiManager=MPI_Manager,
@@ -30,11 +24,13 @@ def test_run_bcast():
     
 if __name__=="__main__":
     #test_init()
-    print(__file__)
+    # test_bcast()
     if len(sys.argv)==1:
-        # test_init()
-        # test_bcast()
-        test_run_bcast()
+        SetMS=mpi_manager.MSSet("mslist.txt")
+        FullSetMS=mpi_manager.MSSet("big-mslist.txt")
+        MPI_Manager=mpi_manager.mpi_manager({},SetMS, FullSetMS)
+        test_init(MPI_Manager)
+        test_run_bcast(MPI_Manager)
     elif sys.argv[1]=="bcast":
         print("   process test bcast")
         test_bcast()
