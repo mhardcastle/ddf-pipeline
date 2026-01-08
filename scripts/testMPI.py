@@ -1,12 +1,18 @@
 import mpi_manager
 from auxcodes import run,run_serial
 from mpi4py import MPI
+import mpi4py
 import sys
+import os
 
 def test_bcast():
     i=10
+    print(MPI.Get_processor_name())
+    print(mpi4py.__version__,mpi4py.__file__)
     print("i=",i)
-    j= MPI.COMM_WORLD.bcast(i, root=0)
+    os.system("mpirun --version")
+    jsum=MPI.COMM_WORLD.allreduce(i, MPI.SUM)
+    # j= MPI.COMM_WORLD.bcast(i, root=0)
     print("(rank %i) j=%i"%(MPI.COMM_WORLD.rank,j))
 
 
