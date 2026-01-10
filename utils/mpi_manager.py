@@ -100,7 +100,6 @@ def filterHost(jobs):
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
         #if RunOnHost == f"{host}@{localrank}":
-        
         if RunOnHost == f"{host}":
             print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
             res.append(func(*args,**kwargs))
