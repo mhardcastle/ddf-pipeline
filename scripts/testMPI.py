@@ -36,7 +36,7 @@ if __name__=="__main__":
         FullSetMS=mpi_manager.MSSet("big-mslist.txt")
         MPI_Manager=mpi_manager.mpi_manager({},SetMS, FullSetMS)
         test_init(MPI_Manager)
-        # test_run_bcast(MPI_Manager)
+        test_run_bcast(MPI_Manager)
     elif sys.argv[1]=="bcast":
         print("   process test bcast")
         test_bcast()
