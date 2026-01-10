@@ -34,6 +34,7 @@ from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
+import socket
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -739,7 +740,6 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
                 _,_,ModelColName,_=DISettings
-                import socket
                 print(socket.gethostname(),f,colname,ModelColName)
                 _,dt_give,_,n_df_give=give_dt_dnu(f,
                                         DataCol=colname,
@@ -934,8 +934,8 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                 else:
                     SolName=os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time))
                     os.symlink(SolName,symsolname)
-                    
-                mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
+
+                if mpiManager is not None: mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
 
         if SkipSmooth:
             outname = ddsols + '_merged'
@@ -1351,8 +1351,11 @@ def main(o=None):
     global SetMS
     SetMS=mpi_manager.MSSet(o['mslist'])
     FullSetMS=mpi_manager.MSSet(o['full_mslist'])
-
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+    # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node 
+    if not MPI_Manager.UseMPI:
+        o['mslist']=MPI_Manager.DicoNode2mslist[socket.gethostname()]
+        o['full_mslist']=MPI_Manager.DicoNode2fullmslist[socket.gethostname()]
     
     separator('Run MemMonitor')
     MonitorFileDump=os.path.expanduser("~/monitor.pipeline.csv")

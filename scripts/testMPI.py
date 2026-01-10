@@ -22,7 +22,7 @@ def test_bcast():
 
 
 def test_init(MPI_Manager):
-    runcommand="""python -c "from mpi4py import MPI; print(MPI.Get_processor_name())" """
+    runcommand="""python -c "from mpi4py import MPI; print(MPI.COMM_WORLD.rank,MPI.Get_processor_name())" """
     run(runcommand,
         mpiManager=MPI_Manager,
         mpi_disabled_in_serial_call=False)

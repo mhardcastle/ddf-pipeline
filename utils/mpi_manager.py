@@ -178,7 +178,6 @@ class mpi_manager():
         # Scatter mslist and big-mslist.txt
         self.scpScatter(MSSet.file_nodes_mslist)
         self.scpScatter(FullMSSet.file_nodes_mslist)
-
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
 
@@ -221,6 +220,7 @@ class mpi_manager():
             self.scpScatter(FName,Node)
 
     def scpScatter(self,FileName,NodeDest="all"):
+        if not self.UseMPI: return
         if NodeDest=="all":
             for Node in self.ListNodesBeingUsed:
                 if Node==self.MainHost:
@@ -237,6 +237,7 @@ class mpi_manager():
             #os.system("%s"%ss)
 
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
+        if not self.UseMPI: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         for Node in self.ListNodesBeingUsed:
@@ -251,7 +252,7 @@ class mpi_manager():
                 #os.system("%s"%ss)
                 
     def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
-        
+        if not self.UseMPI: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         Node=self.FullMSSet.DicoMSName2Node[MSName]
