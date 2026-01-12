@@ -40,8 +40,40 @@ dependencies = [
 ]
 
 [project.scripts]
-"pipeline.py" = "scripts.pipeline:driver"
+"SplitInFreq.py" = "scripts.SplitInFreq:driver"
+"analyse_logs.py" = "scripts.analyse_logs:driver"
+"apply-astrometric-shifts.py" = "scripts.apply-astrometric-shifts:driver"
+"average.py" = "scripts.average:average"
 "bootstrap.py" = "scripts.bootstrap:driver"
+"compress_all_ms.py" = "scripts.compress_all_ms:driver"
+#-rwxr-xr-x scripts/download.py
+#-rwxr-xr-x scripts/download_field.py
+#-rwxr-xr-x scripts/extraction.py
+#-rwxr-xr-x scripts/make_facet_noise.py
+"make_mslists.py" = "scripts.make_mslists:driver"
+#-rwxr-xr-x scripts/make_subim.py
+#-rwxr-xr-x scripts/mosaic.py
+#-rwxr-xr-x scripts/mosaic_pointing.py
+#-rwxr-xr-x scripts/offsets.py
+"pipeline.py" = "scripts.pipeline:driver"
+#-rwxr-xr-x scripts/plot_dir_pos.py
+#-rwxr-xr-x scripts/quality_pipeline.py
+"remove_columns.py" = "scripts.remove_columns:driver"
+#-rwxr-xr-x scripts/rerun_offsets.py
+#-rwxr-xr-x scripts/run_extraction_pipeline.py
+#-rwxr-xr-x scripts/run_full_field_reprocessing_pipeline.py
+#-rwxr-xr-x scripts/run_selfcal_pipeline.py
+#-rwxr-xr-x scripts/run_smooth_again.py
+"runwsclean.py" = "scripts.runwsclean:driver"
+#-rwxr-xr-x scripts/sourcefind.py
+#-rwxr-xr-x scripts/sub-sources-outside-region.py
+#-rwxr-xr-x scripts/unpack.py
+
+[project.optional-dependencies]
+mpi-support = ["mpi4py == 3.1.5",
+               "fasteners",
+               "DDFacet[mpi-support]",
+              ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -57,6 +89,7 @@ dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
 [tool.uv.sources]
 #ddfacet = { git = "https://github.com/cyriltasse/DDFacet", rev = "79cab91b83bf611476d0d779334fb5c81d29530a" }
 #killms = { git = "https://github.com/cyriltasse/killMS", rev = "b7aa9d4b1d0c929286863cfc0eac32edbcd2cb48" }
-ddfacet = { git = "file:///home/dguibert/code/DDFacet", rev = "58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
-killms = { git = "file:///home/dguibert/code/killMS", rev = "76975d727a1eecd42ae35e58e54a9881c35f490e" }
+ddfacet = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/DDFacet"}
+killms = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/killMS" }
 #ddfacet = { path = "../DDFacet" }
+#killms = { path = "../DDFacet" }

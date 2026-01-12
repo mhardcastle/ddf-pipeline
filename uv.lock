@@ -725,6 +725,13 @@ dependencies = [
     { name = "yorn" },
 ]
 
+[package.optional-dependencies]
+mpi-support = [
+    { name = "ddfacet", extra = ["mpi-support"] },
+    { name = "fasteners" },
+    { name = "mpi4py" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "astropy", specifier = "==6.1.7" },
@@ -732,9 +739,12 @@ requires-dist = [
     { name = "bcrypt", specifier = "==4.3.0" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "cryptography", specifier = "==45.0.5" },
-    { name = "ddfacet", git = "file:///home/dguibert/code/DDFacet?rev=58e758d08f9ce108dc60d6ae3f17d4079fef6387" },
+    { name = "ddfacet", git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/DDFacet" },
+    { name = "ddfacet", extras = ["mpi-support"], marker = "extra == 'mpi-support'", git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/DDFacet" },
+    { name = "fasteners", marker = "extra == 'mpi-support'" },
     { name = "future", specifier = "==1.0.0" },
-    { name = "killms", git = "file:///home/dguibert/code/killMS?rev=76975d727a1eecd42ae35e58e54a9881c35f490e" },
+    { name = "killms", git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/killMS" },
+    { name = "mpi4py", marker = "extra == 'mpi-support'", specifier = "==3.1.5" },
     { name = "numpy" },
     { name = "packaging", specifier = "==25.0" },
     { name = "paramiko", specifier = "==3.5.1" },
@@ -755,11 +765,12 @@ requires-dist = [
     { name = "treepick", specifier = "==0.1.4" },
     { name = "yorn", specifier = "==0.0.6" },
 ]
+provides-extras = ["mpi-support"]
 
 [[package]]
 name = "ddfacet"
 version = "0.8.0.0"
-source = { git = "file:///home/dguibert/code/DDFacet?rev=58e758d08f9ce108dc60d6ae3f17d4079fef6387#58e758d08f9ce108dc60d6ae3f17d4079fef6387" }
+source = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/DDFacet#6fbf04c88492702c2ab1473b563dea699a0996e8" }
 dependencies = [
     { name = "astlib" },
     { name = "astropy" },
@@ -794,6 +805,15 @@ dependencies = [
     { name = "tables" },
     { name = "toml" },
     { name = "tqdm" },
+]
+
+[package.optional-dependencies]
+kms-support = [
+    { name = "bdsf" },
+]
+mpi-support = [
+    { name = "fasteners" },
+    { name = "mpi4py" },
 ]
 
 [[package]]
@@ -895,6 +915,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cc/28/c14e053b6762b1044f34a13aab6859bbf40456d37d23aa286ac24cfd9a5d/executing-2.2.1.tar.gz", hash = "sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4", size = 1129488, upload-time = "2025-09-01T09:48:10.866Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/ea/53f2148663b321f21b5a606bd5f191517cf40b7072c0497d3c92c4a13b1e/executing-2.2.1-py2.py3-none-any.whl", hash = "sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017", size = 28317, upload-time = "2025-09-01T09:48:08.5Z" },
+]
+
+[[package]]
+name = "fasteners"
+version = "0.19"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/d4/e834d929be54bfadb1f3e3b931c38e956aaa3b235a46a3c764c26c774902/fasteners-0.19.tar.gz", hash = "sha256:b4f37c3ac52d8a445af3a66bce57b33b5e90b97c696b7b984f530cf8f0ded09c", size = 24832, upload-time = "2023-09-19T17:11:20.228Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/bf/fd60001b3abc5222d8eaa4a204cd8c0ae78e75adc688f33ce4bf25b7fafa/fasteners-0.19-py3-none-any.whl", hash = "sha256:758819cb5d94cdedf4e836988b74de396ceacb8e2794d21f82d131fd9ee77237", size = 18679, upload-time = "2023-09-19T17:11:18.725Z" },
 ]
 
 [[package]]
@@ -1121,11 +1150,10 @@ wheels = [
 
 [[package]]
 name = "killms"
-version = "0.1.0"
-source = { git = "file:///home/dguibert/code/killMS?rev=76975d727a1eecd42ae35e58e54a9881c35f490e#76975d727a1eecd42ae35e58e54a9881c35f490e" }
+version = "3.2.2"
+source = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/killMS#5a6a1020aa45c7349648f26ca8b5a355200cfd36" }
 dependencies = [
-    { name = "bdsf" },
-    { name = "ddfacet" },
+    { name = "ddfacet", extra = ["kms-support"] },
 ]
 
 [[package]]
@@ -1321,6 +1349,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/74/97e72a36efd4ae2bccb3463284300f8953f199b5ffbc04cbbb0ec78f74b1/matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe", size = 8110, upload-time = "2025-10-23T09:00:22.126Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76", size = 9516, upload-time = "2025-10-23T09:00:20.675Z" },
+]
+
+[[package]]
+name = "mpi4py"
+version = "3.1.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2e/1a/1393e69df9cf7b04143a51776727dd048586781bca82543594ab439e2eb4/mpi4py-3.1.5.tar.gz", hash = "sha256:a706e76db9255135c2fb5d1ef54cb4f7b0e4ad9e33cbada7de27626205f2a153", size = 2469777, upload-time = "2023-10-04T09:05:33.1Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/86/01a7daadd0f507b742dabf8ec7ee36765b46a305ca8676185ada3e6bfa3c/mpi4py-3.1.5-cp310-cp310-win32.whl", hash = "sha256:f39df0d985cb6fb342ee6c6902cadf21b2d828d7df00b182573da0242646b715", size = 398548, upload-time = "2023-10-04T09:04:56.807Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/42/10730250c6ae7d4b28941d5717601695ae1a3d49dbe06ef3e64e17b6f33a/mpi4py-3.1.5-cp310-cp310-win_amd64.whl", hash = "sha256:aec0e6238ed76c930c07df7dcea19f3be5ca958fb76353e668b19511ed4c86d7", size = 472124, upload-time = "2023-10-04T09:04:59.722Z" },
+    { url = "https://files.pythonhosted.org/packages/31/59/cae090e24040a9803314745bcb800ff7d901fd4b46ad18b458f72008bddd/mpi4py-3.1.5-cp311-cp311-win32.whl", hash = "sha256:f73686e3ff8f76bacb9ecacba0515f84392ad4c561b76603f9680f0fe64ef0ed", size = 394766, upload-time = "2023-10-04T09:05:02.859Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/5e/94811843d8c99729bf2b73341ef74b5874c661b8110dec690fe315dddd7e/mpi4py-3.1.5-cp311-cp311-win_amd64.whl", hash = "sha256:d854dae2e62042a0355fa24ef7bea50b5380414806319240a57e654be1e59d9c", size = 465978, upload-time = "2023-10-04T09:05:05.097Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/89/8a65e994eb9840102781daf3a7624fe46f92c899e05134a3129836ad2b7a/mpi4py-3.1.5-cp312-cp312-win32.whl", hash = "sha256:17cc793bf2fe3921f2c3cda59a2a708d2e0c68ce07c8b9d2b6ee1a9adc28fe3d", size = 398117, upload-time = "2023-10-29T09:54:16.913Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/d6/f5cf70e877969871bf3bf3defbb5c2d9a0524ff59db39c498e5a5a712235/mpi4py-3.1.5-cp312-cp312-win_amd64.whl", hash = "sha256:8b38ad45a843bcbd7d11e23fd901016bb8069f35a9d4500666090465a2f734f2", size = 471891, upload-time = "2023-10-29T09:54:19.598Z" },
 ]
 
 [[package]]

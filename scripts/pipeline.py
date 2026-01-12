@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
 Copyright (C) 2017-2024 Martin Hardcastle (mjh@extragalactic.info) and others

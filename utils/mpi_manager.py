@@ -166,7 +166,7 @@ class mpi_manager():
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
-        self.MainHost = MPI.Get_processor_name()
+        self.MainHost = MPI.Get_processor_name() or "localhost"
                 
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False

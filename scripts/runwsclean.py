@@ -1447,8 +1447,7 @@ def runDP3(ms, solint_ap, solint_phaseonly, nchan_phase, nchan_ap, parmdb, solty
 
 # ------------- MAIN LOOP ------------------
 
-if __name__=='__main__':
-
+def driver():
    switchtogaincycle = 3 # number of phase-only selfcal cycles
 
 
@@ -1644,4 +1643,7 @@ if __name__=='__main__':
 
    archive(mslist, outtarname, args['boxfile'], fitsmask, imagename)    
    cleanup(mslist)
+
+if __name__=="__main__":
+    driver()
 
