@@ -15,8 +15,34 @@ from pathlib import Path
 
 WIDTH_PROMPT=90
 
-NFS_MODE=True
-NFS_MODE=False
+
+def CheckNFS():
+    cwd = os.getcwd()
+    cwd = os.path.realpath(cwd)
+    print(cwd)
+    
+    best_match = ""
+    fs_type = None
+
+    with open("/proc/self/mounts") as f:
+        for line in f:
+            parts = line.split()
+            # print("=================")
+            # print(parts)
+            if len(parts) < 3:
+                continue
+            mount_point = parts[1]
+            fstype = parts[2]
+            # print("  ",mount_point,fstype)
+            if cwd.startswith(mount_point) and len(mount_point) > len(best_match):
+                best_match = mount_point
+                fs_type = fstype
+                # print("   --- ",best_match,fs_type)
+    # print("!!!!!",fs_type)
+
+    if fs_type is not None:
+        return fs_type.startswith("nfs") or fs_type== "beegfs"
+    
 
 class MSSet():
     def __init__(self,mslist):
@@ -176,6 +202,8 @@ class mpi_manager():
             self.UseMPI=True
 
         # Scatter mslist and big-mslist.txt
+        
+        self.DoScatterGather=(CheckNFS()==False)
         self.scpScatter(MSSet.file_nodes_mslist)
         self.scpScatter(FullMSSet.file_nodes_mslist)
         self.createRemoteLocal_mslist()
@@ -221,6 +249,8 @@ class mpi_manager():
 
     def scpScatter(self,FileName,NodeDest="all"):
         if not self.UseMPI: return
+        if not self.DoScatterGather: return
+
         if NodeDest=="all":
             for Node in self.ListNodesBeingUsed:
                 if Node==self.MainHost:
@@ -238,6 +268,7 @@ class mpi_manager():
 
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
         if not self.UseMPI: return
+        if not self.DoScatterGather: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         for Node in self.ListNodesBeingUsed:
@@ -253,6 +284,7 @@ class mpi_manager():
                 
     def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
         if not self.UseMPI: return
+        if not self.DoScatterGather: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         Node=self.FullMSSet.DicoMSName2Node[MSName]
