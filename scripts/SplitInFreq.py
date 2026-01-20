@@ -9,9 +9,9 @@ def split(MSName):
     tf=table("%s/SPECTRAL_WINDOW/"%MSName)
     _,nch=tf.getcol("CHAN_FREQ").shape
 
-    nMS=24
+    nMS=20
 
-    chStep=nch//24
+    chStep=nch//nMS
     chEdges=np.linspace(0,nch,nMS+1)
     TemplateName="DP3_split.parset"
     f=open(TemplateName,"w")
