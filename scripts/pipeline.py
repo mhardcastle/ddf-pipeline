@@ -1846,7 +1846,8 @@ def main(o=None):
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0,
+                        DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),
+                        UpdateWeights=1,
                         mpiManager=MPI_Manager, mslist_str='mslist'
                         )
 
@@ -2005,7 +2006,7 @@ def main(o=None):
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0,
+                    DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=1,
                     mpiManager=MPI_Manager, mslist_str='full_mslist'
                     )
         colname="DATA_DI_CORRECTED"
