@@ -451,25 +451,25 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
 
         # runcommand+=" --GAClean-NSourceKin=20 "
-        
-        run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
-        run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)    
-        import DDFacet.DDF
-        SaveFile1="last_DDFacet.finalised.obj"
-        OP=MyPickle.Load(SaveFile1)
-        ListJobs=[]
-        for Node in mpiManager.DicoNode2mslist.keys():
-            ListJobs.append((Node,DDFacet.DDF.driver,(),{"OP_IN":OP}))
 
         Register.register("[DDFacet] %s"%imagename,"Imaging")
-        res=mpi_manager.callParallel(ListJobs)
+        if mpiManager.UseMPI:
+            run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
+            run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)    
+            import DDFacet.DDF
+            SaveFile1="last_DDFacet.finalised.obj"
+            OP=MyPickle.Load(SaveFile1)
+            ListJobs=[]
+            for Node in mpiManager.DicoNode2mslist.keys():
+                ListJobs.append((Node,DDFacet.DDF.driver,(),{"OP_IN":OP}))
+
+            res=mpi_manager.callParallel(ListJobs)
+        else:
+            run(runcommand,
+                dryrun=options['dryrun'],
+                log=logfilename('DDF-'+imagename+'.log',options=options),
+                quiet=options['quiet'])
         Register.register("[DDFacet] %s"%imagename,"Stop")
-    
-        # run(runcommand,
-        #     # dryrun=options['dryrun'],
-        #     # log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'],
-        #     mpiManager=mpiManager,
-        #     mpi_disabled_in_serial_call=False)
 
         if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
             mpiManager.scpScatter("%s.DicoModel"%imagename)
@@ -1386,8 +1386,8 @@ def main(o=None):
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
     # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node 
     if not MPI_Manager.UseMPI:
-        o['mslist']=MPI_Manager.DicoNode2mslist[socket.gethostname()]
-        o['full_mslist']=MPI_Manager.DicoNode2fullmslist[socket.gethostname()]
+        o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
+        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['mslist'])
     
     separator('Run MemMonitor')
     try:
