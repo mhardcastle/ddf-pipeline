@@ -450,6 +450,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         # stoppp
 
 
+        # runcommand+=" --GAClean-NSourceKin=20 "
+        
         run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
         run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)    
         import DDFacet.DDF
@@ -638,7 +640,7 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 SolverType,PolMode,False,NChanSols,
                 DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights),{ }))
-        
+    
     res=mpi_manager.callParallel(ListJobs)
     
     mpiManager.scpGatherSolutions(outsols)
@@ -760,11 +762,15 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                     NChanSols=n_df_give
                 runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
                 
-                
-            # rootfilename=outsols.split('/')[-1]
+            rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
+            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
+            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
+            print("kjbfsdqkjsqdkljdhjkdfhlk")
+            print("kjbfsdqkjsqdkljdhjkdfhlk")
+            print("kjbfsdqkjsqdkljdhjkdfhlk")
             try:
-                Register.register("[killMS ms#%i] %s"%(iFile,outsols),"Calibration")
+                Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
             except:
                 pass
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
@@ -779,7 +785,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
             
             try:
-                Register.register("[killMS ms#%i] %s"%(iFile,outsols),"Stop")
+                Register.register("[killMS ms%i] %s"%(iFile,outsols),"Stop")
             except:
                 pass
 
@@ -1729,7 +1735,7 @@ def main(o=None):
                                 catcher=catcher,NChanSols=o['NChanSols'],
                                 options=o, # required to get the global variable o
                                 MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
-        stoppp
+
         # ##########################################################
         # run bootstrap, and change the column name if it runs
         if o['bootstrap']:
