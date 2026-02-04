@@ -63,7 +63,7 @@ class RClone(object):
         if isinstance(command,str):
             command=command.split()
         
-        fullcommand=[self.command,'--multi-thread-streams','1','--config='+self.config_file]+command
+        fullcommand=[self.command,'--no-check-certificate','--multi-thread-streams','1','--config='+self.config_file]+command
         if self.debug:
             print('Running command',' '.join(fullcommand))
         proc=subprocess.Popen(fullcommand,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -86,7 +86,7 @@ class RClone(object):
         if isinstance(command,str):
             command=command.split()
         
-        fullcommand=[self.command,'--multi-thread-streams','1','--config='+self.config_file]+command
+        fullcommand=[self.command,'--no-check-certificate','--multi-thread-streams','1','--config='+self.config_file]+command
         if self.debug:
             print('Running command',' '.join(fullcommand))
         proc=subprocess.Popen(fullcommand)

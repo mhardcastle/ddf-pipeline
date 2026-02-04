@@ -2,7 +2,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import numpy as np
 from pipeline import *
 from pyrap.tables import table
@@ -103,7 +102,7 @@ def do_polcubes(colname,
             die('Too many frequencies for Stokes cube')
                 
     for i,freq in enumerate(ufreqs):
-        print('Image %i: channel map for frequency %.3f MHz' % (i,old_div(freq,1e6)))
+        print('Image %i: channel map for frequency %.3f MHz' % (i,freq/1e6))
         # iterate over frequencies, finding all MS with the same values
         fmslist=[]
         for ms,f,chan in zip(m.mss,m.freqs,m.channels):

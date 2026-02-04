@@ -106,7 +106,7 @@ def do_run_dynspec(field):
             print("DynSpecMS output %s exists"%tgzName)
             
     if not AllOutputExist:
-        executionstr = 'ms2dynspec.py --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
+        executionstr = 'ms2dynspec.py --tolerance 0.3 --ms big-mslist.txt --data DATA --model PREDICT_SUB --sols [DDS3_full_smoothed,DDS3_full_slow] --rad 2. --SolsDir SOLSDIR --BeamModel LOFAR --BeamNBand 1 --DicoFacet image_full_ampphase_di_m.NS_SUB.DicoFacet --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --imageI image_full_ampphase_di_m.NS.int.restored.fits --imageV image_full_high_stokesV.dirty.corr.fits --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits'
         print(executionstr)
         result=os.system(executionstr)
         if result!=0:
@@ -142,6 +142,9 @@ def transient_image(msfilename,imagename,galactic=False,options=None):
     outimages = glob.glob('%s*dirty.fits'%imagename)
     for outimage in outimages:
         compress_fits(outimage,o['fpack_q'])
+        os.remove(outimage)
+    unwanted=glob.glob(imagename+'*.fits')
+    for outimage in unwanted:
         os.remove(outimage)
 
 def image_vlow(ncpu,wd=None,cache='.'):
@@ -305,14 +308,14 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
         if idd is None:
             raise RuntimeError('Unable to find database entry for field "%s".' % id)
         idd['status']=status
-        tag_field(sdb,idd,workdir=workdir) # Turned this off as columns are not long enough in DB.
+        tag_field(sdb,idd,workdir=workdir)
         if time is not None and idd[time] is None:
             idd[time]=datetime.datetime.now()
         sdb.set_ffr(idd)
 
-def get_next():
-    with SurveysDB() as sdb:
-        sdb.cur.execute('select distinct id,priority from full_field_reprocessing where status="Not started" order by priority desc')
+def get_next(reverse=False):
+    with SurveysDB(readonly=True) as sdb:
+        sdb.cur.execute('select distinct ffr.id,ffr.priority from full_field_reprocessing ffr left join fields f on ffr.id=f.id where ffr.status="Not started" and ffr.clustername is NULL order by priority desc,ra'+' desc' if reverse)
         results=sdb.cur.fetchall()
     if len(results)==0:
         return None
@@ -335,6 +338,44 @@ def get_galactic_coords(msfile):
     gal = skycoord.galactic
     return gal.l.deg, gal.b.deg
 
+def upload_results(operation, field, resultfilestar=None, nodb=False):
+    # Lookup table of where the operations go. Next time, Tim, let's
+    # call the directories the same thing as the operations (-:
+    # If resultfilestar is None then try to find the files to upload
+    # This allows recovery from a failed upload
+    op_locations={'FullSub':'Subtracted_data',
+                  'TransientImage':'Subtracted_snapshot_images',
+                  'DynSpecMS':'DynSpecMS',
+                  'StokesV':'StokesV_imaging',
+                  'HighPol':'Pol_highres',
+                  'EpochPol':'Pol_Epoch',
+                  'VLow_image':'VLow_imaging',
+                  'VLow_sub_image':'VLow_sub_imaging'
+                  }
+    glob_patterns={'DynSpecMS':'DynSpecs_*.tar',
+                   'FullSub':'*_object*archive*.tar',
+                   'TransientImage':'*_snapshot_images.tar',
+                   'StokesV':'V_high_maps.tar',
+                   'HighPol':'stokes_highres.tar',
+                   'EpochPol':'stokes_epochpol.tar',
+                   'VLow_image':'*_low_images.tar',
+                   'VLow_sub_image':'*_low_sub_images.tar'}
+    
+    if os.path.isdir(field): os.chdir(field)
+    if resultfilestar is None:
+        resultfilestar=glob.glob(glob_patterns[operation])
+    if operation not in op_locations:
+        raise RuntimeError('Upload location undefined')
+    target=op_locations[operation]+'/'
+    if not nodb: update_status(field,operation,'Uploading')
+    result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,target)
+    if result['code']==0:
+        if not nodb: update_status(field,operation,'Verified',time='end_date')
+    else:
+        if not nodb: update_status(field,operation,'Upload failed')
+        raise RuntimeError(operation+' upload failed')
+
+
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Reprocessing LoTSS fields')
@@ -345,7 +386,8 @@ if __name__=='__main__':
     parser.add_argument('--Dynspec', help='Process with DynSpecMS', action='store_true')
     parser.add_argument('--Field',help='LoTSS fieldname',type=str,default="")
     parser.add_argument('--Cache',help='DDF cache dir',type=str,default=".")
-    parser.add_argument('--NoDBSync',help='Do not Update the reprocessing database (put 1 to not update)',type=int,default=0)
+    parser.add_argument('--NoDBSync',help='Do not update the reprocessing database',action='store_true')
+    parser.add_argument('--NoUpload',help='Do not upload the processed files',action='store_true')
     parser.add_argument('--NCPU',help='Number of CPU (0 for all)',type=int,default=0)
     parser.add_argument('--Force', help='Process anyway disregarding status in database',action='store_true')
     parser.add_argument('--TransientImage',help='Only possible if doing FullSub and then images output data at 1 image per time slot',action='store_true')
@@ -355,15 +397,17 @@ if __name__=='__main__':
     parser.add_argument('--Download_FullSub',help='Download the full subtracted data from tape',action='store_true')
     parser.add_argument('--Skip_DataPrepare',help='Do not download the uv-data (if e.g. working on downloaded subtracted data)',action='store_true')
     parser.add_argument('--DoDatabaseOps',help='Do the operations specified in the database (in this case operations to do should have status other than Verified)',action='store_true')
+    parser.add_argument('--Upload',help='Retry failed uploads for this field, then stop',action='store_true')
     parser.add_argument('--GetNext',help='Get the next field to do in the database, and do that (combine with DoDatabaseOps)',action='store_true')
+    parser.add_argument('--Reverse',help='Do GetNext in reverse RA order',action='store_true')
 
     args = vars(parser.parse_args())
-            
+
     args['DynSpecMS']=args['Dynspec'] ## because option doesn't match database value
     if args['NCPU']==0: args['NCPU']=getcpus()
     print('Input arguments: ',args)
     if args['GetNext']:
-        field=get_next()
+        field=get_next(reverse=args.Reverse)
         print('Selected field is',field)
         if not field:
             raise RuntimeError('Cannot find a field to do!')
@@ -385,6 +429,15 @@ if __name__=='__main__':
             if fieldinfo is None:
                 raise RuntimeError('Field',field,'does not exist in the database')
 
+        if args['Upload']:
+            # Special mode to retry a failed upload
+            field=args['Field']
+            for r in results:
+                if r['status']=='Upload failed':
+                    print('Retrying upload for operation',r['operation'])
+                    upload_results(r['operation'],field)
+            sys.exit(0)
+    
         if args['DoDatabaseOps']:
             for r in results:
                 if r['status']=='Verified': continue
@@ -466,19 +519,14 @@ if __name__=='__main__':
             if not args["NoDBSync"]: update_status(field,'FullSub','Started',time='start_date')
             do_run_subtract(field)
             resultfiles = glob.glob('*object*sub*archive?')
-            if not args["NoDBSync"]:
+            if not args["NoUpload"]:
                 resultfilestar = []
                 for resultfile in resultfiles:
                     d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
                     if d!=0:
                         raise RuntimeError('Tar of %s failed'%resultfile)	
                     resultfilestar.append('%s.tar'%resultfile)
-                update_status(field,'FullSub','Uploading')
-                result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
-                if result['code']==0:
-                    update_status(field,'FullSub','Verified',time='end_date')
-                else:
-                    update_status(field,'FullSub','Upload failed')
+                upload_results('FullSub',field,resultfilestar,nodb=args['NoDBSync'])
 
     if args['TransientImage']:
         if not args["NoDBSync"]: update_status(field,'TransientImage','Started',time='start_date')
@@ -504,15 +552,11 @@ if __name__=='__main__':
             assert(g)
             for f in g:
                 shutil.move(f,resultdir)
-        d=os.system('tar -cvf %s_snapshot_images.tar %s'%(field,resultdir))
-        if d!=0:
-            raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
-        if not args['NoDBSync']:
-            result = do_rclone_reproc_tape_upload(field,os.getcwd(),['%s_snapshot_images.tar'%field],'Subtracted_snapshot_images/')
-            if result['code']==0:
-                update_status(field,'TransientImage','Verified',time='end_date')
-            else:
-                update_status(field,'TransientImage','Upload failed')
+        if not args['NoUpload']:
+            d=os.system('tar -cvf %s_snapshot_images.tar %s'%(field,resultdir))
+            if d!=0:
+                raise RuntimeError('Tar of %s_snapshot_images failed'%field)	
+            upload_results('TransientImage',field,['%s_snapshot_images.tar'%field],nodb=args['NoDBSync'])
 
     if args['Dynspec'] or args['DynSpecMS']:
         if not args["NoDBSync"]: update_status(field,'DynSpecMS','Started',time='start_date')
@@ -526,16 +570,9 @@ if __name__=='__main__':
             raise RuntimeError('Failed to find any results file from DynSpecMS!')
         for resultfile in resultfiles:
             os.system('cp %s %s'%(resultfile,OutDir))
-        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
-        resultfilestar = ['%s.tar'%OutDir]
-        if not args["NoDBSync"]:
-            update_status(field,'DynSpecMS','Uploading')
-            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'DynSpecMS/')
-            if result['code']==0:
-                update_status(field,'DynSpecMS','Verified',time='end_date')
-            else:
-                update_status(field,'DynSpecMS','Upload failed')
-
+        if not args['NoUpload']:
+            os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+            upload_results('DynSpecMS',field,['%s.tar' % OutDir],nodb=args['NoDBSync'])
             
     if args['StokesV']:
         if not args["NoDBSync"]: update_status(field,'StokesV','Started',time='start_date')
@@ -547,12 +584,10 @@ if __name__=='__main__':
             os.system('mkdir V_high_maps')
             for resultfile in resultfiles:
                 os.system('cp %s V_high_maps'%(resultfile))
-        os.system('tar -cvf V_high_maps.tar V_high_maps')
-        resultfilestar = ['V_high_maps.tar']            
-        if not args["NoDBSync"]:
-            update_status(field,'StokesV','Uploading')
-            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'StokesV_imaging/')
-            update_status(field,'StokesV','Verified',time='end_date')
+        if not args['NoUpload']:
+            os.system('tar -cvf V_high_maps.tar V_high_maps')
+            resultfilestar = ['V_high_maps.tar']            
+            upload_results('StokesV',field,resultfilestar,nodb=args['NoDBSync'])
 
     if args['HighPol']:
         if not args["NoDBSync"]: update_status(field,'HighPol','Started',time='start_date')
@@ -564,14 +599,9 @@ if __name__=='__main__':
         os.system('mkdir stokes_highres')
         for resultfile in resultfiles:
             os.system('mv %s stokes_highres/'%(resultfile))
-        os.system('tar -cvf stokes_highres.tar stokes_highres')
-
-        if not args["NoDBSync"]:
-            resultfilestar = ['stokes_highres.tar']
-            print('Starting upload of',resultfilestar)
-            update_status(field,'HighPol','Uploading')
-            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_highres')
-            update_status(field,'HighPol','Verified',time='end_date')
+        if not args['NoUpload']:
+            os.system('tar -cvf stokes_highres.tar stokes_highres')
+            upload_results('HighPol',field,['stokes_highres.tar'],nodb=args['NoDBSync'])
 
     if args['EpochPol']:
         if not args["NoDBSync"]: update_status(field,'EpochPol','Started',time='start_date')
@@ -585,13 +615,9 @@ if __name__=='__main__':
             os.system('mkdir stokes_epochpol')
             for resultfile in resultfiles:
                 os.system('mv %s stokes_epochpol/'%(resultfile))
-        os.system('tar -cvf stokes_epochpol.tar stokes_epochpol')
-        if not args["NoDBSync"]:
-            resultfilestar = ['stokes_epochpol.tar']
-            print('Starting upload of',resultfilestar)
-            update_status(field,'EpochPol','Uploading')
-            do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Pol_Epoch')
-            update_status(field,'EpochPol','Verified',time='end_date')
+        if not args['NoUpload']:
+            os.system('tar -cvf stokes_epochpol.tar stokes_epochpol')
+            upload_results('EpochPol',field,['stokes_epochpol.tar'],nodb=args['NoDBSync'])
 
     if args['VLow_image']:
         if not args["NoDBSync"]: update_status(field,'VLow_image','Started',time='start_date')
@@ -601,16 +627,10 @@ if __name__=='__main__':
         resultfiles = glob.glob('image_full_vlow_nocut*')
         for resultfile in resultfiles:
             os.system('cp %s %s'%(resultfile,OutDir))
-        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
-        resultfilestar = ['%s.tar'%OutDir]
-        if not args["NoDBSync"]:
-            update_status(field,'VLow_image','Uploading')
-            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_imaging/')
-            if result['code']==0:
-                update_status(field,'VLow_image','Verified',time='end_date')
-            else:
-                update_status(field,'VLow_image','Upload failed')
-
+        if not args['NoUpload']:
+            os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+            resultfilestar = ['%s.tar'%OutDir]
+            upload_results('VLow_image',field,resultfilestar,nodb=args['NoDBSync'])
 
     if args['VLow_sub_image']:
         if not args["NoDBSync"]: update_status(field,'VLow_sub_image','Started',time='start_date')
@@ -620,13 +640,8 @@ if __name__=='__main__':
         resultfiles = glob.glob('WSCLEAN_low*')
         for resultfile in resultfiles:
             os.system('cp %s %s'%(resultfile,OutDir))
-        os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
-        resultfilestar = ['%s.tar'%OutDir]
-        if not args["NoDBSync"]:
-            update_status(field,'VLow_sub_image','Uploading')
-            result=do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'VLow_sub_imaging/')
-            if result['code']==0:
-                update_status(field,'VLow_sub_image','Verified',time='end_date')
-            else:
-                update_status(field,'VLow_sub_image','Upload failed')
+        if not args['NoUpload']:
+            os.system('tar -cvf %s.tar %s'%(OutDir,OutDir))
+            resultfilestar = ['%s.tar'%OutDir]
+            upload_results('VLow_sub_image',field,resultfilestar,nodb=args['NoDBSync'])
 
