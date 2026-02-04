@@ -316,7 +316,7 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
 
 def get_next(reverse=False):
     with SurveysDB(readonly=True) as sdb:
-        sdb.cur.execute('select distinct ffr.id,ffr.priority from full_field_reprocessing ffr left join fields f on ffr.id=f.id where ffr.status="Not started" and ffr.clustername is NULL order by staged desc,priority desc,ra'+' desc' if reverse)
+        sdb.cur.execute('select distinct ffr.id,ffr.priority from full_field_reprocessing ffr left join fields f on ffr.id=f.id where ffr.status="Not started" and ffr.clustername is NULL order by staged desc,priority desc,ra'+(' desc' if reverse else ''))
         results=sdb.cur.fetchall()
     if len(results)==0:
         return None
@@ -408,7 +408,7 @@ if __name__=='__main__':
     if args['NCPU']==0: args['NCPU']=getcpus()
     print('Input arguments: ',args)
     if args['GetNext']:
-        field=get_next(reverse=args.Reverse)
+        field=get_next(reverse=args['Reverse'])
         print('Selected field is',field)
         if not field:
             raise RuntimeError('Cannot find a field to do!')
