@@ -15,6 +15,7 @@ from astropy import units as u
 from astropy.io import fits
 import time
 from subprocess import call
+import subprocess
 from reprocessing_utils import prepare_field,do_rclone_reproc_tape_upload,convert_summary_cfg,do_rclone_reproc_tape_download
 import argparse
 import threading
@@ -519,15 +520,42 @@ if __name__=='__main__':
             if not args["NoDBSync"]: update_status(field,'FullSub','Started',time='start_date')
             do_run_subtract(field)
             resultfiles = glob.glob('*object*sub*archive?')
-            if not args["NoUpload"]:
+            if not args["NoDBSync"]:
                 resultfilestar = []
                 for resultfile in resultfiles:
-                    d=os.system('tar -cvf %s.tar %s'%(resultfile,resultfile))
-                    if d!=0:
-                        raise RuntimeError('Tar of %s failed'%resultfile)	
-                    resultfilestar.append('%s.tar'%resultfile)
-                upload_results('FullSub',field,resultfilestar,nodb=args['NoDBSync'])
 
+                     p = subprocess.run(
+                       [
+                         "tar",
+                         "--exclude=table.lock",
+                         "--exclude=*.lock",
+                         "-cvf", '%s.tar'%resultfile,
+                         resultfile,
+                      ],
+                      text=True,
+                      capture_output=True,
+                      )
+
+                     # GNU tar: 0=ok, 1=warnings (e.g. "file changed as we read it"), 2=fatal
+                     if p.returncode == 2:
+                         raise RuntimeError(
+                         f"Tar of {resultfile} failed (fatal).\n"
+                         f"STDERR:\n{p.stderr}\n"
+                         f"STDOUT:\n{p.stdout}"
+                         )
+                     elif p.returncode == 1:
+                         # Warning only    ^`^t keep going, but print so it lands in Slurm logs
+                         print(f"Tar warning for {resultfile}:\n{p.stderr}")
+                     resultfilestar.append('%s.tar'%resultfile)
+
+                if not args["NoUpload"]:
+                     update_status(field,'FullSub','Uploading')
+                     result = do_rclone_reproc_tape_upload(field,os.getcwd(),resultfilestar,'Subtracted_data/')
+                     if result['code']==0:
+                        update_status(field,'FullSub','Verified',time='end_date')
+                     else:
+                        update_status(field,'FullSub','Upload failed')
+   
     if args['TransientImage']:
         if not args["NoDBSync"]: update_status(field,'TransientImage','Started',time='start_date')
         resultfiles = glob.glob('*object*sub*archive?')
