@@ -316,7 +316,7 @@ def update_status(name,operation,status,time=None,workdir=None,av=None,survey=No
 
 def get_next(reverse=False):
     with SurveysDB(readonly=True) as sdb:
-        sdb.cur.execute('select distinct ffr.id,ffr.priority from full_field_reprocessing ffr left join fields f on ffr.id=f.id where ffr.status="Not started" and ffr.clustername is NULL order by priority desc,ra'+' desc' if reverse)
+        sdb.cur.execute('select distinct ffr.id,ffr.priority from full_field_reprocessing ffr left join fields f on ffr.id=f.id where ffr.status="Not started" and ffr.clustername is NULL order by staged desc,priority desc,ra'+' desc' if reverse)
         results=sdb.cur.fetchall()
     if len(results)==0:
         return None
