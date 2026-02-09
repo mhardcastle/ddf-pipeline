@@ -14,7 +14,7 @@ dependencies = [
     "bcrypt==4.3.0",
     "cffi==1.17.1",
     "cryptography==45.0.5",
-    "ddfacet",
+    "ddfacet[fits-beam-support]",
     "future==1.0.0",
     "killms",
     "numpy", #==2.2.6",
