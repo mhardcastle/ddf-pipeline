@@ -89,7 +89,5 @@ dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
 [tool.uv.sources]
 #ddfacet = { git = "https://github.com/cyriltasse/DDFacet", rev = "79cab91b83bf611476d0d779334fb5c81d29530a" }
 #killms = { git = "https://github.com/cyriltasse/killMS", rev = "b7aa9d4b1d0c929286863cfc0eac32edbcd2cb48" }
-ddfacet = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/DDFacet"}
-killms = { git = "file:///home_nfs/projects/pro_2020_ska/bguibertd/killMS" }
-#ddfacet = { path = "../DDFacet" }
-#killms = { path = "../DDFacet" }
+ddfacet = { path = "../DDFacet" }
+killms = { path = "../killMS" }
