@@ -42,7 +42,7 @@ dependencies = [
 [project.scripts]
 "SplitInFreq.py" = "scripts.SplitInFreq:driver"
 "analyse_logs.py" = "scripts.analyse_logs:driver"
-"apply-astrometric-shifts.py" = "scripts.apply-astrometric-shifts:driver"
+"apply-astrometric-shifts.py" = "scripts.apply_astrometric_shifts:driver"
 "average.py" = "scripts.average:average"
 "bootstrap.py" = "scripts.bootstrap:driver"
 "compress_all_ms.py" = "scripts.compress_all_ms:driver"
