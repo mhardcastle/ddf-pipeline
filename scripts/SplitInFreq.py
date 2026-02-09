@@ -29,6 +29,9 @@ def split(MSName):
         print(ss)
         os.system(ss)
 
-if __name__=="__main__":
+def driver():
     MSName=sys.argv[1]
     split(MSName)
+
+if __name__=="__main__":
+    driver()
