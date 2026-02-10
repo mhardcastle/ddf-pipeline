@@ -1,7 +1,7 @@
 try:
-    from mpi4py.futures import MPIPoolExecutor
+    #from mpi4py.futures import MPIPoolExecutor
     from mpi4py import MPI
-    from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
+    #from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
     MPIsize = MPI.COMM_WORLD.size
 except:
     MPIsize = 0
@@ -64,16 +64,23 @@ class MSSet():
             
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
-            fns=[]
-            with MPIPoolExecutor() as executor:
-                fns=[]
-                fns.append(executor.submit(get_node_name))
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
 
-            # # CT: This was breaking stuff in nancap - not sure what the logic is
-            # self.ListNodesBeingUsed=[f"{MPI.Get_processor_name()}@0"]
-            self.ListNodesBeingUsed=[MPI.Get_processor_name()]
-            for f in fns:
-                self.ListNodesBeingUsed.append(f.result())
+            host = MPI.Get_processor_name()
+            hosts = comm.gather(host, root=0)
+
+            if rank == 0:
+                seen = set()
+                self.ListNodesBeingUsed = []
+                for h in hosts:
+                    if h not in seen:
+                        seen.add(h)
+                        self.ListNodesBeingUsed.append(h)
+            else:
+                self.ListNodesBeingUsed = None
+
+            self.ListNodesBeingUsed = comm.bcast(self.ListNodesBeingUsed, root=0)
                 
             mslist=list(zip(itertools.cycle(self.ListNodesBeingUsed), nodes2ms[None]))
             del nodes2ms[None]
@@ -82,6 +89,7 @@ class MSSet():
                 l=nodes2ms.get(node,[])
                 l.append(ms)
                 nodes2ms[node] = l
+                self.DicoMSName2Node[ms] = node
 
         self.DicoNodes2ListMS=nodes2ms
         self.ListNodesBeingUsed = list(nodes2ms.keys())
@@ -136,42 +144,34 @@ def filterHost(jobs):
     
 
 def callParallel(ListJobs):
-    masterNode = MPI.Get_processor_name()
-    print()
-    print("".center(WIDTH_PROMPT,"="))
-    print(ModColor.Str(" CALL PARALLEL ".center(WIDTH_PROMPT,"="),col="blue"))
-    print(ModColor.Str((" Master node: %s "%masterNode).center(WIDTH_PROMPT,"="),col="blue"))
-    localrank = os.environ.get("SLURM_LOCALID", "0")
-    LJobMasterNode=[]
-    Lres0=[]
-    with MPIPoolExecutor() as executor:
-    #with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-        #mpi_comm_executor = MPICommExecutor(MPI.COMM_WORLD, root=0)
-        Lres=[]
-        for worker in range(MPI.COMM_WORLD.size-1):
-            # submit remote jobs
-            f1=executor.submit(filterHost, ListJobs)
-            Lres.append(f1)
-        
-        # run local jobs
-        for host,func,args,kwargs in ListJobs:
-            #if host == f"{masterNode}@{localrank}":
-            if host == masterNode:
-                print("  [local %s]: %s(%s,%s)"%(host,str(func),str(args),str(kwargs)))
-                Lres0.append(func(*args,**kwargs))
-                
-        for res in Lres:
-            try:
-                #res.result()
-                Lres0.extend(res.result())
-            except Exception as e:
-                print(f"e: {e}")
-        #MPI.COMM_WORLD.Barrier()
-    print(f"callParallel: ok ({Lres0})")
-    # print(" END callParallel ".center(WIDTH_PROMPT,"="))
-    # print("".center(WIDTH_PROMPT,"="))
-    print()
-    return Lres0
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    host = MPI.Get_processor_name()
+
+    if rank == 0:
+        print()
+        print("".center(WIDTH_PROMPT,"="))
+        print(ModColor.Str(" CALL PARALLEL ".center(WIDTH_PROMPT,"="),col="blue"))
+        print(ModColor.Str((f" MPI size: {size} ").center(WIDTH_PROMPT,"="),col="blue"))
+
+    local_results = filterHost(ListJobs)
+
+    all_results = comm.gather(local_results, root=0)
+
+    # Synchronization
+    comm.Barrier()
+
+    if rank == 0:
+        flat = []
+        for r in all_results:
+            flat.extend(r)
+        print(f"callParallel: ok ({flat})")
+        print()
+        return flat
+    else:
+        return None
         
 # import itertools
 # a= [7, 8, 4, 5, 9, 10]
@@ -272,7 +272,8 @@ class mpi_manager():
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         for Node in self.ListNodesBeingUsed:
-            if Node==self.MainHost: return
+            if Node==self.MainHost:
+                continue
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
             for MSName in LMS:
                 MSName = Path(MSName).name # if MSName is given with full path
@@ -296,14 +297,18 @@ class mpi_manager():
             print("[Scatter Sols] %s"%ss)
             #os.system("%s &>/dev/null"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
-        
-        ss="ssh %s rm %s"%(Node,SolsAliasName)
-        print(ss)
-        os.system("%s > /dev/null 2>&1"%ss)
-        
-        ss="ssh %s ln -s %s %s"%(Node,SmoothSolName,SolsAliasName)
-        print(ss)
-        os.system("%s > /dev/null 2>&1"%ss)
+            
+            ss="ssh %s rm %s"%(Node,SolsAliasName)
+            print(ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+            
+            ss="ssh %s ln -s %s %s"%(Node,SmoothSolName,SolsAliasName)
+            print(ss)
+            os.system("%s > /dev/null 2>&1"%ss)
+        else:
+            if os.path.islink(SolsAliasName):
+                os.unlink(SolsAliasName)
+            os.symlink(SmoothSolName,SolsAliasName)
                 
 
     # def createLink(self):
