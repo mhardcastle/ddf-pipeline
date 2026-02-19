@@ -1580,7 +1580,9 @@ def main(o=None):
             make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
             
         if o['external_fits_mask'] is not None:
-            merge_mask(external_mask,o['external_fits_mask'],external_mask)
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,o['external_fits_mask'],external_mask)
 
         if MPI_Manager.UseMPI and external_mask is not None:
             MPI_Manager.scpScatter(external_mask)
@@ -1607,7 +1609,9 @@ def main(o=None):
         
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
-            merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
         
         # make a mask from the final image
         separator("Make mask for next iteration")
@@ -1616,7 +1620,7 @@ def main(o=None):
                               external_mask=external_mask,
                               catcher=catcher)
     
-        if MPI_Manager.UseMPI and external_mask is not None:
+        if MPI_Manager.UseMPI:
             MPI_Manager.scpScatter(CurrentMaskName)
             
         separator("Continue deconvolution")
