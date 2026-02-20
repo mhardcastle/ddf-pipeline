@@ -185,10 +185,6 @@ def find_cache_dir(options):
     return cache_dir
 
 def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     ListJobs=[]
     if o is not None:
         for Node in MPI_Manager.DicoNode2mslist.keys():
@@ -293,12 +289,6 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
 
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2, mpiManager=None):
     if catcher: catcher.check()
-
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        if comm is not None and size > 1:
-            return comm.bcast(None, root=0)
-        return imagename
 
     # saveimages lists _additional_ images to save
     if saveimages is None:
@@ -515,8 +505,6 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         if PredictSettings is not None:
             fname=os.system("touch %s"%fname)
             
-    if comm is not None and size > 1:
-        comm.bcast(imagename, root=0)
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize',
@@ -644,12 +632,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 mpiManager=None, mslist_str=""
                 ):
 
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        if comm is not None and size > 1:
-            return comm.bcast(None, root=0)
-        return outsols
-
     
     if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
         SolsDir=options["SolsDir"]
@@ -662,8 +644,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
                 mpiManager, mslist_str
         )
-        if comm is not None and size > 1:
-            comm.bcast(rep, root=0)
         return rep
     else:
         rep=killms_data_serial(
@@ -673,8 +653,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
         )
-        if comm is not None and size > 1:
-            comm.bcast(rep, root=0)
         return rep
 
 def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
@@ -682,10 +660,6 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None, mpiManager=None, mslist_str=""):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return outsols
-
     ListJobs=[]
     if mslist_str != "":
         for Node in mpiManager.DicoNode2mslist.keys():
@@ -925,10 +899,6 @@ def mvglob(path,dest):
         move(f,dest)
 
 def clearcache_mpi(MPI_Manager,mslist_str, o):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     ListJobs=[]
     for Node in MPI_Manager.DicoNode2mslist.keys():
         mslist_ = None
@@ -1060,10 +1030,6 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     return outname
 
 def full_clearcache_mpi(MPI_Manager,o,extras=None):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     ListJobs=[]
     if o is not None:
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
@@ -1085,10 +1051,6 @@ def full_clearcache(o,extras=None):
             clearcache(mslist,o)
 
 def redo_dppp_di_mpi(MPI_Manager,o):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     ListJobs=[]
     if o is not None:
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
@@ -1255,10 +1217,6 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
         subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
 
 def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str=""):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     ListJobs=[]
     if mslist_str != "":
         for Node in mpiManager.DicoNode2mslist.keys():
@@ -1406,10 +1364,6 @@ def subtractOuterSquare(o, mpiManager=None):
             catcher=catcher, mpiManager=MPI_Manager)
 
 def checkColName_mpi(MPI_Manager, o):
-    should_run, comm, size, rank = _mpi_rank0_guard()
-    if not should_run:
-        return
-
     listJobs = []
     for node in MPI_Manager.DicoNode2mslist.keys():
         o_ = copy.deepcopy(o)
