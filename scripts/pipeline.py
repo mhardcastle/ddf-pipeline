@@ -724,7 +724,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(f,SolverType,PolMode,imagename+"_"+socket.gethostname(),niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
+            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
 
             # check for option to stop pdb call and use it if present
             
