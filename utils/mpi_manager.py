@@ -16,7 +16,7 @@ from pathlib import Path
 WIDTH_PROMPT=90
 
 
-def CheckNFS():
+def CheckDistributedFS():
     cwd = os.getcwd()
     cwd = os.path.realpath(cwd)
     print(cwd)
@@ -41,7 +41,7 @@ def CheckNFS():
     # print("!!!!!",fs_type)
 
     if fs_type is not None:
-        return fs_type.startswith("nfs") or fs_type== "beegfs"
+        return fs_type.startswith("nfs") or fs_type== "beegfs" or fs_type == "lustre"
     
 
 class MSSet():
@@ -204,7 +204,7 @@ class mpi_manager():
 
         # Scatter mslist and big-mslist.txt
         
-        self.DoScatterGather=(CheckNFS()==False)
+        self.DoScatterGather=(CheckDistributedFS()==False)
         self.scpScatter(MSSet.file_nodes_mslist)
         self.scpScatter(FullMSSet.file_nodes_mslist)
         self.createRemoteLocal_mslist()
