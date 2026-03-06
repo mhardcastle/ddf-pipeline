@@ -462,8 +462,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
         # runcommand+=" --GAClean-NSourceKin=20 "
 
-        Register.register("[DDFacet] %s"%imagename,"Imaging")
-        if mpiManager.UseMPI:
+        try:
+            Register.register("[DDFacet] %s"%imagename,"Imaging")
+        except:
+            pass
+        if mpiManager is not None and mpiManager.UseMPI:
             run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
             run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)
             import DDFacet.DDF
@@ -479,7 +482,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
                 dryrun=options['dryrun'],
                 log=logfilename('DDF-'+imagename+'.log',options=options),
                 quiet=options['quiet'])
-        Register.register("[DDFacet] %s"%imagename,"Stop")
+        try:
+            Register.register("[DDFacet] %s"%imagename,"Stop")
+        except:
+            pass
 
         if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
             mpiManager.scpScatter("%s.DicoModel"%imagename)

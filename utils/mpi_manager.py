@@ -206,7 +206,7 @@ class mpi_manager():
         
         self.DoScatterGather=(CheckDistributedFS()==False)
         self.scpScatter(MSSet.file_nodes_mslist)
-        self.scpScatter(FullMSSet.file_nodes_mslist)
+        if FullMSSet is not None: self.scpScatter(FullMSSet.file_nodes_mslist)
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
 
