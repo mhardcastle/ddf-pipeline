@@ -1448,7 +1448,7 @@ def main(o=None):
     # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node 
     if not MPI_Manager.UseMPI:
         o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
-        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['mslist'])
+        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
     
     separator('Run MemMonitor')
     try:
