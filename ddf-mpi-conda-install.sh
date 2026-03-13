@@ -78,6 +78,7 @@ export KMS_BRANCH=APP_Predict_Compress_PolSmooth_HybridSM_OpFit_MultiField_MPI_M
 export DDFPIPE_BRANCH=Hackaton_mpipool_test_NancepMPI_Herts
 export DDFACET_COMMIT=403050b69c51e77ac9b7db69e6a69201db785a27
 export KMS_COMMIT=d9de06d57bd5f083f41ccf3dae85588bbc7b33df
+export DDFPIPE_COMMIT=109e389d0fb523d282c321ceb0cfe884bfe98004
 
 git clone --branch $DDFACET_BRANCH https://github.com/cyriltasse/DDFacet.git
 pip install --no-build-isolation -e ./DDFacet[mpi-support]
@@ -86,6 +87,10 @@ git clone --branch $KMS_BRANCH https://github.com/cyriltasse/killMS.git
 pip install -e ./killMS
 
 git clone --branch $DDFPIPE_BRANCH https://github.com/besnardb/ddf-pipeline.git
+
+cd ddf-pipeline
+git checkout $DDFPIPE_COMMIT
+cd ..
 
 cd DDFacet
 git checkout $DDFACET_COMMIT
