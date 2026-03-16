@@ -70,7 +70,7 @@ dependencies = [
 #-rwxr-xr-x scripts/unpack.py
 
 [project.optional-dependencies]
-mpi-support = ["mpi4py == 3.1.5",
+mpi-support = ["mpi4py",
                "fasteners",
                "DDFacet[mpi-support]",
               ]
