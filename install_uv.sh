@@ -7,7 +7,13 @@ if ! command -v uv; then
 fi
 
 
+# Use on HPC centers (Jean Zay, Adastra, ...)
+#export UV_CACHE_DIR=$PWD/uv_cache
+# Use on Adastra HPC center
+#export CC=gcc
+
 # download DDFacet/killMS and ddf-pipeline
+# Use https method on some HPC centers
 export METHOD_CLONE="https://github.com/"
 export METHOD_CLONE="git@github.com:"
 
