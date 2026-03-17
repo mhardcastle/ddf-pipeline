@@ -1114,7 +1114,11 @@ def main(o=None):
         os.mkdir(o['logging'])
        
     # Check imaging weights -- needed before DDF
-    new=check_imaging_weight(o['mslist'])
+    if o['full_mslist'] is not None:
+        new=check_imaging_weight(o['full_mslist'])
+    else:
+        new=check_imaging_weight(o['mslist'])
+        
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to
@@ -1477,9 +1481,6 @@ def main(o=None):
         # #########################################################################
         # ###############                  BIG MSLIST               ###############
         # #########################################################################
-
-        # check full mslist imaging weights
-        check_imaging_weight(o['full_mslist'])
 
         if o['bootstrap']:
             colname='SCALED_DATA'
