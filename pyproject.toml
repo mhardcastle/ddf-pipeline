@@ -84,6 +84,9 @@ packages = [
          "scripts",
 ]
 
+[tool.uv.extra-build-dependencies]
+astlib = ["setuptools==80.10.2"]
+
 # https://hatch.pypa.io/1.9/config/build/#dev-mode
 [tool.hatch.build]
 dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
