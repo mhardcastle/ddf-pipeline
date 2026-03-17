@@ -35,7 +35,7 @@ dependencies = [
     "sshtunnel==0.4.0",
     "treepick==0.1.4",
     "yorn==0.0.6",
-    
+    "everybeam",
     "emcee",
     
     "python-casacore", # lofar
