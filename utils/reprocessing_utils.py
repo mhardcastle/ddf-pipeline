@@ -135,6 +135,8 @@ def stage_field_SDR(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleep
     elif Mode=="Misc":
         tarfiles=['misc.tar']
     elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','uv.tar','misc.tar']
+    elif Mode=="Imaging+Misc+Stokes":
         tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
 
     for f in tarfiles:
@@ -177,6 +179,8 @@ def stage_field_rclone(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sl
     elif Mode=="Misc":
         tarfiles=['misc.tar']
     elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','misc.tar']+[f for f in files if 'uv' in f]
+    elif Mode=="Imaging+Misc+Stokes":
         tarfiles=['images.tar','misc.tar',"stokes_small.tar"]+[f for f in files if 'uv' in f]
     to_stage=[]
     for f in tarfiles:
@@ -254,6 +258,8 @@ def do_sdr_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['downl
     elif Mode=="Misc":
         tarfiles=['misc.tar']
     elif Mode=="Imaging+Misc":
+        tarfiles=['images.tar','uv.tar','misc.tar']
+    elif Mode=="Imaging+Misc+Stokes":
         tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
     elif Mode=="ImageOnly":
         tarfiles=['images.tar']
@@ -288,6 +294,8 @@ def do_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['do
             elif Mode=="Misc":
                 tarfiles=[fl for fl in files if 'misc.tar'==fl]
             elif Mode=="Imaging+Misc":
+                tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl]
+            elif Mode=="Imaging+Misc+Stokes":
                 tarfiles=[fl for fl in files if 'images' in fl or 'uv' in fl or 'misc.tar'==fl or "stokes_small.tar"==fl]
             else:
                 raise NotImplementedError('Unknown mode requested')

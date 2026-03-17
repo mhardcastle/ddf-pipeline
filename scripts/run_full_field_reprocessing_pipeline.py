@@ -571,6 +571,10 @@ if __name__=='__main__':
             imagefile = resultfile.split('_')[0] + '_epoch_' + resultfile.split('archive')[-1]
             print(resultfile)
             print(imagefile)
+            g=glob.glob(resultdir+'/'+imagefile+'*')
+            if len(g):
+                print('Files like',imagefile,'already exist, skipping')
+                continue
             gal_l, gal_b = get_galactic_coords(resultfiles[0])
             if abs(gal_b) < 10.0:
                 transient_image(resultfile,imagefile,galactic=True,options=o)
@@ -649,6 +653,7 @@ if __name__=='__main__':
 
     if args['VLow_image']:
         if not args["NoDBSync"]: update_status(field,'VLow_image','Started',time='start_date')
+        prepare_field(field,'./',Mode='Imaging+Misc',operations=['fixsymlinks'])
         image_vlow(args['NCPU'],cache=args['Cache'])
         OutDir = '%s_low_images'%field
         os.system('mkdir %s'%OutDir)
@@ -662,6 +667,15 @@ if __name__=='__main__':
 
     if args['VLow_sub_image']:
         if not args["NoDBSync"]: update_status(field,'VLow_sub_image','Started',time='start_date')
+        # Check that the Vlow_image outputs are here, we need them for beam correction
+        resultfiles = glob.glob('image_full_vlow_nocut*')
+        if len(resultfiles)==0:
+            print('Attempting to download VLow files')
+            do_rclone_reproc_tape_download(field,'./','VLow_imaging',verbose=True)
+            imagepath=field+'_low_images'
+            g=glob.glob(imagepath+'/*.fits')
+            for f in g:
+                shutil.move(f,'.')
         image_vlow_sub() # does a new subtraction so must be run last
         OutDir = '%s_low_sub_images'%field
         os.system('mkdir %s'%OutDir)
