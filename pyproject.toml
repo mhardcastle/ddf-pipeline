@@ -1,0 +1,93 @@
+[build-system]
+requires = ['hatchling', 'editables']
+build-backend = 'hatchling.build'
+
+[project]
+name = "ddf-pipeline"
+version = "0.1.0"
+description = "Pipeline to carry out several iterations of direction-dependent self-calibration on your LOFAR imaging data using DDFacet and KillMS"
+authors = [ ]
+requires-python = ">=3.10"
+dependencies = [
+    "astropy==6.1.7",
+    "astropy-iers-data==0.2025.6.30.0.39.40",
+    "bcrypt==4.3.0",
+    "cffi==1.17.1",
+    "cryptography==45.0.5",
+    "ddfacet[fits-beam-support]",
+    "future==1.0.0",
+    "killms",
+    "numpy", #==2.2.6",
+    "packaging==25.0",
+    "paramiko==3.5.1",
+    "pdu==0.0.3",
+    "psutil==7.0.0",
+    "pycparser==2.22",
+    "pyerfa==2.0.1.5",
+    "pymysql==1.1.1",
+    "pynacl==1.5.0",
+    "pyparsing==3.2.3",
+    "pyregion==2.3.0",
+    "python-casacore==3.7.1",
+    "pyyaml==6.0.2",
+    "scipy==1.15.3",
+    "six==1.17.0",
+    "sshtunnel==0.4.0",
+    "treepick==0.1.4",
+    "yorn==0.0.6",
+    
+    "python-casacore", # lofar
+]
+
+[project.scripts]
+"SplitInFreq.py" = "scripts.SplitInFreq:driver"
+"analyse_logs.py" = "scripts.analyse_logs:driver"
+"apply-astrometric-shifts.py" = "scripts.apply_astrometric_shifts:driver"
+"average.py" = "scripts.average:average"
+"bootstrap.py" = "scripts.bootstrap:driver"
+"compress_all_ms.py" = "scripts.compress_all_ms:driver"
+#-rwxr-xr-x scripts/download.py
+#-rwxr-xr-x scripts/download_field.py
+#-rwxr-xr-x scripts/extraction.py
+#-rwxr-xr-x scripts/make_facet_noise.py
+"make_mslists.py" = "scripts.make_mslists:driver"
+#-rwxr-xr-x scripts/make_subim.py
+#-rwxr-xr-x scripts/mosaic.py
+#-rwxr-xr-x scripts/mosaic_pointing.py
+#-rwxr-xr-x scripts/offsets.py
+"pipeline.py" = "scripts.pipeline:driver"
+#-rwxr-xr-x scripts/plot_dir_pos.py
+#-rwxr-xr-x scripts/quality_pipeline.py
+"remove_columns.py" = "scripts.remove_columns:driver"
+#-rwxr-xr-x scripts/rerun_offsets.py
+#-rwxr-xr-x scripts/run_extraction_pipeline.py
+#-rwxr-xr-x scripts/run_full_field_reprocessing_pipeline.py
+#-rwxr-xr-x scripts/run_selfcal_pipeline.py
+#-rwxr-xr-x scripts/run_smooth_again.py
+"runwsclean.py" = "scripts.runwsclean:driver"
+#-rwxr-xr-x scripts/sourcefind.py
+#-rwxr-xr-x scripts/sub-sources-outside-region.py
+#-rwxr-xr-x scripts/unpack.py
+
+[project.optional-dependencies]
+mpi-support = ["mpi4py",
+               "fasteners",
+               "DDFacet[mpi-support]",
+              ]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+         "others",
+         "utils",
+         "scripts",
+]
+
+# https://hatch.pypa.io/1.9/config/build/#dev-mode
+[tool.hatch.build]
+dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
+
+[tool.uv.sources]
+#ddfacet = { git = "https://github.com/cyriltasse/DDFacet", rev = "79cab91b83bf611476d0d779334fb5c81d29530a" }
+#killms = { git = "https://github.com/cyriltasse/killMS", rev = "b7aa9d4b1d0c929286863cfc0eac32edbcd2cb48" }
+ddfacet = { path = "../DDFacet" }
+killms = { path = "../killMS" }
