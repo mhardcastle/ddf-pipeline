@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$(dirname "$(realpath -- "${BASH_SOURCE[0]}")")"
 
-export DDF_PIPELINE_CATALOGS=$USER/CATALOGS
+export DDF_PIPELINE_CATALOGS=$HOME/CATALOGS
 export SOURCE_DIR="$(realpath -- "$SCRIPT_DIR/..")"
 
 source $SCRIPT_DIR/.venv/bin/activate
