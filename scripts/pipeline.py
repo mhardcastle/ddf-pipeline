@@ -26,7 +26,6 @@ standard_library.install_aliases()
 from builtins import zip
 from builtins import str
 from builtins import range
-from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
