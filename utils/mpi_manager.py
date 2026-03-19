@@ -162,7 +162,9 @@ def callParallel(ListJobs):
                 
         for res in Lres:
             try:
-                #res.result()
+                err = res.exception()
+                if err is not None:
+                    raise RuntimeError from err
                 Lres0.extend(res.result())
             except Exception as e:
                 print(f"e: {e}")
