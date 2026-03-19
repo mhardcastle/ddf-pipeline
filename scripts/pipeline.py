@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
 Copyright (C) 2017-2024 Martin Hardcastle (mjh@extragalactic.info) and others
@@ -439,19 +440,19 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             print('would have run',runcommand)
     else:
         if conditional_clearcache:
-            if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1:
+            if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
                 clearcache_mpi(mpiManager, mslist, options)
             else:
                 clearcache(mslist,options)
 
-        if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1:
-            jobs=[]
-            for h in mpiManager.ListNodesBeingUsed:
-                log=logfilename('DDF-'+imagename+'-'+h+'.log')
-                jobs.append([h, run_serial, (runcommand,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
-            print(f"run: {jobs}")
-            res=mpi_manager.callParallel(jobs)
-            print(res)
+        # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+        #     jobs=[]
+        #     for h in mpiManager.ListNodesBeingUsed:
+        #         log=logfilename('DDF-'+imagename+'-'+h+'.log')
+        #         jobs.append([h, run_serial, (runcommand,), { "dryrun": options['dryrun'], "log": log, "quiet": options['quiet'] }])
+        #     print(f"run: {jobs}")
+        #     res=mpi_manager.callParallel(jobs)
+        #     print(res)
 
         # runcommand="""/home/tasse/VE_MPI/venv/bin/python -c "from mpi4py import MPI; print(MPI.Get_processor_name())" """
         # run(runcommand,dryrun=options['dryrun'],
@@ -780,11 +781,6 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
-            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
             try:
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
             except:
@@ -1166,7 +1162,7 @@ def ingest_dynspec(obsid='*'):
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
                  mpiManager=None, mslist_str=""):
-    if mpiManager is not None and mpiManager.UseMPI and mpiManager.size>1 and mslist_str != "":
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
         subtract_vis_mpi(mslist,colname_a,colname_b,out_colname, mpiManager, mslist_str)
     else:
         subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
