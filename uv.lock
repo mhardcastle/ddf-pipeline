@@ -785,7 +785,7 @@ requires-dist = [
     { name = "ddfacet", extras = ["fits-beam-support"], directory = "../DDFacet" },
     { name = "ddfacet", extras = ["mpi-support"], marker = "extra == 'mpi-support'", directory = "../DDFacet" },
     { name = "emcee" },
-    { name = "everybeam" },
+    { name = "everybeam", specifier = "==0.5.8" },
     { name = "fasteners", marker = "extra == 'mpi-support'" },
     { name = "future", specifier = "==1.0.0" },
     { name = "killms", directory = "../killMS" },
@@ -1034,17 +1034,16 @@ wheels = [
 
 [[package]]
 name = "everybeam"
-version = "0.8.2"
+version = "0.5.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/38/6ce9e0389d5e38000e057bc6b1065ba973c1204753b072db44991a5e6222/everybeam-0.8.2.tar.gz", hash = "sha256:b6b2a3381101d8c5fa07eed5b8f82796dbee32638f669656dcf3d9a92d7f9730", size = 7288212, upload-time = "2026-02-26T10:58:05.574Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/18/a1186fae81bfa451e3fe488f14b7f87efb6f95e24db60deef3f0eb8069e7/everybeam-0.5.8.tar.gz", hash = "sha256:2e081c21e20be123442e40777dce39a393abd55f625933c3d08cddc893fbc427", size = 5152012, upload-time = "2024-05-07T12:57:32.719Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/fd/d47e503ee9e5aee347ebe145fbfce5aea805004d603a2a17d8fad186c834/everybeam-0.8.2-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:1c51def37ea699d71dbbd55a06e5d59af2b12eb61949b3d7508e38cc3f5ab048", size = 31868988, upload-time = "2026-02-26T10:57:45.722Z" },
-    { url = "https://files.pythonhosted.org/packages/86/55/95fa3a42a99dfccab66f6a38d8b5b9947427228ff88f13425e1328ba752b/everybeam-0.8.2-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:a12ba56490368a453ef53604014e715af7f3e7216bb609b55a4012952e0c9f79", size = 31869381, upload-time = "2026-02-26T10:57:51.014Z" },
-    { url = "https://files.pythonhosted.org/packages/95/fb/70be8317cc3dbdca964418f356162311d8a70a079d09c82e16847121afab/everybeam-0.8.2-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:c27c90916cde24d520b93c12d00fb2a0dbcb7bfd2417bbb6520aebaba4ac0fd3", size = 31869332, upload-time = "2026-02-26T10:57:54.525Z" },
-    { url = "https://files.pythonhosted.org/packages/86/21/bb5a115e81a5ade0bfcc858292dd06f859ba2b9f5bd182107decd30e04cd/everybeam-0.8.2-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:07e592a01d72dd61f9cdd2a2915cc6ea8fbaf1ce0621e99c2ac1bbf7984ba59c", size = 31869259, upload-time = "2026-02-26T10:57:58.731Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/81/8ad4e754b41380c26d37cf14d98bb9ab60177d24da0f55967140a5a760d7/everybeam-0.5.8-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8f82d19b9e8bec31dc204fdc7609386bc6ee668332bbcb5d534e9412afa697b1", size = 33422107, upload-time = "2024-05-07T12:57:08.065Z" },
+    { url = "https://files.pythonhosted.org/packages/32/98/ac349295d1c7216f111913f4f417dbc6a4a6f94c21508c2e402ef153806c/everybeam-0.5.8-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3122bb29871281997054e03af98744ceba3118832a3f7023714456391ef889e4", size = 33422117, upload-time = "2024-05-07T12:57:12.443Z" },
+    { url = "https://files.pythonhosted.org/packages/24/0e/474505a67db90200bf6985cd4db1a4b6195130cba9804e2ec9198e4f4599/everybeam-0.5.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:805d14eb2eb58e56ae54b601f59ee0557761eefc7d40cf171b85c2aca5aa2a69", size = 33419750, upload-time = "2024-05-07T12:57:16.22Z" },
 ]
 
 [[package]]

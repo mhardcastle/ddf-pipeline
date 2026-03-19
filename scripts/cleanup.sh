@@ -14,8 +14,8 @@ rm last*
 rm mask*
 rm external_mask*
 rm -r logs
-rm -r *.ddfcache
-rm -r SOLSDIR
+rm -rf *.ddfcache
+rm -rf SOLSDIR
 rm DD*.npz
 rm MaskDiffuse.pickle Noise*fits MaskDiffuse.reg MaskDiffuse.fits
 rm Predict_*
