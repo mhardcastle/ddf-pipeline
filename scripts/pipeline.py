@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 ddf-pipeline, a pipeline for LOFAR data reduction
 Copyright (C) 2017-2024 Martin Hardcastle (mjh@extragalactic.info) and others
@@ -780,11 +781,6 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
 
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
-            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
-            print("kjbfsdqkjsqdkljdhjkdfhlk",rootfilename)
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
-            print("kjbfsdqkjsqdkljdhjkdfhlk")
             try:
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
             except:
