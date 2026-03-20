@@ -87,6 +87,7 @@ cd build
 cmake -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DBUILD_WITH_PYTHON=On -DCASACORE_ROOT_DIR=$VIRTUAL_ENV -DCFITSIO_INCLUDE_DIR=$VIRTUAL_ENV/include -DCFITSIO_LIBRARY=$VIRTUAL_ENV/lib/libcfitsio.so ..
 make -j 20
 
+
 cd $VE_FOLDER/../sources
 git clone https://github.com/aroffringa/dysco.git
 cd dysco
