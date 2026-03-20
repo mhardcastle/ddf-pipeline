@@ -122,7 +122,25 @@ def run_standalone(commands):
     except subprocess.CalledProcessError as e:
         print("ERROR:", e.stderr)
 
+def _mpi_rank0_guard():
+    """Return (should_run, comm, size, rank) for rank-0 only sections."""
+    try:
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        size = comm.Get_size()
+        rank = comm.Get_rank()
+    except Exception:
+        comm = None
+        size = 1
+        rank = 0
+    if size > 1 and rank != 0:
+        return False, comm, size, rank
+    return True, comm, size, rank
+
 def summary(o):
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
     with open('summary.txt','w') as f:
         ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
         f.write('ddf-pipeline completed at '+ts+'\n')
@@ -243,6 +261,11 @@ def parse_parset(parsets,use_headings=False):
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
     if catcher: catcher.check()
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
+
     if options is None:
         options=o # attempt to get global if it exists
 
@@ -507,6 +530,10 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
     if options is None:
         options=o # attempt to get global
 
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
+
     if options['dryrun']: return
 
     if options['restart'] and os.path.isfile(fname) and not clobber:
@@ -532,6 +559,11 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
 
 
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
+
     if os.path.isfile(OutClusterCat):
         warn('File %s already exists, skipping clustering step'%OutClusterCat)
         return
@@ -582,7 +614,10 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     if options['dryrun']: return
     fname=imagename+'.mask.fits'
 
-
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return fname
+    
     runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
     if OutMaskExtended is not None:
         runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
@@ -810,12 +845,19 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
     return outsols
 
 def compress_fits(filename,q):
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
     command='fpack -q %i %s' % (q,filename)
     run(command,dryrun=o['dryrun'])
 
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
     if catcher: catcher.check()
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return False
 
     fname=imagename+'.npy'
     if o['restart'] and os.path.isfile(fname):
@@ -829,12 +871,21 @@ def make_model(maskname,imagename,catcher=None):
 def mask_dicomodel(indico,maskname,outdico,catcher=None):
     if catcher: catcher.check()
 
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        if comm is not None and size > 1:
+            return comm.bcast(None, root=0)
+        return outdico.split(".")[0]
+
     if o['restart'] and os.path.isfile(outdico):
         warn('File '+outdico+' already exists, skipping MaskDicoModel step')
     else:
         runcommand = "MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(maskname,indico,outdico)
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
-    return outdico.split(".")[0]
+    result = outdico.split(".")[0]
+    if comm is not None and size > 1:
+        comm.bcast(result, root=0)
+    return result
 
 def rmtglob(path):
     g=glob.glob(path)
@@ -898,6 +949,13 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                      options=None,mpiManager=None):
     if options is None:
         options=o
+        
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        if comm is not None and size > 1:
+            outname = comm.bcast(None, root=0)
+            return outname
+        
     filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
@@ -977,6 +1035,9 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             outname = ddsols + '_merged'
         else:
             outname = ddsols + '_smoothed'
+
+    if comm is not None and size > 1:
+        comm.bcast(outname, root=0)
 
     return outname
 
@@ -1400,8 +1461,8 @@ def main(o):
     # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node
     if not MPI_Manager.UseMPI:
         o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
-        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['mslist'])
-
+        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
+    
     separator('Run MemMonitor')
     try:
         run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
@@ -1537,7 +1598,9 @@ def main(o):
             make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
 
         if o['external_fits_mask'] is not None:
-            merge_mask(external_mask,o['external_fits_mask'],external_mask)
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,o['external_fits_mask'],external_mask)
 
         if MPI_Manager.UseMPI and external_mask is not None:
             MPI_Manager.scpScatter(external_mask)
@@ -1564,8 +1627,10 @@ def main(o):
 
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
-            merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
-
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+        
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
