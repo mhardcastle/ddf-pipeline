@@ -178,7 +178,7 @@ def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
             elif mslist_str=='full_mslist':
                 oc["mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             else:
-                stoppp
+                raise RuntimeError(f'mslist string not recognised ({mslist_str})')
             ListJobs.append((Node,check_imaging_weight,(oc["mslist"],),{}))
 
     mpi_manager.callParallel(ListJobs)
@@ -538,7 +538,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
 
     Register.register("[clusterGA]","Cluster")
     if not ".app.restored.fits" in imagename:
-        raise RuntimeError('Input image should be an apparant restored image')
+        raise RuntimeError('Input image should be an apparent restored image')
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -1388,7 +1388,7 @@ def main(o):
     for mslist in [o['mslist'],o['full_mslist']]:
         filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
         for fname in filenames:
-            if fname=="": stoppp
+            if fname=="": die('MS list must have no blank lines')
 
 
     # Set column name for first steps
@@ -1435,7 +1435,7 @@ def main(o):
 
     if o['redofrom']:
         # not ported yet to mpi manager
-        stoppp
+        raise NotImplementedError('Redofrom not implemented in this version yet')
 
         if not os.path.isdir(o['archive_dir']):
             os.mkdir(o['archive_dir'])
@@ -1512,7 +1512,7 @@ def main(o):
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
-        stopp
+        raise NotImplementedError('Subtraction not implemented in this version yet')
         subtractOuterSquare(o, mpiManager=MPI_Manager)
         colname="DATA_SUB"
         #ReduceFactor=o['fact_reduce_field']
@@ -2298,7 +2298,7 @@ def main(o):
     spectral_mslist=None
     if o['spectral_restored']:
         #TODO mpi
-        stopp
+        raise NotImplementedError('Spectral restored mode not implemented yet')
         import do_spectral_restored
         separator('Spectral restored images')
         spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
@@ -2313,7 +2313,7 @@ def main(o):
 
     if o['polcubes']:
         # TODO mpi
-        stopp
+        raise NotImplementedError('Pol cubes not implemented yet')
         if o['clearcache_end']:
             full_clearcache(o)
         from do_polcubes import do_polcubes
