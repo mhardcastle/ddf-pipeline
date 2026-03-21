@@ -1753,6 +1753,7 @@ def main(o):
         # run bootstrap, and change the column name if it runs
         if o['bootstrap']:
             separator("Bootstrap")
+            raise NotImplementedError('Bootstrap not implemented in MPI version')
             report('Running bootstrap')
             # FIXME run in parallel (to run ddFacet in parallel)
             run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
