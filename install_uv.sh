@@ -18,12 +18,13 @@ export METHOD_CLONE="https://github.com/"
 export METHOD_CLONE="git@github.com:"
 
 
-git clone ${METHOD_CLONE}cyriltasse/DDFacet -b MassiveMerge_PR_MergeSSD3_NancepMPI_APP  ../DDFacet || true
-git clone ${METHOD_CLONE}cyriltasse/killMS -b APP_Predict_Compress_PolSmooth_HybridSM_OpFit_MultiField_MPI_MultiChain ../killMS || true
+git clone ${METHOD_CLONE}cyriltasse/DDFacet -b HackathonRennes  ../DDFacet || true
+git clone ${METHOD_CLONE}cyriltasse/killMS -b HackathonRennes ../killMS || true
 # git clone ${METHOD_CLONE}dguibert/ddf-pipeline -b Hackaton_mpipool_test_NancepMPI_Herts ../ddf-pipeline || true
 
 uv venv -p 3.10
 source .venv/bin/activate
 uv sync --extra mpi-support --refresh-package ddfacet --refresh-package killms --active --verbose
+uv pip install https://github.com/dguibert/LOFARBeam/releases/download/v0.1-10-gc49afaf/lofarbeam-0.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 
 

@@ -17,18 +17,6 @@ wheels = [
 ]
 
 [[package]]
-name = "astlib"
-version = "0.11.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "astropy" },
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "scipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/77/29d2079b09f1d519c616a15eff32628057c0d0f15e157ddcf1d2a4ee4338/astLib-0.11.10.tar.gz", hash = "sha256:c7a7edf73202e35a07d363cd60fa1ee77faef9f605f29b69e91b1654138ba72e", size = 10022928, upload-time = "2023-10-19T09:05:49.586Z" }
-
-[[package]]
 name = "astro-kittens"
 version = "1.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -817,7 +805,6 @@ name = "ddfacet"
 version = "0.8.0.0"
 source = { directory = "../DDFacet" }
 dependencies = [
-    { name = "astlib" },
     { name = "astropy" },
     { name = "codex-africanus", extra = ["dask"] },
     { name = "configparser" },
@@ -866,7 +853,6 @@ mpi-support = [
 
 [package.metadata]
 requires-dist = [
-    { name = "astlib", specifier = ">=0.8.0,<=0.11.10" },
     { name = "astropy", specifier = ">=3.0" },
     { name = "bdsf", marker = "python_full_version >= '3.8' and python_full_version < '3.10' and extra == 'kms-support'", specifier = ">1.8.15,<=1.10.1" },
     { name = "bdsf", marker = "python_full_version >= '3.10' and extra == 'kms-support'", specifier = ">1.8.15,<=1.11.1" },
