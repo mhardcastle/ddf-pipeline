@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 from builtins import str
 from builtins import range
 from past.utils import old_div
@@ -26,9 +23,11 @@ else:
     from utils.termsize import get_terminal_size_linux
     from utils import mpi_manager
 
+
 from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
+
 import signal
 import pyregion
 import multiprocessing as mp
