@@ -44,6 +44,14 @@ def merge_mask(in1,in2,outfile):
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD_m_c.tessel.reg'):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
 
+    try:
+        from mpi4py import MPI
+        _comm = MPI.COMM_WORLD
+        if _comm.Get_size() > 1 and _comm.Get_rank() != 0:
+            return
+    except ImportError:
+        pass
+
     if rootname is None:
         prefix=''
     else:
