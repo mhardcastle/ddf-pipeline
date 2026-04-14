@@ -122,7 +122,7 @@ def find_closest_fields(ra, dec, fieldsdict_path, max_results=10):
 
     return closest_fields
 
-def get_catalogue_path(field_id):
+def get_catalogue_path(cat_directory,field_id):
     """
     Construct the catalogue path for a given field ID.
     """
