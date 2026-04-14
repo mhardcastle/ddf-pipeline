@@ -20,6 +20,7 @@ parser.add_argument("--dec", type=float, default=9.965, help="Declination of the
 parser.add_argument("--size", type=float, default=0.4, help="Initial box size in degrees (default: 0.4).")
 parser.add_argument("--target_flux", type=float, default=0.2, help="Target total flux in Jy (default: 0.2).")
 parser.add_argument("--region_file", type=str, default="region.reg", help="Output DS9 region file (default: region.reg).")
+parser.add_argument("--catalogue_directory", type=str, default="../../LoTSS-individual-field-cats-large/Make-matched-catalogues/MASKED_BEAM_CATS/", help="Directory containing the individual pointing masked beam catalogues.")
 args = parser.parse_args()
 
 ra = args.ra
@@ -27,6 +28,7 @@ dec = args.dec
 size = args.size
 target_flux = args.target_flux
 REGION_FILE = args.region_file
+cat_directory = args.catalogue_directory
 
 
 def fix_aplpy_fits(aplpy_obj, dropaxis=2):
@@ -124,7 +126,7 @@ def get_catalogue_path(field_id):
     """
     Construct the catalogue path for a given field ID.
     """
-    return f'../../LoTSS-individual-field-cats-large/Make-matched-catalogues/MASKED_BEAM_CATS/{field_id}_beam_mask.cat.fits'
+    return f'{cat_directory}/{field_id}_beam_mask.cat.fits'
 
 def download_image(field_id, image_url, output_dir, username, password):
     """
@@ -145,7 +147,7 @@ closestfields = find_closest_fields(ra, dec, 'fieldsdict.pkl')
 valid_fields = []
 for field in closestfields:
     field_id = field['id']
-    catalogue_path = get_catalogue_path(field_id)
+    catalogue_path = get_catalogue_path(cat_directory,field_id)
     try:
         # Open the catalogue
         hdul = fits.open(catalogue_path)
