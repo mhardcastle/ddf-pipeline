@@ -191,7 +191,7 @@ closestfields = valid_fields
 valid_fields = []
 for field in closestfields:
     field_id = field['id']
-    catalogue_path = get_catalogue_path(field_id)
+    catalogue_path = get_catalogue_path(cat_directory,field_id)
     try:
         # Open the catalogue
         hdul = fits.open(catalogue_path)
@@ -218,7 +218,7 @@ closestfields = valid_fields
 catalogues = {}
 for field in closestfields:
     field_id = field['id']
-    catalogue_path = get_catalogue_path(field_id)   
+    catalogue_path = get_catalogue_path(cat_directory,field_id)   
     try:
         # Open the catalogue and store it in memory
         hdul = fits.open(catalogue_path)
