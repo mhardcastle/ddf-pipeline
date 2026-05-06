@@ -1139,7 +1139,9 @@ def main(o=None):
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
         #o['imsize']=NPixSmall
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
-
+        if o['exitafter'] == 'wide':
+            warn('User specified exit after wide field source subtraction')
+            stop(2)
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
         # ##########################################################
