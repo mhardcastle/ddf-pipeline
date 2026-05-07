@@ -939,7 +939,7 @@ def subtractOuterSquare(o):
                 uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
                 imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
                 apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-                smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],
+                smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],phasecenter=o['phasecenter'],
                 catcher=catcher)
 
 
@@ -956,7 +956,7 @@ def subtractOuterSquare(o):
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,
+            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,phasecenter=o['phasecenter'],
             reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
             catcher=catcher)
 
@@ -981,7 +981,7 @@ def subtractOuterSquare(o):
                   beamsize=o['wide_psf_arcsec'],
                   imsize=o['wide_imsize'],cellsize=o['wide_cell'],
                   use_dicomodel=True,catcher=catcher,
-                  PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),
+                  PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
                   dicomodel_base='image_full_wide_im')
         os.system("touch %s"%FileHasPredicted)
 
@@ -1006,7 +1006,7 @@ def subtractOuterSquare(o):
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',
+            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',phasecenter=o['phasecenter'],
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
             catcher=catcher)
 
@@ -1114,13 +1114,13 @@ def main(o=None):
                 
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
-       
+
     # Check imaging weights -- needed before DDF
     if o['full_mslist'] is not None:
         new=check_imaging_weight(o['full_mslist'])
     else:
         new=check_imaging_weight(o['mslist'])
-        
+
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to
@@ -1142,14 +1142,16 @@ def main(o=None):
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
         #o['imsize']=NPixSmall
         #o['ndir']=int(o['ndir']/float(ReduceFactor))
-
+        if o['exitafter'] == 'wide':
+            warn('User specified exit after wide field source subtraction')
+            stop(2)
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
         separator("Initial dirty")
         ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
+                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,phasecenter=o['phasecenter'],
                   apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
 
         separator("External mask")
@@ -1164,7 +1166,7 @@ def main(o=None):
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
                                            majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                            peakfactor=0.01,rms_factor=3,
-                                           colname=colname,clusterfile=None,automask=True,
+                                           colname=colname,clusterfile=None,automask=True,phasecenter=o['phasecenter'],
                                            automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher)
     
@@ -1197,7 +1199,7 @@ def main(o=None):
                                            dirty_from_resid=True,
                                            peakfactor=0.001,rms_factor=0,
                                            colname=colname,clusterfile=None,
-                                           automask=True,
+                                           automask=True,phasecenter=o['phasecenter'],
                                            automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
@@ -1245,7 +1247,7 @@ def main(o=None):
                                            automask=True,
                                            automask_threshold=o['thresholds'][0],
                                            apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher,
+                                           uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
                                            PredictSettings=("Clean","DD_PREDICT"))
@@ -1288,7 +1290,7 @@ def main(o=None):
                         automask=True,
                         automask_threshold=o['thresholds'][0],
                         apply_weights=True,#o['apply_weights'][0],
-                        uvrange=uvrange,catcher=catcher,
+                        uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                         RMSFactorInitHMP=1.,
                         MaxMinorIterInitHMP=10000,
                         PredictSettings=("Clean","DD_PREDICT"))
@@ -1307,7 +1309,7 @@ def main(o=None):
                                             automask=True,
                                             automask_threshold=o['thresholds'][0],
                                             apply_weights=True,#o['apply_weights'][0],
-                                            uvrange=uvrange,catcher=catcher,
+                                            uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                                             RMSFactorInitHMP=1.,
                                             MaxMinorIterInitHMP=10000,
                                             PredictSettings=("Clean","DD_PREDICT"))
@@ -1359,7 +1361,7 @@ def main(o=None):
                                            normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                            use_dicomodel=True,
                                            dicomodel_base=CurrentBaseDicoModelName,
-                                           catcher=catcher,
+                                           catcher=catcher,phasecenter=o['phasecenter'],
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
                                            PredictSettings=("Clean","DD_PREDICT"))
@@ -1393,7 +1395,7 @@ def main(o=None):
                                        normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                        use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
-                                       catcher=catcher,
+                                       catcher=catcher,phasecenter=o['phasecenter'],
                                        RMSFactorInitHMP=1.,
                                        #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
@@ -1417,7 +1419,7 @@ def main(o=None):
                     normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                     use_dicomodel=True,
                     dicomodel_base=CurrentBaseDicoModelName,
-                    catcher=catcher,
+                    catcher=catcher,phasecenter=o['phasecenter'],
                     RMSFactorInitHMP=1.,
                     #AllowNegativeInitHMP=True,
                     MaxMinorIterInitHMP=10000,
@@ -1462,7 +1464,7 @@ def main(o=None):
                                         catcher=catcher,
                                         RMSFactorInitHMP=1.,
                                         #AllowNegativeInitHMP=True,
-                                        MaxMinorIterInitHMP=10000,
+                                        MaxMinorIterInitHMP=10000,phasecenter=o['phasecenter'],
                                         PredictSettings=("Clean","DD_PREDICT"))
 
             if o['exitafter'] == 'ampphase_di':
@@ -1556,7 +1558,7 @@ def main(o=None):
                 automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
                 apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
                 dicomodel_base=CurrentBaseDicoModelName,
-                catcher=catcher,
+                catcher=catcher,phasecenter=o['phasecenter'],
                 ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
 
         separator("Compute DI calibration (full mslist)")
@@ -1608,7 +1610,7 @@ def main(o=None):
               dicomodel_base=CurrentBaseDicoModelName,
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
+              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
               apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
 
     if o['exitafter'] == 'fullampphase':
@@ -1637,7 +1639,7 @@ def main(o=None):
                                        normalization=o['normalize'][1],uvrange=uvrange,
                                        apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
                                        AllowNegativeInitHMP=True,
-                                       RMSFactorInitHMP=.5,
+                                       RMSFactorInitHMP=.5,phasecenter=o['phasecenter'],
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
 
     separator("MakeMask")
@@ -1707,7 +1709,7 @@ def main(o=None):
                   majorcycles=2,robust=o['low_robust'],
                   colname=colname,use_dicomodel=False,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher)
 
@@ -1720,7 +1722,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
               uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
               smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',
               catcher=catcher)
@@ -1754,7 +1756,7 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
               uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,
+              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
               smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
               catcher=catcher,rms_factor=o['final_rmsfactor'])
@@ -1807,7 +1809,7 @@ def main(o=None):
               dicomodel_base=CurrentBaseDicoModelName,
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
+              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
               apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
               PredictSettings=("Clean","DD_PREDICT"),
               **ddf_kw)
@@ -1921,7 +1923,7 @@ def main(o=None):
                   majorcycles=0,robust=o['final_robust'],
                   colname=colname,use_dicomodel=False,
                   uvrange=uvrange,cellsize=o['cellsize'],
-                  peakfactor=0.001,
+                  peakfactor=0.001,phasecenter=o['phasecenter'],
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
                   catcher=catcher,**ddf_kw)
 
