@@ -286,8 +286,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
     if do_decorr:
         runcommand += ' --RIME-DecorrMode=FT'
 
-    if cleanmode == 'SSD':
-        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
+    match cleanmode:
+        case 'SSD':              runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
+        case 'SSD2':             None
+        case 'WSCMS' | 'WSCMS2': runcommand += ' --WSCMS-MultiScale=1 --WSCMS-Scales=[0,4,8,16,32,64,128,256,512,768] --WSCMS-MaxScale=1500 --WSCMS-MultiScaleBias=0.6 --WSCMS-NSubMinorIter=500 --WSCMS-SubMinorPeakFact=0.85 --WSCMS-Padding=1.2 --WSCMS-AutoMask=1 --WSCMS-AutoMaskRMSFactor=3'
+    
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
     if automask:
