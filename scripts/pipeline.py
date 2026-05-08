@@ -1038,9 +1038,10 @@ def main(o=None):
         lCat+=o["catalogues"]
     if o['tgss'] is not None:
         lCat+=[o["tgss"]]
-    for fCat in lCat:
-        if not os.path.isfile(fCat):
-            die("Catalog %s does not exist"%fCat)
+    if not o['dryrun']:
+        for fCat in lCat:
+            if not os.path.isfile(fCat):
+                die("Catalog %s does not exist"%fCat)
 
     if o['catch_signal']:
         catcher=Catcher()
@@ -1064,15 +1065,16 @@ def main(o=None):
     # Check if the column exists in one MS. Important to do this
     # before we check imaging weights, because that will create empty
     # versions of e.g. CORRECTED_DATA
-    mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    t = pt.table(mslist[0])
-    try:
-        dummy=t.getcoldesc(colname)
-    except RuntimeError:
-        dummy=None
-    t.close()
-    if dummy is None:
-        die('Dataset does not contain the column "%s"' % colname)
+    if not o['dryrun']:
+        mslist=[s.strip() for s in open(o['mslist']).readlines()]
+        t = pt.table(mslist[0])
+        try:
+            dummy=t.getcoldesc(colname)
+        except RuntimeError:
+            dummy=None
+        t.close()
+        if dummy is None:
+            die('Dataset does not contain the column "%s"' % colname)
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
@@ -1123,10 +1125,13 @@ def main(o=None):
         os.mkdir(o['logging'])
 
     # Check imaging weights -- needed before DDF
-    if o['full_mslist'] is not None:
-        new=check_imaging_weight(o['full_mslist'])
+    if not o['dryrun']:
+        if o['full_mslist'] is not None:
+            new=check_imaging_weight(o['full_mslist'])
+        else:
+            new=check_imaging_weight(o['mslist'])
     else:
-        new=check_imaging_weight(o['mslist'])
+        new=False
 
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
