@@ -118,7 +118,7 @@ def do_polcubes(colname,
         ThisImageName = '%s_IQU_Cube%s'%(imageoutname,i)
 
         ddf_image(ThisImageName,mslistname,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   polcubemode=True,
 		  AllowNegativeInitHMP=True,
