@@ -28,7 +28,8 @@ option_list = (
     ( 'solutions',  'smoothing',        bool,  True,  'Smooth the solutions.'),
     ( 'solutions',  'smoothingtype',    str,   'TEC,PolyAmp', 'Type of smoothing to do on the solutions.'),
     ( 'solutions',  'apply_sols',       list,  ['P', 'AP', 'AP', 'AP', 'AP', 'AP', 'AP'], 'Solutions to apply after the 7 killMS steps' ),
-    
+
+    ( 'image',      'cleanmode',              str,   'SSD',  'Deconvolution mode to use for the imaging (SSD, SSD2, WSCMS, WSCMS2)'),
     ( 'image',      'do_wide',                bool,  False,  'do widefield image and subtract sources in annulus' ),
     ( 'image',      'wide_imsize',            int,   10000,  'Widefield image size in pixels' ),
     ( 'image',      'wide_cell',              float, 10.,    'Widefield pixel size in arcsec' ),

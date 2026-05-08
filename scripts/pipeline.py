@@ -180,7 +180,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
+def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
 
     if catcher: catcher.check()
 
@@ -195,6 +195,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         
     if HMPsize is None:
         HMPsize=options['HMPsize']
+    if cleanmode is None:
+        cleanmode=options['cleanmode']
     if do_decorr is None:
         do_decorr=options['do_decorr']
     if beamsize is None:
@@ -932,7 +934,7 @@ def subtractOuterSquare(o):
 
     ddf_image('image_full_wide',o['mslist'],
                 cleanmask=extmask,
-                cleanmode='SSD',
+                cleanmode=o['cleanmode'],
                 AllowNegativeInitHMP=True,
                 majorcycles=2,robust=o['wide_robust'],
                 colname=colname,use_dicomodel=False,
@@ -950,7 +952,7 @@ def subtractOuterSquare(o):
     
     ddf_image('image_full_wide_im',o['mslist'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-            cleanmode='SSD',
+            cleanmode=o['cleanmode'],
             AllowNegativeInitHMP=True,
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
@@ -971,7 +973,7 @@ def subtractOuterSquare(o):
     else:
         ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-                  cleanmode='SSD',
+                  cleanmode=o['cleanmode'],
                   #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
                   #ddsols='wide_killms_p1',
                   #applysols='AP',#normalization=o['normalize'][0],
@@ -1000,7 +1002,7 @@ def subtractOuterSquare(o):
     ## sanity check
     ddf_image('image_full_wide_im_sub',o['mslist'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-            cleanmode='SSD',
+            cleanmode=o['cleanmode'],
             AllowNegativeInitHMP=True,
             majorcycles=1,robust=o['wide_robust'],
             uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
@@ -1150,7 +1152,7 @@ def main(o=None):
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
         separator("Initial dirty")
-        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
+        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode=o['cleanmode'],majorcycles=0,robust=o['image_robust'],
                   reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,phasecenter=o['phasecenter'],
                   apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
 
@@ -1163,7 +1165,7 @@ def main(o=None):
 
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode=o['cleanmode'],
                                            majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                            peakfactor=0.01,rms_factor=3,
                                            colname=colname,clusterfile=None,automask=True,phasecenter=o['phasecenter'],
@@ -1191,7 +1193,7 @@ def main(o=None):
     
         separator("Continue deconvolution")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
-                                           cleanmask=CurrentMaskName,cleanmode='SSD',
+                                           cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                                            majorcycles=2,robust=o['image_robust'],
                                            reuse_psf=True,
                                            dicomodel_base=CurrentBaseDicoModelName,
@@ -1234,7 +1236,7 @@ def main(o=None):
         separator("Deconv clustered DI image")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
                                            cleanmask=CurrentMaskName,
-                                           cleanmode='SSD',
+                                           cleanmode=o['cleanmode'],
                                            majorcycles=1,robust=o['image_robust'],
                                            #reuse_psf=True,
                                            #reuse_dirty=True,
@@ -1279,7 +1281,7 @@ def main(o=None):
 
 
             _=ddf_image('image_dirin_SSD_m_c_di',o['mslist'],
-                        cleanmask=CurrentMaskName,cleanmode='SSD',
+                        cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                         majorcycles=0,robust=o['image_robust'],
                         #reuse_psf=True,
                         dicomodel_base=CurrentBaseDicoModelName,
@@ -1297,7 +1299,7 @@ def main(o=None):
 
 
             CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
-                                            cleanmask=CurrentMaskName,cleanmode='SSD',
+                                            cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                                             majorcycles=1,robust=o['image_robust'],
                                             reuse_psf=True,
                                             reuse_dirty=True,
@@ -1354,7 +1356,7 @@ def main(o=None):
         print('Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName)
         CurrentBaseDicoModelName=ddf_image('image_phase1',o['mslist'],
                                            cleanmask=CurrentMaskName,
-                                           cleanmode='SSD',
+                                           cleanmode=o['cleanmode'],
                                            ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][0],majorcycles=2,robust=o['image_robust'],
                                            colname=colname,peakfactor=0.001,automask=True,
                                            automask_threshold=o['thresholds'][1],
@@ -1388,7 +1390,7 @@ def main(o=None):
 
         separator("AmpPhase deconv")
         CurrentBaseDicoModelName=ddf_image('image_ampphase1',o['mslist'],
-                                       cleanmask=CurrentMaskName,cleanmode='SSD',
+                                       cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                                        ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][1],majorcycles=1,robust=o['image_robust'],
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
@@ -1412,7 +1414,7 @@ def main(o=None):
         if not o['skip_di']:
             separator("Second DI calibration")
             ddf_image('Predict_DI1',o['mslist'],
-                    cleanmask=CurrentMaskName,cleanmode='SSD',
+                    cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                     ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][2],majorcycles=1,robust=o['image_robust'],
                     colname=colname,peakfactor=0.001,automask=True,
                     automask_threshold=o['thresholds'][1],
@@ -1452,7 +1454,7 @@ def main(o=None):
 
             colname='DATA_DI_CORRECTED' # again
             CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
-                                        cleanmask=CurrentMaskName,cleanmode='SSD',
+                                        cleanmask=CurrentMaskName,cleanmode=o['cleanmode'],
                                         ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][3],
                                         majorcycles=1,robust=o['image_robust'],
                                         colname=colname,peakfactor=0.001,automask=True,
@@ -1553,7 +1555,7 @@ def main(o=None):
         
     if not o['skip_di']:
         separator("Compute DD Predict (full mslist)")
-        ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
+        ddf_image('Predict_DDS2',o['full_mslist'],cleanmode=o['cleanmode'],
                 applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
                 automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
                 apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
@@ -1602,7 +1604,7 @@ def main(o=None):
     
     ddf_image(ImageName,o['full_mslist'],
               cleanmask=CurrentMaskName,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
               applysols=o['apply_sols'][5],
               majorcycles=0,
               robust=o['final_robust'],
@@ -1630,7 +1632,7 @@ def main(o=None):
                                        reuse_psf=True,
                                        reuse_dirty=True,
                                        robust=o['final_robust'],
-                                       cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                                       cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                                        applysols=o['apply_sols'][5],majorcycles=1,
                                        colname=colname,use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
@@ -1703,7 +1705,7 @@ def main(o=None):
 
         ddf_image('image_full_low',o['full_mslist'],
                   cleanmask=extmask,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   AllowNegativeInitHMP=True,
                   majorcycles=2,robust=o['low_robust'],
@@ -1717,7 +1719,7 @@ def main(o=None):
 
         ddf_image('image_full_low_im',o['full_mslist'],
               cleanmask='image_full_low.app.restored.fits.mask.fits',
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
               applysols=o['apply_sols'][6],
               AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
@@ -1751,7 +1753,7 @@ def main(o=None):
 
         ddf_image('image_full_low_m',o['full_mslist'],
               cleanmask='image_full_low_im.app.restored.fits.mask.fits',
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
               applysols=o['apply_sols'][6],
               AllowNegativeInitHMP=True,
               majorcycles=1,robust=o['low_robust'],
@@ -1803,7 +1805,7 @@ def main(o=None):
     ddf_image(ImageName,o['full_mslist'],
               cleanmask=CurrentMaskName,
               reuse_psf=False,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+              cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
               applysols=o['apply_sols'][6],majorcycles=1,robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
               dicomodel_base=CurrentBaseDicoModelName,
@@ -1917,7 +1919,7 @@ def main(o=None):
         for obsid in uobsid:
             separator('Stokes V image for %s'%obsid)
             ddf_image('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
                   majorcycles=0,robust=o['final_robust'],
