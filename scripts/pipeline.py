@@ -285,23 +285,21 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
     if do_decorr:
         runcommand += ' --RIME-DecorrMode=FT'
 
-    # switch between different cleanmodes. 
+    # switch between different cleanmodes.
     # external masks are not supported in WSCMS mode, and thus only used in SSD(2)
-    match cleanmode:
-        case 'SSD' | 'SSD2':
-            # parameters shared between SSD and SSD2
-            runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
-            if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}'
-            if cleanmask is not None:      runcommand += f' --Mask-External={cleanmask}'
-            if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options['splitisland_size']}'
+    if cleanmode in ('SSD', 'SSD2'):
+        # parameters shared between SSD and SSD2
+        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
+        if automask:                   runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
+        if cleanmask is not None:      runcommand += ' --Mask-External=%s' % cleanmask
+        if options['use_splitisland']: runcommand += ' --SSDClean-MaxIslandSize=%s' % options['splitisland_size']
 
-            # SSD2 specific parameters
-            if cleanmode == 'SSD2':
-                # runcommand += ' --SSD2-NLastCycleDeconvAll=4' # experimental
-                None
-            
-        case 'WSCMS' | 'WSCMS2':
-            runcommand += ' --WSCMS-MultiScale=1 --WSCMS-Scales=[0,4,8,16,32,64,128,256,512,768] --WSCMS-MaxScale=1000 --WSCMS-MultiScaleBias=0.55 --WSCMS-NSubMinorIter=500 --WSCMS-SubMinorPeakFact=0.85 --WSCMS-Padding=1.2 --WSCMS-AutoMask=1 --WSCMS-AutoMaskRMSFactor=3 --Mask-FluxImageType=ModelConv'
+        # SSD2 specific parameters
+        # if cleanmode == 'SSD2':
+        #     runcommand += ' --SSD2-NLastCycleDeconvAll=4' # experimental
+
+    elif cleanmode in ('WSCMS', 'WSCMS2'):
+        runcommand += ' --WSCMS-MultiScale=1 --WSCMS-Scales=[0,4,8,16,32,64,128,256,512,768] --WSCMS-MaxScale=1000 --WSCMS-MultiScaleBias=0.55 --WSCMS-NSubMinorIter=500 --WSCMS-SubMinorPeakFact=0.85 --WSCMS-Padding=1.2 --WSCMS-AutoMask=1 --WSCMS-AutoMaskRMSFactor=3 --Mask-FluxImageType=ModelConv'
     
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
