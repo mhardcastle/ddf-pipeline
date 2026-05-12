@@ -420,7 +420,9 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         if os.path.isfile(filename):
             break
     else:
-        die('Catalogue file does not exist!')
+        if not options['dryrun']:
+            die('Catalogue file does not exist!')
+        filename=filenames[0]
     if use_makemask_products:
         runcommand="ClusterCat.py --SourceCat %s --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
     else:
@@ -1768,7 +1770,8 @@ def main(o=None):
                 make_extended_mask('image_full_low_im.app.restored.fits','image_full_ampphase.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'],ds9region='image_full_ampphase_m.tessel.reg')
             else:
                 # Something may be wrong.
-                die('Could not find the required products for the full-bw extended source mask!')
+                if not o['dryrun']:
+                    die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
         extmask='full-mask-low.fits' if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3') else None
         make_mask('image_full_low_im.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
@@ -1807,7 +1810,7 @@ def main(o=None):
         separator('Offset image downloads')
         report('Checking if optical catalogue download is required')
         from get_cat import get_cat, download_required
-        if download_required(o['method']):
+        if not o['dryrun'] and download_required(o['method']):
             download_thread = threading.Thread(target=get_cat, args=(o['method'],))
             download_thread.start()
         else:
@@ -1845,23 +1848,24 @@ def main(o=None):
     if o['method'] is not None:
         separator('Offset correction')
         # have we got the catalogue?
-        if download_thread is not None and download_thread.is_alive():
-            warn('Waiting for background download thread to finish...')
-            download_thread.join()
-        # maybe the thread died, check the files are there
-        if download_required(o['method']):
-            warn('Retrying download for some or all of the catalogue')
-            try:
-                get_cat(o['method'])
-            except RuntimeError:
-                die('Failed to download catalogue with method '+o['method'])
+        if not o['dryrun']:
+            if download_thread is not None and download_thread.is_alive():
+                warn('Waiting for background download thread to finish...')
+                download_thread.join()
+            # maybe the thread died, check the files are there
+            if download_required(o['method']):
+                warn('Retrying download for some or all of the catalogue')
+                try:
+                    get_cat(o['method'])
+                except RuntimeError:
+                    die('Failed to download catalogue with method '+o['method'])
 
         # we should now have the catalogue, find the offsets
         facet_offset_file='facet-offset.txt'
         if o['restart'] and os.path.isfile(facet_offset_file):
             warn('Offset file already exists, not running offsets.py')
         else:
-            run('offsets.py '+' '.join(sys.argv[1:]),log=None)
+            run('offsets.py '+' '.join(sys.argv[1:]),log=None,dryrun=o['dryrun'])
 
         # apply the offsets
         ddf_shift(ImageName,facet_offset_file,options=o,catcher=catcher)
@@ -1929,17 +1933,23 @@ def main(o=None):
                         cthreads.append(thread)
                         flist.append(cubefile)
         
-    m=MSList(o['full_mslist'])
-    uobsid = set(m.obsids)
+    mslist_file = o['full_mslist'] or o['mslist']
+    if mslist_file is not None and os.path.isfile(mslist_file):
+        m=MSList(mslist_file)
+        uobsid = set(m.obsids)
+    else:
+        m=None
+        uobsid = set()
     stokesv_mslists=[]
     for obsid in uobsid:
         umslist='mslist-%s.txt' % obsid
         stokesv_mslists.append(umslist)
-        print('Writing ms list for obsids',umslist)
-        with open(umslist,'w') as file:
-            for ms,ob in zip(m.mss,m.obsids):
-                if ob==obsid:
-                    file.write(ms+'\n')
+        if not o['dryrun']:
+            print('Writing ms list for obsids',umslist)
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
     if o['stokesv']:
         for obsid in uobsid:
             separator('Stokes V image for %s'%obsid)
@@ -1966,7 +1976,8 @@ def main(o=None):
                     warn('Deleting compressed file %s' % f)
                     os.remove(f)
                 else:
-                    die('compressed files do not exist, compression must have failed')
+                    if not o['dryrun']:
+                        die('compressed files do not exist, compression must have failed')
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
