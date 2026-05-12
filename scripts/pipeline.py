@@ -287,7 +287,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
 
     # switch between different cleanmodes.
     # external masks are not supported in WSCMS mode, and thus only used in SSD(2)
-    if cleanmode in ('SSD', 'SSD2'):
+    if cleanmode in ('SSD', 'SSD2', 'SSD3'):
         # parameters shared between SSD and SSD2
         runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
         if automask:                   runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
@@ -298,6 +298,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
         # if cleanmode == 'SSD2':
         #     runcommand += ' --SSD2-NLastCycleDeconvAll=4' # experimental
 
+        # SSD3 specific parameters
+        # if cleanmode == 'SSD3':
+        #     runcommand += ' --SSD3-'
+    
     elif cleanmode in ('WSCMS', 'WSCMS2'):
         runcommand += ' --WSCMS-MultiScale=1 --WSCMS-Scales=[0,4,8,16,32,64,128,256,512,768] --WSCMS-MaxScale=1000 --WSCMS-MultiScaleBias=0.55 --WSCMS-NSubMinorIter=500 --WSCMS-SubMinorPeakFact=0.85 --WSCMS-Padding=1.2 --WSCMS-AutoMask=1 --WSCMS-AutoMaskRMSFactor=3 --Mask-FluxImageType=ModelConv'
     
@@ -950,9 +954,12 @@ def subtractOuterSquare(o):
                 catcher=catcher)
 
 
-    external_mask='wide_external_mask.fits'
-    make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
-    
+    if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3'):
+        external_mask='wide_external_mask.fits'
+        make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
+    else:
+        external_mask=None
+
     make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
     
     ddf_image('image_full_wide_im',o['mslist'],
@@ -1167,11 +1174,13 @@ def main(o=None):
                   apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
 
         separator("External mask")
-        external_mask='external_mask.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-        
-        if o['external_fits_mask'] is not None:
-            merge_mask(external_mask,o['external_fits_mask'],external_mask)
+        if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3'):
+            external_mask='external_mask.fits'
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+            if o['external_fits_mask'] is not None and not o['dryrun']:
+                merge_mask(external_mask,o['external_fits_mask'],external_mask)
+        else:
+            external_mask=None
 
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
@@ -1189,7 +1198,7 @@ def main(o=None):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
-        if o['use_maskdiffuse']:
+        if o['use_maskdiffuse'] and not o['dryrun'] and external_mask is not None:
             separator("Merge diffuse emission mask into external mask")
             merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
         
@@ -1560,8 +1569,11 @@ def main(o=None):
             report('Making the extended source mask')
             mask_base_image='image_bootstrap.app.mean.fits'
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'],rootname='bootstrap',rmsfacet=o['rmsfacet'])
-        external_mask='external_mask_ext.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
+        if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3'):
+            external_mask='external_mask_ext.fits'
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
+        else:
+            external_mask=None
         
     if not o['skip_di']:
         separator("Compute DD Predict (full mslist)")
@@ -1701,7 +1713,7 @@ def main(o=None):
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask-low exists then use it
-        if os.path.isfile('bootstrap-mask-low.fits'):
+        if os.path.isfile('bootstrap-mask-low.fits') and o['cleanmode'] in ('SSD', 'SSD2', 'SSD3'):
             extmask='bootstrap-mask-low.fits'
             # can be empty, in which case recent versions of DDF throw
             # an error, so check and drop it if it is
@@ -1758,7 +1770,7 @@ def main(o=None):
                 # Something may be wrong.
                 die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
-        extmask='full-mask-low.fits'
+        extmask='full-mask-low.fits' if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3') else None
         make_mask('image_full_low_im.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
         ddf_image('image_full_low_m',o['full_mslist'],
@@ -1772,15 +1784,18 @@ def main(o=None):
               smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
               catcher=catcher,rms_factor=o['final_rmsfactor'])
-        external_mask='external_mask_ext-deep.fits'
-        if os.path.isfile(external_mask):
-            warn('Deep external mask already exists, skipping creation')
+        if o['cleanmode'] in ('SSD', 'SSD2', 'SSD3'):
+            external_mask='external_mask_ext-deep.fits'
+            if os.path.isfile(external_mask):
+                warn('Deep external mask already exists, skipping creation')
+            else:
+                report('Make deep external mask')
+                if os.path.isfile('image_full_ampphase_di.app.restored.fits'):
+                    make_external_mask(external_mask,'image_full_ampphase_di.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
+                elif os.path.isfile('image_full_ampphase.app.restored.fits'):
+                    make_external_mask(external_mask,'image_full_ampphase.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
         else:
-            report('Make deep external mask')
-            if os.path.isfile('image_full_ampphase_di.app.restored.fits'):
-                make_external_mask(external_mask,'image_full_ampphase_di.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
-            elif os.path.isfile('image_full_ampphase.app.restored.fits'):
-                make_external_mask(external_mask,'image_full_ampphase.app.restored.fits',use_tgss=True,clobber=False,extended_use='full-mask-high.fits')
+            external_mask=None
 
     # ##########################################################
     if o['exitafter'] == 'fulllow':
