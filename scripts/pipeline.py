@@ -365,8 +365,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
 
         # Ugly way to see if predict has been already done
-        if PredictSettings is not None:
-            fname=os.system("touch %s"%fname)
+        if PredictSettings is not None and not options['dryrun']:
+            os.system("touch %s"%fname)
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
@@ -687,11 +687,12 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     Ustart_times = np.unique(start_times)
 
     for start_time in Ustart_times:
-        with open('solslist_%.2f.txt'%start_time,'w') as f:
-            for i in range(0,len(full_sollist)):
-                if start_times[i] == start_time:
-                    solname = full_sollist[i]
-                    f.write('%s\n'%(solname))
+        if not dryrun:
+            with open('solslist_%.2f.txt'%start_time,'w') as f:
+                for i in range(0,len(full_sollist)):
+                    if start_times[i] == start_time:
+                        solname = full_sollist[i]
+                        f.write('%s\n'%(solname))
         
         checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
         if options['restart'] and os.path.isfile(checkname):
@@ -727,15 +728,15 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                     symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
                 else:
                     symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
-                # always overwrite the symlink to allow the dataset to move -- costs nothing
-                if os.path.islink(symsolname):
-                    warn('Symlink ' + symsolname + ' already exists, recreating')
-                    os.unlink(symsolname)
-
-                if not SkipSmooth:
-                    os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
-                else:
-                    os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
+                if not dryrun:
+                    # always overwrite the symlink to allow the dataset to move -- costs nothing
+                    if os.path.islink(symsolname):
+                        warn('Symlink ' + symsolname + ' already exists, recreating')
+                        os.unlink(symsolname)
+                    if not SkipSmooth:
+                        os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
+                    else:
+                        os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
                     
                     
         if SkipSmooth:
@@ -1005,7 +1006,8 @@ def subtractOuterSquare(o):
                   use_dicomodel=True,catcher=catcher,
                   PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
                   dicomodel_base='image_full_wide_im')
-        os.system("touch %s"%FileHasPredicted)
+        if not o['dryrun']:
+            os.system("touch %s"%FileHasPredicted)
 
 
 
@@ -2022,7 +2024,7 @@ def main(o=None):
                     ingest_dynspec(obsid)
 
 
-    if o['compress_ms']:
+    if o['compress_ms'] and not o['dryrun']:
         separator('Compressing MS for archive -- column '+colname)
         os.system('archivems.sh . '+colname)
                 
