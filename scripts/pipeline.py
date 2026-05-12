@@ -1007,7 +1007,7 @@ def subtractOuterSquare(o):
     FileHasSubtracted='image_full_wide_predict.HasSubtracted'
     if o['restart'] and os.path.isfile(FileHasSubtracted):
         warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
-    else:
+    elif not o['dryrun']:
         subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
         os.system("touch %s"%FileHasSubtracted)
 
@@ -1067,6 +1067,16 @@ def main(o=None):
         killms_uvrange[0]=o['solutions_uvmin']
     if o['mslist'] is None:
         die('MS list must be specified')
+
+    # In dryrun mode, create placeholder mslist files so the pipeline doesn't crash
+    # They contain a single dummy MS name for command printing.
+    _dryrun_tmpfiles = []
+    if o['dryrun']:
+        for key in ('mslist', 'full_mslist'):
+            if o[key] is not None and not os.path.isfile(o[key]):
+                with open(o[key], 'w') as f:
+                    f.write('dummy.ms\n')
+                _dryrun_tmpfiles.append(o[key])
 
     # Set column name for first steps
     colname=o['colname']
@@ -2026,7 +2036,11 @@ def main(o=None):
     
     if use_database():
         update_status(None,'Complete',time='end_date',av=4)
-        
+
+    # Remove temporary msfiles made for dryrun mode
+    for f in _dryrun_tmpfiles:
+        os.remove(f)
+
     return
 
 if __name__=='__main__':
