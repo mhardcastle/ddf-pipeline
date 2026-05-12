@@ -92,7 +92,6 @@ option_list = (
     ( 'control',    'bootstrap',         bool, False,   'If True, do bootstrap' ),
     ( 'control',    'catch_signal',      bool, True,    'If True, catch SIGUSR1 as graceful exit signal -- stops when control returns to the pipeline.'),
     ( 'control',    'exitafter',         str,  None,    'Step to exit after -- cleanup, wide, dirin, dirin_di, bootstrap, phase, ampphase, fulllow'),
-    ( 'control',    'exitafter',         str,  None,    'Step to exit after -- cleanup, dirin, dirin_di, bootstrap, phase, ampphase, fulllow'),
     ( 'control',    'redofrom',          str,  None,    'Step to redo from after -- start or dirin'),
     ( 'control',    'archive_dir',       str,  'old',   'Directory to archive to if redofrom is set'),
     ( 'control',    'msss_mode',         bool, False,   'Work in "MSSS mode" where a smooth beam and spectral cube are computed in the ampphase1 step' ),
