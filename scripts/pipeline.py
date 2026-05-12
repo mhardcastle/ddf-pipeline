@@ -444,8 +444,8 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     if options is None:
         options=o # attempt to get global
 
-    if options['dryrun']: return
     fname=imagename+'.mask.fits'
+    if options['dryrun']: return fname
     runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
     if OutMaskExtended is not None:
         runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
