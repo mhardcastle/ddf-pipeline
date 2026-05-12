@@ -892,7 +892,6 @@ def ingest_dynspec(obsid='*'):
                 print(sExec)
                 sdb.cur.execute(sExec)
         
-    
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
@@ -916,7 +915,6 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
     
 
 def subtractOuterSquare(o):
-    
     wide_imsize=o['wide_imsize']
     NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
@@ -1071,7 +1069,7 @@ def main(o=None):
     # In dryrun mode, create placeholder mslist files so the pipeline doesn't crash
     # They contain a single dummy MS name for command printing.
     _dryrun_tmpfiles = []
-    if o['dryrun']:
+    if o['dryrun'] and o['dummy_msfile']:
         for key in ('mslist', 'full_mslist'):
             if o[key] is not None and not os.path.isfile(o[key]):
                 with open(o[key], 'w') as f:

@@ -84,6 +84,7 @@ option_list = (
     ( 'control',    'nobar',             bool, False,   'If True, do not print progress bars' ),
     ( 'control',    'logging',           str,  'logs',  'Name of directory to save logs to, or \'None\' for no logging' ),
     ( 'control',    'dryrun',            bool, False,   'If True, don\'t run anything, just print what would be run' ),
+    ( 'control',    'dummy_msfile',      bool, False,   'If True (and dryrun==True), create placeholder mslist files so the pipeline can run even without real data' ),
     ( 'control',    'restart',           bool, True,    'If True, skip steps that would re-generate existing files' ),
     ( 'control',    'cache_dir',         str,  None,    'Directory for ddf cache files -- default is working directory'),
     ( 'control',    'clearcache',        bool, True,    'If True, clear all DDF cache before running' ),
