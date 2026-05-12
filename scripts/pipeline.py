@@ -83,6 +83,10 @@ def logfilename(s,options=None):
         return None
 
 def get_solutions_timerange(sols):
+    if not os.path.isfile(sols):
+        if o['dryrun']:
+            return 0.0, 1.0
+        raise FileNotFoundError('Solutions file not found: %s' % sols)
     print('Reading %s'%sols)
     S=np.load(sols)
     t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
@@ -553,14 +557,18 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             else:
                 runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
                 _,_,ModelColName,_=DISettings
-                _,dt_give,_,n_df_give=give_dt_dnu(f,
-                                        DataCol=colname,
-                                        ModelCol=ModelColName,
-                                        T=10.)
-                if dt is None:
-                    dt=dt_give
-                if NChanSols is None:
-                    NChanSols=n_df_give
+                if not options['dryrun'] or os.path.isfile(f):
+                    _,dt_give,_,n_df_give=give_dt_dnu(f,
+                                            DataCol=colname,
+                                            ModelCol=ModelColName,
+                                            T=10.)
+                    if dt is None:
+                        dt=dt_give
+                    if NChanSols is None:
+                        NChanSols=n_df_give
+                else:
+                    if dt is None: dt=1.0
+                    if NChanSols is None: NChanSols=1
                 runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
                 
                 
