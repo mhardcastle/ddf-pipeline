@@ -1953,8 +1953,14 @@ def main(o=None):
         
     mslist_file = o['full_mslist'] or o['mslist']
     if mslist_file is not None and os.path.isfile(mslist_file):
-        m=MSList(mslist_file)
-        uobsid = set(m.obsids)
+        try:
+            m=MSList(mslist_file)
+            uobsid = set(m.obsids)
+        except RuntimeError:
+            if not o['dryrun']:
+                raise
+            m=None
+            uobsid = set()
     else:
         m=None
         uobsid = set()
