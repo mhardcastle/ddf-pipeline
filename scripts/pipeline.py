@@ -184,7 +184,84 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
+def ddf_image(
+    imagename,
+    mslist,
+
+    # Data
+    colname='CORRECTED_DATA',
+
+    # Solutions
+    ddsols=None,
+    applysols=None,
+
+    # Image
+    cleanmode=None,
+    robust=0,
+    imsize=None,
+    cellsize=None,
+    uvrange=None,
+    beamsize=None,
+    beamsize_minor=None,
+    beamsize_pa=None,
+    phasecenter=None,
+    do_decorr=None,
+    HMPsize=None,
+    apply_weights=True,
+    use_weightspectrum=False,
+    clusterfile=None,
+    normalization=None,
+    cubemode=False,
+    polcubemode=False,
+    channels=None,
+    startchan=None,
+    endchan=None,
+    stokes=None,
+    freq_nband=2,
+    peakfactor=0.1,
+    rms_factor=3.0,
+    threshold=None,
+
+    # Masking
+    cleanmask=None,
+    automask=True,
+    automask_threshold=10.0,
+    automask_rms_factor=3,
+    
+    # Control
+    majorcycles=3,
+    reuse_psf=False,
+    reuse_dirty=False,
+    dirty_from_resid=False,
+    conditional_clearcache=False,
+    verbose=False,
+    saveimages=None,
+    predict_column=None,
+    smooth=False,
+    noweights=False,
+    catcher=None,
+
+    # HMP settings
+    RMSFactorInitHMP=1.0,
+    MaxMinorIterInitHMP=10000,
+    AllowNegativeInitHMP=False,
+    OuterSpaceTh=None,
+
+    # WSCMS settings
+    # allows the option for per pipeline-step scale adjustments
+    wscms_MultiScaleBias=0.55,
+    wscms_Scales=None,
+    wscms_MaxScale=250,
+    wscms_NSubMinorIter=250,
+    wscms_SubMinorPeakFact=0.85,
+
+    # Input model
+    use_dicomodel=False,
+    dicomodel_base=None,
+
+    # Other
+    options=None,
+    PredictSettings=None):
 
     if catcher: catcher.check()
 
@@ -283,6 +360,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
 
     if not cubemode and not polcubemode:
         runcommand+=' --Freq-NBand=%i' % freq_nband
+    
     if stokes:
         runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
 
@@ -290,9 +368,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
         runcommand += ' --RIME-DecorrMode=FT'
 
     # switch between different cleanmodes.
-    # external masks are not supported in WSCMS mode, and thus only used in SSD(2)
+    # external masks are not fully tested in WSCMS mode alongside automasking, and thus only used in SSD; for now
     if cleanmode in ('SSD', 'SSD2', 'SSD3'):
-        # parameters shared between SSD and SSD2
+        # parameters shared between SSD versions
         runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
         if automask:                   runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
         if cleanmask is not None:      runcommand += ' --Mask-External=%s' % cleanmask
@@ -307,8 +385,17 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode=None,ddsols=None,applyso
         #     runcommand += ' --SSD3-'
     
     elif cleanmode in ('WSCMS', 'WSCMS2'):
-        runcommand += ' --WSCMS-MultiScale=1 --WSCMS-Scales=[0,4,8,16,32,64,128,256,512,768] --WSCMS-MaxScale=1000 --WSCMS-MultiScaleBias=0.55 --WSCMS-NSubMinorIter=500 --WSCMS-SubMinorPeakFact=0.85 --WSCMS-Padding=1.2 --WSCMS-AutoMask=1 --WSCMS-AutoMaskRMSFactor=3 --Mask-FluxImageType=ModelConv'
-    
+        # parameters shared between WSCMS versions
+        runcommand += ' --WSCMS-MultiScale=1'
+        if wscms_Scales is not None: runcommand += '--WSCMS-Scales=%s' % (wscms_Scales)
+        runcommand += ' --WSCMS-MaxScale=%f --WSCMS-MultiScaleBias=%f --WSCMS-NSubMinorIter=%i --WSCMS-SubMinorPeakFact=%f '%(wscms_MaxScale,wscms_MultiScaleBias,wscms_NSubMinorIter,wscms_SubMinorPeakFact)
+
+        # dedicated automasking inputs
+        if automask:
+            runcommand += '--WSCMS-AutoMask=%i' % automask
+            if automask_threshold is not None:  runcommand += ' --WSCMS-AutoMaskThreshold=%f' % automask_threshold
+            if automask_rms_factor is not None: runcommand += ' --WSCMS-AutoMaskRMSFactor=%f' % automask_rms_factor
+        
     if clusterfile is not None:
         runcommand += ' --Facets-CatNodes=%s' % clusterfile
     
@@ -404,7 +491,7 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         warn('File %s already exists, skipping clustering step'%OutClusterCat)
         return
 
-    if not ".app.restored.fits" in imagename:
+    if ".app.restored.fits" not in imagename:
         raise RuntimeError('Input image should be an apparant restored image')
 
     if options is None:
@@ -465,8 +552,6 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
             else:
                 merge_mask(fname,external_mask,fname)
     return fname
-            
-
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
@@ -900,7 +985,6 @@ def ingest_dynspec(obsid='*'):
                 sExec='insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
                 print(sExec)
                 sdb.cur.execute(sExec)
-        
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
