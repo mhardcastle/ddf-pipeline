@@ -392,13 +392,15 @@ def ddf_image(
     elif cleanmode in ('WSCMS', 'WSCMS2'):
         # parameters shared between WSCMS versions
         runcommand += ' --WSCMS-MultiScale=1' # Force multi-scale
-        if wscms_Scales is not None: runcommand += '--WSCMS-Scales=%s' % (wscms_Scales)
+        if wscms_Scales is not None: runcommand += ' --WSCMS-Scales=%s' % (wscms_Scales)
         runcommand += ' --WSCMS-MaxScale=%f --WSCMS-MultiScaleBias=%f --WSCMS-NSubMinorIter=%i --WSCMS-SubMinorPeakFact=%f '%(wscms_MaxScale,wscms_MultiScaleBias,wscms_NSubMinorIter,wscms_SubMinorPeakFact)
 
         # dedicated automasking inputs
         if automask:
-            runcommand += '--WSCMS-AutoMask=%i' % automask
-            if automask_threshold is not None:  runcommand += ' --WSCMS-AutoMaskThreshold=%f' % automask_threshold
+            if cleanmode == 'WSCMS2' and majorcycles <= 1:
+                runcommand += ' --WSCMS-AutoMask=0'
+            else:
+                runcommand += ' --WSCMS-AutoMask=%i' % automask
             if automask_rms_factor is not None: runcommand += ' --WSCMS-AutoMaskRMSFactor=%f' % automask_rms_factor
 
         if cleanmask is not None: runcommand += ' --Mask-External=%s' % cleanmask
@@ -997,7 +999,12 @@ def ingest_dynspec(obsid='*'):
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
-    f=open(mslist)
+
+    if mslist is not None:
+        f=open(mslist)
+    else:
+        raise ValueError("mslist is None")
+
     mslist=f.readlines()
     mslist=[msname.replace("\n","") for msname in mslist]
     for msname in mslist:
