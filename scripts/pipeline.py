@@ -249,11 +249,11 @@ def ddf_image(
 
     # WSCMS settings
     # allows the option for per pipeline-step scale adjustments
-    wscms_MultiScaleBias=0.55,
+    wscms_MultiScaleBias=None,
     wscms_Scales=None,
-    wscms_MaxScale=250,
-    wscms_NSubMinorIter=250,
-    wscms_SubMinorPeakFact=0.85,
+    wscms_MaxScale=None,
+    wscms_NSubMinorIter=None,
+    wscms_SubMinorPeakFact=None,
 
     # Input model
     use_dicomodel=False,
@@ -273,20 +273,22 @@ def ddf_image(
         options=o # attempt to get global if it exists
 
     keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
-    if HMPsize is None:
-        HMPsize=options['HMPsize']
-    if cleanmode is None:
-        cleanmode=options['cleanmode']
-    if do_decorr is None:
-        do_decorr=options['do_decorr']
-    if beamsize is None:
-        beamsize=options['psf_arcsec']
-    if imsize is None:
-        imsize=options['imsize']
-    if cellsize is None:
-        cellsize=options['cellsize']
-        
+    
+    # pull defaults from parset if not specified
+    if HMPsize   is None: HMPsize   = options['HMPsize']
+    if cleanmode is None: cleanmode = options['cleanmode']
+    if do_decorr is None: do_decorr = options['do_decorr']
+    if beamsize  is None: beamsize  = options['psf_arcsec']
+    if imsize    is None: imsize    = options['imsize']
+    if cellsize  is None: cellsize  = options['cellsize']
+
+    # pull default WSCMS settings from parset if not specified
+    if wscms_MultiScaleBias   is None: wscms_MultiScaleBias   = options['wscms_multiscale_bias']
+    if wscms_Scales           is None: wscms_Scales           = options['wscms_scales']
+    if wscms_MaxScale         is None: wscms_MaxScale         = options['wscms_max_scale']
+    if wscms_NSubMinorIter    is None: wscms_NSubMinorIter    = options['wscms_nsubminoriter']
+    if wscms_SubMinorPeakFact is None: wscms_SubMinorPeakFact = options['wscms_subminorpeakfact']
+    
     cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
@@ -297,14 +299,12 @@ def ddf_image(
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
+    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist} --Deconv-PeakFactor {peakfactor} --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor={rms_factor} --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
 
-    runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
-    runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
-    if AllowNegativeInitHMP:
-        runcommand += " --GAClean-AllowNegativeInitHMP True"
-    if OuterSpaceTh is not None:
-        runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
+    if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
+    if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
+    if AllowNegativeInitHMP:            runcommand += " --GAClean-AllowNegativeInitHMP True"
+    if OuterSpaceTh is not None:        runcommand += f" --HMP-OuterSpaceTh {OuterSpaceTh}"
 
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
     runcommand+=' --Cache-Weight=reset'
@@ -361,11 +361,8 @@ def ddf_image(
     if not cubemode and not polcubemode:
         runcommand+=' --Freq-NBand=%i' % freq_nband
     
-    if stokes:
-        runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
-
-    if do_decorr:
-        runcommand += ' --RIME-DecorrMode=FT'
+    if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
+    if do_decorr: runcommand += ' --RIME-DecorrMode=FT'
 
 
     ###########################
@@ -374,9 +371,9 @@ def ddf_image(
     if cleanmode in ('SSD', 'SSD2', 'SSD3'):
         # parameters shared between SSD versions
         runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
-        if automask:                   runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
-        if cleanmask is not None:      runcommand += ' --Mask-External=%s' % cleanmask
-        if options['use_splitisland']: runcommand += ' --SSDClean-MaxIslandSize=%s' % options['splitisland_size']
+        if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}' 
+        if cleanmask is not None:      runcommand += f' --Mask-External={cleanmask}'
+        if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options["splitisland_size"]}'
 
         # SSD2 specific parameters
         # if cleanmode == 'SSD2':
@@ -392,18 +389,18 @@ def ddf_image(
     elif cleanmode in ('WSCMS', 'WSCMS2'):
         # parameters shared between WSCMS versions
         runcommand += ' --WSCMS-MultiScale=1' # Force multi-scale
-        if wscms_Scales is not None: runcommand += ' --WSCMS-Scales=%s' % (wscms_Scales)
-        runcommand += ' --WSCMS-MaxScale=%f --WSCMS-MultiScaleBias=%f --WSCMS-NSubMinorIter=%i --WSCMS-SubMinorPeakFact=%f '%(wscms_MaxScale,wscms_MultiScaleBias,wscms_NSubMinorIter,wscms_SubMinorPeakFact)
+        if wscms_Scales is not None: runcommand += f' --WSCMS-Scales={wscms_Scales}'
+        runcommand += f' --WSCMS-MaxScale={wscms_MaxScale} --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
 
         # dedicated automasking inputs
         if automask:
             if cleanmode == 'WSCMS2' and majorcycles <= 1:
                 runcommand += ' --WSCMS-AutoMask=0'
             else:
-                runcommand += ' --WSCMS-AutoMask=%i' % automask
-            if automask_rms_factor is not None: runcommand += ' --WSCMS-AutoMaskRMSFactor=%f' % automask_rms_factor
+                runcommand += f' --WSCMS-AutoMask={automask}'
+            if automask_rms_factor is not None: runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_rms_factor}'
 
-        if cleanmask is not None: runcommand += ' --Mask-External=%s' % cleanmask
+        if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
         runcommand += ' --Mask-FluxImageType=ModelConv'
 
 

@@ -66,6 +66,8 @@ option_list = (
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning'),
     ( 'image',      'wscms_max_scale',        float, 250,    'Maximum WSCMS cleaning scale'),
+    ( 'image',      'wscms_nsubminoriter',    int,   250,    'Number of sub-minor cycle iterations in WSCMS'),
+    ( 'image',      'wscms_subminorpeakfact', float, 0.85,   'Sub-minor peak factor in WSCMS'),
 
     ( 'masking',    'thresholds',            list,  [15,10,10,5], 'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
     ( 'masking',    'low_threshold',         float, 3.0,   'Mask sigma for low-res masking' ),
