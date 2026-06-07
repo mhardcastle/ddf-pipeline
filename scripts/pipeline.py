@@ -622,6 +622,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --DoBar=0'
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
+            runcommand+=' --Parallel-UseMPI=0' 
             
             if PreApplySols:
                 runcommand+=' --PreApplySols=[%s]'%PreApplySols
