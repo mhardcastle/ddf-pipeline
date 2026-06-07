@@ -600,7 +600,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            runcommand = "DDF_FORCE_NOT_USE_MPI=1 kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
 
             # check for option to stop pdb call and use it if present
             
@@ -622,7 +622,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=' --DoBar=0'
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
-            runcommand+=' --Parallel-UseMPI=0' 
             
             if PreApplySols:
                 runcommand+=' --PreApplySols=[%s]'%PreApplySols
