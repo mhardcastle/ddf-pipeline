@@ -380,9 +380,20 @@ def ddf_image(
         #     runcommand += ' --SSD2-NLastCycleDeconvAll=4' # experimental
 
         # SSD3 specific parameters
-        # if cleanmode == 'SSD3':
-        #     runcommand += ' --SSD3-'
-
+        if cleanmode == 'SSD3':
+             runcommand += ' --SSD3-InitType ["HMP_0-100","MultiSlice:Orieux"]'
+             runcommand += ' --SSD3-NLookBackModels 5'
+             runcommand += ' --SSD3-NLastCycleDeconvAll 2'
+             runcommand += ' --SSD3-AllowFacetOverlap 0'
+             runcommand += ' --SSD3-RunSimpleClean 0'
+             runcommand += ' --SSD3-PropagatePrevGen 0'
+             runcommand += ' --SSD3-AlphaScaleModel 1'
+             runcommand += ' --SSDClean-SSDCostFunc ["Chi2"]'
+             runcommand += ' --GAClean-NMaxGen 30'
+             runcommand += ' --GAClean-NSourceKin 30'
+             runcommand += ' --Mask-ThFilterRFI 3'
+             runcommand += ' --MultiSliceDeconv-HyperSmooth 3.5'
+             
     ########################
     #### WSCMS / WSCMS2 ####
     ########################
