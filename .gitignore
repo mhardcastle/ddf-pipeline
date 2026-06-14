@@ -2,3 +2,8 @@
 *.pyc
 *.o
 *.so
+
+# logs and dirs with logs
+logs/*
+*.log
+*.def
