@@ -578,8 +578,6 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
 
-    os.environ['DDF_FORCE_NOT_USE_MPI'] = '1'
-    
     if options is None:
         options=o # attempt to get global if it exists
 
