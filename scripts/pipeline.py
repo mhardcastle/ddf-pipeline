@@ -182,15 +182,10 @@ def logfilename(s,options=None):
         return None
 
 def get_solutions_timerange(sols):
-    TT=None
-    if RANK==0:
-        print('Reading %s'%sols)
-        S=np.load(sols)
-        t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
-        TT=np.min(t),np.max(t)
-    if USE_MPI:
-        MPI.COMM_WORLD.Barrier()
-        TT=comm.bcast(None, root=0)
+    print('Reading %s'%sols)
+    S=np.load(sols)
+    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
+    TT=np.min(t),np.max(t)
     return TT
 
 def find_cache_dir(options):
@@ -724,7 +719,7 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
     if RANK==0:
         mpiManager.scpGatherSolutions(outsols)
     MPI.COMM_WORLD.Barrier()
-    
+
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
                                  SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options,mpiManager=mpiManager)
@@ -989,7 +984,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     full_sollist = []
     start_times = []
     SolsDir=options["SolsDir"]
-    print("smooth_solutions RANK=%i"%RANK)
+    print("smooth_solutions RANK=%i"%RANK,SolsDir,mslist)
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
             solname =fname+'/killMS.'+ddsols+'.sols.npz'
@@ -1881,7 +1876,8 @@ def main(o):
                                            ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][0],majorcycles=2,robust=o['image_robust'],
                                            colname=colname,peakfactor=0.001,automask=True,
                                            automask_threshold=o['thresholds'][1],
-                                           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
+                                           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],
+                                           use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
                                            use_dicomodel=True,
                                            dicomodel_base=CurrentBaseDicoModelName,
                                            catcher=catcher,
@@ -1898,6 +1894,7 @@ def main(o):
 
         separator("Mask for deeper deconv")
         CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+        MPI_Manager.scpScatter(CurrentMaskName)
         CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
         MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
 
@@ -1936,6 +1933,7 @@ def main(o):
 
         separator("Make Mask")
         CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+        MPI_Manager.scpScatter(CurrentMaskName)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
         MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
 
@@ -2047,6 +2045,7 @@ def main(o):
         if not o['skip_di']:
             separator("Make Mask")
             CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+            MPI_Manager.scpScatter(CurrentMaskName)
             CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
             MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
             CurrentImageName= 'image_ampphase1_di'
@@ -2177,6 +2176,7 @@ def main(o):
 
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
+    MPI_Manager.scpScatter(CurrentMaskName)
 
     separator("Finish Deconvolution AP (full mslist)")
     if not o['skip_di']:

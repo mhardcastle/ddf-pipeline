@@ -195,6 +195,9 @@ class mpi_manager():
         self.options=options_cfg
         self.MSSet=MSSet
         self.FullMSSet=FullMSSet
+        # check subset consistency
+        
+        
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
@@ -213,6 +216,11 @@ class mpi_manager():
         if FullMSSet is not None: self.scpScatter(FullMSSet.file_nodes_mslist)
         self.createRemoteLocal_mslist()
         self.createRemoteLocal_fullmslist()
+        for Node in self.DicoNode2mslist.keys():
+            LMS=self.FullMSSet.DicoNodes2ListMS[Node]
+            for MSName in self.MSSet.DicoNodes2ListMS[Node]:
+                if MSName not in LMS: raise Exception("MSs lists not consistent")
+                
 
     def callParallel(self,*args,**kwargs):
         return callParallel(*args,**kwargs)
@@ -276,12 +284,17 @@ class mpi_manager():
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
+        
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
+        
         for Node in self.ListNodesBeingUsed:
             if Node==self.MainHost:
                 continue
+            
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
+            
+            
             for MSName in LMS:
                 MSName = Path(MSName).name # if MSName is given with full path
                 os.system("mkdir -p %s/%s"%(SolsDir,MSName))
