@@ -25,6 +25,16 @@ from __future__ import division
 
 import os
 
+try:
+    from mpi4py import MPI
+    MPIsize = MPI.COMM_WORLD.size
+    RANK=MPI.COMM_WORLD.rank
+except:
+    MPIsize = 0
+    RANK=0
+
+USE_MPI=(MPIsize>1)
+        
 from future import standard_library
 standard_library.install_aliases()
 from builtins import zip
@@ -69,10 +79,12 @@ if not LOCAL_DEV:
     import datetime
     import threading
     import mpi_manager
+    from getcpus import getcpus
 
 
 else:
     print("Using local dev")
+    from utils.getcpus import getcpus
     from utils.auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
     from utils.parset import option_list
     from utils.options import options,print_options
@@ -170,10 +182,16 @@ def logfilename(s,options=None):
         return None
 
 def get_solutions_timerange(sols):
-    print('Reading %s'%sols)
-    S=np.load(sols)
-    t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
-    return np.min(t),np.max(t)
+    TT=None
+    if RANK==0:
+        print('Reading %s'%sols)
+        S=np.load(sols)
+        t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
+        TT=np.min(t),np.max(t)
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+        TT=comm.bcast(None, root=0)
+    return TT
 
 def find_cache_dir(options):
     cache_dir=options['cache_dir']
@@ -426,7 +444,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         else:
             raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
 
-    if threshold is not None:
+    if threshold is not None and threshold>0:
         runcommand += ' --Deconv-FluxThreshold=%f'%threshold
     if uvrange is not None:
         runcommand += ' --Selection-UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
@@ -494,10 +512,15 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         except:
             pass
         if mpiManager is not None and mpiManager.UseMPI:
-            run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
+            if RANK==0:
+                run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
+                
             run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)
             import DDFacet.DDF
             SaveFile1="last_DDFacet.finalised.obj"
+            mpiManager.scpScatter(SaveFile1)
+            MPI.COMM_WORLD.Barrier()
+
             OP=MyPickle.Load(SaveFile1)
             ListJobs=[]
             for Node in mpiManager.DicoNode2mslist.keys():
@@ -698,12 +721,15 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
 
     res=mpi_manager.callParallel(ListJobs)
 
-    mpiManager.scpGatherSolutions(outsols)
-
+    if RANK==0:
+        mpiManager.scpGatherSolutions(outsols)
+    MPI.COMM_WORLD.Barrier()
+    
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
                                  SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options,mpiManager=mpiManager)
-
+    MPI.COMM_WORLD.Barrier()
+    
     return outsols
 
 def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
@@ -952,7 +978,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                      options=None,mpiManager=None):
     if options is None:
         options=o
-        
+    
     should_run, comm, size, rank = _mpi_rank0_guard()
     if not should_run:
         if comm is not None and size > 1:
@@ -963,6 +989,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     full_sollist = []
     start_times = []
     SolsDir=options["SolsDir"]
+    print("smooth_solutions RANK=%i"%RANK)
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
             solname =fname+'/killMS.'+ddsols+'.sols.npz'
@@ -1449,18 +1476,34 @@ def main(o):
 
 
     # Dirty check that mslist has no empty row
-    for mslist in [o['mslist'],o['full_mslist']]:
-        filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
-        for fname in filenames:
-            if fname=="": die('MS list must have no blank lines')
-
+    if RANK==0:
+        for mslist in [o['mslist'],o['full_mslist']]:
+            filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
+            for fname in filenames:
+                if fname=="": die('MS list must have no blank lines')
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
 
     # Set column name for first steps
     colname=o['colname']
     global SetMS
+    
+    # need to copy mslist.txt and big-mslist.txt around because 
+    if RANK==0:
+        SetMS=mpi_manager.MSSet(o['mslist'])
+        FullSetMS=mpi_manager.MSSet(o['full_mslist'])
+        MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+        MPI_Manager.scpScatter(o['mslist'])
+        MPI_Manager.scpScatter(o['full_mslist'])
+    
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+        
     SetMS=mpi_manager.MSSet(o['mslist'])
     FullSetMS=mpi_manager.MSSet(o['full_mslist'])
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+    if USE_MPI: MPI.COMM_WORLD.Barrier()
+    
     # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node
     if not MPI_Manager.UseMPI:
         o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
@@ -2536,12 +2579,24 @@ def driver():
         print_options(option_list)
         sys.exit(1)
 
-    global o
-    o=options(sys.argv[1:],option_list)
-    if MyPickle is not None:
-        MyPickle.Save(o, "ddf-pipeline.last")
 
-    print(f"{o}")
+    print(RANK,getcpus())
+
+    global o
+
+    # Following is necessary when running from a non-network directory (non local) 
+    UseMPI=(MPIsize>1)
+    global o
+    if not UseMPI:
+        o=options(sys.argv[1:],option_list)
+        print(f"{o}")
+    else:
+        o=None
+        if RANK==0:
+            o=options(sys.argv[1:],option_list)
+            if MyPickle is not None: MyPickle.Save(o, "ddf-pipeline.last")
+        o = MPI.COMM_WORLD.bcast(o, root=0)
+
     main(o)
 
 if __name__=='__main__':

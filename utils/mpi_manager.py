@@ -3,10 +3,30 @@ try:
     from mpi4py import MPI
     #from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
     MPIsize = MPI.COMM_WORLD.size
+    RANK=MPI.COMM_WORLD.rank
 except:
     MPIsize = 0
+    RANK=0
 
+USE_MPI=(MPIsize>1)
+LIST_NODES_BEING_USED=None
 
+if USE_MPI:
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    host = MPI.Get_processor_name()
+    hosts=comm.gather(host, root=0)
+    ListNodesBeingUsed = None
+    if rank == 0:
+        seen = set()
+        ListNodesBeingUsed = []
+        for h in hosts:
+            if h not in seen:
+                seen.add(h)
+                ListNodesBeingUsed.append(h)
+    LIST_NODES_BEING_USED=comm.bcast(ListNodesBeingUsed, root=0)
+
+    
 import itertools
 import os
 from DDFacet.Other import ModColor
@@ -61,26 +81,11 @@ class MSSet():
             l.append(msname)
             nodes2ms[node]=l
             self.DicoMSName2Node[msname]=node
-            
+
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
-            comm = MPI.COMM_WORLD
-            rank = comm.Get_rank()
-
-            host = MPI.Get_processor_name()
-            hosts = comm.gather(host, root=0)
-
-            if rank == 0:
-                seen = set()
-                self.ListNodesBeingUsed = []
-                for h in hosts:
-                    if h not in seen:
-                        seen.add(h)
-                        self.ListNodesBeingUsed.append(h)
-            else:
-                self.ListNodesBeingUsed = None
-
-            self.ListNodesBeingUsed = comm.bcast(self.ListNodesBeingUsed, root=0)
+            
+            self.ListNodesBeingUsed = LIST_NODES_BEING_USED
                 
             mslist=list(zip(itertools.cycle(self.ListNodesBeingUsed), nodes2ms[None]))
             del nodes2ms[None]
@@ -194,7 +199,6 @@ class mpi_manager():
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
         self.MainHost = MPI.Get_processor_name() or "localhost"
-                
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         self.MPIsize=MPIsize
@@ -252,7 +256,8 @@ class mpi_manager():
     def scpScatter(self,FileName,NodeDest="all"):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
-
+        rank = comm.Get_rank()
+        if rank != 0: return
         if NodeDest=="all":
             for Node in self.ListNodesBeingUsed:
                 if Node==self.MainHost:
@@ -267,7 +272,7 @@ class mpi_manager():
             print("[Scatter] %s"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
             #os.system("%s"%ss)
-
+            
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
