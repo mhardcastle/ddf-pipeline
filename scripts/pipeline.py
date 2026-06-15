@@ -602,7 +602,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             MSName=os.path.abspath(f).split("/")[-1]
             solname =os.path.abspath(SolsDir)+"/"+MSName+'/killMS.'+outsols+'.sols.npz'
         checkname=solname
-
+        clipcal_checkname=checkname.replace('.sols.npz','.clipcal_done')
+        rootfilename=outsols.split('/')[-1]
+        f_=f.replace("/","_")
 
 
         #checkname=f+'/killMS.'+outsols+'.sols.npz'
@@ -676,17 +678,21 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
                 
                 
-            rootfilename=outsols.split('/')[-1]
-            f_=f.replace("/","_")
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
-            # Clip anyway - on IMAGING_WEIGHT by default
-            if DISettings is not None:
-                ClipCol=DISettings[-1]
-            else:
-                ClipCol=colname
-            runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
+        # Clip anyway - on IMAGING_WEIGHT by default
+        if DISettings is not None:
+            ClipCol=DISettings[-1]
+        else:
+            ClipCol=colname
+        runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
+
+        if options['restart'] and os.path.isfile(clipcal_checkname):
+            warn('ClipCal done file '+clipcal_checkname+' already exists, not running ClipCal step')
+        else:
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
+            if not options['dryrun']:
+                os.system("touch %s"%clipcal_checkname)
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
