@@ -1838,6 +1838,8 @@ def main(o=None):
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
             # if mask-low exists then use it
+        
+        extmask=None
         if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
             # can be empty, in which case recent versions of DDF throw
