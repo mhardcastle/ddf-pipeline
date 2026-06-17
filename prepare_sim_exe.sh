@@ -7,7 +7,8 @@ unzip CATALOGS.zip
 
 # Install the simulated dataset
 wget -O Sim.tgz https://sdrive.cnrs.fr/public.php/dav/files/PNmRiW3zc7XmEwN
-tar -xvf Sim.tgz
+mkdir $SCRATCH/ddf-sim-dataset
+tar -xvf Sim.tgz --directory "$SCRATCH/ddf-sim-dataset"
 
 # Install the ddf pipeline configuration file working with the simulated dataset
 wget -O Simul-Hackaton.cfg https://sdrive.cnrs.fr/public.php/dav/files/qgptXzGa6BCE56J
