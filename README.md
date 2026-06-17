@@ -1,4 +1,4 @@
-# ddf-pipeline
+# DDF Pipeline
 
 ddf-pipeline carries out several iterations of direction-dependent
 self-calibration on your LOFAR imaging data using DDFacet and KillMS
@@ -21,3 +21,67 @@ papers and provide a link to the ddf-pipeline github.
 ddf-pipeline is licensed under the GPL and is free to use. For full
 documentation and installation instructions
 see docs/manual.md.
+
+## Getting Started
+
+The following configuration has been tested on the Jean Zay supercomputer cpu partition.
+
+### 1. Prerequisites
+- Measurements dataset, .ms extension
+- Configuration dataset, .cfg extension
+- Lists dataset: mslist.txt, big-mslist.txt
+- Catalogs
+
+### 2. Installation
+
+```bash
+git clone --branch HackathonRennes_no_futures https://github.com/mhardcastle/ddf-pipeline.git
+cd ddf-pipeline
+./install_uv.sh
+./prepare_sim_exe.sh
+```
+
+### 3. Usage
+
+```bash
+sbatch sim_exe.slurm
+```
+
+## Global system architecture
+
+```mermaid
+flowchart TD
+    %% Prerequisites / Inputs
+    subgraph Inputs["Inputs"]
+        MS["Measurements Dataset (.ms)"]
+        CFG["Configuration Dataset (.cfg)"]
+        MSLIST["mslist.txt"]
+        BIGMSLIST["big-mslist.txt"]
+    end
+
+    subgraph Pipeline["Processing"]
+        DDF["pipeline.py"]
+        DDFacet["DDFacet (Imaging)"]
+        KMS["killMS (Calibration)"]
+    end
+
+    subgraph Outputs["Outputs"]
+        FITS["Products Dataset (.fits)"]
+        MMS["Modeled Measurements Dataset (.ms)"]
+
+    end
+
+    %% Inputs
+    MS --> DDF
+    CFG --> DDF
+    MSLIST --> DDF
+    BIGMSLIST --> DDF
+
+    %% Processing Loops
+    DDF <-->|"options list"| DDFacet
+    DDF <-->|"options list"| KMS
+
+    %% Outputs
+    DDF --> FITS
+    DDF --> MMS
+```
