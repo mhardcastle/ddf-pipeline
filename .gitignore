@@ -2,6 +2,7 @@
 *.pyc
 *.o
 *.so
+*.lock
 
 # logs and dirs with logs
 logs/*
