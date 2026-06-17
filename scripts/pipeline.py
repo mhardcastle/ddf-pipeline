@@ -1042,7 +1042,6 @@ def subtractOuterSquare(o):
     NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
 
-
     wide_uvrange=[o['image_uvmin'],2.5*206.0/o['wide_psf_arcsec']]
     
     killms_uvrange=[0,1000]
@@ -1054,8 +1053,7 @@ def subtractOuterSquare(o):
         catcher=Catcher()
     else:
         catcher=None
-    
-    
+        
     #if o['wide_psf_arcsec'] is not None:
     # wide-res image requested
     #if o['wide_imsize'] is not None:
@@ -1104,21 +1102,20 @@ def subtractOuterSquare(o):
     else:
         ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-                  cleanmode=o['cleanmode'],
-                  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
-                  #ddsols='wide_killms_p1',
-                  #applysols='AP',#normalization=o['normalize'][0],
-                  peakfactor=0.001,
-                  apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-                  #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
-                  beamsize=o['wide_psf_arcsec'],
-                  imsize=o['wide_imsize'],cellsize=o['wide_cell'],
-                  use_dicomodel=True,catcher=catcher,
-                  PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
-                  dicomodel_base='image_full_wide_im')
+            cleanmode=o['cleanmode'],
+            #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
+            #ddsols='wide_killms_p1',
+            #applysols='AP',#normalization=o['normalize'][0],
+            peakfactor=0.001,
+            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
+            #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
+            beamsize=o['wide_psf_arcsec'],
+            imsize=o['wide_imsize'],cellsize=o['wide_cell'],
+            use_dicomodel=True,catcher=catcher,
+            PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
+            dicomodel_base='image_full_wide_im')
         if not o['dryrun']:
             os.system("touch %s"%FileHasPredicted)
-
 
 
     # subtract predicted visibilities
@@ -1128,7 +1125,6 @@ def subtractOuterSquare(o):
     elif not o['dryrun']:
         subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
         os.system("touch %s"%FileHasSubtracted)
-
 
     ## test subtracted...
     ## sanity check
