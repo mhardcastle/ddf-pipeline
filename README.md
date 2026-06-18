@@ -22,31 +22,6 @@ ddf-pipeline is licensed under the GPL and is free to use. For full
 documentation and installation instructions
 see docs/manual.md.
 
-## Getting Started
-
-The following configuration has been tested on the Jean Zay supercomputer cpu partition.
-
-### 1. Prerequisites
-- Measurements dataset, .ms extension
-- Configuration dataset, .cfg extension
-- Lists dataset: mslist.txt, big-mslist.txt
-- Catalogs
-
-### 2. Installation
-
-```bash
-git clone --branch HackathonRennes_no_futures https://github.com/mhardcastle/ddf-pipeline.git
-cd ddf-pipeline
-./install_uv.sh
-./prepare_sim_exe.sh
-```
-
-### 3. Usage
-
-```bash
-sbatch sim_exe.slurm
-```
-
 ## Global system architecture
 
 ```mermaid
@@ -84,4 +59,43 @@ flowchart TD
     %% Outputs
     DDF --> FITS
     DDF --> MMS
+```
+
+## Core Components
+
+| Component | File Path | Description |
+| ----------- | ----------- | ----------- |
+| Main Pipeline | scripts/pipeline.py | Orchestration and workflow control |
+| Configuration System | utils/parset.py | Parameter parsing and option management |
+| Core Utilities | utils/auxcodes.py | Utility functions and helpers |
+
+## Hardware and System Requirements
+- RAM: 512 GB
+- CPU Cores: Recommended 32 cores
+- Storage: 600 GB fast storage
+- Shared Memory: 256 GB (/dev/shm)
+
+## Getting Started
+
+The following configuration has been tested on the Jean Zay supercomputer cpu partition.
+
+### 1. Prerequisites
+- Measurements dataset, .ms extension
+- Configuration dataset, .cfg extension
+- Lists dataset: mslist.txt, big-mslist.txt
+- Catalogs
+
+### 2. Installation
+
+```bash
+git clone --branch HackathonRennes_no_futures https://github.com/mhardcastle/ddf-pipeline.git
+cd ddf-pipeline
+./install_uv.sh
+./prepare_sim_exe.sh
+```
+
+### 3. Usage
+
+```bash
+sbatch sim_exe.slurm
 ```
