@@ -61,7 +61,7 @@ def CheckDistributedFS():
     # print("!!!!!",fs_type)
 
     if fs_type is not None:
-        return fs_type.startswith("nfs") or fs_type== "beegfs" or fs_type == "lustre" or fs_type == "gpfs"
+        return fs_type.startswith("nfs") or fs_type== "beegfs" or fs_type == "lustre" or fs_type == "gpfs" or fs_type == "ceph"
 
 class MSSet():
     def __init__(self,mslist):
