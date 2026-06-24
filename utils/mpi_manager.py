@@ -1,30 +1,30 @@
 try:
-    #from mpi4py.futures import MPIPoolExecutor
     from mpi4py import MPI
-    #from mpi4py.futures import MPICommExecutor, MPIPoolExecutor
     MPIsize = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
+    shared_comm = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED)
+    localrank = shared_comm.rank
+    localsize = shared_comm.size
+    hostname = MPI.Get_processor_name()
 except:
     MPIsize = 0
     RANK=0
+    localrank = 0 # local process ID on the node
+    localsize = 1 # number of mpi process on the node
+    hostname = "localhost"
 
 USE_MPI=(MPIsize>1)
-LIST_NODES_BEING_USED=None
+LIST_SITES_BEING_USED=None
 
 if USE_MPI:
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    host = MPI.Get_processor_name()
-    hosts=comm.gather(host, root=0)
-    ListNodesBeingUsed = None
-    if rank == 0:
-        seen = set()
-        ListNodesBeingUsed = []
-        for h in hosts:
-            if h not in seen:
-                seen.add(h)
-                ListNodesBeingUsed.append(h)
-    LIST_NODES_BEING_USED=comm.bcast(ListNodesBeingUsed, root=0)
+    host = f"{hostname}@{localrank}"
+    print(f"{host}")
+    hosts_rank=comm.allgather(host)
+    print(f"{hosts_rank}")
+    LIST_SITES_BEING_USED=hosts_rank
+    print(f"LIST_SITES_BEING_USED={LIST_SITES_BEING_USED}")
 
     
 import itertools
@@ -84,9 +84,9 @@ class MSSet():
         if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
             # get all node names because None have been specified
             
-            self.ListNodesBeingUsed = LIST_NODES_BEING_USED
+            self.ListNodesBeingUsed = LIST_SITES_BEING_USED
                 
-            mslist=list(zip(itertools.cycle(self.ListNodesBeingUsed), nodes2ms[None]))
+            mslist=list(zip(itertools.cycle(LIST_SITES_BEING_USED), nodes2ms[None]))
             del nodes2ms[None]
             
             for node,ms in mslist:
@@ -97,27 +97,25 @@ class MSSet():
 
         self.DicoNodes2ListMS=nodes2ms
         self.ListNodesBeingUsed = list(nodes2ms.keys())
-        
-        
-        
+ 
         print(ModColor.Str(" Data set distribution ".center(WIDTH_PROMPT,"="),col="blue"))
         print(ModColor.Str((" %s "%(str(self.ListNodesBeingUsed))).center(WIDTH_PROMPT,"="),col="blue"))
         pprint.pp(self.DicoNodes2ListMS)
 
         
 def testFunc(*args,**kwargs):
-    host = MPI.Get_processor_name()
+    host = hostname
     print(host,args,kwargs)
     
 import os
 def testParallel():
-    ListJobs=[["nancep10.obs-nancay.fr",testFunc,(5,),{"e":6}],
-              ["nancep10.obs-nancay.fr",testFunc,(9,),{"f":6}],
-              ["nancep11.obs-nancay.fr",testFunc,(77,),{"g":88}],
+    ListJobs=[["nancep10.obs-nancay.fr@0",testFunc,(5,),{"e":6}],
+              ["nancep10.obs-nancay.fr@0",testFunc,(9,),{"f":6}],
+              ["nancep11.obs-nancay.fr@0",testFunc,(77,),{"g":88}],
               ]
     
-    ListJobs=[["cw10055",os.system,("CleanSHM.py",), {}],
-              ["cw10057",os.system,("CleanSHM.py",), {}],
+    ListJobs=[["cw10055@0",os.system,("CleanSHM.py",), {}],
+              ["cw10057@0",os.system,("CleanSHM.py",), {}],
               ]
     
     ListJobs=[["nancep10.obs-nancay.fr@0",os.system,("CleanSHM.py",), {}],
@@ -132,17 +130,17 @@ def testParallel():
     callParallel(ListJobs)
     
 def filterHost(jobs):
-    host = MPI.Get_processor_name()
-    print("FilterHost : %s"%host)
+    site = f"{hostname}@{localrank}"
+    print("FilterHost : %s"%site)
     #localrank = os.environ.get("SLURM_LOCALID", "0")
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
         #if RunOnHost == f"{host}@{localrank}":
-        if RunOnHost == f"{host}":
-            print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
+        if RunOnHost == f"{site}":
+            print("  [exec] [ME=%s][TARGET=%s]: %s(%s,%s)"%(site,RunOnHost,str(func),str(args),str(kwargs)))
             res.append(func(*args,**kwargs))
         else:
-            # print("  [skip] [ME=%s][TARGET=%s]: %s(%s,%s)"%(host,RunOnHost,str(func),str(args),str(kwargs)))
+            print("  [skip] [ME=%s][TARGET=%s]: %s(%s,%s)"%(site,RunOnHost,str(func),str(args),str(kwargs)))
             pass
     return res
     
@@ -152,13 +150,14 @@ def callParallel(ListJobs):
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    host = MPI.Get_processor_name()
+    comm.Barrier()
 
     if rank == 0:
         print()
         print("".center(WIDTH_PROMPT,"="))
         print(ModColor.Str(" CALL PARALLEL ".center(WIDTH_PROMPT,"="),col="blue"))
         print(ModColor.Str((f" MPI size: {size} ").center(WIDTH_PROMPT,"="),col="blue"))
+        print(ModColor.Str((f" : {ListJobs} ")))
 
     local_results = filterHost(ListJobs)
 
@@ -184,11 +183,6 @@ def callParallel(ListJobs):
 # # Zipping using cycle
 # res= list(zip(a, itertools.cycle(b)))
 # print(res)
-def get_node_name():
-    # localrank = os.environ.get("SLURM_LOCALID", "0")
-    # return f"{MPI.Get_processor_name()}@{localrank}"
-    return MPI.Get_processor_name()
-
 class mpi_manager():
     def __init__(self,options_cfg,MSSet, FullMSSet):
         self.options=options_cfg
@@ -200,7 +194,7 @@ class mpi_manager():
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
-        self.MainHost = MPI.Get_processor_name() or "localhost"
+        self.MainSite = f"{hostname}@0"
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
         self.MPIsize=MPIsize
@@ -218,7 +212,7 @@ class mpi_manager():
         for Node in self.DicoNode2mslist.keys():
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
             for MSName in self.MSSet.DicoNodes2ListMS[Node]:
-                if MSName not in LMS: raise Exception("MSs lists not consistent")
+                if MSName not in LMS: raise Exception(f"MSs lists not consistent: {MSName} not in {LMS}")
                 
 
     def callParallel(self,*args,**kwargs):
@@ -265,16 +259,20 @@ class mpi_manager():
         if not self.DoScatterGather: return
         rank = comm.Get_rank()
         if rank != 0: return
+        if local_rank != 0: return
         if NodeDest=="all":
-            for Node in self.ListNodesBeingUsed:
-                if Node==self.MainHost:
+            for site in self.ListNodesBeingUsed:
+                if site==self.MainSite:
                     continue
+                Node=site.split('@')[0]
+                lrank=site.split('@')[1]
+                if lrank != 0: return
                 ss="scp -r %s %s:%s"%(FileName,Node,self.WorkDir)
                 print("[Scatter] %s"%ss)
                 os.system("%s > /dev/null 2>&1"%ss)
                 os.system("%s > /dev/null 2>&1"%ss)
         else:
-            if NodeDest==self.MainHost: return
+            if NodeDest==self.MainSite: return
             ss="scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir)            
             print("[Scatter] %s"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
@@ -283,11 +281,15 @@ class mpi_manager():
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
+        if local_rank != 0: return
         
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         
-        for Node in self.ListNodesBeingUsed:
+        for site in self.ListNodesBeingUsed:
+            Node=site.split('@')[0]
+            lrank=site.split('@')[1]
+            if lrank != 0: return
             if Node==self.MainHost:
                 continue
             
@@ -305,6 +307,7 @@ class mpi_manager():
     def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
+        if local_rank != 0: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         Node=self.FullMSSet.DicoMSName2Node[MSName]
