@@ -25,6 +25,7 @@ git clone ${METHOD_CLONE}cyriltasse/killMS -b HackathonRennes_June26 ../killMS |
 uv venv -p 3.12
 source .venv/bin/activate
 uv sync --extra mpi-support --refresh-package ddfacet --refresh-package killms --active --verbose
+uv pip install --reinstall mpi4py --no-cache-dir --no-binary mpi4py --verbose
 # Go to https://github.com/dguibert/LOFARBeam/releases/tag/v0.1-10-gc49afaf to find lofarbeam wheels
 uv pip install https://github.com/dguibert/LOFARBeam/releases/download/v0.1-10-gc49afaf/lofarbeam-0.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 
