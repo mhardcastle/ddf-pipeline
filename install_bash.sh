@@ -5,6 +5,7 @@ cd VE_P3.12_Merge
 source bin/activate
 #cp $HOME/VE_P3.12_Merge/init.sh .
 
+cd $VIRTUAL_ENV
 git clone -b HackathonRennes_June26 git@github.com:cyriltasse/DDFacet.git
 git clone -b HackathonRennes_June26 git@github.com:cyriltasse/killMS.git
 git clone -b HackathonRennes_June26 git@github.com:mhardcastle/ddf-pipeline.git
@@ -22,11 +23,13 @@ cmake -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV       -DPYTHON_PACKAGES_DIR=$VIRTUAL_E
 make -j4
 
 # install oskar
+pip install 'git+https://github.com/OxfordSKA/OSKAR.git@master#egg=oskarpy&subdirectory=python'
+
+
+# install oskar
 cd $VIRTUAL_ENV
-mkdir OSKAR
-cd OSKAR/
-git clone https://gitlab.com/ska-telescope/sim/oskar.git
-cd oskar/
+git clone https://github.com/OxfordSKA/OSKAR.git
+cd OSKAR/oskar/
 mkdir build
 cd build/
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV/OSKAR/install -DFIND_CUDA=OFF -DFIND_OPENCL=OFF

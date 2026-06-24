@@ -1657,7 +1657,8 @@ def main(o):
                                            use_weightspectrum=o['use_weightspectrum'],
                                            uvrange=uvrange,catcher=catcher,
                                            mpiManager=MPI_Manager)
-
+        
+        
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
         _=make_mask('image_dirin_SSD.residual01.fits',
@@ -2474,9 +2475,14 @@ def main(o):
 
     try:
         run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
+        run("""pkill -f "IOMonitor.py" """, mpiManager=MPI_Manager)
     except:
         pass
+    print("Successfully ran ddf-pipeline")
+    if UseMPI:
+        MPI.Finalize()
     exit(0)
+    
     # TODO mpi
     m=MSList(o['full_mslist'])
     uobsid = set(m.obsids)
