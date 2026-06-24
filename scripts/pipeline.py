@@ -473,10 +473,16 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     if phasecenter is not None:
         runcommand += " --Image-PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
-    if options['restart'] and os.path.isfile(fname):
+
+    OutputExists=os.path.isfile(fname)
+    if USE_MPI:
+        OutputExists=MPI.COMM_WORLD.bcast(OutputExists, root=0)
+            
+    if options['restart'] and OutputExists:
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
             print('would have run',runcommand)
+            
     else:
         if conditional_clearcache:
             if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
@@ -714,7 +720,9 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights),{ }))
 
+
     res=mpi_manager.callParallel(ListJobs)
+    MPI.COMM_WORLD.Barrier()
 
     if RANK==0:
         mpiManager.scpGatherSolutions(outsols)
@@ -1470,6 +1478,7 @@ def main(o):
         die('MS list must be specified')
 
 
+
     # Dirty check that mslist has no empty row
     if RANK==0:
         for mslist in [o['mslist'],o['full_mslist']]:
@@ -1491,6 +1500,7 @@ def main(o):
         MPI_Manager.scpScatter(o['mslist'])
         MPI_Manager.scpScatter(o['full_mslist'])
     
+
     if USE_MPI:
         MPI.COMM_WORLD.Barrier()
         
@@ -1504,6 +1514,7 @@ def main(o):
         o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
         o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
     
+
     separator('Run MemMonitor')
     try:
         run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
@@ -1524,6 +1535,7 @@ def main(o):
         checkColName_mpi(MPI_Manager, o)
     else:
         checkColName(o)
+
 
     # Clear the shared memory
     #import DDFacet.CleanSHM
@@ -1575,6 +1587,7 @@ def main(o):
             stop(2)
 
 
+
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
@@ -1583,6 +1596,7 @@ def main(o):
         full_clearcache_mpi(MPI_Manager, o)
     else:
         full_clearcache(o)
+
 
     if MPI_Manager.UseMPI:
         new=check_imaging_weight_mpi(MPI_Manager, o,mslist_str="mslist")
@@ -1599,6 +1613,7 @@ def main(o):
         else:
             full_clearcache(o)
 
+
     # ##########################################################
     if o['redo_DI']:
         separator('Redo DI correction')
@@ -1606,6 +1621,7 @@ def main(o):
             redo_dppp_di_mpi(MPI_Manager, o)
         else:
             redo_dppp_di(o)
+
 
 
 
@@ -1631,6 +1647,7 @@ def main(o):
         ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode=DeconvMode,majorcycles=0,robust=o['image_robust'],
                 reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,
                 apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
+
 
         external_mask=None
         if not o["force_disable_extmask"]:
@@ -1658,6 +1675,7 @@ def main(o):
                                            uvrange=uvrange,catcher=catcher,
                                            mpiManager=MPI_Manager)
         
+
         
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
@@ -1666,6 +1684,7 @@ def main(o):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
+
 
         if o['use_maskdiffuse']:
             separator("Merge diffuse emission mask into external mask")
@@ -1734,6 +1753,7 @@ def main(o):
 
 
         separator("Deconv clustered DI image")
+
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
                                            cleanmask=CurrentMaskName,
                                            cleanmode=DeconvMode,
@@ -1754,6 +1774,7 @@ def main(o):
                                            MaxMinorIterInitHMP=10000,
                                            PredictSettings=("Clean","DD_PREDICT"),
                                            mpiManager=MPI_Manager)
+
 
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
