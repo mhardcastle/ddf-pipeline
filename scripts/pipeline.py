@@ -2499,7 +2499,7 @@ def main(o):
     except:
         pass
     print("Successfully ran ddf-pipeline")
-    if UseMPI:
+    if MPI_Manager.UseMPI:
         MPI.Finalize()
     exit(0)
     
