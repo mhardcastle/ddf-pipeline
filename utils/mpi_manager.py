@@ -170,7 +170,7 @@ def callParallel(ListJobs):
         print("".center(WIDTH_PROMPT,"="))
         print(ModColor.Str(" CALL PARALLEL ".center(WIDTH_PROMPT,"="),col="blue"))
         print(ModColor.Str((f" MPI size: {size} ").center(WIDTH_PROMPT,"="),col="blue"))
-        print(ModColor.Str((f" : {ListJobs} ")))
+        # print(ModColor.Str((f" : {ListJobs} ")))
 
     local_results = filterHost(ListJobs)
 
@@ -261,18 +261,25 @@ class mpi_manager():
                 self.scpScatter(FName,Node)
 
     def scpScatter(self,FileName,NodeDest="all"):
+        print("scpScatter",FileName)
         if not self.UseMPI: return
         if not self.DoScatterGather: return
         rank = comm.Get_rank()
         if rank != 0: return
         if local_rank != 0: return
+        print("   scpScatter running")
+        
         if NodeDest=="all":
             for site in self.ListNodesBeingUsed:
+                print(site)
                 if site==self.MainSite:
+                    print("skip",site,self.MainSite)
                     continue
                 Node=site.split('@')[0]
-                lrank=site.split('@')[1]
-                if lrank != 0: return
+                lrank=int(site.split('@')[1])
+                if lrank != 0:
+                    print("skipb",lrank)
+                    return
                 ss="scp -r %s %s:%s"%(FileName,Node,self.WorkDir)
                 print("[Scatter] %s"%ss)
                 os.system("%s > /dev/null 2>&1"%ss)
@@ -292,7 +299,7 @@ class mpi_manager():
 
         for site in self.ListNodesBeingUsed:
             Node=site.split('@')[0]
-            lrank=site.split('@')[1]
+            lrank=int(site.split('@')[1])
             if lrank != 0: return
             if Node==self.MainHost:
                 continue

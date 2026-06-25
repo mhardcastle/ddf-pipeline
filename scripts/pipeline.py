@@ -1079,7 +1079,7 @@ def full_clearcache_mpi(MPI_Manager,o,extras=None):
     if o is not None:
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
             oc=copy.deepcopy(o)
-            print("MPI_Manager.DicoNode2fullmslist.keys",MPI_Manager.DicoNode2fullmslist.keys())
+            print("MPI_Manager.DicoNode2mslist.keys",MPI_Manager.DicoNode2mslist.keys())
             oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
             oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             ListJobs.append((Node,full_clearcache,(oc,extras),{}))
@@ -1499,6 +1499,7 @@ def main(o):
         MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
         MPI_Manager.scpScatter(o['mslist'])
         MPI_Manager.scpScatter(o['full_mslist'])
+    
 
     if USE_MPI:
         MPI.COMM_WORLD.Barrier()
@@ -1516,8 +1517,8 @@ def main(o):
 
     separator('Run MemMonitor')
     try:
-        run("""pkill -f "MemMonitor.py || true """, mpiManager=MPI_Manager)
-        run("""pkill -f "IOMonitor.py" || true """, mpiManager=MPI_Manager)
+        run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
+        run("""pkill -f "IOMonitor.py" """, mpiManager=MPI_Manager)
     except:
         pass
     DoResetCounter=0
@@ -2499,7 +2500,7 @@ def main(o):
     except:
         pass
     print("Successfully ran ddf-pipeline")
-    if MPI_Manager.UseMPI:
+    if UseMPI:
         MPI.Finalize()
     exit(0)
     
