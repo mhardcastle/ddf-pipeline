@@ -14,7 +14,7 @@ try:
     localsize = shared_comm.size
     hostname = MPI.Get_processor_name()
 
-    if size>1:
+    if MPIsize>1:
         USE_MPI=True
     else:
         print(ModColor.Str(" mpi4py properly initialised, but size=1, not using MPI mode.",col="blue"))

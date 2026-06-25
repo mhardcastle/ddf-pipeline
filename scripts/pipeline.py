@@ -2501,7 +2501,7 @@ def main(o):
     print("Successfully ran ddf-pipeline")
     if MPI_Manager.UseMPI:
         MPI.Finalize()
-    exit(0)
+    return
     
     # TODO mpi
     m=MSList(o['full_mslist'])
