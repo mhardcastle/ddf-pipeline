@@ -294,7 +294,7 @@ class mpi_manager():
             Node=site.split('@')[0]
             lrank=site.split('@')[1]
             if lrank != 0: return
-            if Node==self.MainHost:
+            if site==self.MainSite:
                 continue
 
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
@@ -319,7 +319,7 @@ class mpi_manager():
 
         MSName = Path(MSName).name # if MSName is given with full path
         os.system("mkdir -p %s/%s"%(SolsDir,MSName))
-        if Node!=self.MainHost:
+        if site==self.MainSite:
             ss="scp -r %s %s:%s"%(SmoothSolName,Node,self.WorkDir)
             print("[Scatter Sols] %s"%ss)
             #os.system("%s &>/dev/null"%ss)
