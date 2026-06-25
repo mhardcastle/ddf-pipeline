@@ -278,7 +278,7 @@ class mpi_manager():
                 os.system("%s > /dev/null 2>&1"%ss)
         else:
             if NodeDest==self.MainSite: return
-            ss="scp -r %s %s:%s"%(FileName,NodeDest,self.WorkDir)
+            ss="scp -r %s %s:%s"%(FileName,NodeDest.split("@")[0],self.WorkDir)
             print("[Scatter] %s"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
 
