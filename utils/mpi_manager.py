@@ -17,10 +17,10 @@ try:
     if MPIsize>1:
         USE_MPI=True
     else:
-        print(ModColor.Str(" mpi4py properly initialised, but size=1, not using MPI mode.",col="blue"))
+        print(" mpi4py properly initialised, but size=1, not using MPI mode.")
 
 except ModuleNotFoundError:
-    print(ModColor.Str(" Could not initialise mpi4py ",col="blue"))
+    print(" Could not initialise mpi4py ")
     pass
 except Error as e:
     raise RuntimeError(e)
