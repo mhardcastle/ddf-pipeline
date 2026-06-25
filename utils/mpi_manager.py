@@ -1,6 +1,6 @@
 MPIsize = 0
 RANK=0
-localrank = 0 # local process ID on the node
+local_rank = 0 # local process ID on the node
 localsize = 1 # number of mpi process on the node
 hostname = "localhost"
 USE_MPI=False
@@ -10,11 +10,11 @@ try:
     MPIsize = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
     shared_comm = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED)
-    localrank = shared_comm.rank
+    local_rank = shared_comm.rank
     localsize = shared_comm.size
     hostname = MPI.Get_processor_name()
 
-    if size>1:
+    if MPIsize>1:
         USE_MPI=True
     else:
         print(ModColor.Str(" mpi4py properly initialised, but size=1, not using MPI mode.",col="blue"))
@@ -31,7 +31,7 @@ LIST_SITES_BEING_USED=None
 if USE_MPI:
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    host = f"{hostname}@{localrank}"
+    host = f"{hostname}@{local_rank}"
     print(f"{host}")
     hosts_rank=comm.allgather(host)
     print(f"{hosts_rank}")
@@ -145,7 +145,7 @@ def testParallel():
     callParallel(ListJobs)
 
 def filterHost(jobs):
-    site = f"{hostname}@{localrank}"
+    site = f"{hostname}@{local_rank}"
     #print("FilterHost : %s"%site)
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
