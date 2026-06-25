@@ -315,6 +315,7 @@ class mpi_manager():
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         Node=self.FullMSSet.DicoMSName2Node[MSName]
+        Node =  Node.split("@")[0]
 
         MSName = Path(MSName).name # if MSName is given with full path
         os.system("mkdir -p %s/%s"%(SolsDir,MSName))
