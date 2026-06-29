@@ -64,8 +64,8 @@ option_list = (
     ( 'image',      'splitisland_size',       float, 100,    'Size to use for SSDClean-MaxIslandSize option in DDFacet'),
     ( 'image',      'phasecenter',            list,  None,   'Desired RA and DEC of image phase centre (["hh:mm:ss", "dd:mm:ss"])'),
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
-    ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning'),
-    ( 'image',      'wscms_max_scale',        float, 250,    'Maximum WSCMS cleaning scale'),
+    ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
+    ( 'image',      'wscms_max_scale',        float, 250,    'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_nsubminoriter',    int,   250,    'Number of sub-minor cycle iterations in WSCMS'),
     ( 'image',      'wscms_subminorpeakfact', float, 0.85,   'Sub-minor peak factor in WSCMS'),
 

@@ -400,8 +400,18 @@ def ddf_image(
     elif cleanmode in ('WSCMS', 'WSCMS2'):
         # parameters shared between WSCMS versions
         runcommand += ' --WSCMS-MultiScale=1' # Force multi-scale
-        if wscms_Scales is not None: runcommand += f' --WSCMS-Scales={wscms_Scales}'
-        runcommand += f' --WSCMS-MaxScale={wscms_MaxScale} --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
+
+        # wscms max scale is not aware of cellsizes, it only knows pixels
+        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px)
+        if wscms_MaxScale is not None:
+            wscms_MaxScale_px = int(float(wscms_MaxScale) / cellsize * options['cellsize'])
+            runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
+        if wscms_Scales is not None:
+            # scale everything by cellsize, but ensure no duplicates are created due to rounding
+            wscms_Scales_px = list(set([int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales]))
+            runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
+
+        runcommand += f' --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
 
         # dedicated automasking inputs
         if automask:
