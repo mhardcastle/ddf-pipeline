@@ -27,13 +27,13 @@ import os
 
 try:
     from mpi4py import MPI
-    MPIsize = MPI.COMM_WORLD.size
+    MPI_SIZE = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
 except:
-    MPIsize = 0
+    MPI_SIZE = 0
     RANK=0
 
-USE_MPI=(MPIsize>1)
+USE_MPI=(MPI_SIZE>1)
         
 from future import standard_library
 standard_library.install_aliases()
@@ -485,12 +485,12 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             
     else:
         if conditional_clearcache:
-            if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+            if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1:
                 clearcache_mpi(mpiManager, mslist, options)
             else:
                 clearcache(mslist,options)
 
-        # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+        # if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1:
         #     jobs=[]
         #     for h in mpiManager.ListNodesBeingUsed:
         #         log=logfilename('DDF-'+imagename+'-'+h+'.log')
@@ -538,7 +538,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         except:
             pass
 
-        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1:
+        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1:
             mpiManager.scpScatter("%s.DicoModel"%imagename)
 
         # else:
@@ -677,7 +677,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 ):
 
 
-    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1 and mslist_str != "":
         SolsDir=options["SolsDir"]
         os.system("mkdir -p %s"%SolsDir)
         rep=killms_data_mpi(
@@ -1256,7 +1256,7 @@ def ingest_dynspec(obsid='*'):
 
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
                  mpiManager=None, mslist_str=""):
-    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPIsize>1 and mslist_str != "":
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1 and mslist_str != "":
         subtract_vis_mpi(mslist,colname_a,colname_b,out_colname, mpiManager, mslist_str)
     else:
         subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
@@ -1491,12 +1491,18 @@ def main(o):
     # Set column name for first steps
     colname=o['colname']
     global SetMS
+
+    MainNode=None
+    if RANK==0: MainNode=socket.gethostname()
+    if USE_MPI:
+        MainNode=MPI.COMM_WORLD.bcast(MainNode, root=0)
+    
     
     # need to copy mslist.txt and big-mslist.txt around because 
     if RANK==0:
         SetMS=mpi_manager.MSSet(o['mslist'])
         FullSetMS=mpi_manager.MSSet(o['full_mslist'])
-        MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+        MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
         MPI_Manager.scpScatter(o['mslist'])
         MPI_Manager.scpScatter(o['full_mslist'])
     
@@ -1506,7 +1512,9 @@ def main(o):
         
     SetMS=mpi_manager.MSSet(o['mslist'])
     FullSetMS=mpi_manager.MSSet(o['full_mslist'])
-    MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS)
+    MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
+
+    
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     
     # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node
@@ -2612,7 +2620,7 @@ def driver():
     global o
 
     # Following is necessary when running from a non-network directory (non local) 
-    UseMPI=(MPIsize>1)
+    UseMPI=(MPI_SIZE>1)
     global o
     if not UseMPI:
         o=options(sys.argv[1:],option_list)

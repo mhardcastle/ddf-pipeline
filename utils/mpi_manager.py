@@ -1,20 +1,20 @@
-MPIsize = 0
+MPI_SIZE = 0
 RANK=0
-local_rank = 0 # local process ID on the node
-localsize = 1 # number of mpi process on the node
-hostname = "localhost"
+LOCAL_RANK = 0 # local process ID on the node
+LOCAL_SIZE = 1 # number of mpi process on the node
+HOSTNAME = "localhost"
 USE_MPI=False
+
 
 try:
     from mpi4py import MPI
-    MPIsize = MPI.COMM_WORLD.size
+    MPI_SIZE = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
     shared_comm = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED)
-    local_rank = shared_comm.rank
-    localsize = shared_comm.size
-    hostname = MPI.Get_processor_name()
-
-    if MPIsize>1:
+    LOCAL_RANK = shared_comm.rank
+    LOCAL_SIZE = shared_comm.size
+    HOSTNAME = MPI.Get_processor_name()
+    if MPI_SIZE>1:
         USE_MPI=True
     else:
         print(" mpi4py properly initialised, but size=1, not using MPI mode.")
@@ -31,7 +31,7 @@ LIST_SITES_BEING_USED=None
 if USE_MPI:
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    host = f"{hostname}@{local_rank}"
+    host = f"{HOSTNAME}@{LOCAL_RANK}"
     print(f"{host}")
     hosts_rank=comm.allgather(host)
     print(f"{hosts_rank}")
@@ -96,7 +96,7 @@ class MSSet():
             nodes2ms[node]=l
             self.DicoMSName2Node[msname]=node
 
-        if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPIsize>1:
+        if (None in nodes2ms.keys()) and len(nodes2ms) == 1 and MPI_SIZE>1:
             # get all node names because None have been specified
 
             self.ListNodesBeingUsed = LIST_SITES_BEING_USED
@@ -119,7 +119,7 @@ class MSSet():
 
 
 def testFunc(*args,**kwargs):
-    host = hostname
+    host = HOSTNAME
     print(host,args,kwargs)
 
 import os
@@ -145,7 +145,7 @@ def testParallel():
     callParallel(ListJobs)
 
 def filterHost(jobs):
-    site = f"{hostname}@{local_rank}"
+    site = f"{HOSTNAME}@{LOCAL_RANK}"
     #print("FilterHost : %s"%site)
     res=[]
     for RunOnHost, func, args, kwargs in jobs:
@@ -190,7 +190,7 @@ def callParallel(ListJobs):
         return None
 
 class mpi_manager():
-    def __init__(self,options_cfg,MSSet, FullMSSet):
+    def __init__(self,options_cfg,MSSet, FullMSSet, MainNode):
         self.options=options_cfg
         self.MSSet=MSSet
         self.FullMSSet=FullMSSet
@@ -200,13 +200,16 @@ class mpi_manager():
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
-        self.MainSite = f"{hostname}@0"
+        self.MainSite_onThisNode = f"{HOSTNAME}@0"
+        self.MainNode=MainNode
         self.ddf_nproc = int(self.options.get('ddf_nproc', 1))
         self.UseMPI=False
-        self.MPIsize=MPIsize
+        self.MPI_SIZE=MPI_SIZE
 
-        if MPIsize>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
+        if MPI_SIZE>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
+
+            
 
         # Scatter mslist and big-mslist.txt
 
@@ -266,14 +269,14 @@ class mpi_manager():
         if not self.DoScatterGather: return
         rank = comm.Get_rank()
         if rank != 0: return
-        if local_rank != 0: return
+        if LOCAL_RANK != 0: return
         print("   scpScatter running")
         
         if NodeDest=="all":
             for site in self.ListNodesBeingUsed:
                 print(site)
-                if site==self.MainSite:
-                    print("skip",site,self.MainSite)
+                if site==self.MainSite_onThisNode:
+                    print("skip",site,self.MainSite_onThisNode)
                     continue
                 Node=site.split('@')[0]
                 lrank=int(site.split('@')[1])
@@ -284,7 +287,7 @@ class mpi_manager():
                 print("[Scatter] %s"%ss)
                 os.system("%s > /dev/null 2>&1"%ss)
         else:
-            if NodeDest==self.MainSite: return
+            if NodeDest==self.MainSite_onThisNode: return
             ss="scp -r %s %s:%s"%(FileName,NodeDest.split("@")[0],self.WorkDir)
             print("[Scatter] %s"%ss)
             os.system("%s > /dev/null 2>&1"%ss)
@@ -292,7 +295,7 @@ class mpi_manager():
     def scpGatherSolutions(self,SolName,DestDir="",NodeSource="all"):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
-        if local_rank != 0: return
+        if LOCAL_RANK != 0: return
 
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
@@ -301,10 +304,10 @@ class mpi_manager():
             Node=site.split('@')[0]
             lrank=int(site.split('@')[1])
             if lrank != 0: return
-            if site==self.MainSite:
+            if site==self.MainSite_onThisNode:
                 continue
 
-            LMS=self.FullMSSet.DicoNodes2ListMS[Node]
+            LMS=self.FullMSSet.DicoNodes2ListMS[site]
 
 
             for MSName in LMS:
@@ -318,15 +321,16 @@ class mpi_manager():
     def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
         if not self.UseMPI: return
         if not self.DoScatterGather: return
-        if local_rank != 0: return
+        if LOCAL_RANK != 0: return
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
-        Node=self.FullMSSet.DicoMSName2Node[MSName]
-        Node =  Node.split("@")[0]
+        site=self.FullMSSet.DicoMSName2Node[MSName]
+        
+        Node =  site.split("@")[0]
 
         MSName = Path(MSName).name # if MSName is given with full path
         os.system("mkdir -p %s/%s"%(SolsDir,MSName))
-        if site==self.MainSite:
+        if Node!=self.MainNode:
             ss="scp -r %s %s:%s"%(SmoothSolName,Node,self.WorkDir)
             print("[Scatter Sols] %s"%ss)
             #os.system("%s &>/dev/null"%ss)
