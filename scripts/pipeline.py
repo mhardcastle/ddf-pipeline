@@ -408,7 +408,7 @@ def ddf_image(
             runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
         if wscms_Scales is not None:
             # scale everything by cellsize, but ensure no duplicates are created due to rounding
-            wscms_Scales_px = str(list(set([int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales]))).replace(" ", "")
+            wscms_Scales_px = str(sorted(set([int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales]))).replace(" ", "")
             runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
 
         runcommand += f' --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
