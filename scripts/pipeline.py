@@ -415,10 +415,7 @@ def ddf_image(
 
         # dedicated automasking inputs
         if automask:
-            if cleanmode == 'WSCMS2' and majorcycles <= 1:
-                runcommand += ' --WSCMS-AutoMask=0'
-            else:
-                runcommand += f' --WSCMS-AutoMask={automask}'
+            runcommand += f' --WSCMS-AutoMask={automask}'
             if automask_rms_factor is not None: runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_rms_factor}'
 
         if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
