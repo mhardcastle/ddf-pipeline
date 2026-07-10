@@ -16,11 +16,10 @@
 ##SBATCH --constraint=GENOA
 
 # Modules on the Jean Zay supercomputer
+module load gcc/11.4.1
+module load openmpi/4.1.6
+module load cmake/3.21.3
 module load gsl/2.7.1
-module load gcc-native/14
-module load craype-network-ofi
-module load craype/2.7.35
-module load cray-mpich/9.0.1
 
 # Modules on the Adastra supercomputer
 #module load gsl/2.7.1
