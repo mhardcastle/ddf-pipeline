@@ -411,8 +411,8 @@ def ddf_image(
         runcommand += f' --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
 
         # dedicated automasking inputs
+        runcommand += f' --WSCMS-AutoMask={automask}'
         if automask:
-            runcommand += f' --WSCMS-AutoMask={automask}'
             runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_threshold}'
             runcommand += ' --WSCMS-AutoMaskForceLast=False'
 
