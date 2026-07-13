@@ -226,7 +226,6 @@ def ddf_image(
     cleanmask=None,
     automask=True,
     automask_threshold=10.0,
-    automask_rms_factor=3,
     
     # Control
     majorcycles=3,
@@ -252,8 +251,8 @@ def ddf_image(
     wscms_MultiScaleBias=None,
     wscms_Scales=None,
     wscms_MaxScale=None,
-    wscms_NSubMinorIter=None,
-    wscms_SubMinorPeakFact=None,
+    wscms_NSubMinorIter=250,
+    wscms_SubMinorPeakFact=0.85,
 
     # Input model
     use_dicomodel=False,
@@ -286,8 +285,6 @@ def ddf_image(
     if wscms_MultiScaleBias   is None: wscms_MultiScaleBias   = options['wscms_multiscale_bias']
     if wscms_Scales           is None: wscms_Scales           = options['wscms_scales']
     if wscms_MaxScale         is None: wscms_MaxScale         = options['wscms_max_scale']
-    if wscms_NSubMinorIter    is None: wscms_NSubMinorIter    = options['wscms_nsubminoriter']
-    if wscms_SubMinorPeakFact is None: wscms_SubMinorPeakFact = options['wscms_subminorpeakfact']
     
     cache_dir=find_cache_dir(options)
 
@@ -416,7 +413,8 @@ def ddf_image(
         # dedicated automasking inputs
         if automask:
             runcommand += f' --WSCMS-AutoMask={automask}'
-            if automask_rms_factor is not None: runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_rms_factor}'
+            runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_threshold}'
+            runcommand += ' --WSCMS-AutoMaskForceLast=False'
 
         if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
         runcommand += ' --Mask-FluxImageType=ModelConv'
