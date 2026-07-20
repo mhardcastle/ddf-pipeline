@@ -39,4 +39,5 @@ emacs ~/VE_P3.12_Merge/init.sh &
 cd ../python
 pip install .
 
+
 cd $VIRTUAL_ENV
