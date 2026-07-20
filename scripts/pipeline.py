@@ -183,7 +183,6 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
 
-
 def ddf_image(
     imagename,
     mslist,
@@ -225,7 +224,7 @@ def ddf_image(
     # Masking
     cleanmask=None,
     automask=True,
-    automask_threshold=10.0,
+    automask_threshold=None,
     
     # Control
     majorcycles=3,
@@ -251,6 +250,9 @@ def ddf_image(
     wscms_MultiScaleBias=None,
     wscms_Scales=None,
     wscms_MaxScale=None,
+    wscms_rms_factor=None,
+    wscms_peakfactor=None,
+    wscms_automask_rms_factor=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
 
@@ -260,7 +262,8 @@ def ddf_image(
 
     # Other
     options=None,
-    PredictSettings=None):
+    PredictSettings=None,
+    STEP=0):
 
     if catcher: catcher.check()
 
@@ -272,19 +275,26 @@ def ddf_image(
         options=o # attempt to get global if it exists
 
     keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+
+    if STEP < 0 or STEP > len(options['wscms_automask_rms_factor']) - 1:
+        raise ValueError(f"STEP must be between 0 and {len(options['wscms_automask_rms_factor']) - 1}")
     
     # pull defaults from parset if not specified
-    if HMPsize   is None: HMPsize   = options['HMPsize']
-    if cleanmode is None: cleanmode = options['cleanmode']
-    if do_decorr is None: do_decorr = options['do_decorr']
-    if beamsize  is None: beamsize  = options['psf_arcsec']
-    if imsize    is None: imsize    = options['imsize']
-    if cellsize  is None: cellsize  = options['cellsize']
+    if HMPsize            is None: HMPsize            = options['HMPsize']
+    if cleanmode          is None: cleanmode          = options['cleanmode']
+    if do_decorr          is None: do_decorr          = options['do_decorr']
+    if beamsize           is None: beamsize           = options['psf_arcsec']
+    if imsize             is None: imsize             = options['imsize']
+    if cellsize           is None: cellsize           = options['cellsize']
+    if automask_threshold is None: automask_threshold = options['thresholds'][STEP]
 
     # pull default WSCMS settings from parset if not specified
-    if wscms_MultiScaleBias   is None: wscms_MultiScaleBias   = options['wscms_multiscale_bias']
-    if wscms_Scales           is None: wscms_Scales           = options['wscms_scales']
-    if wscms_MaxScale         is None: wscms_MaxScale         = options['wscms_max_scale']
+    if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
+    if wscms_Scales              is None: wscms_Scales              = options['wscms_scales']
+    if wscms_MaxScale            is None: wscms_MaxScale            = options['wscms_max_scale']
+    if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
+    if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
+    if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
     
     cache_dir=find_cache_dir(options)
 
@@ -296,7 +306,7 @@ def ddf_image(
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname="_has_predicted_OK.%s.info"%imagename
 
-    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist} --Deconv-PeakFactor {peakfactor} --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor={rms_factor} --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
+    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1  --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
 
     if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
     if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
@@ -361,20 +371,19 @@ def ddf_image(
     if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
     if do_decorr: runcommand += ' --RIME-DecorrMode=FT'
 
-
     ###########################
     #### SSD / SSD2 / SSD3 ####
     ###########################
     if cleanmode in ('SSD', 'SSD2', 'SSD3'):
         # parameters shared between SSD versions
-        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
+        runcommand += f' --Deconv-RMSFactor={rms_factor} --Deconv-PeakFactor={peakfactor} --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0'
         if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}' 
         if cleanmask is not None:      runcommand += f' --Mask-External={cleanmask}'
         if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options["splitisland_size"]}'
 
         # SSD2 specific parameters
-        # if cleanmode == 'SSD2':
-        #     runcommand += ' --SSD2-NLastCycleDeconvAll=4' # experimental
+        if cleanmode == 'SSD2':
+            runcommand += ''
 
         # SSD3 specific parameters
         if cleanmode == 'SSD3':
@@ -399,21 +408,20 @@ def ddf_image(
         runcommand += ' --WSCMS-MultiScale=1' # Force multi-scale
 
         # wscms max scale is not aware of cellsizes, it only knows pixels
-        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px)
+        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding
         if wscms_MaxScale is not None:
             wscms_MaxScale_px = int(float(wscms_MaxScale) / cellsize * options['cellsize'])
             runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
         if wscms_Scales is not None:
-            # scale everything by cellsize, but ensure no duplicates are created due to rounding
             wscms_Scales_px = str(sorted(set([int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales]))).replace(" ", "")
             runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
 
-        runcommand += f' --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact}'
-
+        runcommand += f' --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor}'
+        
         # dedicated automasking inputs
         runcommand += f' --WSCMS-AutoMask={automask}'
         if automask:
-            runcommand += f' --WSCMS-AutoMaskRMSFactor={automask_threshold}'
+            runcommand += f' --WSCMS-AutoMaskRMSFactor={wscms_automask_rms_factor}'
             runcommand += ' --WSCMS-AutoMaskForceLast=False'
 
         if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
@@ -508,7 +516,6 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
 
-
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
 
     if os.path.isfile(OutClusterCat):
@@ -546,7 +553,6 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         runcommand+=" --OutClusterCat %s"%OutClusterCat
     runcommand+=" --NCluster %i"%options['ndir']
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
-
 
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
     if catcher: catcher.check()
@@ -1040,7 +1046,6 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
             t.addcols(desc)
         t.putcol(out_colname,d)
         t.close()
-    
 
 def subtractOuterSquare(o):
     wide_imsize=o['wide_imsize']
@@ -1077,7 +1082,8 @@ def subtractOuterSquare(o):
                 imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
                 apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
                 smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],phasecenter=o['phasecenter'],
-                catcher=catcher)
+                catcher=catcher,
+                STEP=0)
 
     external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
@@ -1094,7 +1100,8 @@ def subtractOuterSquare(o):
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,phasecenter=o['phasecenter'],
             reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
-            catcher=catcher)
+            catcher=catcher,
+            STEP=0)
 
 
     # predict outside the central rectangle
@@ -1118,7 +1125,8 @@ def subtractOuterSquare(o):
             imsize=o['wide_imsize'],cellsize=o['wide_cell'],
             use_dicomodel=True,catcher=catcher,
             PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
-            dicomodel_base='image_full_wide_im')
+            dicomodel_base='image_full_wide_im',
+            STEP=0)
         if not o['dryrun']:
             os.system("touch %s"%FileHasPredicted)
 
@@ -1143,7 +1151,8 @@ def subtractOuterSquare(o):
             apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
             smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',phasecenter=o['phasecenter'],
             reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
-            catcher=catcher)
+            catcher=catcher,
+            STEP=0)
 
 
 def main(o=None):
@@ -1295,14 +1304,15 @@ def main(o=None):
         if o['exitafter'] == 'wide':
             warn('User specified exit after wide field source subtraction')
             stop(2)
+    
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
     if o['basedicomodel'] is None:
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
         separator("Initial dirty")
         ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode=o['cleanmode'],majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,phasecenter=o['phasecenter'],
-                  apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
+                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,automask_threshold=10.0,colname=colname,clusterfile=None,phasecenter=o['phasecenter'],
+                  apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, STEP=0)
 
         separator("External mask")
         external_mask='external_mask.fits'
@@ -1312,12 +1322,16 @@ def main(o=None):
 
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode=o['cleanmode'],
-                                           majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,
+                                           cleanmode=o['cleanmode'],
+                                           majorcycles=1,robust=o['image_robust'],
+                                           reuse_psf=True,reuse_dirty=True,
                                            peakfactor=0.01,rms_factor=3,
                                            colname=colname,clusterfile=None,automask=True,phasecenter=o['phasecenter'],
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher)
+                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], 
+                                           use_weightspectrum=o['use_weightspectrum'],
+                                           uvrange=uvrange,catcher=catcher, 
+                                           STEP=0)
     
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
@@ -1353,7 +1367,8 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           PredictSettings=("Clean","DD_PREDICT"),
+                                           STEP=0)
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
@@ -1399,7 +1414,8 @@ def main(o=None):
                                            uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           PredictSettings=("Clean","DD_PREDICT"),
+                                           STEP=0)
 
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
@@ -1442,7 +1458,8 @@ def main(o=None):
                         uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                         RMSFactorInitHMP=1.,
                         MaxMinorIterInitHMP=10000,
-                        PredictSettings=("Clean","DD_PREDICT"))
+                        PredictSettings=("Clean","DD_PREDICT"),
+                        STEP=0)
 
 
             CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
@@ -1461,7 +1478,8 @@ def main(o=None):
                                             uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
                                             RMSFactorInitHMP=1.,
                                             MaxMinorIterInitHMP=10000,
-                                            PredictSettings=("Clean","DD_PREDICT"))
+                                            PredictSettings=("Clean","DD_PREDICT"),
+                                            STEP=0)
 
             # make a mask from the full-res image
             separator("Make mask for next iteration")
@@ -1513,7 +1531,8 @@ def main(o=None):
                                            catcher=catcher,phasecenter=o['phasecenter'],
                                            RMSFactorInitHMP=1.,
                                            MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+                                           PredictSettings=("Clean","DD_PREDICT"),
+                                           STEP=1)
 
         if o['exitafter'] == 'phase':
             warn('User specified exit after phase-only deconvolution.')
@@ -1548,7 +1567,8 @@ def main(o=None):
                                        RMSFactorInitHMP=1.,
                                        #AllowNegativeInitHMP=True,
                                        MaxMinorIterInitHMP=10000,
-                                       PredictSettings=("Clean","DD_PREDICT"))
+                                       PredictSettings=("Clean","DD_PREDICT"),
+                                       STEP=1)
 
         if o['exitafter'] == 'ampphase':
             warn('User specified exit after amp-phase deconvolution.')
@@ -1572,7 +1592,8 @@ def main(o=None):
                     RMSFactorInitHMP=1.,
                     #AllowNegativeInitHMP=True,
                     MaxMinorIterInitHMP=10000,
-                    PredictSettings=("Predict","DD_PREDICT"))
+                    PredictSettings=("Predict","DD_PREDICT"),
+                    STEP=1)
 
             
             separator("Another DI step")
@@ -1614,7 +1635,8 @@ def main(o=None):
                                         RMSFactorInitHMP=1.,
                                         #AllowNegativeInitHMP=True,
                                         MaxMinorIterInitHMP=10000,phasecenter=o['phasecenter'],
-                                        PredictSettings=("Clean","DD_PREDICT"))
+                                        PredictSettings=("Clean","DD_PREDICT"),
+                                        STEP=1)
 
             if o['exitafter'] == 'ampphase_di':
                 warn('User specified exit after amp-phase plus DI deconvolution.')
@@ -1709,7 +1731,8 @@ def main(o=None):
                 apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
                 dicomodel_base=CurrentBaseDicoModelName,
                 catcher=catcher,phasecenter=o['phasecenter'],
-                ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
+                ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"),
+                STEP=1)
 
         separator("Compute DI calibration (full mslist)")
         # cubical_data(o['full_mslist'],
@@ -1761,7 +1784,8 @@ def main(o=None):
               AllowNegativeInitHMP=True,
               peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
-              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
+              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
+              STEP=2, **ddf_kw)
 
     if o['exitafter'] == 'fullampphase':
         warn('User specified exit after image_ampphase.')
@@ -1790,7 +1814,8 @@ def main(o=None):
                                        apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
                                        AllowNegativeInitHMP=True,
                                        RMSFactorInitHMP=.5,phasecenter=o['phasecenter'],
-                                       MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
+                                       MaxMinorIterInitHMP=10000,smooth=True,
+                                       STEP=2, **ddf_kw)
 
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
@@ -1861,7 +1886,8 @@ def main(o=None):
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
                   imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher)
+                  catcher=catcher,
+                  STEP=3)
 
         make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
 
@@ -1875,7 +1901,8 @@ def main(o=None):
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
               smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',
-              catcher=catcher)
+              catcher=catcher, 
+              STEP=3)
 
 
         if o['restart'] and os.path.isfile('full-mask-low.fits'):
@@ -1911,7 +1938,8 @@ def main(o=None):
               imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
               smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
               reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
-              catcher=catcher,rms_factor=o['final_rmsfactor'])
+              catcher=catcher,rms_factor=o['final_rmsfactor'],
+              STEP=3)
 
         external_mask='external_mask_ext-deep.fits'
         if os.path.isfile(external_mask):
@@ -1965,7 +1993,7 @@ def main(o=None):
               normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
               apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
               PredictSettings=("Clean","DD_PREDICT"),
-              **ddf_kw)
+              STEP=3, **ddf_kw)
 
     # check for the offset files
     if o['method'] is not None:
@@ -2091,7 +2119,8 @@ def main(o=None):
                   uvrange=uvrange,cellsize=o['cellsize'],
                   peakfactor=0.001,phasecenter=o['phasecenter'],
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher,**ddf_kw)
+                  catcher=catcher,
+                  STEP=3, **ddf_kw)
 
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist

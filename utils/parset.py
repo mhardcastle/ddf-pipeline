@@ -66,7 +66,10 @@ option_list = (
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_max_scale',        float, 250,    'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
+    ( 'image',      'wscms_rms_factor',       list,  [5, 3, 2, 1], "WSCMS2 clean floor based on RMS. Separate from SSD to keep backwards compatibility"),
+    ( 'image',      'wscms_peakfactor',       list,  [0.05, 0.01, 0.01, 0.001], "WSCMS2 clean floor based on dirty image peak"),
 
+    ( 'masking',    'wscms_automask_rms_factor', list, [8,6,5,4], 'WSCMS2 automask freeze sigma per (self)cal step'),
     ( 'masking',    'thresholds',            list,  [15,10,10,5], 'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
     ( 'masking',    'low_threshold',         float, 3.0,   'Mask sigma for low-res masking' ),
     ( 'masking',    'wide_threshold',        float, 3.0,   'Mask sigma for wide-field masking' ),

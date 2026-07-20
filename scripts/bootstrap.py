@@ -123,7 +123,7 @@ def run_bootstrap(o):
                   imsize=low_imsize,cellsize=o['low_cell'],
                   options=o,colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
-                  conditional_clearcache=True)
+                  conditional_clearcache=True, STEP=0)
         external_mask='bootstrap_external_mask.fits'
         make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='low_cell',options=o)
         # Deep SSD clean with this external mask and automasking
@@ -135,7 +135,7 @@ def run_bootstrap(o):
                   cellsize=o['low_cell'],options=o,
                   colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
-                  conditional_clearcache=False)
+                  conditional_clearcache=False, STEP=0)
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
             os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl')):

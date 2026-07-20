@@ -121,14 +121,15 @@ def do_polcubes(colname,
                   cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   polcubemode=True,
-		  AllowNegativeInitHMP=True,
+                  AllowNegativeInitHMP=True,
                   majorcycles=0,robust=robust,
                   colname=colname,use_dicomodel=False,
                   uvrange=uvrange,beamsize=beamsize,
                   imsize=imsize,cellsize=cellsize,peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],channels=channels,
                   startchan=0,endchan=channels,options=o,
-                  catcher=catcher)
+                  catcher=catcher,
+                  STEP=1)
 
     if o['split_polcubes']:
 

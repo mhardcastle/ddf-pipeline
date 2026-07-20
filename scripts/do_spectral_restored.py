@@ -79,7 +79,7 @@ def do_spectral_restored(colname,
                   peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
                   normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
                   apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,options=o,
-                  **ddf_kw)
+                  STEP=2, **ddf_kw)
 
         if o['method'] is not None:
             ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher,dicomodel=CurrentBaseDicoModelName+'.DicoModel')
