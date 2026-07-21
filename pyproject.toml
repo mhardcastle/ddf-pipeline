@@ -38,7 +38,7 @@ dependencies = [
     "everybeam==0.5.8",
     "emcee",
     "future",
-    
+    "simms",
     "python-casacore", # lofar
 ]
 

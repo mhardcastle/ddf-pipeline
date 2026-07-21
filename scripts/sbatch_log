@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# mysbatch <sbatch_file>
+# Submits a job, waits for its log file to appear, then tails it.
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: mysbatch <sbatch_file>" >&2
+    exit 1
+fi
+
+SBATCH_FILE="$1"
+
+# Submit and capture the job ID
+JID=$(sbatch --parsable "$SBATCH_FILE") || { echo "sbatch failed" >&2; exit 1; }
+echo "Submitted job $JID"
+
+# Find the log file from the #SBATCH -o / --output= directive
+LOG=$(grep -E '^#SBATCH[[:space:]]+(-o[[:space:]]+|--output=)' "$SBATCH_FILE" \
+    | sed -E 's/^#SBATCH[[:space:]]+(-o[[:space:]]+|--output=)//' \
+    | head -1 \
+    | sed "s/%j/$JID/g; s/%J/$JID/g")
+
+# Fallback to SLURM default
+if [[ -z "$LOG" ]]; then
+    LOG="slurm-${JID}.out"
+fi
+
+echo "Waiting for log: $LOG"
+
+# Wait up to 300s for the log to appear
+for (( i=0; i<300; i++ )); do
+    if [[ -f "$LOG" ]]; then
+        echo "Log appeared after ${i}s — tailing (Ctrl+C to stop):"
+        echo "---"
+        tail --sleep-interval=0.1 -f "$LOG"
+        exit 0
+    fi
+    sleep 1
+    (( i % 15 == 14 )) && echo "  ... waiting ${i}s (job $JID, checking: $LOG)"
+done
+
+echo "Timeout: $LOG never appeared after 300s. Is the job running?" >&2
+echo "Check: squeue --me --start"
+exit 1

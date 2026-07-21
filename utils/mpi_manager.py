@@ -25,7 +25,12 @@ except ModuleNotFoundError:
 except Error as e:
     raise RuntimeError(e)
 
-
+def Print(*args):
+    if USE_MPI:
+        print("[%s#%i@%i]"%(HOSTNAME,RANK,LOCAL_RANK),*args)
+    else:
+        print(*args)
+    
 LIST_SITES_BEING_USED=None
 
 if USE_MPI:
@@ -49,13 +54,16 @@ WIDTH_PROMPT=90
 
 
 def CheckDistributedFS():
+    Print("CheckDistributedFS A")
     cwd = os.getcwd()
     cwd = os.path.realpath(cwd)
+    Print("CheckDistributedFS B")
     print(cwd)
 
     best_match = ""
     fs_type = None
 
+    Print("CheckDistributedFS C")
     with open("/proc/self/mounts") as f:
         for line in f:
             parts = line.split()
@@ -71,6 +79,7 @@ def CheckDistributedFS():
                 fs_type = fstype
                 # print("   --- ",best_match,fs_type)
     # print("!!!!!",fs_type)
+    Print("CheckDistributedFS D")
 
     if fs_type is not None:
         return fs_type.startswith("nfs") or fs_type== "beegfs" or fs_type == "lustre" or fs_type == "gpfs" or fs_type == "ceph"
@@ -196,7 +205,7 @@ class mpi_manager():
         self.FullMSSet=FullMSSet
         # check subset consistency
 
-
+        Print("LDSLDFKJLD 1")
         self.ListNodesBeingUsed=FullMSSet.ListNodesBeingUsed if FullMSSet else MSSet.ListNodesBeingUsed
         self.DicoNodes2WorkDir={}
         self.WorkDir=os.getcwd()
@@ -208,16 +217,22 @@ class mpi_manager():
 
         if MPI_SIZE>1 and (self.ddf_nproc > 1 or self.ListNodesBeingUsed):
             self.UseMPI=True
+        Print("LDSLDFKJLD 2")
 
             
 
         # Scatter mslist and big-mslist.txt
 
         self.DoScatterGather=(CheckDistributedFS()==False)
+        Print("LDSLDFKJLD 2a")
         self.scpScatter(MSSet.file_nodes_mslist)
+        Print("LDSLDFKJLD 3")
         if FullMSSet is not None: self.scpScatter(FullMSSet.file_nodes_mslist)
+        Print("LDSLDFKJLD 4")
         self.createRemoteLocal_mslist()
+        Print("LDSLDFKJLD 5")
         self.createRemoteLocal_fullmslist()
+        Print("LDSLDFKJLD 6")
         for Node in self.DicoNode2mslist.keys():
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
             for MSName in self.MSSet.DicoNodes2ListMS[Node]:
@@ -264,13 +279,20 @@ class mpi_manager():
                 self.scpScatter(FName,Node)
 
     def scpScatter(self,FileName,NodeDest="all"):
-        print("scpScatter",FileName)
-        if not self.UseMPI: return
-        if not self.DoScatterGather: return
+        if not self.UseMPI:
+            print("scpScatter skipping [no mpi]",FileName)
+            return
+        if not self.DoScatterGather:
+            print("scpScatter skipping [NFS]",FileName)
+            return
         rank = comm.Get_rank()
-        if rank != 0: return
-        if LOCAL_RANK != 0: return
-        print("   scpScatter running")
+        if rank != 0:
+            Print("Nonzero rank")
+            return
+        if LOCAL_RANK != 0:
+            Print("Nonzero local rank")
+            return
+        Print("   scpScatter running")
         
         if NodeDest=="all":
             for site in self.ListNodesBeingUsed:
@@ -319,9 +341,16 @@ class mpi_manager():
                 #os.system("%s"%ss)
 
     def scpScatterSolutions(self,MSName,SmoothSolName,SolsAliasName):
-        if not self.UseMPI: return
-        if not self.DoScatterGather: return
+        if not self.UseMPI:
+            print("scpScatterSolutions skipping [no mpi]",MSName,SmoothSolName,SolsAliasName)
+            return
+        if not self.DoScatterGather:
+            print("scpScatterSolutions skipping [NFS]",MSName,SmoothSolName,SolsAliasName)
+            return
         if LOCAL_RANK != 0: return
+        
+        print("scpScatterSolutions running")
+        
         SolsDir=self.options["SolsDir"]
         AbsSolsDir=os.path.abspath(SolsDir)
         site=self.FullMSSet.DicoMSName2Node[MSName]

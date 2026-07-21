@@ -9,6 +9,9 @@ import os,sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 
+import socket
+HOSTNAME=socket.gethostname()
+
 if not LOCAL_DEV:
     from pipeline_logging import run_log
     from facet_offsets import RegPoly
@@ -23,6 +26,15 @@ else:
     from utils.termsize import get_terminal_size_linux
     from utils import mpi_manager
 
+try:
+    from mpi4py import MPI
+    MPI_SIZE = MPI.COMM_WORLD.size
+    RANK=MPI.COMM_WORLD.rank
+    LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+except:
+    MPI_SIZE = 0
+    RANK=0
+    LOCAL_RANK=0
 
 from subprocess import call
 from astropy.io import fits
@@ -69,13 +81,14 @@ def report(s):
 
 def warn(s):
     print(bcolors.OKBLUE+s+bcolors.ENDC)
+    
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None, mpi_disabled_in_serial_call=True):
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None, mpi_disabled_in_serial_call=True,local_rank=None):
     if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPI_SIZE>1:
         jobs=[]
         for h in mpiManager.ListNodesBeingUsed:
-            jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database), {}])
-        print(f"run: {jobs}")
+            jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database,local_rank), {}])
+        print(f"[{HOSTNAME}#{mpi_manager.RANK}@{mpi_manager.LOCAL_RANK}] run: {jobs}")
         res=mpi_manager.callParallel(jobs)
         print(res)
     else:
@@ -85,10 +98,15 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
         run_serial(ss, proceed, dryrun, log, quiet, database)
 
     
-def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
-    report(f"Running: {s}")
+def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True,local_rank=None):
+    if local_rank is not None:
+        report(f"[{HOSTNAME}#{RANK}@{LOCAL_RANK}] run_serial: skipping due to non-local rank match")
+        if LOCAL_RANK!=local_rank: return 0
+        
+    report(f"[{HOSTNAME}#{RANK}@{LOCAL_RANK}] run_serial: {s}")
     if not dryrun:
         if log is None:
+            print("   Call %s"%s)
             retval=call(s,shell=True)
         else:
             retval=run_log(s,log,quiet)

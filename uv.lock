@@ -225,6 +225,50 @@ wheels = [
 ]
 
 [[package]]
+name = "casaconfig"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/e3/29ec448fdd671bde05f1fdb24bab63b212e5111f079be086392ffdd60775/casaconfig-1.5.0.tar.gz", hash = "sha256:fced2bcde7f562a9fe7b38d359f7b5a11221e85c94d56dc4bfdb6e5e576e932b", size = 57506, upload-time = "2026-03-06T14:14:12.237Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/2f/7ec061e2eda1d029b7a09c0ae6e87a659aee2f47856dc0b2195d24f33eed/casaconfig-1.5.0-py3-none-any.whl", hash = "sha256:f046c92183d2b9561921abbba9ea4bcee291822941be2e54010544d0d4d12671", size = 77112, upload-time = "2026-03-06T14:14:10.752Z" },
+]
+
+[[package]]
+name = "casatasks"
+version = "6.7.5.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "casatools" },
+    { name = "certifi" },
+    { name = "matplotlib" },
+    { name = "pyerfa" },
+    { name = "scipy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/63/74235c25eb20757bc6273987a0a19371f03f5278b4d9c25e03dcf90d0327/casatasks-6.7.5.18-py3-none-any.whl", hash = "sha256:3a5df58162c1fb8a527afe6a875c4699379716c0bb3a1e7e16f2b22468e716d4", size = 1901528, upload-time = "2026-04-27T20:32:50.393Z" },
+]
+
+[[package]]
+name = "casatools"
+version = "6.7.5.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "casaconfig" },
+    { name = "numpy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/43/cf0b94ce501ec2cec8a1966c1a973aaaa8c6e20a4d813e96d7187c124bb7/casatools-6.7.5.18-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:135bffdfbf9d069c3f6b24362453c9319d7642b3064a5d5e7a48f76d929ecac9", size = 72018648, upload-time = "2026-04-27T20:32:55.124Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/ae/e58dc7bac24921984a8fcb811012dc7062aebe463bb1faf1aac22dfefd0f/casatools-6.7.5.18-cp312-cp312-macosx_26_0_arm64.whl", hash = "sha256:b1b898ad51b0a6d4c17433ced8c86f3625e6c69844740994eb6468919af43086", size = 73769776, upload-time = "2026-04-27T20:33:00.64Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/21/456b07f035c3a1aea1a905c9e9d6e27cef559d260b539434c077c28fad1a/casatools-6.7.5.18-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:ac862b1b1e1a3fb7b7c1bfba64aee30b09f01439ba8336866901145d60d68e81", size = 78972049, upload-time = "2026-04-27T20:33:04.98Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/df/b7392f11f9b18f1db5332a85f841034ad428e70631ee9b3472f23b3dd16b/casatools-6.7.5.18-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:851adec89ba8ee6e29633e9e8fcf57a048448458c2ce2281fac419613a94d6d1", size = 87880578, upload-time = "2026-04-27T20:33:09.592Z" },
+    { url = "https://files.pythonhosted.org/packages/02/92/bb9e0728ff87b6240a1cfdce51ce0de048ceba38b7d47ae3518e30e6a495/casatools-6.7.5.18-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:e74c3d69943e7c399341fa9e330db90bc4df7ed0d8860336f881af9dbd0f63b0", size = 72018584, upload-time = "2026-04-27T20:33:13.955Z" },
+    { url = "https://files.pythonhosted.org/packages/86/fe/d6c84f21a8a221b84f9632f71ec9edf454053578ccfeb35f88bd9ba39c83/casatools-6.7.5.18-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:e5a983e613dab16352dc3ee842708d4cbcaccccf0781067b92eb8cf61eb7bb09", size = 78972194, upload-time = "2026-04-27T20:33:18.842Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -645,6 +689,7 @@ dependencies = [
     { name = "python-casacore" },
     { name = "pyyaml" },
     { name = "scipy" },
+    { name = "simms" },
     { name = "six" },
     { name = "sshtunnel" },
     { name = "treepick" },
@@ -689,6 +734,7 @@ requires-dist = [
     { name = "python-casacore", specifier = "==3.7.1" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "scipy", specifier = "==1.15.3" },
+    { name = "simms" },
     { name = "six", specifier = "==1.17.0" },
     { name = "sshtunnel", specifier = "==0.4.0" },
     { name = "treepick", specifier = "==0.1.4" },
@@ -1017,7 +1063,7 @@ name = "importlib-metadata"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/01/15bb152d77b21318514a96f43af312635eb2500c96b55398d020c93d86ea/importlib_metadata-9.0.0.tar.gz", hash = "sha256:a4f57ab599e6a2e3016d7595cfd72eb4661a5106e787a95bcc90c7105b831efc", size = 56405, upload-time = "2026-03-20T06:42:56.999Z" }
 wheels = [
@@ -1095,8 +1141,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ddfacet", extras = ["kms-support"], marker = "python_full_version >= '3'", directory = "../DDFacet" },
-    { name = "ddfacet", extras = ["mpi-support"], marker = "extra == 'mpi-support'", directory = "../DDFacet" },
+    { name = "ddfacet", extras = ["kms-support"], marker = "python_full_version >= '3'", specifier = ">=0.7.0" },
+    { name = "ddfacet", extras = ["mpi-support"], marker = "extra == 'mpi-support'" },
     { name = "fasteners", marker = "extra == 'mpi-support'" },
     { name = "mpi4py", marker = "extra == 'mpi-support'" },
     { name = "toml", specifier = ">=0.10.2" },
@@ -2619,6 +2665,20 @@ dependencies = [
     { name = "numpy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a6/d2/6818d35a7abba9b2410813f2160630e125b12a52ca11acfd1fb0959433ad/SharedArray-3.2.4.tar.gz", hash = "sha256:b8b8d189110c023b9de502f9396ff2591f660fb2c9637eb13fcaf233127e50be", size = 19584, upload-time = "2024-07-18T10:10:53.084Z" }
+
+[[package]]
+name = "simms"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "casatasks" },
+    { name = "casatools" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/20/4dca1e7067f69127bb458665d1dc12a60321366981517c9eeec4e1e44938/simms-2.1.0.tar.gz", hash = "sha256:9e93e42c40544321764a4191d72e3986a48647a25da9955f21acad72c4fa8f02", size = 37705, upload-time = "2026-03-20T11:06:05.727Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/c4/058590b7754ac7f34d5046be7fbf40cf42cc4e5e609173279723fc866093/simms-2.1.0-py3-none-any.whl", hash = "sha256:363ab2dad4d74a54ccc3002d3562f037890b202133043fc577b8e19cd6c0318a", size = 37038, upload-time = "2026-03-20T11:06:04.573Z" },
+]
 
 [[package]]
 name = "six"

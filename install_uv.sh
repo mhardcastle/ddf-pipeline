@@ -14,8 +14,8 @@ export UV_CACHE_DIR=$PWD/uv_cache
 
 # download DDFacet/killMS and ddf-pipeline
 # Use https method on some HPC centers
-export METHOD_CLONE="https://github.com/"
-#export METHOD_CLONE="git@github.com:"
+#export METHOD_CLONE="https://github.com/"
+export METHOD_CLONE="git@github.com:"
 
 
 git clone ${METHOD_CLONE}cyriltasse/DDFacet -b HackathonRennes_June26  ../DDFacet || true

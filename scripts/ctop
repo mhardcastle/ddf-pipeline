@@ -1,0 +1,318 @@
+#!/usr/bin/env bash
+# cluster_load.sh — compact real-time Genoa partition load + my jobs
+# NOTE: occupancy = SLURM allocation, not actual CPU utilisation.
+# Usage: ./cluster_load.sh [refresh_seconds] [partition]
+INTERVAL=${1:-5}
+PARTITION=${2:-genoa}
+ME=${USER}
+
+expand_nodelist() {
+    local nl="$1"
+    [[ -z "$nl" || "$nl" == "(null)" ]] && return
+    scontrol show hostnames "$nl" 2>/dev/null
+}
+
+while true; do
+    # ── my jobs (running + pending) ────────────────────────────────────────
+    declare -A MY_RUNNING=()
+    declare -A MY_PENDING=()
+
+    # Full job info for display
+    MY_JOBS_RUNNING=""
+    MY_JOBS_PENDING=""
+
+    # Use | delimiter so empty %N (pending jobs) doesn't shift fields
+    while IFS='|' read -r jobid jobstate nodes time timelimit name nodelist jobpart reason; do
+        [[ -z "$jobid" || "$jobid" == "JOBID" ]] && continue
+        jobid=$(echo "$jobid" | tr -d ' ')
+        reason=$(echo "$reason" | sed 's/^ *//')
+
+        # Get allocation details from scontrol (one call, cached)
+        _sctl=$(scontrol show job "$jobid" 2>/dev/null)
+        cpus_per_task=$(grep -oP 'CPUs/Task=\K[0-9]+' <<< "$_sctl" | head -1)
+        ntasks=$(grep -oP 'NumTasks=\K[0-9]+' <<< "$_sctl" | head -1)
+        tasks_per_node=$(grep -oP 'NTasksPerN:GPU:Socket:Core=\K[0-9]+' <<< "$_sctl" | head -1)
+        [[ -z "$cpus_per_task" ]] && cpus_per_task="?"
+        [[ -z "$ntasks" ]] && ntasks="?"
+        # Derive tasks/node from ntasks/nodes if SLURM didn't set NTasksPerNode
+        if [[ -z "$tasks_per_node" || "$tasks_per_node" == "0" ]] && [[ "$nodes" =~ ^[0-9]+$ && "$nodes" -gt 0 && "$ntasks" =~ ^[0-9]+$ ]]; then
+            tasks_per_node=$(( ntasks / nodes ))
+        fi
+        [[ -z "$tasks_per_node" ]] && tasks_per_node="?"
+
+        case "$jobstate" in
+            RUNNING)
+                MY_JOBS_RUNNING+=$(printf "  \033[1;36m%-12s\033[0m %-14s [%-10s] %s nodes x %s tasks x %s cpus  elapsed: %-8s limit: %-8s  on: %s" \
+                    "$jobid" "$name" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$time" "$timelimit" "$nodelist")
+                MY_JOBS_RUNNING+=$'\n'
+                while read -r node; do
+                    [[ -n "$node" ]] && MY_RUNNING["$node"]=1
+                done < <(expand_nodelist "$nodelist")
+                ;;
+            PENDING)
+                start=$(squeue --me -h -j "$jobid" --start -o "%S" 2>/dev/null)
+                [[ -z "$start" ]] && start="N/A"
+                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-14s [%-10s] %s nodes x %s tasks x %s cpus  est.start: %-20s reason: %s" \
+                    "$jobid" "$name" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$start" "$reason")
+                MY_JOBS_PENDING+=$'\n'
+                while read -r node; do
+                    [[ -n "$node" ]] && MY_PENDING["$node"]=1
+                done < <(expand_nodelist "$nodelist")
+                ;;
+        esac
+    done < <(squeue -u "$ME" -h -o "%i|%T|%D|%M|%l|%j|%N|%P|%R" 2>/dev/null)
+
+    my_running_nodes=${#MY_RUNNING[@]}
+    my_pending_nodes=${#MY_PENDING[@]}
+
+    # ── collect sinfo data ─────────────────────────────────────────────────
+    mapfile -t LINES < <(sinfo -p "$PARTITION" -h -o "%n %C %T" | sort)
+
+    N=${#LINES[@]}
+    total_alloc=0; total_cores=0
+    n_idle=0; n_full=0; n_part=0; n_down=0
+    declare -a PCTS=()
+    declare -a NODES=()
+    declare -a STATES=()
+
+    for line in "${LINES[@]}"; do
+        read -r node cpuinfo state <<< "$line"
+        alloc=$(cut -d/ -f1 <<< "$cpuinfo")
+        cores=$(cut -d/ -f4 <<< "$cpuinfo")
+        [[ $cores -eq 0 ]] && continue
+        pct=$(( alloc * 100 / cores ))
+        PCTS+=("$pct"); NODES+=("$node"); STATES+=("$state")
+        total_alloc=$(( total_alloc + alloc ))
+        total_cores=$(( total_cores + cores ))
+        case "$state" in
+            idle*)  (( n_idle++ ))  ;;
+            alloc*) (( n_full++ ))  ;;
+            mixed*) (( n_part++ ))  ;;
+            *)      (( n_down++ ))  ;;
+        esac
+    done
+
+    global_pct=$(( total_cores > 0 ? total_alloc * 100 / total_cores : 0 ))
+
+    # ── render ─────────────────────────────────────────────────────────────
+    clear
+
+    # ── terminal width ────────────────────────────────────────────────────────
+    TERM_W=$(tput cols 2>/dev/null || echo 100)
+    TERM_H=${LINES:-$(tput lines 2>/dev/null || echo 40)}
+    MAP_COLS=$(( (TERM_W - 4) / 2 ))
+    [[ $MAP_COLS -lt 10 ]] && MAP_COLS=10
+
+    # ── header ─────────────────────────────────────────────────────────────
+    printf "\033[1mGenoa cluster load\033[0m  \033[90m(SLURM allocation — not actual CPU usage)\033[0m\n"
+    printf "%s  partition: %s  user: %s  refresh: %ds\n" \
+           "$(date '+%H:%M:%S')" "$PARTITION" "$ME" "$INTERVAL"
+    echo
+
+    # ── global bar ─────────────────────────────────────────────────────────
+    BAR=60
+    filled=$(( global_pct * BAR / 100 ))
+    empty=$(( BAR - filled ))
+    if   [[ $global_pct -ge 90 ]]; then col='\033[31m'
+    elif [[ $global_pct -ge 60 ]]; then col='\033[33m'
+    else                                col='\033[32m'; fi
+    bar=$(printf '█%.0s' $(seq 1 $filled))
+    bar+=$(printf '░%.0s' $(seq 1 $empty))
+    printf "  Overall  ${col}%s\033[0m  %d%%   %d / %d cores\n" \
+           "$bar" "$global_pct" "$total_alloc" "$total_cores"
+    printf "  Nodes (%d):  \033[32m%d idle\033[0m  \033[33m%d partial\033[0m  \033[31m%d full\033[0m  \033[90m%d down\033[0m\n" \
+           "$N" "$n_idle" "$n_part" "$n_full" "$n_down"
+    echo
+
+    # ── legend + 2-D map ───────────────────────────────────────────────────
+    printf "  \033[90m░░\033[0m idle  \033[32m██\033[0m<50%%  \033[33m██\033[0m<80%%  \033[31m██\033[0m<95%%  \033[35m██\033[0m100%%  \033[90m──\033[0m down  \033[1;36m██\033[0m MY·run  \033[1;34m◈◈\033[0m MY·pend\n"
+    printf "  "
+    COLS=$MAP_COLS; col_idx=0
+    for i in "${!PCTS[@]}"; do
+        pct="${PCTS[$i]}"; node="${NODES[$i]}"; state="${STATES[$i]}"
+        if   [[ -n "${MY_RUNNING[$node]:-}" ]]; then cell='\033[1;36m██\033[0m'
+        elif [[ -n "${MY_PENDING[$node]:-}" ]]; then cell='\033[1;34m◈◈\033[0m'
+        elif [[ "$state" == down* || "$state" == drain* ]]; then cell='\033[90m──\033[0m'
+        elif [[ $pct -eq 100 ]]; then cell='\033[35m██\033[0m'
+        elif [[ $pct -ge 95  ]]; then cell='\033[31m██\033[0m'
+        elif [[ $pct -ge 80  ]]; then cell='\033[33m██\033[0m'
+        elif [[ $pct -ge  1  ]]; then cell='\033[32m██\033[0m'
+        else                          cell='\033[90m░░\033[0m'
+        fi
+        printf "$cell"
+        (( col_idx++ ))
+        if (( col_idx % COLS == 0 )); then printf "\n  "; fi
+    done
+    echo; echo
+
+    # ── my jobs section ────────────────────────────────────────────────────
+    printf "\033[1m  ── My jobs ─────────────────────────────────────────────────────────\033[0m\n"
+
+    if [[ -n "$MY_JOBS_RUNNING" ]]; then
+        printf "\033[1;36m  ▶ RUNNING  (%d node(s))\033[0m\n" "$my_running_nodes"
+        printf "%b\n" "$MY_JOBS_RUNNING"
+    fi
+
+    if [[ -n "$MY_JOBS_PENDING" ]]; then
+        printf "\033[1;34m  ◷ PENDING  (%d node(s) planned)\033[0m\n" "$my_pending_nodes"
+        printf "%b\n" "$MY_JOBS_PENDING"
+    fi
+
+    if [[ -z "$MY_JOBS_RUNNING" && -z "$MY_JOBS_PENDING" ]]; then
+        printf "  \033[90mNo jobs in queue\033[0m\n"
+    fi
+
+    # ── side-by-side running / pending ──────────────────────────────────
+    PBAR_W=26
+    COL_W=$(( (TERM_W - 3) / 2 ))
+    WB=8
+
+    ansi_pad() {
+        local s="$1" w="$2"
+        local vis
+        vis=$(printf '%b' "$s" | sed $'s/\033\\[[0-9;]*m//g' | LC_ALL=C.UTF-8 wc -m 2>/dev/null || printf '%b' "$s" | sed $'s/\033\\[[0-9;]*m//g' | wc -c)
+        vis=$(( vis - 1 ))
+        local pad=$(( w - vis ))
+        [[ $pad -le 0 ]] && { printf '%b' "$s"; return; }
+        printf '%b%*s' "$s" "$pad" ''
+    }
+
+    # Use temp files — more reliable than mapfile with nested pipelines
+    TMP_RUN=$(mktemp); TMP_PND=$(mktemp)
+
+    # ── running section → TMP_RUN ─────────────────────────────────────────
+    {
+        printf "\033[1m── Running (all, by nodes) ──────────────\033[0m\n"
+        printf "\033[90m%-28s %6s  %-8s progress\033[0m\n" "USER (total, jobs)" "NODES" "left"
+        printf "\033[90m%.${COL_W}s\033[0m\n" \
+               "────────────────────────────────────────────────────────────────────────────"
+
+        squeue -p "$PARTITION" -h -t RUNNING -o "%u|%D|%M|%l" 2>/dev/null \
+          | grep -v "^${ME}|" \
+          | awk -F'|' -v pw="$PBAR_W" '
+            function ts(t,  d,p,n){d=0
+                if(match(t,/^[0-9]+-/)){d=substr(t,1,RLENGTH-1)+0;t=substr(t,RLENGTH+1)}
+                n=split(t,p,":");if(n==3)return d*86400+p[1]*3600+p[2]*60+p[3]
+                if(n==2)return d*86400+p[1]*60+p[2];return d*86400+p[1]}
+            function fs(s,  d,h,m){if(s<0)s=0
+                d=int(s/86400);s-=d*86400;h=int(s/3600);s-=h*3600;m=int(s/60)
+                if(d>0)return d"d"sprintf("%02d",h)"h"
+                if(h>0)return h"h"sprintf("%02d",m)"m";return m"m"}
+            function pb(p,  f,e,b,i){f=int(p*pw/100);e=pw-f;b=""
+                for(i=1;i<=f;i++)b=b"\xe2\x96\x88"
+                for(i=1;i<=e;i++)b=b"\xe2\x96\x91";return b}
+            {u=$1;nd=$2+0;se=ts($3);sl=ts($4)
+                tot[u]+=nd;cnt[u]++
+                p=(sl>0)?int(se*100/sl):0;lf=(sl>se)?sl-se:0
+                psum[u]+=p
+                if(!(u in lfmin)||lf<lfmin[u])lfmin[u]=lf
+                if(!(u in lfmax)||lf>lfmax[u])lfmax[u]=lf}
+            END{n=0;for(u in tot)us[++n]=u
+                for(i=1;i<=n;i++)for(j=i+1;j<=n;j++)
+                    if(tot[us[i]]<tot[us[j]]){t=us[i];us[i]=us[j];us[j]=t}
+                for(i=1;i<=n;i++){u=us[i];nj=cnt[u]
+                    avg=int(psum[u]/nj)
+                    if(nj==1)tl=fs(lfmin[u])
+                    else     tl=fs(lfmin[u])"~"fs(lfmax[u])
+                    printf "%s|%d|%d|%d|%s|%s\n",u,tot[u],nj,avg,pb(avg),tl}}' \
+          | while IFS='|' read -r user nodes njobs pct bar left; do
+                [[ -z "$user$nodes" ]] && continue
+                if   [[ "$pct" -ge 90 ]]; then bc='\033[31m'
+                elif [[ "$pct" -ge 70 ]]; then bc='\033[33m'
+                else                           bc='\033[32m'; fi
+                user="${user:0:18}"
+                printf "\033[33m%-18s\033[0m %6s (%2sj) ${bc}%s\033[0m %3s%%  %s\n" \
+                       "$user" "$nodes" "$njobs" "$bar" "$pct" "$left"
+            done
+    } > "$TMP_RUN"
+
+    # ── pending section → TMP_PND ─────────────────────────────────────────
+    NOW_EPOCH=$(date +%s)
+    {
+        printf "\033[1m── Pending (≥10 nodes) ─────────────────\033[0m\n"
+        printf "\033[90m%-18s %6s %-10s %-16s %-8s %s\033[0m\n" \
+               "USER" "NODES" "limit" "reason" "waiting" "starts in"
+        printf "\033[90m%.${COL_W}s\033[0m\n" \
+               "────────────────────────────────────────────────────────────────────────────"
+
+        squeue -p "$PARTITION" -h -t PENDING -o "%u|%D|%V|%S|%j|%l|%R" 2>/dev/null \
+          | grep -v "^${ME}|" \
+          | awk -F'|' -v now="$NOW_EPOCH" -v wb="$WB" '
+            function te(s,  cmd,ep){if(s==""||s=="N/A")return -1
+                cmd="date -d \""s"\" +%s 2>/dev/null";cmd|getline ep;close(cmd);return ep+0}
+            function fs(s,  d,h,m){if(s<0)return "?"
+                d=int(s/86400);s-=d*86400;h=int(s/3600);s-=h*3600;m=int(s/60)
+                if(d>0)return d"d"sprintf("%02d",h)"h"
+                if(h>0)return h"h"sprintf("%02d",m)"m";return m"m"}
+            function wbar(s,  p,f,e,b,i){
+                p=int(s*100/86400);if(p>100)p=100
+                f=int(p*wb/100);e=wb-f;b=""
+                for(i=1;i<=f;i++)b=b"\xe2\x96\x88"
+                for(i=1;i<=e;i++)b=b"\xe2\x96\x91";return b}
+            # skip Dependency; collect all jobs as flat list sorted by nodes
+            $2+0>=10 && $7!~/[Dd]ependency/{
+                n++;jn[n]=$2+0;ju[n]=$1
+                se=te($3);st=te($4);ws=(se>0)?now-se:0
+                jw[n]=(se>0)?fs(ws):"?";jws[n]=ws
+                je[n]=(st>0)?fs(st-now):"N/A"
+                jname[n]=$5;jlimit[n]=$6;jr[n]=$7}
+            END{
+                for(a=1;a<=n;a++)for(b=a+1;b<=n;b++)
+                    if(jn[a]<jn[b]||(jn[a]==jn[b]&&jws[a]<jws[b])){
+                        t=jn[a];jn[a]=jn[b];jn[b]=t
+                        t=ju[a];ju[a]=ju[b];ju[b]=t
+                        t=jw[a];jw[a]=jw[b];jw[b]=t
+                        t=jws[a];jws[a]=jws[b];jws[b]=t
+                        t=jname[a];jname[a]=jname[b];jname[b]=t
+                        t=jlimit[a];jlimit[a]=jlimit[b];jlimit[b]=t
+                        t=jr[a];jr[a]=jr[b];jr[b]=t
+                        t=je[a];je[a]=je[b];je[b]=t}
+                for(i=1;i<=n;i++)
+                    printf "%s|%d|%s|%s|%s|%s|%s\n",ju[i],jn[i],jname[i],jlimit[i],jr[i],jw[i],je[i]}'   \
+          | while IFS='|' read -r user nodes jname jlimit reason wait eta; do
+                [[ -z "$user$nodes" ]] && continue
+                if [[ "$wait" == *d* ]]; then bc='\033[31m'
+                elif [[ "$wait" == *h* ]]; then bc='\033[33m'
+                else                           bc='\033[32m'; fi
+                user="${user:0:18}"
+                lim="${jlimit:0:10}"
+                rsn="${reason:-?}"
+                printf "\033[34m%-18s\033[0m %6s %-10s ${bc}%-16s\033[0m %-8s %-10s\n" \
+                       "$user" "$nodes" "$lim" "$rsn" "$wait" "$eta"
+            done
+    } > "$TMP_PND"
+
+    # Remaining rows for side-by-side section
+    n_map_rows=$(( (${#PCTS[@]} + MAP_COLS - 1) / MAP_COLS ))
+    # n_myjobs: each non-empty section adds 1 header line + content + 1 blank
+    if [[ -z "$MY_JOBS_RUNNING" && -z "$MY_JOBS_PENDING" ]]; then
+        n_myjobs=1
+    else
+        n_myjobs=0
+        [[ -n "$MY_JOBS_RUNNING" ]] && n_myjobs=$(( n_myjobs + 2 + $(printf '%b' "$MY_JOBS_RUNNING" | wc -l) ))
+        [[ -n "$MY_JOBS_PENDING" ]] && n_myjobs=$(( n_myjobs + 2 + $(printf '%b' "$MY_JOBS_PENDING" | wc -l) ))
+    fi
+    header_lines=$(( 7 + n_map_rows + 2 + n_myjobs ))
+    max_rows=$(( TERM_H - header_lines - 1 ))
+    [[ $max_rows -lt 6 ]] && max_rows=15
+
+    nr=$(wc -l < "$TMP_RUN"); np=$(wc -l < "$TMP_PND")
+    # Use min so both columns are same height — no empty padding
+    total_rows=$(( nr < np ? nr : np ))
+    [[ $total_rows -gt $max_rows ]] && total_rows=$max_rows
+
+    # ── print side by side using file descriptors ─────────────────────────
+    exec 3< "$TMP_RUN"
+    exec 4< "$TMP_PND"
+    for (( r=0; r<total_rows; r++ )); do
+        IFS= read -r -u 3 left_line  || left_line=""
+        IFS= read -r -u 4 right_line || right_line=""
+        ansi_pad "$left_line" "$COL_W"
+        printf " \033[90m│\033[0m "
+        printf '%s\n' "$right_line"
+    done
+    exec 3<&-; exec 4<&-
+    rm -f "$TMP_RUN" "$TMP_PND"
+
+    sleep "$INTERVAL"
+done

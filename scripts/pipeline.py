@@ -29,11 +29,16 @@ try:
     from mpi4py import MPI
     MPI_SIZE = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
+    LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
 except:
     MPI_SIZE = 0
     RANK=0
+    LOCAL_RANK=0
 
 USE_MPI=(MPI_SIZE>1)
+
+import socket
+print(socket.gethostname(),RANK,USE_MPI)
         
 from future import standard_library
 standard_library.install_aliases()
@@ -44,7 +49,6 @@ from past.utils import old_div
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
-import socket
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -516,7 +520,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
             if RANK==0:
                 run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
                 
-            run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager)
+            run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager,local_rank=0)
             import DDFacet.DDF
             SaveFile1="last_DDFacet.finalised.obj"
             mpiManager.scpScatter(SaveFile1)
@@ -1470,6 +1474,7 @@ def main(o):
         warn('Removing all pipeline-created columns')
         run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
 
+    mpi_manager.Print("remove_cols")
     uvrange=[o['image_uvmin'],o['uvmax']]
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
@@ -1498,22 +1503,27 @@ def main(o):
         MainNode=MPI.COMM_WORLD.bcast(MainNode, root=0)
     
     
-    # need to copy mslist.txt and big-mslist.txt around because 
+    # need to copy mslist.txt and big-mslist.txt around
     if RANK==0:
+        print("Setting/scatter mpi_manager ")
+        mpi_manager.Print("Setting/scatter mpi_manager...")
         SetMS=mpi_manager.MSSet(o['mslist'])
         FullSetMS=mpi_manager.MSSet(o['full_mslist'])
         MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
         MPI_Manager.scpScatter(o['mslist'])
         MPI_Manager.scpScatter(o['full_mslist'])
-    
+        mpi_manager.Print("  done")
 
+    mpi_manager.Print("  Before barrier")
     if USE_MPI:
         MPI.COMM_WORLD.Barrier()
+    mpi_manager.Print("  Done barrier")
         
+    mpi_manager.Print("setting MPI_Manager")
     SetMS=mpi_manager.MSSet(o['mslist'])
     FullSetMS=mpi_manager.MSSet(o['full_mslist'])
     MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
-
+    mpi_manager.Print("MPI_Manager set")
     
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     
@@ -1524,33 +1534,56 @@ def main(o):
     
 
     separator('Run MemMonitor')
-    try:
-        run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
-        run("""pkill -f "IOMonitor.py" """, mpiManager=MPI_Manager)
-    except:
-        pass
+    mpi_manager.Print("kill MemMobitor")
+    def PKILL(exe="MemMonitor.py"):
+        # pgrep returns 0 if the process exists, 1 if not. The && ensures pkill only runs if pgrep found something.
+        # The trailing || true makes the whole expression succeed regardless, so even if pgrep returns 1 (no process), the command exits 0.
+        result = subprocess.run(['pgrep', '-f', '%s'%exe], capture_output=True)
+        is_running = (result.returncode == 0)
+        if is_running:
+            mpi_manager.Print("-- kill %s"%exe)
+            run_serial("""pkill -f "%s" """%(exe), proceed=True)
+        
+    if LOCAL_RANK==0:
+        PKILL(exe="MemMonitor.py")
+        PKILL(exe="IOMonitor.py")
+        # run("""pkill -f "MemMonitor.py" || true """, mpiManager=MPI_Manager)
+        # run("""pkill -f "IOMonitor.py" || true """, mpiManager=MPI_Manager)
+        
     DoResetCounter=0
-    run("MemMonitor.py --Mode Dump --Reset %i &"%DoResetCounter,
-        dryrun=o['dryrun'], mpiManager=MPI_Manager)
-    run("IOMonitor.py --Mode Dump --Reset %i &"%DoResetCounter,
-        dryrun=o['dryrun'], mpiManager=MPI_Manager)
+    mpi_manager.Print("run MemMobitor")
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i MemMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i IOMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    mpi_manager.Print("Barrier after Monitors")
+    if USE_MPI: MPI.COMM_WORLD.Barrier()
+    mpi_manager.Print("   ... barrier ok")
+    
     import DDFacet.MemMonitor
     global Register
     Register=DDFacet.MemMonitor.ClassRegister(Reset=DoResetCounter)
     Register.register("Start","Start")
+
+    mpi_manager.Print("BBBB")
 
     if MPI_Manager.UseMPI:
         checkColName_mpi(MPI_Manager, o)
     else:
         checkColName(o)
 
+    mpi_manager.Print("CCCC")
 
     # Clear the shared memory
     #import DDFacet.CleanSHM
     #run(DDFacet.CleanSHM.driver,dryrun=o['dryrun'], mpiManager=MPI_Manager)
-    run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=MPI_Manager)
-    run("mkdir -p logs",dryrun=o['dryrun'], mpiManager=MPI_Manager)
+    if LOCAL_RANK==0:
+        run_serial("CleanSHM.py")
+        
+    run("pwd",dryrun=o['dryrun'], mpiManager=MPI_Manager,proceed=True)
+    run("mkdir -p logs",dryrun=o['dryrun'], mpiManager=MPI_Manager,proceed=True)
 
+    mpi_manager.Print("DDD")
+    MPI.COMM_WORLD.Barrier()
+    
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')
@@ -1595,6 +1628,7 @@ def main(o):
             stop(2)
 
 
+    mpi_manager.Print("EEE")
 
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
@@ -1604,12 +1638,16 @@ def main(o):
         full_clearcache_mpi(MPI_Manager, o)
     else:
         full_clearcache(o)
+        
+    mpi_manager.Print("FFF")
 
 
     if MPI_Manager.UseMPI:
         new=check_imaging_weight_mpi(MPI_Manager, o,mslist_str="mslist")
     else:
         new=check_imaging_weight(o['mslist'])
+        
+    mpi_manager.Print("check_imaging")
 
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
@@ -1621,6 +1659,7 @@ def main(o):
         else:
             full_clearcache(o)
 
+    mpi_manager.Print("full_clearcache_mpi")
 
     # ##########################################################
     if o['redo_DI']:
@@ -1648,6 +1687,8 @@ def main(o):
 
     DeconvMode=o["deconv_mode"]
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
+    
+    mpi_manager.Print("Start the real stuff")
     if o['basedicomodel'] is None:
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
@@ -1657,6 +1698,7 @@ def main(o):
                 apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher, mpiManager=MPI_Manager)
 
 
+    
         external_mask=None
         if not o["force_disable_extmask"]:
             separator("External mask")
@@ -2502,13 +2544,17 @@ def main(o):
                         cthreads.append(thread)
                         flist.append(cubefile)
 
-    try:
-        run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
-        run("""pkill -f "IOMonitor.py" """, mpiManager=MPI_Manager)
-    except:
-        pass
+    if LOCAL_RANK==0:
+        PKILL(exe="MemMonitor.py")
+        PKILL(exe="IOMonitor.py")
+        
+    # try:
+    #     run("""pkill -f "MemMonitor.py" || true """, mpiManager=MPI_Manager)
+    #     run("""pkill -f "IOMonitor.py" || true """, mpiManager=MPI_Manager)
+    # except:
+    #     pass
     print("Successfully ran ddf-pipeline")
-    if UseMPI:
+    if USE_MPI:
         MPI.Finalize()
     return
     
