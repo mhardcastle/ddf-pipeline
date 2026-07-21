@@ -2030,10 +2030,18 @@ def main(o=None):
                                         PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
         CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
-    
-    if o['low_psf_arcsec'] is not None:
+
+    if o['low_psf_arcsec'] is not None: # low-res image requested
         separator("Low-resolution image")
-        # low-res image requested
+
+        ddf_kw={}
+        ddf_kw['beamsize']=o['low_psf_arcsec']
+        if o['low_psf_minor_arcsec'] is not None:
+            if o['low_psf_pa_deg'] is None:
+                die('If low minor axis is supplied, position angle must be supplied too')
+            ddf_kw['beamsize_minor']=o['low_psf_minor_arcsec']
+            ddf_kw['beamsize_pa']=o['low_psf_pa_deg']
+
         low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
         if o['low_imsize'] is not None:
             low_imsize=o['low_imsize'] # allow over-ride
@@ -2058,7 +2066,6 @@ def main(o=None):
                 imsize=low_imsize,
                 cellsize=o['low_cell'],
                 robust=o['low_robust'],
-                beamsize=o['low_psf_arcsec'],
                 phasecenter=o['phasecenter'],
                 majorcycles=2,
                 peakfactor=0.001,
@@ -2074,6 +2081,7 @@ def main(o=None):
                 smooth=True,
                 catcher=catcher,
                 STEP=3,
+                **ddf_kw,
         )
 
         make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
@@ -2084,7 +2092,6 @@ def main(o=None):
                   imsize=low_imsize,
                   cellsize=o['low_cell'],
                   robust=o['low_robust'],
-                  beamsize=o['low_psf_arcsec'],
                   phasecenter=o['phasecenter'],
                   majorcycles=1,
                   peakfactor=0.001,
@@ -2103,6 +2110,7 @@ def main(o=None):
                   smooth=True,
                   catcher=catcher,
                   STEP=3,
+                  **ddf_kw,
         )
 
         if o['restart'] and os.path.isfile('full-mask-low.fits'):

@@ -45,6 +45,8 @@ option_list = (
     ( 'image',      'final_psf_pa_deg',       float, None,   'Final image restored with PSF with this PA in degrees' ),
     ( 'image',      'final_rmsfactor',        float, 1.0,    'Final image RMS factor for cleaning' ),
     ( 'image',      'low_psf_arcsec',         float, None,   'Low-resolution restoring beam in arcsec. If None, no image will be made.' ),
+    ( 'image',      'low_psf_minor_arcsec',   float, None,   'Low-resolution image restored with this PSF minor axis in arcsec' ),
+    ( 'image',      'low_psf_pa_deg',         float, None,   'Low-resolution image restored with PSF with this PA in degrees' ),
     ( 'image',      'low_robust',             float, -0.20,  'Low-resolution image robustness' ),
     ( 'image',      'low_cell',               float, 4.5,    'Low-resolution image pixel size in arcsec' ),
     ( 'image',      'low_imsize',             int,   None,   'Low-resolution image size in pixels' ),
