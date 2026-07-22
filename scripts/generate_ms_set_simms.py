@@ -975,6 +975,21 @@ def main():
                 # Remove MODEL_DATA and CORRECTED_DATA if simms created them —
                 # they waste disk space and are not needed in the template copies.
                 _remove_optional_cols(ms_path, ["MODEL_DATA", "CORRECTED_DATA"])
+
+                # Add PHASED_ARRAY subtable (only needed on the template;
+                # all copytree copies inherit it automatically).
+                # Run as a subprocess to avoid casatools/python-casacore ABI clash.
+                if _oskar_tm_dir is not None:
+                    import subprocess as _sp
+                    _script = os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)),
+                        "add_phased_array.py")
+                    print(f"  Adding PHASED_ARRAY table to template MS ...")
+                    _sp.run(
+                        [sys.executable, _script,
+                         ms_path, "--tm", _oskar_tm_dir, "--overwrite"],
+                        check=True)
+
                 template_path = ms_path
 
             else:
@@ -1010,5 +1025,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    
