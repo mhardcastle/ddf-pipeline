@@ -31,6 +31,7 @@ import argparse
 import os
 import sys
 import tempfile
+import time
 import numpy as np
 
 
@@ -100,6 +101,71 @@ def my_share(items, task_id, num_tasks):
     start = task_id * base + min(task_id, rem)
     count = base + (1 if task_id < rem else 0)
     return items[start:start + count], start
+
+
+# ---------------------------------------------------------------------------
+# Size estimation / reporting helpers
+# ---------------------------------------------------------------------------
+
+def format_bytes(n):
+    """Human-readable byte size, e.g. 1536.0 -> '1.50 KB'."""
+    n = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024.0:
+            return f"{n:.2f} {unit}"
+        n /= 1024.0
+    return f"{n:.2f} PB"
+
+
+def estimate_ms_size(n_ant, n_time, nchan, ncorr, n_data_cols=1, include_autocorr=True):
+    """
+    Rough estimate of an MS main-table size on disk.
+
+    Accounts for the dominant columns: `n_data_cols` complex data columns
+    (e.g. DATA, or DATA+MODEL_DATA+CORRECTED_DATA), FLAG, UVW, WEIGHT/SIGMA,
+    and the usual small per-row bookkeeping columns (TIME, ANTENNA1/2, ...).
+    Does NOT account for casacore table-system / storage-manager overhead,
+    which is normally a small fraction of the total for MSs of any real size.
+    Treat this as an order-of-magnitude estimate, not an exact figure.
+
+    Returns
+    -------
+    n_rows, total_bytes
+    """
+    n_bl = n_ant * (n_ant + 1) // 2 if include_autocorr else n_ant * (n_ant - 1) // 2
+    n_rows = n_bl * n_time
+
+    bytes_uvw       = 3 * 8   # UVW: float64 x3
+    bytes_time      = 2 * 8   # TIME, TIME_CENTROID
+    bytes_interval  = 2 * 8   # INTERVAL, EXPOSURE
+    bytes_ints      = 11 * 4  # ANTENNA1/2, ARRAY_ID, DATA_DESC_ID, FEED1/2, FIELD_ID,
+                               # OBSERVATION_ID, PROCESSOR_ID, SCAN_NUMBER, STATE_ID
+    bytes_flagrow   = 1
+    bytes_weightsig = 2 * ncorr * 4   # WEIGHT + SIGMA, float32
+
+    fixed_per_row = (bytes_uvw + bytes_time + bytes_interval + bytes_ints
+                      + bytes_flagrow + bytes_weightsig)
+
+    data_per_row = n_data_cols * nchan * ncorr * 8   # complex64 per data column
+    flag_per_row = nchan * ncorr * 1                 # bool
+
+    per_row_bytes = fixed_per_row + data_per_row + flag_per_row
+    total_bytes   = per_row_bytes * n_rows
+
+    return n_rows, total_bytes
+
+
+def get_dir_size(path):
+    """Total size in bytes of all files under an MS directory."""
+    total = 0
+    for dirpath, _dirnames, filenames in os.walk(path):
+        for fn in filenames:
+            fp = os.path.join(dirpath, fn)
+            try:
+                total += os.path.getsize(fp)
+            except OSError:
+                pass
+    return total
 
 
 # ---------------------------------------------------------------------------
@@ -179,8 +245,22 @@ def jd_to_casa_date(jd):
     year  = c - 4716 if month > 2 else c - 4715
     # Fractional day → HH:MM:SS
     total_sec = f * 86400.0
+    # Round to 2 decimals up front so the carry below (60.00s -> +1 min, etc.)
+    # is handled, instead of e.g. printing "13:19:60.00".
+    total_sec = round(total_sec, 2)
+    if total_sec >= 86400.0:
+        total_sec -= 86400.0   # (day/month rollover from this is negligible here)
     hh = int(total_sec // 3600);  total_sec -= hh * 3600
     mm = int(total_sec // 60);    ss = total_sec - mm * 60
+    ss = round(ss, 2)
+    if ss >= 60.0:
+        ss -= 60.0
+        mm += 1
+    if mm >= 60:
+        mm -= 60
+        hh += 1
+    if hh >= 24:
+        hh -= 24
     return f"{year}/{month}/{day}/{hh:02d}:{mm:02d}:{ss:05.2f}"
 
 
@@ -438,6 +518,44 @@ def make_observation_plots(
         plt.show()
 
     plt.close(fig)
+
+
+def print_elevation_table(ra_deg, dec_deg, lon_deg, lat_deg, jd_start, dT, n_points=24):
+    """
+    Print a plain-text table of elevation/azimuth/hour-angle vs time across
+    the observation. Independent of --plot: this is meant to show up
+    directly in the run log (e.g. a SLURM stdout file) without needing to
+    open an image. `n_points` is a display sampling, unrelated to the MS's
+    actual dump interval `dt`.
+    """
+    n_points = max(2, n_points)
+    t_sec  = np.linspace(0, dT, n_points)
+    jd_arr = jd_start + t_sec / 86400.0
+    el_deg, az_deg, H_arr = compute_azel(jd_arr, ra_deg, dec_deg, lon_deg, lat_deg)
+    ha_h = (((H_arr / (2 * np.pi)) * 24.0 + 12.0) % 24.0) - 12.0   # wrap to [-12, 12) h
+
+    print(f"\n  Elevation vs time ({n_points} samples over {dT/3600:.2f} h at "
+          f"RA={ra_deg:.4f}° Dec={dec_deg:.4f}°):")
+    print(f"    {'t (h)':>7}  {'UTC date/time':>22}  {'HA (h)':>7}  "
+          f"{'Az (deg)':>9}  {'El (deg)':>9}")
+    for ts, jd, ha, az, el in zip(t_sec, jd_arr, ha_h, az_deg, el_deg):
+        date_str, time_str = jd_to_casa_date(jd).rsplit("/", 1)
+        below = "  (below horizon)" if el < 0 else ""
+        print(f"    {ts/3600:7.3f}  {date_str.replace('/', '-')} {time_str:>9}  "
+              f"{ha:7.3f}  {az:9.2f}  {el:9.2f}{below}")
+
+    above = el_deg > 0
+    if above.any():
+        peak_idx = int(np.argmax(el_deg))
+        print(f"    Peak elevation : {el_deg[peak_idx]:.2f}°  "
+              f"at t={t_sec[peak_idx]/3600:.3f} h  (az={az_deg[peak_idx]:.1f}°)")
+        print(f"    Above horizon  : from t={t_sec[above][0]/3600:.3f} h to "
+              f"t={t_sec[above][-1]/3600:.3f} h in this sampled range "
+              f"(coarse — a short dip/rise near the horizon between samples "
+              f"could be missed)")
+    else:
+        print(f"    WARNING: source is below the horizon at all {n_points} "
+              f"sampled points in this range!")
 
 
 def _display_available():
@@ -774,6 +892,16 @@ def parse_args():
 # ---------------------------------------------------------------------------
 
 def main():
+    # casacore/simms write their log lines (the "NewMSSimulator::..." messages)
+    # straight through their own C++ logger, bypassing Python's stdout buffer.
+    # Without this, our print() calls can sit in a buffer and appear to show up
+    # "after" those messages (or not at all until the buffer flushes/the
+    # process exits) even though they were logically printed first.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
+
     args = parse_args()
 
     do_plot = args.plot or (args.plot_save is not None)
@@ -828,10 +956,14 @@ def main():
     coords        = args.coords
     lon_lat       = args.lon_lat
     _tmp_ascii    = None
+    _oskar_tm_dir = None    # set below if --telescope is an OSKAR .tm dir; used later
+                             # to add the PHASED_ARRAY subtable to the template MS
     stations_enu  = None   # (nStat, 3) for plotting
     lon_deg = lat_deg = None
 
     if is_oskar_tm(tel_path):
+        _oskar_tm_dir = tel_path   # remember the original .tm dir before tel_path
+                                    # gets overwritten with the generated ASCII file below
         print(f"Detected OSKAR .tm directory: {tel_path}")
         lon_deg, lat_deg, elev_m, stations = read_oskar_tm(tel_path)
         stations_enu = np.array(stations)
@@ -876,10 +1008,20 @@ def main():
         coords   = coords   or "itrf"
         tel_path = os.path.abspath(tel_path)
 
-    # If plotting but not an OSKAR tm, try to parse lon/lat from --lon-lat
-    if do_plot and stations_enu is None and lon_lat is not None:
+    # Resolve lon/lat for non-OSKAR telescopes from --lon-lat, needed both for
+    # the elevation table (always) and the diagnostic plot (if --plot).
+    if stations_enu is None and lon_lat is not None and lon_deg is None:
         ll = [float(x) for x in lon_lat.split(",")]
         lon_deg, lat_deg = ll[0], ll[1]
+
+    # --- Elevation vs time (always printed to the log) ---
+    jd_start = jd_obs_start
+    if lon_deg is not None and lat_deg is not None:
+        print_elevation_table(args.ra_deg, args.dec_deg, lon_deg, lat_deg,
+                               jd_start, args.dT)
+    else:
+        print("Warning: no known array position (need an OSKAR .tm dir or "
+              "--lon-lat); skipping elevation table.")
 
     # --- Diagnostic plots (before running simms, so visible on dry-run too) ---
     if do_plot:
@@ -887,7 +1029,6 @@ def main():
             print("Warning: --plot requires an OSKAR .tm dir or --lon-lat "
                   "with known station positions; skipping plot.")
         else:
-            jd_start = parse_date_start(args.date, args.start_utc)
             print(f"Generating observation plots "
                   f"(JD start={jd_start:.5f}, start_utc={args.start_utc}) ...")
             make_observation_plots(
@@ -909,6 +1050,9 @@ def main():
     direction = deg_to_direction(args.ra_deg, args.dec_deg)
     df_str    = hz_to_simms_str(args.df)
 
+    n_ant = len(stations_enu) if stations_enu is not None else None
+    ncorr = len(args.stokes.split())
+
     print(f"Planned {args.nMS} MS(s) across {num_tasks} task(s); "
           f"task {task_id} handles {len(my_chunks)} MS(s).")
     print(f"  Band : {args.f0/1e6:.6f} - {args.f1/1e6:.6f} MHz, "
@@ -917,6 +1061,26 @@ def main():
           f"dt={args.dt} s, steps={num_time_steps}")
     print(f"  Direction : {direction}, date : {args.date} {args.start_utc}")
     print(f"  pos_type={pos_type}, coords={coords}, lon_lat={lon_lat}")
+    print(f"  Correlations : {args.stokes} (ncorr={ncorr})")
+
+    if n_ant is not None:
+        n_bl = n_ant * (n_ant + 1) // 2   # incl. autocorrelations (simms default)
+        n_rows, size_full = estimate_ms_size(n_ant, num_time_steps, chunks[0][1],
+                                              ncorr, n_data_cols=3)
+        _,      size_trim = estimate_ms_size(n_ant, num_time_steps, chunks[0][1],
+                                              ncorr, n_data_cols=1)
+        print(f"  Stations : {n_ant}  ->  {n_bl} baselines (incl. autocorr)  "
+              f"->  {n_rows} rows/MS")
+        print(f"  Expected size / MS (approx.):")
+        print(f"    as simms creates it (DATA+MODEL_DATA+CORRECTED_DATA) : "
+              f"~{format_bytes(size_full)}")
+        print(f"    after column trim (template & all copies, DATA only) : "
+              f"~{format_bytes(size_trim)}")
+        print(f"  Expected total for this task's {len(my_chunks)} MS(s) (post-trim) : "
+              f"~{format_bytes(size_trim * len(my_chunks))}")
+    else:
+        print("  Stations : unknown (non-OSKAR telescope model) "
+              "-- size estimate skipped; will report actual size after creation.")
 
     if not args.dry_run:
         from simms.casasm import makems
@@ -933,21 +1097,44 @@ def main():
             ms_paths.append(os.path.abspath(ms_path))
 
             freq0_str = hz_to_simms_str(start_freq)
-            print(
-                f"[task {task_id}] [{local_i+1}/{len(my_chunks)}] "
-                f"(global {i+1}/{args.nMS}) {ms_path}: "
-                f"freq0={freq0_str}, nchan={num_channels}, df={df_str}"
-            )
+            freq1_str = hz_to_simms_str(start_freq + num_channels * args.df)
+            is_template = (local_i == 0)
+
+            print(f"\n--- [task {task_id}] MS {local_i+1}/{len(my_chunks)} "
+                  f"(global {i+1}/{args.nMS}): {ms_name} ---")
+            print(f"  Path            : {ms_path}")
+            print(f"  Frequency range : {freq0_str} - {freq1_str}  "
+                  f"(nchan={num_channels}, df={df_str})")
+            print(f"  Role            : "
+                  f"{'TEMPLATE (built by simms + metadata fixes)' if is_template else 'COPY (from template, SPW frequencies patched)'}")
+            if n_ant is not None:
+                if is_template:
+                    n_rows, size_full = estimate_ms_size(n_ant, num_time_steps, num_channels,
+                                                          ncorr, n_data_cols=3)
+                    _,      size_trim = estimate_ms_size(n_ant, num_time_steps, num_channels,
+                                                          ncorr, n_data_cols=1)
+                    print(f"  Expected size   : ~{format_bytes(size_full)} as created by simms "
+                          f"-> ~{format_bytes(size_trim)} after column trim  ({n_rows} rows)")
+                else:
+                    n_rows, size_trim = estimate_ms_size(n_ant, num_time_steps, num_channels,
+                                                          ncorr, n_data_cols=1)
+                    print(f"  Expected size   : ~{format_bytes(size_trim)} "
+                          f"({n_rows} rows, same layout as template)")
 
             if args.dry_run:
                 continue
 
             if _is_done(ms_path):
-                print(f"  Already done (found {_done_file(ms_path)}), skipping.")
+                actual_size = get_dir_size(ms_path) if os.path.exists(ms_path) else 0
+                print(f"  Already done (found {_done_file(ms_path)}), skipping. "
+                      f"On-disk size: {format_bytes(actual_size)}")
                 # Still need template_path for subsequent chunks
                 if local_i == 0:
                     template_path = ms_path
                 continue
+
+            t_ms_start = time.time()
+            sys.stdout.flush()
 
             if local_i == 0:
                 # --- First chunk: run simms once, apply all metadata fixes ---
@@ -1004,6 +1191,11 @@ def main():
                 print(f"  Copied from template, SPW updated to {freq0_str}")
 
             _mark_done(ms_path)
+
+            elapsed = time.time() - t_ms_start
+            actual_size = get_dir_size(ms_path)
+            print(f"  Finished in {elapsed:.1f}s. Actual on-disk size: "
+                  f"{format_bytes(actual_size)}")
 
     finally:
         if _tmp_ascii is not None and os.path.exists(_tmp_ascii.name):
