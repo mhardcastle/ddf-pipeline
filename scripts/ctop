@@ -22,7 +22,7 @@ while true; do
     MY_JOBS_PENDING=""
 
     # Use | delimiter so empty %N (pending jobs) doesn't shift fields
-    while IFS='|' read -r jobid jobstate nodes time timelimit name nodelist jobpart reason; do
+    while IFS='|' read -r jobid jobstate nodes time timelimit name nodelist jobpart account reason; do
         [[ -z "$jobid" || "$jobid" == "JOBID" ]] && continue
         jobid=$(echo "$jobid" | tr -d ' ')
         reason=$(echo "$reason" | sed 's/^ *//')
@@ -40,10 +40,38 @@ while true; do
         fi
         [[ -z "$tasks_per_node" ]] && tasks_per_node="?"
 
+        # Convert HH:MM:SS or D-HH:MM:SS to seconds
+        _to_secs() {
+            local t="$1" d=0
+            [[ "$t" == *-* ]] && { d="${t%%-*}"; t="${t#*-}"; }
+            IFS=: read -r _h _m _s <<< "$t"
+            echo $(( d*86400 + 10#${_h:-0}*3600 + 10#${_m:-0}*60 + 10#${_s:-0} ))
+        }
+        _pbar() {
+            local pct=$1 f e bar=""
+            f=$(( pct * 12 / 100 )); e=$(( 12 - f ))
+            for ((i=0;i<f;i++)); do bar+="█"; done
+            for ((i=0;i<e;i++)); do bar+="░"; done
+            echo "$bar"
+        }
+
         case "$jobstate" in
             RUNNING)
-                MY_JOBS_RUNNING+=$(printf "  \033[1;36m%-12s\033[0m %-14s [%-10s] %s nodes x %s tasks x %s cpus  elapsed: %-8s limit: %-8s  on: %s" \
-                    "$jobid" "$name" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$time" "$timelimit" "$nodelist")
+                elapsed_s=$(_to_secs "$time")
+                limit_s=$(_to_secs "$timelimit")
+                if [[ $limit_s -gt 0 ]]; then
+                    pct=$(( elapsed_s * 100 / limit_s ))
+                    left_s=$(( limit_s - elapsed_s ))
+                    left_h=$(( left_s / 3600 ))
+                    left_m=$(( (left_s % 3600) / 60 ))
+                    left_str=$(printf "%dh%02dm" $left_h $left_m)
+                else
+                    pct=0; left_str="?"
+                fi
+                bar=$(_pbar $pct)
+                MY_JOBS_RUNNING+=$(printf "  \033[1;36m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  \033[90m%s\033[0m %3d%%  left:%-8s  on: %s" \
+                    "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" \
+                    "$bar" "$pct" "$left_str" "$nodelist")
                 MY_JOBS_RUNNING+=$'\n'
                 while read -r node; do
                     [[ -n "$node" ]] && MY_RUNNING["$node"]=1
@@ -52,15 +80,15 @@ while true; do
             PENDING)
                 start=$(squeue --me -h -j "$jobid" --start -o "%S" 2>/dev/null)
                 [[ -z "$start" ]] && start="N/A"
-                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-14s [%-10s] %s nodes x %s tasks x %s cpus  est.start: %-20s reason: %s" \
-                    "$jobid" "$name" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$start" "$reason")
+                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  est.start: %-20s reason: %s" \
+                    "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$start" "$reason")
                 MY_JOBS_PENDING+=$'\n'
                 while read -r node; do
                     [[ -n "$node" ]] && MY_PENDING["$node"]=1
                 done < <(expand_nodelist "$nodelist")
                 ;;
         esac
-    done < <(squeue -u "$ME" -h -o "%i|%T|%D|%M|%l|%j|%N|%P|%R" 2>/dev/null)
+    done < <(squeue -u "$ME" -h -o "%i|%T|%D|%M|%l|%j|%N|%P|%a|%R" 2>/dev/null)
 
     my_running_nodes=${#MY_RUNNING[@]}
     my_pending_nodes=${#MY_PENDING[@]}
@@ -183,11 +211,11 @@ while true; do
     # ── running section → TMP_RUN ─────────────────────────────────────────
     {
         printf "\033[1m── Running (all, by nodes) ──────────────\033[0m\n"
-        printf "\033[90m%-28s %6s  %-8s progress\033[0m\n" "USER (total, jobs)" "NODES" "left"
+        printf "\033[90m%-18s %6s %-5s avg%%  progress              soonest~latest_left\033[0m\n" "USER/account" "NODES" "jobs"
         printf "\033[90m%.${COL_W}s\033[0m\n" \
                "────────────────────────────────────────────────────────────────────────────"
 
-        squeue -p "$PARTITION" -h -t RUNNING -o "%u|%D|%M|%l" 2>/dev/null \
+        squeue -p "$PARTITION" -h -t RUNNING -o "%u|%a|%D|%M|%l" 2>/dev/null \
           | grep -v "^${ME}|" \
           | awk -F'|' -v pw="$PBAR_W" '
             function ts(t,  d,p,n){d=0
@@ -201,7 +229,7 @@ while true; do
             function pb(p,  f,e,b,i){f=int(p*pw/100);e=pw-f;b=""
                 for(i=1;i<=f;i++)b=b"\xe2\x96\x88"
                 for(i=1;i<=e;i++)b=b"\xe2\x96\x91";return b}
-            {u=$1;nd=$2+0;se=ts($3);sl=ts($4)
+            {u=$1"/"$2;nd=$3+0;se=ts($4);sl=ts($5)
                 tot[u]+=nd;cnt[u]++
                 p=(sl>0)?int(se*100/sl):0;lf=(sl>se)?sl-se:0
                 psum[u]+=p
@@ -212,8 +240,8 @@ while true; do
                     if(tot[us[i]]<tot[us[j]]){t=us[i];us[i]=us[j];us[j]=t}
                 for(i=1;i<=n;i++){u=us[i];nj=cnt[u]
                     avg=int(psum[u]/nj)
-                    if(nj==1)tl=fs(lfmin[u])
-                    else     tl=fs(lfmin[u])"~"fs(lfmax[u])
+                    if(nj==1 || lfmin[u]==lfmax[u])tl=fs(lfmin[u])
+                    else tl=fs(lfmin[u])"~"fs(lfmax[u])
                     printf "%s|%d|%d|%d|%s|%s\n",u,tot[u],nj,avg,pb(avg),tl}}' \
           | while IFS='|' read -r user nodes njobs pct bar left; do
                 [[ -z "$user$nodes" ]] && continue
@@ -235,7 +263,7 @@ while true; do
         printf "\033[90m%.${COL_W}s\033[0m\n" \
                "────────────────────────────────────────────────────────────────────────────"
 
-        squeue -p "$PARTITION" -h -t PENDING -o "%u|%D|%V|%S|%j|%l|%R" 2>/dev/null \
+        squeue -p "$PARTITION" -h -t PENDING -o "%u|%a|%D|%V|%S|%j|%l|%R" 2>/dev/null \
           | grep -v "^${ME}|" \
           | awk -F'|' -v now="$NOW_EPOCH" -v wb="$WB" '
             function te(s,  cmd,ep){if(s==""||s=="N/A")return -1
@@ -250,12 +278,12 @@ while true; do
                 for(i=1;i<=f;i++)b=b"\xe2\x96\x88"
                 for(i=1;i<=e;i++)b=b"\xe2\x96\x91";return b}
             # skip Dependency; collect all jobs as flat list sorted by nodes
-            $2+0>=10 && $7!~/[Dd]ependency/{
-                n++;jn[n]=$2+0;ju[n]=$1
-                se=te($3);st=te($4);ws=(se>0)?now-se:0
+            $3+0>=10 && $8!~/[Dd]ependency/{
+                n++;jn[n]=$3+0;ju[n]=$1"/"$2
+                se=te($4);st=te($5);ws=(se>0)?now-se:0
                 jw[n]=(se>0)?fs(ws):"?";jws[n]=ws
                 je[n]=(st>0)?fs(st-now):"N/A"
-                jname[n]=$5;jlimit[n]=$6;jr[n]=$7}
+                jname[n]=$6;jlimit[n]=$7;jr[n]=$8}
             END{
                 for(a=1;a<=n;a++)for(b=a+1;b<=n;b++)
                     if(jn[a]<jn[b]||(jn[a]==jn[b]&&jws[a]<jws[b])){
