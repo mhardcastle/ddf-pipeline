@@ -39,6 +39,21 @@ import numpy as np
 # ---------------------------------------------------------------------------
 
 def plan_frequency_chunks(f0, f1, df, nMS):
+    """
+    Split [f0, f1] into nMS equal chunks each with the same integer number of
+    channels.
+
+    Priority: keep f0, f1, and nMS exactly as specified.
+    Adapt:    df is adjusted slightly so that nMS * channels_per_ms channels
+              span exactly (f1 - f0).  channels_per_ms is chosen as the nearest
+              integer to (f1-f0)/df/nMS.
+
+    This guarantees:
+      - Every MS has the same number of channels (channels_per_ms).
+      - The global channel grid covers [f0, f1] exactly.
+      - df may differ from the requested value by at most half a channel width
+        divided by nMS (typically sub-Hz to a few hundred Hz).
+    """
     if f1 <= f0:
         raise ValueError("f1 must be greater than f0")
     if df <= 0:
@@ -46,33 +61,25 @@ def plan_frequency_chunks(f0, f1, df, nMS):
     if nMS <= 0:
         raise ValueError("nMS must be a positive integer")
 
-    # Round total_channels to nearest integer, adapting f1 accordingly.
-    # f0 and df are kept exact; f1 is adjusted to f0 + total_channels * df.
-    total_channels_f = (f1 - f0) / df
-    total_channels   = int(round(total_channels_f))
-    f1_adapted = f0 + total_channels * df
-    if abs(f1_adapted - f1) > df * 0.5:
-        raise ValueError(
-            f"(f1 - f0) / df = {total_channels_f:.6f} rounds to {total_channels} "
-            f"channels, but the rounding error exceeds half a channel width. "
-            f"Check your f0/f1/df values."
-        )
-    if abs(f1_adapted - f1) > 1.0:   # more than 1 Hz adjustment — inform user
-        print(f"  Note: f1 adjusted from {f1/1e6:.9f} MHz "
-              f"to {f1_adapted/1e6:.9f} MHz "
-              f"({f1_adapted-f1:+.4f} Hz) to give an integer number of channels.")
+    total_bw         = f1 - f0
+    channels_per_ms  = max(1, int(round(total_bw / df / nMS)))
+    total_channels   = nMS * channels_per_ms
+    df_adapted       = total_bw / total_channels   # exact: covers f1-f0 in total_channels steps
 
-    if total_channels % nMS != 0:
-        # Try to find the nearest nMS-divisible channel count
-        lo = (total_channels // nMS) * nMS
-        hi = lo + nMS
+    if abs(df_adapted - df) > df:
         raise ValueError(
-            f"Total channels ({total_channels}) is not divisible by nMS ({nMS}). "
-            f"Nearest valid totals: {lo} or {hi} "
-            f"(adjust nMS or df slightly)."
+            f"Adapted df ({df_adapted/1e3:.3f} kHz) deviates by more than 100% "
+            f"from requested df ({df/1e3:.3f} kHz). Check f0/f1/df/nMS."
         )
-    channels_per_ms = total_channels // nMS
-    return [(f0 + i * channels_per_ms * df, channels_per_ms) for i in range(nMS)]
+    if abs(df_adapted - df) > 1.0:
+        print(f"  Note: df adjusted from {df:.4f} Hz to {df_adapted:.4f} Hz "
+              f"({df_adapted-df:+.4f} Hz, {(df_adapted-df)/df*100:+.4f}%) "
+              f"so that {nMS} MSs × {channels_per_ms} channels cover "
+              f"{total_bw/1e6:.6f} MHz exactly.")
+
+    # Use df_adapted for all chunk boundaries (single multiply — no float drift)
+    return [(f0 + i * channels_per_ms * df_adapted, channels_per_ms)
+            for i in range(nMS)], df_adapted
 
 
 def resolve_task_id_and_count(args):
@@ -599,6 +606,49 @@ def fix_ms_metadata(ms_path):
 
 
 # ---------------------------------------------------------------------------
+# Checkpoint / done-file helpers
+# ---------------------------------------------------------------------------
+
+def _done_file(ms_path):
+    """Path of the sentinel file that marks a completed MS chunk."""
+    return ms_path + ".done"
+
+
+def _is_done(ms_path):
+    return os.path.exists(_done_file(ms_path))
+
+
+def _mark_done(ms_path):
+    """Touch <ms_path>.done to record successful completion."""
+    import datetime
+    ts = datetime.datetime.utcnow().isoformat() + "Z"
+    with open(_done_file(ms_path), "w") as fh:
+        fh.write("completed " + ts + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Optional column removal
+# ---------------------------------------------------------------------------
+
+def _remove_optional_cols(ms_path, cols):
+    """
+    Remove columns from the main MS table if they exist.
+    Silently skips columns that are not present.
+    Useful for stripping MODEL_DATA / CORRECTED_DATA that simms may add,
+    before using the MS as a copy template (saves disk space on all copies).
+    """
+    from casatools import table as tb_tool
+    tb = tb_tool()
+    tb.open(ms_path, nomodify=False)
+    existing = tb.colnames()
+    to_remove = [c for c in cols if c in existing]
+    if to_remove:
+        tb.removecols(to_remove)
+        print(f"  Removed columns from main table: {to_remove}")
+    tb.close()
+
+
+# ---------------------------------------------------------------------------
 # SPW frequency update (used when copying a template MS)
 # ---------------------------------------------------------------------------
 
@@ -849,7 +899,8 @@ def main():
             )
 
     # --- Frequency chunking ---
-    chunks = plan_frequency_chunks(args.f0, args.f1, args.df, args.nMS)
+    chunks, df_adapted = plan_frequency_chunks(args.f0, args.f1, args.df, args.nMS)
+    args.df = df_adapted   # use the (possibly adjusted) channel width throughout
 
     # --- Task slice ---
     task_id, num_tasks = resolve_task_id_and_count(args)
@@ -891,6 +942,13 @@ def main():
             if args.dry_run:
                 continue
 
+            if _is_done(ms_path):
+                print(f"  Already done (found {_done_file(ms_path)}), skipping.")
+                # Still need template_path for subsequent chunks
+                if local_i == 0:
+                    template_path = ms_path
+                continue
+
             if local_i == 0:
                 # --- First chunk: run simms once, apply all metadata fixes ---
                 makems(
@@ -914,6 +972,24 @@ def main():
                 )
                 zero_flags(ms_path)
                 fix_ms_metadata(ms_path)
+                # Remove MODEL_DATA and CORRECTED_DATA if simms created them —
+                # they waste disk space and are not needed in the template copies.
+                _remove_optional_cols(ms_path, ["MODEL_DATA", "CORRECTED_DATA"])
+
+                # Add PHASED_ARRAY subtable (only needed on the template;
+                # all copytree copies inherit it automatically).
+                # Run as a subprocess to avoid casatools/python-casacore ABI clash.
+                if _oskar_tm_dir is not None:
+                    import subprocess as _sp
+                    _script = os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)),
+                        "add_phased_array.py")
+                    print(f"  Adding PHASED_ARRAY table to template MS ...")
+                    _sp.run(
+                        [sys.executable, _script,
+                         ms_path, "--tm", _oskar_tm_dir, "--overwrite"],
+                        check=True)
+
                 template_path = ms_path
 
             else:
@@ -926,6 +1002,8 @@ def main():
                 _shutil.copytree(template_path, ms_path)
                 update_spw_frequencies(ms_path, start_freq, num_channels, args.df)
                 print(f"  Copied from template, SPW updated to {freq0_str}")
+
+            _mark_done(ms_path)
 
     finally:
         if _tmp_ascii is not None and os.path.exists(_tmp_ascii.name):
