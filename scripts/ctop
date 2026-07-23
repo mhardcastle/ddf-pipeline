@@ -1,10 +1,72 @@
 #!/usr/bin/env bash
-# cluster_load.sh — compact real-time Genoa partition load + my jobs
+# ctop — real-time SLURM cluster monitor
+#
+# Usage:  ctop [partition] [refresh_seconds]
+#         ctop genoa          → watch 'genoa' partition, refresh every 5s
+#         ctop genoa 10       → same but refresh every 10s
+#         ctop                → defaults: partition=genoa, interval=5s
+#
+# Arguments (both optional, order matters):
+#   partition        SLURM partition name to monitor  (default: genoa)
+#   refresh_seconds  Screen refresh interval in secs  (default: 5)
+#
+# Keyboard: Ctrl+C to quit.
 # NOTE: occupancy = SLURM allocation, not actual CPU utilisation.
-# Usage: ./cluster_load.sh [refresh_seconds] [partition]
-INTERVAL=${1:-5}
-PARTITION=${2:-genoa}
+
+# ── parse arguments ──────────────────────────────────────────────────────────
+# First non-numeric arg = partition name; first numeric arg = interval
+PARTITION="genoa"
+INTERVAL=5
+
+for arg in "$@"; do
+    if [[ "$arg" =~ ^[0-9]+$ ]]; then
+        INTERVAL=$arg
+    else
+        PARTITION=$arg
+    fi
+done
+
 ME=${USER}
+
+# ── validate partition ────────────────────────────────────────────────────────
+_list_partitions() {
+    printf "\033[1mAvailable partitions:\033[0m\n"
+    sinfo -h -o "%20P %8l %6D %6c %G" 2>/dev/null | sort | \
+    while read -r part timelim nodes cpus features; do
+        [[ "$part" == *"*"* ]] && def="\033[32m(default)\033[0m" || def=""
+        printf "  \033[33m%-20s\033[0m  timelimit:%-10s  nodes:%-5s  cpus/node:%-5s  %s\n" \
+               "$part" "$timelim" "$nodes" "$cpus" "$def"
+    done
+}
+
+if [[ "${1:-}" == "list" ]]; then
+    _list_partitions
+    exit 0
+fi
+
+if ! sinfo -h -o "%P" 2>/dev/null | grep -q "^${PARTITION}\*\?$"; then
+    printf "[31mError:[0m partition [33m%s[0m not found.
+
+" "$PARTITION"
+    _list_partitions
+    exit 1
+fi
+
+# ── validate partition ────────────────────────────────────────────────────────
+_available_partitions() {
+    sinfo -h -o "%P" 2>/dev/null | sed 's/\*$//' | sort -u
+}
+
+if ! sinfo -p "$PARTITION" -h &>/dev/null || [[ -z "$(sinfo -p "$PARTITION" -h 2>/dev/null)" ]]; then
+    echo "Error: partition '$PARTITION' not found." >&2
+    echo "" >&2
+    echo "Available partitions:" >&2
+    _available_partitions | while read -r p; do
+        n_nodes=$(sinfo -p "$p" -h -o "%D" 2>/dev/null | awk '{s+=$1}END{print s}')
+        printf "  %-20s (%s nodes)\n" "$p" "$n_nodes" >&2
+    done
+    exit 1
+fi
 
 expand_nodelist() {
     local nl="$1"
