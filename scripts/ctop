@@ -42,10 +42,16 @@ while true; do
 
         # Convert HH:MM:SS or D-HH:MM:SS to seconds
         _to_secs() {
-            local t="$1" d=0
+            # SLURM formats: M:SS | H:MM:SS | D-H:MM:SS
+            local t="$1" d=0 h=0 m=0 s=0
             [[ "$t" == *-* ]] && { d="${t%%-*}"; t="${t#*-}"; }
-            IFS=: read -r _h _m _s <<< "$t"
-            echo $(( d*86400 + 10#${_h:-0}*3600 + 10#${_m:-0}*60 + 10#${_s:-0} ))
+            local n; n=$(awk -F: '{print NF}' <<< "$t")
+            case $n in
+                3) h=$(cut -d: -f1 <<< "$t"); m=$(cut -d: -f2 <<< "$t"); s=$(cut -d: -f3 <<< "$t") ;;
+                2) m=$(cut -d: -f1 <<< "$t"); s=$(cut -d: -f2 <<< "$t") ;;
+                1) s=$t ;;
+            esac
+            echo $(( d*86400 + 10#${h:-0}*3600 + 10#${m:-0}*60 + 10#${s:-0} ))
         }
         _pbar() {
             local pct=$1 f e bar=""
@@ -61,13 +67,18 @@ while true; do
                 limit_s=$(_to_secs "$timelimit")
                 if [[ $limit_s -gt 0 ]]; then
                     pct=$(( elapsed_s * 100 / limit_s ))
+                    [[ $pct -gt 100 ]] && pct=100
+                    [[ $pct -gt 100 ]] && pct=100
                     left_s=$(( limit_s - elapsed_s ))
+                    [[ $left_s -lt 0 ]] && left_s=0
+                    [[ $left_s -lt 0 ]] && left_s=0
                     left_h=$(( left_s / 3600 ))
                     left_m=$(( (left_s % 3600) / 60 ))
                     left_str=$(printf "%dh%02dm" $left_h $left_m)
                 else
                     pct=0; left_str="?"
                 fi
+                account="${account%%_*}"   # strip partition suffix e.g. cad17819_genoa→cad17819
                 bar=$(_pbar $pct)
                 MY_JOBS_RUNNING+=$(printf "  \033[1;36m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  \033[90m%s\033[0m %3d%%  left:%-8s  on: %s" \
                     "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" \
