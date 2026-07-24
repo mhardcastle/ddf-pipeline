@@ -256,6 +256,7 @@ def ddf_image(
     wscms_allownegative=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
+    wscms_remove_1px_scale=True,
 
     # Input model
     use_dicomodel=False,
@@ -411,12 +412,15 @@ def ddf_image(
         runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor}'
         
         # wscms max scale is not aware of cellsizes, it only knows pixels
-        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding
+        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding.
+        # we also exclude the scale px=1 (default:True), to avoid pointsource-fitting divergence
         if wscms_MaxScale is not None:
             wscms_MaxScale_px = int(float(wscms_MaxScale) / cellsize * options['cellsize'])
             runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
         if wscms_Scales is not None:
-            wscms_Scales_px = str(sorted(set([int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales]))).replace(" ", "")
+            scaled = {int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales}
+            if wscms_remove_1px_scale: scaled -= {1}
+            wscms_Scales_px = str(sorted(scaled)).replace(" ", "")
             runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
 
         # dedicated automasking inputs
