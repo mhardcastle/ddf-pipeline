@@ -253,6 +253,7 @@ def ddf_image(
     wscms_rms_factor=None,
     wscms_peakfactor=None,
     wscms_automask_rms_factor=None,
+    wscms_allownegative=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
 
@@ -276,9 +277,10 @@ def ddf_image(
 
     keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
 
-    if STEP < 0 or STEP > len(options['wscms_automask_rms_factor']) - 1:
-        raise ValueError(f"STEP must be between 0 and {len(options['wscms_automask_rms_factor']) - 1}")
-    
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_allownegative'):
+        if STEP > len(options[key]) - 1:
+            raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
+
     # pull defaults from parset if not specified
     if HMPsize            is None: HMPsize            = options['HMPsize']
     if cleanmode          is None: cleanmode          = options['cleanmode']
@@ -295,7 +297,8 @@ def ddf_image(
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
     if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
     if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
-    
+    if wscms_allownegative       is None: wscms_allownegative       = options['wscms_allownegative'][STEP]
+
     cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
@@ -421,6 +424,8 @@ def ddf_image(
         if automask:
             runcommand += f' --WSCMS-AutoMaskRMSFactor={wscms_automask_rms_factor}'
             runcommand += ' --WSCMS-AutoMaskForceLast=False'
+
+        runcommand += f' --Deconv-AllowNegative={int(wscms_allownegative)}'
 
         if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
         runcommand += ' --Mask-FluxImageType=ModelConv'
