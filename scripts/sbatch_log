@@ -26,8 +26,8 @@ fi
 
 echo "Waiting for log: $LOG"
 
-# Wait up to 300s for the log to appear
-for (( i=0; i<300; i++ )); do
+# Wait up to 3000s for the log to appear
+for (( i=0; i<3000; i++ )); do
     if [[ -f "$LOG" ]]; then
         echo "Log appeared after ${i}s — tailing (Ctrl+C to stop):"
         echo "---"
