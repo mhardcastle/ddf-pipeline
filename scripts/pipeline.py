@@ -278,7 +278,7 @@ def ddf_image(
 
     keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
 
-    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_allownegative'):
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_allownegative', 'wscms_max_scale'):
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
 
@@ -294,7 +294,7 @@ def ddf_image(
     # pull default WSCMS settings from parset if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
     if wscms_Scales              is None: wscms_Scales              = options['wscms_scales']
-    if wscms_MaxScale            is None: wscms_MaxScale            = options['wscms_max_scale']
+    if wscms_MaxScale            is None: wscms_MaxScale            = options['wscms_max_scale'][STEP]
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
     if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
     if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
@@ -354,22 +354,21 @@ def ddf_image(
         else:
             runcommand+=' --Weight-ColName="WEIGHT_SPECTRUM"'
 
-    if cubemode:
+    if cubemode or polcubemode:
         # number of channels equals number of distinct freqs in data
         freqs=[]
         mss=[l.rstrip() for l in open(mslist).readlines()]
         for ms in mss:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            freq=t[0]['REF_FREQUENCY']
-            if freq not in freqs:
-                freqs.append(freq)
+            with pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False) as t:
+                freq=t[0]['REF_FREQUENCY']
+                if freq not in freqs:
+                    freqs.append(freq)
         channels=len(freqs)
-        runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
-
-    if polcubemode:
-        runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
-
-    if not cubemode and not polcubemode:
+        
+        if cubemode:    runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
+        if polcubemode: runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
+    else:
+        #if not cubemode and not polcubemode
         runcommand+=' --Freq-NBand=%i' % freq_nband
     
     if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
@@ -1033,12 +1032,11 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
     from pyrap.tables import table
 
     if mslist is not None:
-        f=open(mslist)
+        with open(mslist) as f:
+            mslist = [msname.rstrip() for msname in f]
     else:
         raise ValueError("mslist is None")
 
-    mslist=f.readlines()
-    mslist=[msname.replace("\n","") for msname in mslist]
     for msname in mslist:
         report('Subtracting: %s = %s - %s'%(out_colname,colname_a,colname_b))
         t=table(msname,readonly=False)

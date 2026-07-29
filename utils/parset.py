@@ -67,7 +67,7 @@ option_list = (
     ( 'image',      'phasecenter',            list,  None,   'Desired RA and DEC of image phase centre (["hh:mm:ss", "dd:mm:ss"])'),
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
-    ( 'image',      'wscms_max_scale',        float, 250,    'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
+    ( 'image',      'wscms_max_scale',        list,  [150, 300, 300, 600], 'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_rms_factor',       list,  [5, 3, 2, 1], "WSCMS2 clean floor based on RMS. Separate from SSD to keep backwards compatibility"),
     ( 'image',      'wscms_peakfactor',       list,  [0.05, 0.01, 0.01, 0.001], "WSCMS2 clean floor based on dirty image peak"),
     ( 'image',      'wscms_allownegative',    list,  [False, False, False, True], "Allow negative components in WSCMS2 main deconv per pipeline step"),
