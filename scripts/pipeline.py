@@ -418,6 +418,8 @@ def ddf_image(
             runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
         if wscms_Scales is not None:
             scaled = {int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales}
+            # have to make all scales odd before deduplication to avoid double values when using dense scale bank
+            scaled = {s + 1 if s % 2 == 0 and s > 0 else s for s in scaled}
             if wscms_remove_1px_scale: scaled -= {1}
             wscms_Scales_px = str(sorted(scaled)).replace(" ", "")
             runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
