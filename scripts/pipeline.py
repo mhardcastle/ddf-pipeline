@@ -255,6 +255,7 @@ def ddf_image(
     wscms_automask_rms_factor=None,
     wscms_allownegative=None,
     wscms_flux_threshold=None,
+    wscms_neg_max_scale=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
     wscms_remove_1px_scale=True,
@@ -301,6 +302,7 @@ def ddf_image(
     if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
     if wscms_allownegative       is None: wscms_allownegative       = options['wscms_allownegative'][STEP]
     if wscms_flux_threshold      is None: wscms_flux_threshold      = options['wscms_flux_threshold'][STEP]
+    if wscms_neg_max_scale       is None: wscms_neg_max_scale       = options['wscms_neg_max_scale']
 
     cache_dir=find_cache_dir(options)
 
@@ -425,6 +427,10 @@ def ddf_image(
             if wscms_remove_1px_scale: scaled -= {1}
             wscms_Scales_px = str(sorted(scaled)).replace(" ", "")
             runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
+        if wscms_neg_max_scale is not None:
+            # also scale wscms_neg_max_scale_px by cellsize to keep it consistent
+            wscms_neg_max_scale_px = int(float(wscms_neg_max_scale) / cellsize * options['cellsize'])
+            runcommand += f' --WSCMS-NegMaxScale={wscms_neg_max_scale_px}'
 
         # dedicated automasking inputs
         runcommand += f' --WSCMS-AutoMask={automask}'

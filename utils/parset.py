@@ -70,8 +70,9 @@ option_list = (
     ( 'image',      'wscms_max_scale',        list,  [150, 300, 300, 600], 'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_rms_factor',       list,  [8, 5, 3, 1], "WSCMS2 clean floor based on RMS. Separate from SSD to keep backwards compatibility"),
     ( 'image',      'wscms_peakfactor',       list,  [0.1, 0.01, 0.01, 0.001], "WSCMS2 clean floor based on dirty image peak"),
-    ( 'image',      'wscms_allownegative',    list,  [False, False, False, True], "Allow negative components in WSCMS2 main deconv per pipeline step"),
+    ( 'image',      'wscms_allownegative',    list,  [False, True, True, True], "Allow negative components in WSCMS2 main deconv per pipeline step (global override)"),
     ( 'image',      'wscms_flux_threshold',   list,  [1e-5, 1e-5, 1e-6, 1e-6], "WSCMS2 absolute clean floor (Jy) per pipeline step; backstop against over-cleaning"),
+    ( 'image',      'wscms_neg_max_scale',    int,   None, "WSCMS2 largest scale (px) allowed to fit negative components, scales with cellsize (default: None)"),
 
     ( 'masking',    'wscms_automask_rms_factor', list, [10,7,5,3], 'WSCMS2 automask freeze sigma per (self)cal step'),
     ( 'masking',    'thresholds',            list,  [15,10,10,5], 'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
