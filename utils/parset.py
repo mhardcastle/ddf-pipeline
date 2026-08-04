@@ -75,6 +75,7 @@ option_list = (
     ( 'image',      'wscms_neg_max_scale',    int,   None, "WSCMS2 largest scale (px) allowed to fit negative components, scales with cellsize (default: None)"),
 
     ( 'masking',    'wscms_automask_rms_factor', list, [10,7,5,3], 'WSCMS2 automask freeze sigma per (self)cal step'),
+    ( 'masking',    'use_external_mask',     list,  [True, True, True, True], 'Use the external/step mask as cleanmask and calibration-model clip, per pipeline step (default: True)'),
     ( 'masking',    'thresholds',            list,  [15,10,10,5], 'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
     ( 'masking',    'low_threshold',         float, 3.0,   'Mask sigma for low-res masking' ),
     ( 'masking',    'wide_threshold',        float, 3.0,   'Mask sigma for wide-field masking' ),
