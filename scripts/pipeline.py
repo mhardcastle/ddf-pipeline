@@ -55,7 +55,7 @@ from surveys_db import use_database,update_status,SurveysDB
 
 def summary(o):
     with open('summary.txt','w') as f:
-        ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+        ts = f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}"
         f.write('ddf-pipeline completed at '+ts+'\n')
         f.write('ddf-pipeline version was '+__version__+'\n')
         from DDFacet.DDF import report_version as ddf_version
@@ -66,8 +66,7 @@ def summary(o):
             from DynSpecMS import dynspecms_version
             f.write('DynSpecMS version was '+dynspecms_version.version()+'\n\n')
         f.write('Options dictionary was as follows:\n')
-        for k in o:
-            f.write("%-20s : %s\n" % (k,str(o[k])))
+        f.writelines(f"{k:<20} : {value}\n" for k, value in o.items())
 
 def stop(v=2):
     if use_database():
@@ -86,8 +85,8 @@ def get_solutions_timerange(sols):
     if not os.path.isfile(sols):
         if o['dryrun']:
             return 0.0, 1.0
-        raise FileNotFoundError('Solutions file not found: %s' % sols)
-    print('Reading %s'%sols)
+        raise FileNotFoundError(f'Solutions file not found: {sols}')
+    print(f'Reading {sols}')
     S=np.load(sols)
     t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
     return np.min(t),np.max(t)
@@ -171,17 +170,17 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     cache_dir=find_cache_dir(options)
     if dicomodel is None:
         dicomodel=imagename+'.DicoModel'
-    runcommand='DDF.py '+imagename+'.parset --Misc-ConserveMemory=1  --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+dicomodel+' --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
+    runcommand = f'DDF.py {imagename}.parset --Misc-ConserveMemory=1  --Output-Name={imagename}_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile={shiftfile} --Predict-InitDicoModel {dicomodel} --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir={cache_dir}'
     if 'Misc-IgnoreDeprecationMarking' in keywords:
-        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
+        runcommand += ' --Misc-IgnoreDeprecationMarking=1'
     
-    fname=imagename+'_shift.app.facetRestored.fits'
+    fname = imagename+'_shift.app.facetRestored.fits'
     if options['restart'] and os.path.isfile(fname):
-        warn('File '+fname+' already exists, skipping DDF-shift step')
+        warn(f'File {fname} already exists, skipping DDF-shift step')
         if verbose:
             print('would have run',runcommand)
     else:
-         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
+         run(runcommand,dryrun=options['dryrun'],log=logfilename(f'DDF-{imagename}_shift.log',options=options),quiet=options['quiet'])
 
 def ddf_image(
     imagename,
@@ -273,12 +272,12 @@ def ddf_image(
 
     # saveimages lists _additional_ images to save
     if saveimages is None:
-        saveimages=''
-    saveimages+='onNeds'
+        saveimages = ''
+    saveimages += 'onNeds'
     if options is None:
-        options=o # attempt to get global if it exists
+        options = o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+    keywords = parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
 
     for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_allownegative', 'wscms_max_scale', 'wscms_flux_threshold', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
@@ -307,12 +306,12 @@ def ddf_image(
     cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
-        fname=imagename+'.app.restored.fits'
+        fname = imagename+'.app.restored.fits'
     else:
-        fname=imagename+'.dirty.fits'
+        fname = imagename+'.dirty.fits'
 
     if PredictSettings is not None and PredictSettings[0]=="Predict":
-        fname="_has_predicted_OK.%s.info"%imagename
+        fname = f"_has_predicted_OK.{imagename}.info"
 
     runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1  --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
 
@@ -321,42 +320,42 @@ def ddf_image(
     if AllowNegativeInitHMP:            runcommand += " --GAClean-AllowNegativeInitHMP True"
     if OuterSpaceTh is not None:        runcommand += f" --HMP-OuterSpaceTh {OuterSpaceTh}"
 
-    runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
-    runcommand+=' --Cache-Weight=reset'
+    runcommand += f' --DDESolutions-SolsDir={options["SolsDir"]}'
+    runcommand += ' --Cache-Weight=reset'
 
     if 'Beam-PhasedArrayMode' in keywords: # incompatible change
-        runcommand+=' --Beam-PhasedArrayMode=A'
+        runcommand += ' --Beam-PhasedArrayMode=A'
     else:
-        runcommand+=' --Beam-LOFARBeamMode=A'
+        runcommand += ' --Beam-LOFARBeamMode=A'
     
     if 'Misc-IgnoreDeprecationMarking' in keywords:
-        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
+        runcommand += ' --Misc-IgnoreDeprecationMarking=1'
 
     if 'Beam-At' in keywords:
-        runcommand+=' --Beam-At=%s'%options['beam_at']
+        runcommand += f' --Beam-At={options["beam_at"]}'
         
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
         if len(PredictSettings) == 2:
-            runcommand += " --Output-Mode=%s --Predict-ColName %s"%PredictSettings
+            runcommand += f" --Output-Mode={PredictSettings[0]} --Predict-ColName {PredictSettings[1]}"
         elif len(PredictSettings) == 3:
-            runcommand += " --Output-Mode=%s --Predict-ColName %s --Predict-MaskSquare [0,%i]"%PredictSettings
+            runcommand += f" --Output-Mode={PredictSettings[0]} --Predict-ColName {PredictSettings[1]} --Predict-MaskSquare [0,{PredictSettings[2]}]"
         else:
-            raise RuntimeError('PredictSettings has the wrong dimensions %s '%PredictSettings)
+            raise RuntimeError(f'PredictSettings has the wrong dimensions {PredictSettings}')
 
     if beamsize_minor is not None:
-        runcommand += ' --Output-RestoringBeam %f,%f,%f'%(beamsize,beamsize_minor,beamsize_pa)
+        runcommand += f' --Output-RestoringBeam {beamsize},{beamsize_minor},{beamsize_pa}'
     elif beamsize is not None:
-        runcommand += ' --Output-RestoringBeam %f'%(beamsize)
+        runcommand += f' --Output-RestoringBeam {beamsize}'
     
     if apply_weights:
-        runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
+        runcommand += ' --Weight-ColName="IMAGING_WEIGHT"'
     else:
         if not use_weightspectrum:
-            runcommand+=' --Weight-ColName="None"'
+            runcommand += ' --Weight-ColName="None"'
         else:
-            runcommand+=' --Weight-ColName="WEIGHT_SPECTRUM"'
+            runcommand += ' --Weight-ColName="WEIGHT_SPECTRUM"'
 
     if cubemode or polcubemode:
         # number of channels equals number of distinct freqs in data
@@ -369,11 +368,11 @@ def ddf_image(
                     freqs.append(freq)
         channels=len(freqs)
         
-        if cubemode:    runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
-        if polcubemode: runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
+        if cubemode:    runcommand += f' --Output-Cubes I --Freq-NBand={channels}'
+        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand={channels} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
     else:
         #if not cubemode and not polcubemode
-        runcommand+=' --Freq-NBand=%i' % freq_nband
+        runcommand += f' --Freq-NBand={freq_nband}'
     
     if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
     if do_decorr: runcommand += ' --RIME-DecorrMode=FT'
@@ -446,39 +445,37 @@ def ddf_image(
 
 
     if clusterfile is not None:
-        runcommand += ' --Facets-CatNodes=%s' % clusterfile
+        runcommand += f' --Facets-CatNodes={clusterfile}'
     
     if applysols is not None:
         if normalization is not None:
             if normalization[:3]=='Abs':
                 normalization='Mean'+normalization # backward compat. hack
             runcommand += ' --DDESolutions-GlobalNorm='+normalization
-        runcommand += ' --DDESolutions-DDModeGrid=%s --DDESolutions-DDModeDeGrid=%s --DDESolutions-DDSols=%s'%(applysols,applysols,ddsols)
+        runcommand += f' --DDESolutions-DDModeGrid={applysols} --DDESolutions-DDModeDeGrid={applysols} --DDESolutions-DDSols={ddsols}'
     if use_dicomodel:
         if dicomodel_base is not None:
-            runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
+            runcommand += f' --Predict-InitDicoModel={dicomodel_base}.DicoModel'
         else:
             raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
         
     if threshold is not None:
-        runcommand += ' --Deconv-FluxThreshold=%f'%threshold
+        runcommand += f' --Deconv-FluxThreshold={threshold}'
     if uvrange is not None:
-        runcommand += ' --Selection-UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
+        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
     if dirty_from_resid and reuse_dirty:
         raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
-    if dirty_from_resid:
-        # possible that crashes could destroy the cache, so need to check
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/LastResidual'):
-            runcommand += ' --Cache-Dirty forceresidual'
-    if reuse_dirty:
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/Dirty'):
-            runcommand += ' --Cache-Dirty forcedirty'
-    if reuse_psf:
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/PSF'):
-            runcommand += ' --Cache-PSF force'
+
+    # possible that crashes could destroy the cache, so need to check
+    if dirty_from_resid and os.path.exists(cache_dir+'/'+mslist+'.ddfcache/LastResidual'):
+        runcommand += ' --Cache-Dirty forceresidual'
+    if reuse_dirty and os.path.exists(cache_dir+'/'+mslist+'.ddfcache/Dirty'):
+        runcommand += ' --Cache-Dirty forcedirty'
+    if reuse_psf and os.path.exists(cache_dir+'/'+mslist+'.ddfcache/PSF'):
+        runcommand += ' --Cache-PSF force'
 
     if HMPsize is not None:
-        runcommand += ' --GAClean-MinSizeInit=%i' % HMPsize
+        runcommand += f' --GAClean-MinSizeInit={HMPsize}'
 
     if options['nobar']:
         runcommand += ' --Log-Boring=1'
@@ -487,10 +484,11 @@ def ddf_image(
         runcommand += ' --Beam-Smooth=1'
 
     if predict_column is not None:
-        runcommand += ' --Predict-ColName=%s' % predict_column
+        runcommand += f' --Predict-ColName={predict_column}'
         
     if phasecenter is not None:
-        runcommand += " --Image-PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
+        runcommand += f' --Image-PhaseCenterRADEC=[{phasecenter[0]},{phasecenter[1]}]'
+
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
@@ -502,7 +500,7 @@ def ddf_image(
 
         # Ugly way to see if predict has been already done
         if PredictSettings is not None and not options['dryrun']:
-            os.system("touch %s"%fname)
+            os.system(f"touch {fname}")
     return imagename
         
 def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
@@ -536,7 +534,7 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
 
     if os.path.isfile(OutClusterCat):
-        warn('File %s already exists, skipping clustering step'%OutClusterCat)
+        warn(f'File {OutClusterCat} already exists, skipping clustering step')
         return
 
     if ".app.restored.fits" not in imagename:
@@ -546,9 +544,9 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         options=o # attempt to get global if it exists
 
     if use_makemask_products:
-        runcommand="MakeCatalog.py --RestoredIm %s --rmsmean_map [Noise.mean.fits,Noise.fits]"%imagename
+        runcommand = f"MakeCatalog.py --RestoredIm {imagename} --rmsmean_map [Noise.mean.fits,Noise.fits]"
     else:
-        runcommand="MakeCatalog.py --RestoredIm %s"%imagename 
+        runcommand = f"MakeCatalog.py --RestoredIm {imagename}"
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
 
     Name=imagename.split(".app.restored.fits")[0]
@@ -563,12 +561,12 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
             die('Catalogue file does not exist!')
         filename=filenames[0]
     if use_makemask_products:
-        runcommand="ClusterCat.py --SourceCat %s --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
+        runcommand = f"ClusterCat.py --SourceCat {filename} --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU {options['NCPU_DDF']}"
     else:
-        runcommand="ClusterCat.py --SourceCat %s --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
+        runcommand = f"ClusterCat.py --SourceCat {filename} --DoPlot=0 --NGen 100 --NCPU {options['NCPU_DDF']}"
     if OutClusterCat is not None:
-        runcommand+=" --OutClusterCat %s"%OutClusterCat
-    runcommand+=" --NCluster %i"%options['ndir']
+        runcommand += f" --OutClusterCat {OutClusterCat}"
+    runcommand += f" --NCluster {options['ndir']}"
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
@@ -580,9 +578,9 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 
     fname=imagename+'.mask.fits'
     if options['dryrun']: return fname
-    runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
+    runcommand = f"MakeMask.py --RestoredIm={imagename} --Th={thresh} --Box=50,2"
     if OutMaskExtended is not None:
-        runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
+        runcommand += f" --OutMaskExtended {OutMaskExtended} --OutNameNoiseMap Noise"
 
 
         
@@ -593,7 +591,7 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
-            if isinstance(external_mask,list) or isinstance(external_mask,tuple):
+            if isinstance(external_mask, (list, tuple)):
                 for mask in external_mask:
                     merge_mask(fname,mask,fname)
             else:
@@ -641,55 +639,55 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             warn('Solutions file '+checkname+' already exists, not running killMS step')
             
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            runcommand = f"kMS.py --MSName {f} --SolverType {SolverType} --PolMode {PolMode} --BaseImageName {imagename} --NIterKF {niterkf} --CovQ {CovQ} --LambdaKF={options['LambdaKF']} --NCPU {options['NCPU_killms']} --OutSolsName {outsols} --InCol {colname}"
 
             # check for option to stop pdb call and use it if present
             
             if 'DebugPdb' in keywords:
-                runcommand+=' --DebugPdb=0'
+                runcommand += ' --DebugPdb=0'
                 
             if robust is None:
-                runcommand+=' --Weighting Natural'
+                runcommand += ' --Weighting Natural'
             else:
-                runcommand+=' --Weighting Briggs --Robust=%f' % robust
+                runcommand += f' --Weighting Briggs --Robust={robust}'
             if UpdateWeights is not None:
-                runcommand+=' --UpdateWeights=%f' %UpdateWeights               
+                runcommand += f' --UpdateWeights={UpdateWeights}'               
             if uvrange is not None:
                 if wtuv is not None:
-                    runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
+                    runcommand += f' --WTUV={wtuv} --WeightUVMinMax={uvrange[0]},{uvrange[1]}'
                 else:
-                    runcommand+=' --UVMinMax=%f,%f' % (uvrange[0], uvrange[1])
+                    runcommand += f' --UVMinMax={uvrange[0]},{uvrange[1]}'
             if options['nobar']:
-                runcommand+=' --DoBar=0'
+                runcommand += ' --DoBar=0'
 
-            runcommand+=' --SolsDir=%s'%options["SolsDir"]
+            runcommand += f' --SolsDir={options["SolsDir"]}'
             
             if PreApplySols:
-                runcommand+=' --PreApplySols=[%s]'%PreApplySols
+                runcommand += f' --PreApplySols=[{PreApplySols}]'
                 
             if DISettings is None:
                 if NChanSols is None:
                     NChanSols=1 # reproduce old behaviour
-                runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode LOFAR'
+                runcommand += f' --NChanSols {NChanSols}'
+                runcommand += ' --BeamMode LOFAR'
                 if 'PhasedArrayMode' in keywords: # incompatible change
-                    runcommand+=' --PhasedArrayMode=A'
+                    runcommand += ' --PhasedArrayMode=A'
                 else:
-                    runcommand+=' --LOFARBeamMode=A'
-                runcommand+=' --DDFCacheDir='+cache_dir
+                    runcommand += ' --LOFARBeamMode=A'
+                runcommand += ' --DDFCacheDir='+cache_dir
                 if 'BeamAt' in keywords:
-                    runcommand+=' --BeamAt=%s'%options['beam_at']
+                    runcommand += f' --BeamAt={options["beam_at"]}'
 
                 if clusterfile is not None:
-                    runcommand+=' --NodesFile '+clusterfile
+                    runcommand += ' --NodesFile '+clusterfile
                 if dicomodel is not None:
-                    runcommand+=' --DicoModel '+dicomodel
+                    runcommand += ' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
-                    runcommand+=' --EvolutionSolFile '+EvolutionSolFile
+                    runcommand += ' --EvolutionSolFile '+EvolutionSolFile
                 if dt is not None:
-                    runcommand+=' --dt %f' % dt
+                    runcommand += f' --dt {dt}'
             else:
-                runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
+                runcommand += f" --SolverType {DISettings[0]} --PolMode {DISettings[1]} --SkyModelCol {DISettings[2]} --OutCol {DISettings[3]} --ApplyToDir 0"
                 _,_,ModelColName,_=DISettings
                 if not options['dryrun'] or os.path.isfile(f):
                     _,dt_give,_,n_df_give=give_dt_dnu(f,
@@ -703,7 +701,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 else:
                     if dt is None: dt=1.0
                     if NChanSols is None: NChanSols=1
-                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
+                runcommand += f" --dt {dt+1e-4} --NChanSols {NChanSols}"
                 
                 
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
@@ -713,14 +711,14 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             ClipCol=DISettings[-1]
         else:
             ClipCol=colname
-        runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
+        runcommand = f"ClipCal.py --MSName {f} --ColName {ClipCol}"
 
         if options['restart'] and os.path.isfile(clipcal_checkname):
             warn('ClipCal done file '+clipcal_checkname+' already exists, not running ClipCal step')
         else:
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
             if not options['dryrun']:
-                os.system("touch %s"%clipcal_checkname)
+                os.system(f"touch {clipcal_checkname}")
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
@@ -732,8 +730,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
     return outsols
 
 def compress_fits(filename,q):
-    command='fpack -q %i %s' % (q,filename)
-    run(command,dryrun=o['dryrun'])
+    command = f'fpack -q {q} {filename}'
+    run(command, dryrun=o['dryrun'])
     
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
@@ -744,7 +742,7 @@ def make_model(maskname,imagename,catcher=None):
         warn('File '+fname+' already exists, skipping MakeModel step')
         return False
     else:
-        runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['ndir'])
+        runcommand = f"MakeModel.py --MaskName={maskname} --BaseImageName={imagename} --NCluster={o['ndir']} --DoPlot=0"
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
         return True
 
@@ -754,7 +752,7 @@ def mask_dicomodel(indico,maskname,outdico,catcher=None):
     if o['restart'] and os.path.isfile(outdico):
         warn('File '+outdico+' already exists, skipping MaskDicoModel step')
     else:
-        runcommand = "MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(maskname,indico,outdico) 
+        runcommand = f"MaskDicoModel.py --MaskName={maskname} --InDicoModel={indico} --OutDicoModel={outdico}"
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
     return outdico.split(".")[0]
 
@@ -826,38 +824,38 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 
     for start_time in Ustart_times:
         if not dryrun:
-            with open('solslist_%.2f.txt'%start_time,'w') as f:
-                for i in range(0,len(full_sollist)):
+            with open(f'solslist_{start_time:.2f}.txt', 'w') as f:
+                for i in range(0, len(full_sollist)):
                     if start_times[i] == start_time:
                         solname = full_sollist[i]
-                        f.write('%s\n'%(solname))
+                        f.write(f'{solname}\n')
         
-        checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
+        checkname=f'{ddsols}_{start_time:.2f}_merged.npz'
         if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running MergeSols step')
         else:
-            ss='MergeSols.py --SolsFilesIn=solslist_%.2f.txt --SolFileOut=%s '%(start_time,checkname)
+            ss=f'MergeSols.py --SolsFilesIn=solslist_{start_time:.2f}.txt --SolFileOut={checkname}'
             if SigmaFilterOutliers:
-                ss+=" --SigmaFilterOutliers %f"%SigmaFilterOutliers
+                ss+=f" --SigmaFilterOutliers {SigmaFilterOutliers}"
             run(ss,dryrun=dryrun)
             
-        checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+        checkname=f'{ddsols}_{start_time:.2f}_smoothed.npz'
         if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
         else:
-            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,options['smoothingtype'],options['NCPU_killms']),dryrun=dryrun)
+            run(f'SmoothSols.py --SolsFileIn={ddsols}_{start_time:.2f}_merged.npz --SolsFileOut={checkname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
 
-        smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+        smoothoutname=f'{ddsols}_{start_time:.2f}_smoothed.npz'
 
         if InterpToMSListFreqs:
-            interp_outname="%s_%.2f_interp.npz"%(smoothoutname,start_time)
+            interp_outname=f"{smoothoutname}_{start_time:.2f}_interp.npz"
             checkname=interp_outname
             if options['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,options['NCPU_killms'])
+                command=f"InterpSols.py --SolsFileIn {smoothoutname} --SolsFileOut {interp_outname} --MSOutFreq {InterpToMSListFreqs} --NCPU={options['NCPU_killms']}"
                 run(command,dryrun=dryrun)
         
         for i in range(0,len(full_sollist)):
@@ -872,9 +870,9 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                         warn('Symlink ' + symsolname + ' already exists, recreating')
                         os.unlink(symsolname)
                     if not SkipSmooth:
-                        os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
+                        os.symlink(os.path.abspath(f'{ddsols}_{start_time:.2f}_smoothed.npz'),symsolname)
                     else:
-                        os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
+                        os.symlink(os.path.abspath(f'{ddsols}_{start_time:.2f}_merged.npz'),symsolname)
                     
                     
         if SkipSmooth:
@@ -926,7 +924,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     nch_step=int(round(np.sqrt(nb)))
     nch_step=np.max([1,nch_step])
     nch_step=np.min([nch,nch_step])
-    warn('nch_step=%i'%(nch_step))
+    warn(f'nch_step={nch_step}')
 
     # find the step to have equal interval size
     #nch_bin=int(nch/nch_step)+1
@@ -941,7 +939,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     nt_step=np.max([1,nt_step])
 
     SNR=np.sqrt(nt_step*nch_step)*M/S
-    warn('Using (dt,df)=(%i,%i) for self-cal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
+    warn(f'Using ({nt_step},{nch_step}) for self-cal run of {msname} with (<|model|>,std)=({M:.2f},{S:.2f}) giving SNR={SNR:.2f}')
     
     return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
     
@@ -999,7 +997,7 @@ def cubical_data(mslist,
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
 def ingest_dynspec(obsid='*'):
-    report('Ingesting dynamic spectra (%s) into the database' % obsid)
+    report(f'Ingesting dynamic spectra ({obsid}) into the database')
     with SurveysDB() as sdb:
         sdb.cur.execute('lock table spectra write')
         field=os.path.basename(os.getcwd())
@@ -1010,11 +1008,11 @@ def ingest_dynspec(obsid='*'):
             bits=f.split('_')
             obsid=bits[1]
             CatName=f+'/Catalog.npy'
-            print("Loading %s"%CatName)
+            print(f"Loading {CatName}")
             try:
                 catalogue=np.load(CatName)
             except:
-                print("   %s does not exist"%CatName)
+                print(f"   {CatName} does not exist")
                 continue
             # match filenames to names
             fd={}
@@ -1030,12 +1028,12 @@ def ingest_dynspec(obsid='*'):
                 assert(name in fd)
                 fd[name]=ff
                 hdu.close()
-            sdb.cur.execute('delete from spectra where obsid="%s"' % obsid)
+            sdb.cur.execute(f'delete from spectra where obsid="{obsid}"')
             for i,r in enumerate(catalogue):
                 name=r['Name']
                 if isinstance(name,np.bytes_):
                     name=name.decode('utf-8')
-                sExec='insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
+                sExec = 'insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
                 print(sExec)
                 sdb.cur.execute(sExec)
 
@@ -1049,13 +1047,13 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
         raise ValueError("mslist is None")
 
     for msname in mslist:
-        report('Subtracting: %s = %s - %s'%(out_colname,colname_a,colname_b))
+        report(f'Subtracting: {out_colname} = {colname_a} - {colname_b}')
         t=table(msname,readonly=False)
         d=t.getcol(colname_a)
         p=t.getcol(colname_b)
         d-=p
         if out_colname not in t.colnames():
-            report('Adding column %s in %s'%(out_colname,msname))
+            report(f'Adding column {out_colname} in {msname}')
             desc=t.getcoldesc(colname_a)
             desc["name"]=out_colname
             desc['comment']=desc['comment'].replace(" ","_")
@@ -1064,8 +1062,8 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
         t.close()
 
 def subtractOuterSquare(o):
-    wide_imsize=o['wide_imsize']
-    NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
+    #wide_imsize=o['wide_imsize']
+    #NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
 
     wide_uvrange=[o['image_uvmin'],2.5*206.0/o['wide_psf_arcsec']]
@@ -1149,7 +1147,7 @@ def subtractOuterSquare(o):
     
     FileHasPredicted='image_full_wide_predict.HasPredicted'
     if o['restart'] and os.path.isfile(FileHasPredicted):
-        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
+        warn(f'File {FileHasPredicted} already exists, skipping Predict step')
     else:
         ddf_image('image_full_wide_predict', o['full_mslist'],
                   cleanmode=o['cleanmode'],
@@ -1178,16 +1176,16 @@ def subtractOuterSquare(o):
         )
         
         if not o['dryrun']:
-            os.system("touch %s"%FileHasPredicted)
+            os.system(f"touch {FileHasPredicted}")
 
 
     # subtract predicted visibilities
     FileHasSubtracted='image_full_wide_predict.HasSubtracted'
     if o['restart'] and os.path.isfile(FileHasSubtracted):
-        warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
+        warn(f'File {FileHasSubtracted} already exists, skipping subtract vis step')
     elif not o['dryrun']:
         subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
-        os.system("touch %s"%FileHasSubtracted)
+        os.system(f"touch {FileHasSubtracted}")
 
     ## test subtracted...
     ## sanity check
@@ -1241,7 +1239,7 @@ def main(o=None):
     if not o['dryrun']:
         for fCat in lCat:
             if not os.path.isfile(fCat):
-                die("Catalog %s does not exist"%fCat)
+                die(f"Catalog {fCat} does not exist")
 
     if o['catch_signal']:
         catcher=Catcher()
@@ -1284,7 +1282,7 @@ def main(o=None):
             dummy=None
         t.close()
         if dummy is None:
-            die('Dataset does not contain the column "%s"' % colname)
+            die(f'Dataset does not contain the column {colname}')
     
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])    
@@ -1530,7 +1528,7 @@ def main(o=None):
             separator("DI CAL")
             ########################
             killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                         niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
@@ -1613,7 +1611,7 @@ def main(o=None):
 
         separator("DD calibration")
         CurrentDDkMSSolName=killms_data(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                         clusterfile=ClusterFile,
                                         CovQ=0.02,
                                         niterkf=o['NIterKF'][1],
@@ -1674,7 +1672,7 @@ def main(o=None):
 
         separator("DD calibration")
         CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                         CovQ=0.02,
                                         clusterfile=ClusterFile,
                                         niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
@@ -1756,7 +1754,7 @@ def main(o=None):
                 colname=o['colname']
 
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
-                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                         #clusterfile=ClusterFile,
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
@@ -1857,7 +1855,7 @@ def main(o=None):
     separator("DD calibration of full mslist")
     CurrentDDkMSSolName=killms_data(CurrentImageName,o['full_mslist'],'DDS2_full',
                                     colname=colname,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
                                     niterkf=o['NIterKF'][4],
@@ -1918,7 +1916,7 @@ def main(o=None):
         #              ModelColName="DD_PREDICT",
         #              OutColName="DATA_DI_CORRECTED")
         killms_data('Predict_DDS2',o['full_mslist'],'DIS2_full',colname=colname,
-                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                     clusterfile=ClusterFile,
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
@@ -2024,7 +2022,7 @@ def main(o=None):
                                     o['full_mslist'],'DDS3_full',
                                     colname=colname,
                                     clusterfile=ClusterFile,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                     niterkf=o['NIterKF'][6],
                                     CovQ=0.1,
                                     uvrange=killms_uvrange,
@@ -2042,7 +2040,7 @@ def main(o=None):
                                         colname=colname,
                                         SolverType="KAFCA",
                                         clusterfile=ClusterFile,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                         uvrange=[o['uvmin_very_slow'],1000.],
                                         wtuv=o['wtuv'],
                                         robust=o['solutions_robust'],
@@ -2051,7 +2049,7 @@ def main(o=None):
                                         dt=o['dt_very_slow'],catcher=catcher,
                                         PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
 
-        CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
+        CurrentDDkMSSolName=f"[{CurrentDDkMSSolName_FastSmoothed},{CurrentDDkMSSolName}]"
 
     if o['low_psf_arcsec'] is not None: # low-res image requested
         separator("Low-resolution image")
@@ -2360,7 +2358,7 @@ def main(o=None):
         uobsid = set()
     stokesv_mslists=[]
     for obsid in uobsid:
-        umslist='mslist-%s.txt' % obsid
+        umslist = f'mslist-{obsid}.txt'
         stokesv_mslists.append(umslist)
         if not o['dryrun']:
             print('Writing ms list for obsids',umslist)
@@ -2370,8 +2368,8 @@ def main(o=None):
                         file.write(ms+'\n')
     if o['stokesv']:
         for obsid in uobsid:
-            separator('Stokes V image for %s'%obsid)
-            ddf_image('image_full_high_stokesV_%s' % obsid, 'mslist-%s.txt' % obsid,
+            separator(f'Stokes V image for {obsid}')
+            ddf_image(f'image_full_high_stokesV_{obsid}', f'mslist-{obsid}.txt',
                       cleanmode=o['cleanmode'],
                       colname=colname,
                       cellsize=o['cellsize'],
@@ -2403,7 +2401,7 @@ def main(o=None):
         if o['delete_compressed']:
             for f in flist:
                 if os.path.isfile(f+'.fz'):
-                    warn('Deleting compressed file %s' % f)
+                    warn(f'Deleting compressed file {f}')
                     os.remove(f)
                 else:
                     if not o['dryrun']:
@@ -2419,15 +2417,15 @@ def main(o=None):
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
 
         for obsid in uobsid:
-            LastImageV="image_full_high_stokesV_%s.dirty.corr.fits"%obsid
-            warn('Running ms2dynspec for obsid %s' % obsid)
-            umslist='mslist-%s.txt' % obsid
-            g=glob.glob('DynSpec*'+obsid+'*')
+            LastImageV=f"image_full_high_stokesV_{obsid}.dirty.corr.fits"
+            warn(f'Running ms2dynspec for obsid {obsid}')
+            umslist=f'mslist-{obsid}.txt'
+            g=glob.glob(f'DynSpec*{obsid}*')
             if len(g)>0:
-                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+                warn(f'DynSpecs results directory {g[0]} already exists, skipping DynSpecs')
             else:
-                DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
-                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
+                DicoFacetName=f"{LastImage.split('.int.restored.fits')[0]}.DicoFacet"
+                runcommand = f"ms2dynspec.py --ms {umslist} --data {colname} --model DD_PREDICT --sols {CurrentDDkMSSolName} --rad 2. --imageI {LastImage} --imageV {LastImageV} --LogBoring {o['nobar']} --SolsDir {o['SolsDir']} --BeamModel LOFAR --BeamNBand 1 --DicoFacet {DicoFacetName} --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${{DDF_PIPELINE_CATALOGS}}/dyn_spec_catalogue_addedexo_addvlotss.fits"
                 
                 if o['bright_threshold'] is not None and os.path.isfile('brightlist.csv'):
                     runcommand+=' --srclist brightlist.csv'
@@ -2437,8 +2435,8 @@ def main(o=None):
 
 
     if o['compress_ms'] and not o['dryrun']:
-        separator('Compressing MS for archive -- column '+colname)
-        os.system('archivems.sh . '+colname)
+        separator(f'Compressing MS for archive -- column {colname}')
+        os.system(f'archivems.sh . {colname}')
                 
     separator('Write summary and tidy up')
     summary(o)
