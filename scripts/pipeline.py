@@ -746,14 +746,18 @@ def make_model(maskname,imagename,catcher=None):
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
         return True
 
-def mask_dicomodel(indico,maskname,outdico,catcher=None):
+def mask_dicomodel(indico,maskname,outdico,catcher=None,filterneg=True):
     if catcher: catcher.check()
 
     if o['restart'] and os.path.isfile(outdico):
         warn('File '+outdico+' already exists, skipping MaskDicoModel step')
     else:
-        runcommand = f"MaskDicoModel.py --MaskName={maskname} --InDicoModel={indico} --OutDicoModel={outdico}"
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
+        runcommand = f"MaskDicoModel.py --InDicoModel={indico} --OutDicoModel={outdico}"
+        if maskname:
+            runcommand += f" --MaskName={maskname}"
+        if filterneg:
+            runcommand += " --FilterNegComp=1"
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+outdico+'.log'),quiet=o['quiet'])
     return outdico.split(".")[0]
 
 def rmtglob(path):
@@ -1667,8 +1671,7 @@ def main(o=None):
 
         separator("Mask for deeper deconv")
         CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
-        if o['use_external_mask'][1]:
-            CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
+        CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_phase1_masked.DicoModel',catcher=catcher)
 
         separator("DD calibration")
         CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
@@ -1715,8 +1718,7 @@ def main(o=None):
 
         separator("Make Mask")
         CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
-        if o['use_external_mask'][1]:
-            CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+        CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_ampphase1m_masked.DicoModel',catcher=catcher)
 
         if not o['skip_di']:
             separator("Second DI calibration")
@@ -1826,8 +1828,7 @@ def main(o=None):
         if not o['skip_di']:
             separator("Make Mask")
             CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
-            if o['use_external_mask'][1]:
-                CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
+            CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
             CurrentImageName= 'image_ampphase1_di'
         else:
             CurrentImageName = 'image_ampphase1'
@@ -2014,8 +2015,7 @@ def main(o=None):
 
     separator("MakeMask")
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][2] else None
-    if o['use_external_mask'][2]:
-        CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName,ImageName+'_masked.DicoModel',catcher=catcher)
+    CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName if o['use_external_mask'][2] else None,ImageName+'_masked.DicoModel',catcher=catcher)
             
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data(ImageName,
