@@ -945,7 +945,7 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     SNR=np.sqrt(nt_step*nch_step)*M/S
     warn(f'Using ({nt_step},{nch_step}) for self-cal run of {msname} with (<|model|>,std)=({M:.2f},{S:.2f}) giving SNR={SNR:.2f}')
     
-    return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
+    return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch//nch_step
     
 def cubical_data(mslist,
                  NameSol="DI0",
@@ -1147,7 +1147,7 @@ def subtractOuterSquare(o):
     )
 
     # predict outside the central rectangle
-    NpixMaskSquare = np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell'])
+    NpixMaskSquare = int(np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell']))
     
     FileHasPredicted='image_full_wide_predict.HasPredicted'
     if o['restart'] and os.path.isfile(FileHasPredicted):
@@ -1976,7 +1976,7 @@ def main(o=None):
         stop(2)
         
     separator("MakeMask")
-    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher) if o['use_external_mask'][2] else None
+    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][2] else None
 
     separator("Finish Deconvolution AP (full mslist)")
     if not o['skip_di']:
@@ -2425,7 +2425,7 @@ def main(o=None):
                 warn(f'DynSpecs results directory {g[0]} already exists, skipping DynSpecs')
             else:
                 DicoFacetName=f"{LastImage.split('.int.restored.fits')[0]}.DicoFacet"
-                runcommand = f"ms2dynspec.py --ms {umslist} --data {colname} --model DD_PREDICT --sols {CurrentDDkMSSolName} --rad 2. --imageI {LastImage} --imageV {LastImageV} --LogBoring {o['nobar']} --SolsDir {o['SolsDir']} --BeamModel LOFAR --BeamNBand 1 --DicoFacet {DicoFacetName} --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${{DDF_PIPELINE_CATALOGS}}/dyn_spec_catalogue_addedexo_addvlotss.fits"
+                runcommand = f"ms2dynspec.py --ms {umslist} --data {colname} --model DD_PREDICT --sols {CurrentDDkMSSolName} --rad 2. --imageI {LastImage} --imageV {LastImageV} --LogBoring {int(o['nobar'])} --SolsDir {o['SolsDir']} --BeamModel LOFAR --BeamNBand 1 --DicoFacet {DicoFacetName} --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${{DDF_PIPELINE_CATALOGS}}/dyn_spec_catalogue_addedexo_addvlotss.fits"
                 
                 if o['bright_threshold'] is not None and os.path.isfile('brightlist.csv'):
                     runcommand+=' --srclist brightlist.csv'
