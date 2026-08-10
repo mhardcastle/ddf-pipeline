@@ -247,6 +247,7 @@ def ddf_image(
     # WSCMS settings
     # allows the option for per pipeline-step scale adjustments
     wscms_MultiScaleBias=None,
+    wscms_scale_density=None,
     wscms_Scales=None,
     wscms_MaxScale=None,
     wscms_rms_factor=None,
@@ -294,6 +295,7 @@ def ddf_image(
 
     # pull default WSCMS settings from parset if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
+    if wscms_scale_density       is None: wscms_scale_density       = options['wscms_scale_density']
     if wscms_Scales              is None: wscms_Scales              = options['wscms_scales']
     if wscms_MaxScale            is None: wscms_MaxScale            = options['wscms_max_scale'][STEP]
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
@@ -410,8 +412,11 @@ def ddf_image(
     #### WSCMS / WSCMS2 ####
     ########################
     elif cleanmode in ('WSCMS', 'WSCMS2'):
+        if wscms_scale_density <=1:
+            die('wscms_scale_density must be > 1 to avoid infinite scales')
+
         # parameters shared between WSCMS versions
-        runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor}'
+        runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --WSCMS-ScaleDensity={wscms_scale_density} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor}'
         
         # wscms max scale is not aware of cellsizes, it only knows pixels
         # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding.

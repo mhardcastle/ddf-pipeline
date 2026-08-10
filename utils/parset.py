@@ -66,6 +66,7 @@ option_list = (
     ( 'image',      'splitisland_size',       float, 100,    'Size to use for SSDClean-MaxIslandSize option in DDFacet'),
     ( 'image',      'phasecenter',            list,  None,   'Desired RA and DEC of image phase centre (["hh:mm:ss", "dd:mm:ss"])'),
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
+    ( 'image',      'wscms_scale_density',    float, 1.6,    'WSCMS auto scale-bank density; geometric factor between consecutive scales (must be > 1)'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_max_scale',        list,  [150, 300, 300, 600], 'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_rms_factor',       list,  [8, 5, 3, 1], "WSCMS2 clean floor based on RMS. Separate from SSD to keep backwards compatibility"),
