@@ -256,6 +256,8 @@ def ddf_image(
     wscms_allownegative=None,
     wscms_flux_threshold=None,
     wscms_neg_max_scale=None,
+    wscms_compact_margin=None,
+    wscms_rescue_rms_factor=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
     wscms_remove_1px_scale=True,
@@ -304,6 +306,8 @@ def ddf_image(
     if wscms_allownegative       is None: wscms_allownegative       = options['wscms_allownegative'][STEP]
     if wscms_flux_threshold      is None: wscms_flux_threshold      = options['wscms_flux_threshold'][STEP]
     if wscms_neg_max_scale       is None: wscms_neg_max_scale       = options['wscms_neg_max_scale']
+    if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
+    if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
 
     cache_dir=find_cache_dir(options)
 
@@ -441,6 +445,10 @@ def ddf_image(
         if automask:
             runcommand += f' --WSCMS-AutoMaskRMSFactor={wscms_automask_rms_factor}'
             runcommand += ' --WSCMS-AutoMaskForceLast=False'
+        if wscms_compact_margin is not None:
+            runcommand += f' --WSCMS-CompactMargin={float(wscms_compact_margin)}'
+        if wscms_rescue_rms_factor is not None:
+            runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
 
         runcommand += f' --Deconv-AllowNegative={int(wscms_allownegative)}'
         runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold}'
