@@ -253,7 +253,7 @@ def ddf_image(
     wscms_rms_factor=None,
     wscms_peakfactor=None,
     wscms_automask_rms_factor=None,
-    wscms_allownegative=None,
+    wscms_neg_model_mode=None,
     wscms_flux_threshold=None,
     wscms_neg_max_scale=None,
     wscms_compact_margin=None,
@@ -282,7 +282,7 @@ def ddf_image(
 
     keywords = parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
 
-    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_allownegative', 'wscms_max_scale', 'wscms_flux_threshold', 'thresholds', 'use_external_mask'):
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
 
@@ -303,7 +303,7 @@ def ddf_image(
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
     if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
     if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
-    if wscms_allownegative       is None: wscms_allownegative       = options['wscms_allownegative'][STEP]
+    if wscms_neg_model_mode      is None: wscms_neg_model_mode      = options['wscms_neg_model_mode'][STEP]
     if wscms_flux_threshold      is None: wscms_flux_threshold      = options['wscms_flux_threshold'][STEP]
     if wscms_neg_max_scale       is None: wscms_neg_max_scale       = options['wscms_neg_max_scale']
     if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
@@ -450,7 +450,7 @@ def ddf_image(
         if wscms_rescue_rms_factor is not None:
             runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
 
-        runcommand += f' --Deconv-AllowNegative={int(wscms_allownegative)}'
+        runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
         runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold}'
 
         if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
