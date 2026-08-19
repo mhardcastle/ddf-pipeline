@@ -319,7 +319,7 @@ def ddf_image(
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname = f"_has_predicted_OK.{imagename}.info"
 
-    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1  --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
+    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 50000 --CF-Nw 100 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
 
     if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
     if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
@@ -375,22 +375,22 @@ def ddf_image(
         channels=len(freqs)
         
         if cubemode:    runcommand += f' --Output-Cubes I --Freq-NBand={channels}'
-        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand={channels} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
+        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty --Freq-NBand={channels} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
     else:
         #if not cubemode and not polcubemode
         runcommand += f' --Freq-NBand={freq_nband}'
     
     if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
     if do_decorr: runcommand += ' --RIME-DecorrMode=FT'
+    if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
 
     ###########################
     #### SSD / SSD2 / SSD3 ####
     ###########################
     if cleanmode in ('SSD', 'SSD2', 'SSD3'):
         # parameters shared between SSD versions
-        runcommand += f' --Deconv-RMSFactor={rms_factor} --Deconv-PeakFactor={peakfactor} --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0'
+        runcommand += f' --Deconv-RMSFactor={rms_factor} --Deconv-PeakFactor={peakfactor} --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0  --SSDClean-ConvFFTSwitch 10000'
         if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}' 
-        if cleanmask is not None:      runcommand += f' --Mask-External={cleanmask}'
         if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options["splitisland_size"]}'
 
         # SSD2 specific parameters
@@ -451,10 +451,7 @@ def ddf_image(
             runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
 
         runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
-        runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold}'
-
-        if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
-        runcommand += ' --Mask-FluxImageType=ModelConv'
+        runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold} --Mask-FluxImageType=ModelConv'
 
 
     if clusterfile is not None:
