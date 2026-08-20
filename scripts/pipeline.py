@@ -401,7 +401,7 @@ def ddf_image(
         if cleanmode == 'SSD3':
              runcommand += ' --SSD3-InitType ["HMP_0-100","MultiSlice:Orieux"]'
              runcommand += ' --SSD3-NLookBackModels 5'
-             runcommand += ' --SSD3-NLastCycleDeconvAll 2'
+             runcommand += ' --SSD3-NLastCyclesDeconvAll 2'
              runcommand += ' --SSD3-AllowFacetOverlap 0'
              runcommand += ' --SSD3-RunSimpleClean 0'
              runcommand += ' --SSD3-PropagatePrevGen 0'
