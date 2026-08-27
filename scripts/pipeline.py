@@ -579,6 +579,26 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     runcommand += f" --NCluster {options['ndir']}"
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
 
+def get_phase_centre(fname):
+    """Return (ra, dec) in radians of the MS phase centre, or None on any error."""
+    try:
+        t = pt.table(fname + '/FIELD', ack=False)
+        try:
+            phase_dir = t.getcol('PHASE_DIR')[0, 0]
+        finally:
+            t.close()
+        return float(phase_dir[0]), float(phase_dir[1])
+    except Exception:
+        return None
+
+def get_pointing_id(fname, phase_dir):
+    if phase_dir is not None:
+        return '%.7f_%.7f' % (round(phase_dir[0], 7), round(phase_dir[1], 7))
+    parent = os.path.basename(os.path.dirname(fname.rstrip(os.path.sep)))
+    if parent:
+        return parent
+    return None
+
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
     if catcher: catcher.check()
 
@@ -690,6 +710,8 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
 
                 if clusterfile is not None:
                     runcommand += ' --NodesFile '+clusterfile
+                if options['cluster_cut_deg'] > 0:
+                    runcommand += f' --ImageSkyModel-ClusterAngularCutDeg {options["cluster_cut_deg"]}'
                 if dicomodel is not None:
                     runcommand += ' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
@@ -819,6 +841,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
+    pointing_ids = []
     SolsDir=options["SolsDir"]
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
@@ -826,6 +849,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
+            pointing_ids.append(get_pointing_id(fname,get_phase_centre(fname)))
     else:
         for fname in filenames:
             MSName=os.path.abspath(fname).split("/")[-1]
@@ -833,66 +857,92 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
+            pointing_ids.append(get_pointing_id(fname,get_phase_centre(fname)))
 
-    Ustart_times = np.unique(start_times)
+    pids = [p if p is not None else 'unknown' for p in pointing_ids]
+    groups = sorted(set(zip(start_times, pids)))
+    outname = ddsols + '_merged' if SkipSmooth else ddsols + '_smoothed'
 
-    for start_time in Ustart_times:
+    for start_time, pid in groups:
+        inds = [i for i in range(len(full_sollist))
+                if start_times[i] == start_time and pids[i] == pid]
+        tag = f'{start_time:.2f}_{pid}'
+
         if not dryrun:
-            with open(f'solslist_{start_time:.2f}.txt', 'w') as f:
-                for i in range(0, len(full_sollist)):
-                    if start_times[i] == start_time:
-                        solname = full_sollist[i]
-                        f.write(f'{solname}\n')
-        
-        checkname=f'{ddsols}_{start_time:.2f}_merged.npz'
-        if options['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running MergeSols step')
-        else:
-            ss=f'MergeSols.py --SolsFilesIn=solslist_{start_time:.2f}.txt --SolFileOut={checkname}'
-            if SigmaFilterOutliers:
-                ss+=f" --SigmaFilterOutliers {SigmaFilterOutliers}"
-            run(ss,dryrun=dryrun)
-            
-        checkname=f'{ddsols}_{start_time:.2f}_smoothed.npz'
-        if options['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
-        elif SkipSmooth:
-            warn('Skipping smoothing Solutions file')
-        else:
-            run(f'SmoothSols.py --SolsFileIn={ddsols}_{start_time:.2f}_merged.npz --SolsFileOut={checkname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
+            with open(f'solslist_{tag}.txt', 'w') as f:
+                for i in inds:
+                    f.write(f'{full_sollist[i]}\n')
 
-        smoothoutname=f'{ddsols}_{start_time:.2f}_smoothed.npz'
+        mergedname = f'{ddsols}_{tag}_merged.npz'
+        smoothoutname = f'{ddsols}_{tag}_smoothed.npz'
+
+        if len(inds) == 1:
+            # single MS in this (t0, pointing) group: MergeSols crashes on one
+            # file (SortInFreq reduction over empty diff) and SmoothSols cannot
+            # smooth over a single frequency cell, so symlink the raw (expanded)
+            # solutions as both outputs
+            solname = full_sollist[inds[0]]
+            if options['restart'] and os.path.isfile(mergedname):
+                warn('Solutions file '+mergedname+' already exists, not running MergeSols step')
+            elif not dryrun:
+                if os.path.islink(mergedname):
+                    os.unlink(mergedname)
+                os.symlink(os.path.abspath(solname), mergedname)
+                warn(f'Only one MS in group {tag}, using raw solutions as merged file')
+            if options['restart'] and os.path.isfile(smoothoutname):
+                warn('Solutions file '+smoothoutname+' already exists, not running SmoothSols step')
+            elif SkipSmooth:
+                warn('Skipping smoothing Solutions file')
+            elif not dryrun:
+                nfreq = np.load(solname, allow_pickle=True)['FreqDomains'].shape[0]
+                if nfreq <= 1:
+                    warn(f'Only {nfreq} frequency cell(s) in group {tag}, skipping SmoothSols (TEC fit degenerate)')
+                    if os.path.islink(smoothoutname):
+                        os.unlink(smoothoutname)
+                    os.symlink(os.path.abspath(solname), smoothoutname)
+                else:
+                    run(f'SmoothSols.py --SolsFileIn={mergedname} --SolsFileOut={smoothoutname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
+        else:
+            checkname=mergedname
+            if options['restart'] and os.path.isfile(checkname):
+                warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+            else:
+                ss=f'MergeSols.py --SolsFilesIn=solslist_{tag}.txt --SolFileOut={checkname}'
+                if SigmaFilterOutliers:
+                    ss+=f" --SigmaFilterOutliers {SigmaFilterOutliers}"
+                run(ss,dryrun=dryrun)
+
+            checkname=smoothoutname
+            if options['restart'] and os.path.isfile(checkname):
+                warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+            elif SkipSmooth:
+                warn('Skipping smoothing Solutions file')
+            else:
+                run(f'SmoothSols.py --SolsFileIn={mergedname} --SolsFileOut={checkname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
 
         if InterpToMSListFreqs:
-            interp_outname=f"{smoothoutname}_{start_time:.2f}_interp.npz"
+            interp_outname=f"{smoothoutname}_interp.npz"
             checkname=interp_outname
             if options['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
                 command=f"InterpSols.py --SolsFileIn {smoothoutname} --SolsFileOut {interp_outname} --MSOutFreq {InterpToMSListFreqs} --NCPU={options['NCPU_killms']}"
                 run(command,dryrun=dryrun)
-        
-        for i in range(0,len(full_sollist)):
-            if start_times[i] == start_time:
+
+        for i in inds:
+            if not SkipSmooth:
+                symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+            else:
+                symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')
+            if not dryrun:
+                # always overwrite the symlink to allow the dataset to move -- costs nothing
+                if os.path.islink(symsolname):
+                    warn('Symlink ' + symsolname + ' already exists, recreating')
+                    os.unlink(symsolname)
                 if not SkipSmooth:
-                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+                    os.symlink(os.path.abspath(smoothoutname),symsolname)
                 else:
-                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
-                if not dryrun:
-                    # always overwrite the symlink to allow the dataset to move -- costs nothing
-                    if os.path.islink(symsolname):
-                        warn('Symlink ' + symsolname + ' already exists, recreating')
-                        os.unlink(symsolname)
-                    if not SkipSmooth:
-                        os.symlink(os.path.abspath(f'{ddsols}_{start_time:.2f}_smoothed.npz'),symsolname)
-                    else:
-                        os.symlink(os.path.abspath(f'{ddsols}_{start_time:.2f}_merged.npz'),symsolname)
-                    
-                    
-        if SkipSmooth:
-            outname = ddsols + '_merged'
-        else:
-            outname = ddsols + '_smoothed'
+                    os.symlink(os.path.abspath(mergedname),symsolname)
 
     return outname
 

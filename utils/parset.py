@@ -28,6 +28,7 @@ option_list = (
     ( 'solutions',  'smoothing',        bool,  True,  'Smooth the solutions.'),
     ( 'solutions',  'smoothingtype',    str,   'TEC,PolyAmp', 'Type of smoothing to do on the solutions.'),
     ( 'solutions',  'apply_sols',       list,  ['P', 'AP', 'AP', 'AP', 'AP', 'AP', 'AP'], 'Solutions to apply after the 7 killMS steps' ),
+    ( 'solutions',  'cluster_cut_deg',  float, 4.0,   'Maximum distance (deg) of directions from each MS phase centre when solving per-MS (0 disables pruning)' ),
 
     ( 'image',      'cleanmode',              str,   'SSD',  'Deconvolution mode to use for the imaging (SSD, SSD2, SSD3, WSCMS, WSCMS2)'),
     ( 'image',      'do_wide',                bool,  False,  'do widefield image and subtract sources in annulus' ),
