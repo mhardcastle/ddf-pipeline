@@ -118,7 +118,7 @@ def run_bootstrap(o):
         # As for the main pipeline, first make a dirty map
         ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',
                   cleanmask=None,cleanmode=o['cleanmode'],ddsols='DDS0',
-                  applysols=o['apply_sols'][6],majorcycles=0,robust=low_robust,
+                  applysols=o['apply_sols'][0],majorcycles=0,robust=low_robust,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
                   imsize=low_imsize,cellsize=o['low_cell'],
                   options=o,colname=colname,automask=True,
@@ -129,12 +129,13 @@ def run_bootstrap(o):
         # Deep SSD clean with this external mask and automasking
         ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
                   cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
-                  cleanmode=o['cleanmode'],ddsols='DDS0',applysols=o['apply_sols'][6],
+                  cleanmode=o['cleanmode'],ddsols='DDS0',applysols=o['apply_sols'][0],
                   majorcycles=5,robust=low_robust,uvrange=low_uvrange,
                   beamsize=o['low_psf_arcsec'],imsize=low_imsize,
                   cellsize=o['low_cell'],options=o,
                   colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
+                  wscms_peakfactor=0.01,wscms_neg_model_mode=1,wscms_rescue_rms_factor=15.0,
                   conditional_clearcache=False, STEP=0)
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
