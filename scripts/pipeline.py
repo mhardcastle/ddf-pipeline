@@ -711,7 +711,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
                 if clusterfile is not None:
                     runcommand += ' --NodesFile '+clusterfile
                 if options['cluster_cut_deg'] > 0:
-                    runcommand += f' --ImageSkyModel-ClusterAngularCutDeg {options["cluster_cut_deg"]}'
+                    runcommand += f' --ClusterAngularCutDeg {options["cluster_cut_deg"]}'
                 if dicomodel is not None:
                     runcommand += ' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
