@@ -282,7 +282,7 @@ def do_run_high_v(outname,mslist,options=None):
     uvrange=[o['image_uvmin'],o['uvmax']]
     ddf_kw = {}
     ddf_image(outname,mslist,
-                  cleanmode='SSD',ddsols='[DDS3_full_smoothed,DDS3_full_slow]',
+                  cleanmode=o['cleanmode'],ddsols='[DDS3_full_smoothed,DDS3_full_slow]',
                   applysols=o['apply_sols'][6],stokes='IV',
                   AllowNegativeInitHMP=True,
                   majorcycles=0,robust=o['final_robust'],
