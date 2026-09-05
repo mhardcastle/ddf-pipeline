@@ -248,7 +248,7 @@ def do_epoch_pol(outname,mslistname,options=None):
     cthreads=[]
     flist=[]
     ddf_kw = {}
-    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',low_uvrange,outname,mslistname,ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=None)
+    do_polcubes('DATA','[DDS3_full_smoothed,DDS3_full_slow]',low_uvrange,outname,mslistname,ddf_kw,beamsize=o['low_psf_arcsec'],beamsize_minor=o['low_psf_minor_arcsec'],beamsize_pa=o['low_psf_pa_deg'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=None)
 
     # Redo the headers
     #for cubefile in cubefiles:

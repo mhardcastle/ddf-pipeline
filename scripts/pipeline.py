@@ -2222,7 +2222,6 @@ def main(o=None):
                 imsize=low_imsize,
                 cellsize=o['low_cell'],
                 robust=o['low_robust'],
-                beamsize=o['low_psf_arcsec'],
                 phasecenter=o['phasecenter'],
                 majorcycles=1,
                 peakfactor=0.001,
@@ -2242,6 +2241,7 @@ def main(o=None):
                 smooth=True,
                 catcher=catcher,
                 STEP=3,
+                **ddf_kw,
         )
 
         external_mask='external_mask_ext-deep.fits'
@@ -2372,7 +2372,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
-            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',o['full_mslist'],ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',o['full_mslist'],ddf_kw,beamsize=o['low_psf_arcsec'],beamsize_minor=o['low_psf_minor_arcsec'],beamsize_pa=o['low_psf_pa_deg'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):
