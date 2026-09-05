@@ -319,7 +319,7 @@ def ddf_image(
     if PredictSettings is not None and PredictSettings[0]=="Predict":
         fname = f"_has_predicted_OK.{imagename}.info"
 
-    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 70000 --CF-Nw 200 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
+    runcommand = f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}  --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']} --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode} --Beam-Model=LOFAR --Weight-Robust {robust} --Image-NPix={imsize} --CF-wmax 70000 --CF-Nw 200 --Output-Also {saveimages} --Image-Cell {float(cellsize)} --Facets-NFacets=11 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Facets-SkipTh {options['facets_skip_th']} --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir} --Debug-Pdb=never --Log-Memory 1"
 
     if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
     if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"

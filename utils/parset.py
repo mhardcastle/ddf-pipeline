@@ -66,6 +66,7 @@ option_list = (
     ( 'image',      'use_splitisland',        bool,  False,  'Use the SSDClean-MaxIslandSize option in DDFacet'),
     ( 'image',      'splitisland_size',       float, 100,    'Size to use for SSDClean-MaxIslandSize option in DDFacet'),
     ( 'image',      'phasecenter',            list,  None,   'Desired RA and DEC of image phase centre (["hh:mm:ss", "dd:mm:ss"])'),
+    ( 'image',      'facets_skip_th',         float, 0.0,    'Skip gridding/degridding facets below this mean Jones power; for mosaic/co-deconvolution mode (default: 0, disable)'),
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
     ( 'image',      'wscms_scale_density',    float, 1.6,    'WSCMS auto scale-bank density; geometric factor between consecutive scales (must be > 1)'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
