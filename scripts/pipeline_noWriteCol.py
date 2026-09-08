@@ -284,10 +284,14 @@ def check_imaging_weight(mslist_name):
                 desc['comment']=desc['comment'].replace(" ","_")
                 print("  Putting column %s in %s"%(desc["name"],ms))
                 t.addcols(desc)
+                print("  OK1 %s in %s"%(desc["name"],ms))
                 w=t.getcol(desc["name"])
+                print("  OK2 %s in %s"%(desc["name"],ms))
                 w.fill(1)
                 t.putcol(desc["name"],w)
+                print("  OK3 %s in %s"%(desc["name"],ms))
                 t.close()
+                print("  OK %s in %s"%(desc["name"],ms))
                 result=True
     if error:
         raise RuntimeError('One or more tables failed to open')
@@ -896,6 +900,9 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
 
             # 25/04/2024: Not in master but in my exp branch, not sure it should be there
             runcommand+=' --WeightInCol=IMAGING_WEIGHT'
+            
+            if options['chunk_hours'] > 0:
+                runcommand += " --TChunk=%f"%options['chunk_hours']
 
             if NChanSols is None:
                 NChanSols=1 # reproduce old behaviour

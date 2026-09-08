@@ -40,6 +40,8 @@ dependencies = [
     "future",
     "simms",
     "python-casacore", # lofar
+    "xarray",
+    "zarr",
 ]
 
 [project.scripts]
