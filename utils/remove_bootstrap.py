@@ -23,6 +23,7 @@ def remove_columns(mslist_name,colnames=['SCALED_DATA']):
         t.close()
         if isinstance(colnames,str):
             colnames=[colnames]
+            
         for colname in colnames:
             print('Removing',colname,'column in',mslist_name)
             if colname in cpresent:
@@ -32,6 +33,7 @@ def remove_columns(mslist_name,colnames=['SCALED_DATA']):
                 t.close()
             else:
                 print('Table',ms,'has no',colname,'column')
+        os.system("rm -rf %s/IMAGING_WEIGHT.zarr"%ms)
 
 if __name__=='__main__':
     remove_columns(sys.argv[1],sys.argv[2])

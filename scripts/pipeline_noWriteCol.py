@@ -60,6 +60,8 @@ import mpi_manager
 global SetMS,Register
 Register=None
 
+KMS_LUCKY_WEIGHTS_NAME="IMAGING_WEIGHT.zarr"
+
 import time
 import copy # deepcopy
 
@@ -245,6 +247,8 @@ def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
 #         raise RuntimeError('One or more tables failed to open')
 #     return result
 
+from DDFacet.Data.ClassZarrCol import ClassZarrColMachine
+
 def check_imaging_weight(mslist_name):
     # returns a boolean that says whether it did something
     result=False
@@ -258,44 +262,20 @@ def check_imaging_weight(mslist_name):
             print('Failed to open table',ms,'-- table may be missing or corrupt')
             error=True
         else:
-            try:
-                dummy=t.getcoldesc('IMAGING_WEIGHT')
-            except RuntimeError:
-                dummy=None
+            nrows=t.nrows()
             t.close()
-            if dummy is not None:
+            ColMachine=ClassZarrColMachine(ms)
+            if ColMachine.exists('IMAGING_WEIGHT'):
                 warn('Table '+ms+' already has imaging weights')
             else:
                 nchan=pt.table("%s/SPECTRAL_WINDOW"%ms).getcol("CHAN_FREQ").size
-                ColDesc={'valueType': 'float',
-                         'dataManagerType': 'StandardStMan',
-                         'dataManagerGroup': 'SSMVar',
-                         'option': 4,
-                         'maxlen': 0,
-                         'comment': '',
-                         'ndim': 1,
-                         'shape': np.array([nchan]),
-                         '_c_order': True,
-                         'keywords': {}}
-
-                t=pt.table(ms,readonly=False,ack=False)
-                desc=ColDesc
-                desc["name"]="IMAGING_WEIGHT"
-                desc['comment']=desc['comment'].replace(" ","_")
-                print("  Putting column %s in %s"%(desc["name"],ms))
-                t.addcols(desc)
-                print("  OK1 %s in %s"%(desc["name"],ms))
-                w=t.getcol(desc["name"])
-                print("  OK2 %s in %s"%(desc["name"],ms))
-                w.fill(1)
-                t.putcol(desc["name"],w)
-                print("  OK3 %s in %s"%(desc["name"],ms))
-                t.close()
-                print("  OK %s in %s"%(desc["name"],ms))
+                print("  Putting column %s in %s (zarr)"%('IMAGING_WEIGHT',ms))
+                ColMachine.addcol("IMAGING_WEIGHT", (nrows,nchan), dtype=np.float32, fill_value=1, max_chunk_bytes=1e6)
                 result=True
     if error:
         raise RuntimeError('One or more tables failed to open')
     return result
+
 
 
 def parse_parset(parsets,use_headings=False):
@@ -362,7 +342,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
 def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
               #ddsols=None,applysols=None,
               DDSols=None,
-              threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2, mpiManager=None,ApplyJonesCorr=None):
+              threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2, mpiManager=None,ApplyJonesCorr=None,ResetWeight=False):
     if catcher: catcher.check()
 
     # saveimages lists _additional_ images to save
@@ -403,6 +383,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
 
     if options['chunk_hours'] > 0:
         runcommand += " --Data-ChunkHours=%f"%options['chunk_hours']
+    runcommand += " --Misc-QuickUVScan 1"
 
     runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
     runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
@@ -418,7 +399,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
 
 
     runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
-    runcommand+=' --Cache-Weight=reset'
+
+    if ResetWeight:
+        runcommand+=' --Cache-Weight=reset'
 
 
     runcommand+=" --RIME-FullMTilde=True"
@@ -455,7 +438,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
         runcommand += ' --Output-RestoringBeam %f'%(beamsize)
 
     if apply_weights:
-        runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
+        runcommand+=' --Weight-ColName="%s"'%KMS_LUCKY_WEIGHTS_NAME
     else:
         if not use_weightspectrum:
             runcommand+=' --Weight-ColName="None"'
@@ -899,10 +882,9 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                     runcommand+=' --PreApplySols=%s --PreApplyMode=%s'%(sPreApplySols,sPreApplyModes)
 
             # 25/04/2024: Not in master but in my exp branch, not sure it should be there
-            runcommand+=' --WeightInCol=IMAGING_WEIGHT'
-            
-            if options['chunk_hours'] > 0:
-                runcommand += " --TChunk=%f"%options['chunk_hours']
+            runcommand+=' --WeightInCol=%s'%KMS_LUCKY_WEIGHTS_NAME
+            runcommand+=' --WeightOutCol=%s'%KMS_LUCKY_WEIGHTS_NAME
+
 
             if NChanSols is None:
                 NChanSols=1 # reproduce old behaviour
@@ -948,6 +930,9 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             if ApplyJonesCorr:
                 runcommand+=" --ApplyJonesCorr %s"%ApplyJonesCorr
                 
+            if options['chunk_hours']:
+                runcommand += " --TChunk %f"%options['chunk_hours']
+            
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
             try:
@@ -962,11 +947,14 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             #     ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
             # else:
             #     ClipCol=colname
+            
             ClipCol=colname
             runcommand="ClipCal.py --MSName %s --ColName %s "%(f,ClipCol)
             if DISettings is not None:
                 runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(outsols,SolsDir)
-                
+            runcommand+=" --WeightCol %s"%KMS_LUCKY_WEIGHTS_NAME
+            runcommand += " --ChunkHours %f"%options['chunk_hours']
+            
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             try:
@@ -2010,6 +1998,7 @@ def main(o):
                         mpiManager=MPI_Manager,
                         #DDSols=[[CurrentDIkMSSolName,"AP_inv"]],
                         ApplyJonesCorr=CurrentDIkMSSolName,
+                        ResetWeight=True
                         )
 
             separator("Make mask for next iteration")
@@ -2108,6 +2097,7 @@ def main(o):
                                            PredictSettings=("Clean","DD_PREDICT"),
                                            mpiManager=MPI_Manager,
                                            ApplyJonesCorr=CurrentDIkMSSolName,
+                                           ResetWeight=True
                                            )
         ###
 
@@ -2160,6 +2150,7 @@ def main(o):
                                            PredictSettings=("Clean","DD_PREDICT"),
                                            mpiManager=MPI_Manager,
                                            ApplyJonesCorr=CurrentDIkMSSolName,
+                                           ResetWeight=True
                                            )
         if o['exitafter'] == 'ampphase':
             warn('User specified exit after amp-phase deconvolution.')
