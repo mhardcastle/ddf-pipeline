@@ -60,6 +60,8 @@ import mpi_manager
 global SetMS,Register
 Register=None
 
+KMS_LUCKY_WEIGHTS_NAME="IMAGING_WEIGHT.zarr"
+
 import time
 import copy # deepcopy
 
@@ -245,6 +247,8 @@ def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
 #         raise RuntimeError('One or more tables failed to open')
 #     return result
 
+from DDFacet.Data.ClassZarrCol import ClassZarrColMachine
+
 def check_imaging_weight(mslist_name):
     # returns a boolean that says whether it did something
     result=False
@@ -258,40 +262,20 @@ def check_imaging_weight(mslist_name):
             print('Failed to open table',ms,'-- table may be missing or corrupt')
             error=True
         else:
-            try:
-                dummy=t.getcoldesc('IMAGING_WEIGHT')
-            except RuntimeError:
-                dummy=None
+            nrows=t.nrows()
             t.close()
-            if dummy is not None:
+            ColMachine=ClassZarrColMachine(ms)
+            if ColMachine.exists('IMAGING_WEIGHT'):
                 warn('Table '+ms+' already has imaging weights')
             else:
                 nchan=pt.table("%s/SPECTRAL_WINDOW"%ms).getcol("CHAN_FREQ").size
-                ColDesc={'valueType': 'float',
-                         'dataManagerType': 'StandardStMan',
-                         'dataManagerGroup': 'SSMVar',
-                         'option': 4,
-                         'maxlen': 0,
-                         'comment': '',
-                         'ndim': 1,
-                         'shape': np.array([nchan]),
-                         '_c_order': True,
-                         'keywords': {}}
-
-                t=pt.table(ms,readonly=False,ack=False)
-                desc=ColDesc
-                desc["name"]="IMAGING_WEIGHT"
-                desc['comment']=desc['comment'].replace(" ","_")
-                print("  Putting column %s in %s"%(desc["name"],ms))
-                t.addcols(desc)
-                w=t.getcol(desc["name"])
-                w.fill(1)
-                t.putcol(desc["name"],w)
-                t.close()
+                print("  Putting column %s in %s (zarr)"%('IMAGING_WEIGHT',ms))
+                ColMachine.addcol("IMAGING_WEIGHT", (nrows,nchan), dtype=np.float32, fill_value=1, max_chunk_bytes=1e6)
                 result=True
     if error:
         raise RuntimeError('One or more tables failed to open')
     return result
+
 
 
 def parse_parset(parsets,use_headings=False):
@@ -451,7 +435,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
         runcommand += ' --Output-RestoringBeam %f'%(beamsize)
 
     if apply_weights:
-        runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
+        runcommand+=' --Weight-ColName="%s"'%KMS_LUCKY_WEIGHTS_NAME
     else:
         if not use_weightspectrum:
             runcommand+=' --Weight-ColName="None"'
@@ -895,7 +879,8 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                     runcommand+=' --PreApplySols=%s --PreApplyMode=%s'%(sPreApplySols,sPreApplyModes)
 
             # 25/04/2024: Not in master but in my exp branch, not sure it should be there
-            runcommand+=' --WeightInCol=IMAGING_WEIGHT'
+            runcommand+=' --WeightInCol=%s'%KMS_LUCKY_WEIGHTS_NAME
+            runcommand+=' --WeightOutCol=%s'%KMS_LUCKY_WEIGHTS_NAME
 
             if NChanSols is None:
                 NChanSols=1 # reproduce old behaviour
@@ -941,6 +926,9 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             if ApplyJonesCorr:
                 runcommand+=" --ApplyJonesCorr %s"%ApplyJonesCorr
                 
+            if options['chunk_hours']:
+                runcommand += " --TChunk %f"%options['chunk_hours']
+            
             rootfilename=outsols.split('/')[-1]
             f_=f.replace("/","_")
             try:
@@ -955,11 +943,14 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             #     ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
             # else:
             #     ClipCol=colname
+            
             ClipCol=colname
             runcommand="ClipCal.py --MSName %s --ColName %s "%(f,ClipCol)
             if DISettings is not None:
                 runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(outsols,SolsDir)
-                
+            runcommand+=" --WeightCol %s"%KMS_LUCKY_WEIGHTS_NAME
+            runcommand += " --ChunkHours %f"%options['chunk_hours']
+            
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             try:
