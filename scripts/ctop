@@ -74,7 +74,56 @@ expand_nodelist() {
     scontrol show hostnames "$nl" 2>/dev/null
 }
 
+# ── typical wait time by node-count bucket (from recent job history) ───────
+# Looks at jobs that started in the last 3 days on this partition and
+# buckets their (start - submit) wait time by how many nodes they asked
+# for, so a pending job's wait can be compared to similarly-sized jobs.
+# sacct over a multi-day window can be slow (tens of seconds on a busy
+# accounting DB), so this is only refreshed every TYPICAL_WAIT_TTL seconds
+# -- not every screen refresh -- and cached in-memory in between.
+TYPICAL_WAIT_TTL=300   # seconds between sacct refreshes (5 min)
+LAST_TYPICAL_WAIT_REFRESH=0
+declare -A TYPICAL_WAIT_SUM=()
+declare -A TYPICAL_WAIT_CNT=()
+
+_refresh_typical_wait() {
+    local now; now=$(date +%s)
+    (( now - LAST_TYPICAL_WAIT_REFRESH < TYPICAL_WAIT_TTL )) && return
+    LAST_TYPICAL_WAIT_REFRESH=$now
+    TYPICAL_WAIT_SUM=()
+    TYPICAL_WAIT_CNT=()
+    while IFS='|' read -r submit start nnodes_h state_h; do
+        [[ -z "$submit" || "$submit" == "Unknown" || "$submit" == "None" ]] && continue
+        [[ -z "$start"  || "$start"  == "Unknown" || "$start"  == "None" ]] && continue
+        [[ "$nnodes_h" =~ ^[0-9]+$ ]] || continue
+        sub_epoch=$(date -d "$submit" +%s 2>/dev/null) || continue
+        start_epoch=$(date -d "$start" +%s 2>/dev/null) || continue
+        wait_s=$(( start_epoch - sub_epoch ))
+        [[ $wait_s -lt 0 ]] && continue
+        TYPICAL_WAIT_SUM[$nnodes_h]=$(( ${TYPICAL_WAIT_SUM[$nnodes_h]:-0} + wait_s ))
+        TYPICAL_WAIT_CNT[$nnodes_h]=$(( ${TYPICAL_WAIT_CNT[$nnodes_h]:-0} + 1 ))
+    done < <(sacct -a -X -p --partition="$PARTITION" --starttime=now-3days \
+                   --format=Submit,Start,NNodes,State 2>/dev/null | tail -n +2)
+}
+
+# Given a requested node count, find the closest bucket with at least
+# 2 samples and report its average wait, e.g. "~1h30m (n=4,~4N)".
+_typical_wait_str() {
+    local want=$1 best_n="" best_diff=999999 n diff
+    for n in "${!TYPICAL_WAIT_CNT[@]}"; do
+        (( ${TYPICAL_WAIT_CNT[$n]} < 2 )) && continue
+        diff=$(( n > want ? n - want : want - n ))
+        if (( diff < best_diff )); then best_diff=$diff; best_n=$n; fi
+    done
+    [[ -z "$best_n" ]] && { echo "n/a"; return; }
+    local avg=$(( TYPICAL_WAIT_SUM[$best_n] / TYPICAL_WAIT_CNT[$best_n] ))
+    local h=$(( avg/3600 )) m=$(( (avg%3600)/60 ))
+    printf "~%dh%02dm (n=%d,~%dN)" "$h" "$m" "${TYPICAL_WAIT_CNT[$best_n]}" "$best_n"
+}
+
 while true; do
+    _refresh_typical_wait
+
     # ── my jobs (running + pending) ────────────────────────────────────────
     declare -A MY_RUNNING=()
     declare -A MY_PENDING=()
@@ -84,7 +133,7 @@ while true; do
     MY_JOBS_PENDING=""
 
     # Use | delimiter so empty %N (pending jobs) doesn't shift fields
-    while IFS='|' read -r jobid jobstate nodes time timelimit name nodelist jobpart account reason; do
+    while IFS='|' read -r jobid jobstate nodes time timelimit name nodelist jobpart account reason submit; do
         [[ -z "$jobid" || "$jobid" == "JOBID" ]] && continue
         jobid=$(echo "$jobid" | tr -d ' ')
         reason=$(echo "$reason" | sed 's/^ *//')
@@ -153,15 +202,32 @@ while true; do
             PENDING)
                 start=$(squeue --me -h -j "$jobid" --start -o "%S" 2>/dev/null)
                 [[ -z "$start" ]] && start="N/A"
-                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  est.start: %-20s reason: %s" \
-                    "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$start" "$reason")
+                twait=$(_typical_wait_str "$nodes")
+                if [[ -n "$submit" && "$submit" != "Unknown" && "$submit" != "N/A" ]]; then
+                    submit_epoch=$(date -d "$submit" +%s 2>/dev/null)
+                    if [[ -n "$submit_epoch" ]]; then
+                        waited_s=$(( $(date +%s) - submit_epoch ))
+                        [[ $waited_s -lt 0 ]] && waited_s=0
+                        wd=$(( waited_s/86400 )); wh=$(( (waited_s%86400)/3600 )); wm=$(( (waited_s%3600)/60 ))
+                        if   [[ $wd -gt 0 ]]; then waited_str=$(printf "%dd%02dh" "$wd" "$wh")
+                        elif [[ $wh -gt 0 ]]; then waited_str=$(printf "%dh%02dm" "$wh" "$wm")
+                        else                       waited_str=$(printf "%dm" "$wm"); fi
+                        submitted_str="${submit} (${waited_str} ago)"
+                    else
+                        submitted_str="$submit"
+                    fi
+                else
+                    submitted_str="N/A"
+                fi
+                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  req:%-11s submitted: %s\n                  est.start: %-14s typ.wait: %-22s reason: %s" \
+                    "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$timelimit" "$submitted_str" "$start" "$twait" "$reason")
                 MY_JOBS_PENDING+=$'\n'
                 while read -r node; do
                     [[ -n "$node" ]] && MY_PENDING["$node"]=1
                 done < <(expand_nodelist "$nodelist")
                 ;;
         esac
-    done < <(squeue -u "$ME" -h -o "%i|%T|%D|%M|%l|%j|%N|%P|%a|%R" 2>/dev/null)
+    done < <(squeue -u "$ME" -h -o "%i|%T|%D|%M|%l|%j|%N|%P|%a|%R|%V" 2>/dev/null)
 
     my_running_nodes=${#MY_RUNNING[@]}
     my_pending_nodes=${#MY_PENDING[@]}
