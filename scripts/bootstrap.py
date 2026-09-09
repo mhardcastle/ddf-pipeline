@@ -86,7 +86,7 @@ def run_bootstrap(o):
 
     # We use the individual ms in mslist.
     m=MSList(o['mslist'])
-    Uobsid = set(m.obsids)
+    Uobsid = sorted(set(m.obsids))
     
     for obsid in Uobsid:
         
@@ -135,7 +135,7 @@ def run_bootstrap(o):
                   cellsize=o['low_cell'],options=o,
                   colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
-                  wscms_peakfactor=0.01,wscms_neg_model_mode=1,wscms_rescue_rms_factor=15.0,
+                  wscms_peakfactor=0.01,wscms_rescue_rms_factor=15.0,
                   conditional_clearcache=False, STEP=0)
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
