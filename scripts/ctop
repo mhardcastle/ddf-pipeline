@@ -74,51 +74,190 @@ expand_nodelist() {
     scontrol show hostnames "$nl" 2>/dev/null
 }
 
-# ── typical wait time by node-count bucket (from recent job history) ───────
+# ── typical wait time by node-count + requested-walltime bucket ────────────
 # Looks at jobs that started in the last 3 days on this partition and
-# buckets their (start - submit) wait time by how many nodes they asked
-# for, so a pending job's wait can be compared to similarly-sized jobs.
-# sacct over a multi-day window can be slow (tens of seconds on a busy
-# accounting DB), so this is only refreshed every TYPICAL_WAIT_TTL seconds
-# -- not every screen refresh -- and cached in-memory in between.
+# buckets their (start - submit) wait time by (how many nodes they asked
+# for, how long they asked to run for), since both influence scheduling/
+# backfill decisions -- a 2-node/1h job and a 2-node/3-day job can have very
+# different queue times.
+#
+# This can be a genuinely slow query on a busy accounting DB (many rows,
+# each needing two `date -d` calls), so it is NEVER run in the foreground:
+# it's launched as a background job at most once every TYPICAL_WAIT_TTL
+# seconds, writes its result to a small cache file, and the main loop just
+# reads that cache file (near-instant) every redraw. The screen never waits
+# on sacct, no matter how long it takes.
 TYPICAL_WAIT_TTL=300   # seconds between sacct refreshes (5 min)
-LAST_TYPICAL_WAIT_REFRESH=0
-declare -A TYPICAL_WAIT_SUM=()
+CACHE_FILE="/tmp/.ctop_typical_wait_${PARTITION}_${UID}.cache"
+LOCK_FILE="${CACHE_FILE}.lock"
+declare -A TYPICAL_WAIT_SUM=()        # key "<nnodes>_<walltime_bucket_idx>"
 declare -A TYPICAL_WAIT_CNT=()
+declare -A TYPICAL_WAIT_SUM_ANYWT=()  # key "<nnodes>" -- fallback, ignores walltime
+declare -A TYPICAL_WAIT_CNT_ANYWT=()
 
-_refresh_typical_wait() {
-    local now; now=$(date +%s)
-    (( now - LAST_TYPICAL_WAIT_REFRESH < TYPICAL_WAIT_TTL )) && return
-    LAST_TYPICAL_WAIT_REFRESH=$now
-    TYPICAL_WAIT_SUM=()
-    TYPICAL_WAIT_CNT=()
-    while IFS='|' read -r submit start nnodes_h state_h; do
+WALLTIME_BUCKET_LABELS=("<=1h" "<=4h" "<=12h" "<=24h" "<=72h" ">72h")
+
+# Parse a SLURM duration string (SS | MM:SS | HH:MM:SS | D-HH:MM:SS) to seconds.
+# Pure bash (no awk/cut forks) since this also runs once per historical row.
+_dhms_to_secs() {
+    local t="$1" d=0 h=0 m=0 s=0 parts
+    if [[ -z "$t" || "$t" == "UNLIMITED" || "$t" == "Partition_Limit" ]]; then
+        echo 999999999; return
+    fi
+    [[ "$t" == *-* ]] && { d="${t%%-*}"; t="${t#*-}"; }
+    IFS=':' read -ra parts <<< "$t"
+    case ${#parts[@]} in
+        3) h=${parts[0]}; m=${parts[1]}; s=${parts[2]} ;;
+        2) m=${parts[0]}; s=${parts[1]} ;;
+        1) s=${parts[0]} ;;
+        *) echo 999999999; return ;;
+    esac
+    echo $(( 10#${d:-0}*86400 + 10#${h:-0}*3600 + 10#${m:-0}*60 + 10#${s:-0} ))
+}
+
+_walltime_bucket_idx() {
+    local secs=$1
+    if   (( secs <= 3600     )); then echo 0
+    elif (( secs <= 4*3600   )); then echo 1
+    elif (( secs <= 12*3600  )); then echo 2
+    elif (( secs <= 24*3600  )); then echo 3
+    elif (( secs <= 72*3600  )); then echo 4
+    else                              echo 5
+    fi
+}
+
+# Runs only in the background. Queries sacct, buckets everything using pure
+# bash string ops (one fork pair for `date -d` per row -- unavoidable -- but
+# nothing else), and writes the result to CACHE_FILE atomically (via a temp
+# file + mv) so the main loop never sees a half-written cache.
+_compute_typical_wait_to_file() {
+    local tmpfile="${CACHE_FILE}.tmp.$$"
+    local submit start nnodes_h tlimit_h state_h
+    local sub_epoch start_epoch wait_s t d h m s parts tsecs bidx key
+    declare -A sum=() cnt=() sum_any=() cnt_any=()
+
+    while IFS='|' read -r submit start nnodes_h tlimit_h state_h; do
         [[ -z "$submit" || "$submit" == "Unknown" || "$submit" == "None" ]] && continue
         [[ -z "$start"  || "$start"  == "Unknown" || "$start"  == "None" ]] && continue
         [[ "$nnodes_h" =~ ^[0-9]+$ ]] || continue
         sub_epoch=$(date -d "$submit" +%s 2>/dev/null) || continue
         start_epoch=$(date -d "$start" +%s 2>/dev/null) || continue
         wait_s=$(( start_epoch - sub_epoch ))
-        [[ $wait_s -lt 0 ]] && continue
-        TYPICAL_WAIT_SUM[$nnodes_h]=$(( ${TYPICAL_WAIT_SUM[$nnodes_h]:-0} + wait_s ))
-        TYPICAL_WAIT_CNT[$nnodes_h]=$(( ${TYPICAL_WAIT_CNT[$nnodes_h]:-0} + 1 ))
+        (( wait_s < 0 )) && continue
+
+        d=0; h=0; m=0; s=0; t="$tlimit_h"; tsecs=""
+        if [[ -z "$t" || "$t" == "UNLIMITED" || "$t" == "Partition_Limit" ]]; then
+            tsecs=999999999
+        else
+            [[ "$t" == *-* ]] && { d="${t%%-*}"; t="${t#*-}"; }
+            IFS=':' read -ra parts <<< "$t"
+            case ${#parts[@]} in
+                3) h=${parts[0]}; m=${parts[1]}; s=${parts[2]} ;;
+                2) m=${parts[0]}; s=${parts[1]} ;;
+                1) s=${parts[0]} ;;
+                *) tsecs=999999999 ;;
+            esac
+            [[ -z "$tsecs" ]] && tsecs=$(( 10#${d:-0}*86400 + 10#${h:-0}*3600 + 10#${m:-0}*60 + 10#${s:-0} ))
+        fi
+        if   (( tsecs <= 3600     )); then bidx=0
+        elif (( tsecs <= 4*3600   )); then bidx=1
+        elif (( tsecs <= 12*3600  )); then bidx=2
+        elif (( tsecs <= 24*3600  )); then bidx=3
+        elif (( tsecs <= 72*3600  )); then bidx=4
+        else                              bidx=5
+        fi
+
+        key="${nnodes_h}_${bidx}"
+        sum[$key]=$(( ${sum[$key]:-0} + wait_s ))
+        cnt[$key]=$(( ${cnt[$key]:-0} + 1 ))
+        sum_any[$nnodes_h]=$(( ${sum_any[$nnodes_h]:-0} + wait_s ))
+        cnt_any[$nnodes_h]=$(( ${cnt_any[$nnodes_h]:-0} + 1 ))
     done < <(sacct -a -X -p --partition="$PARTITION" --starttime=now-3days \
-                   --format=Submit,Start,NNodes,State 2>/dev/null | tail -n +2)
+                   --format=Submit,Start,NNodes,Timelimit,State 2>/dev/null | tail -n +2)
+
+    : > "$tmpfile"
+    for key in "${!cnt[@]}"; do
+        echo "BUCKET|$key|${sum[$key]}|${cnt[$key]}" >> "$tmpfile"
+    done
+    for key in "${!cnt_any[@]}"; do
+        echo "ANYWT|$key|${sum_any[$key]}|${cnt_any[$key]}" >> "$tmpfile"
+    done
+    mv -f "$tmpfile" "$CACHE_FILE"
+    rm -f "$LOCK_FILE"
 }
 
-# Given a requested node count, find the closest bucket with at least
-# 2 samples and report its average wait, e.g. "~1h30m (n=4,~4N)".
+# Called every redraw. Never blocks: kicks off a background recompute if the
+# cache is missing/stale and nothing is already running, then loads whatever
+# is currently on disk (instant) into the in-memory arrays used for display.
+_refresh_typical_wait() {
+    if [[ -e "$LOCK_FILE" ]]; then
+        # Guard against a crashed/killed background job leaving a stale lock
+        # forever -- if it's older than 2x TTL, assume it's dead and clear it.
+        local lock_age=$(( $(date +%s) - $(date -r "$LOCK_FILE" +%s 2>/dev/null || echo 0) ))
+        (( lock_age > TYPICAL_WAIT_TTL * 2 )) && rm -f "$LOCK_FILE"
+    fi
+    if [[ ! -e "$LOCK_FILE" ]]; then
+        local need_refresh=1
+        if [[ -e "$CACHE_FILE" ]]; then
+            local age=$(( $(date +%s) - $(date -r "$CACHE_FILE" +%s 2>/dev/null || echo 0) ))
+            (( age < TYPICAL_WAIT_TTL )) && need_refresh=0
+        fi
+        if (( need_refresh )); then
+            : > "$LOCK_FILE"
+            ( _compute_typical_wait_to_file ) &
+        fi
+    fi
+
+    TYPICAL_WAIT_SUM=(); TYPICAL_WAIT_CNT=()
+    TYPICAL_WAIT_SUM_ANYWT=(); TYPICAL_WAIT_CNT_ANYWT=()
+    if [[ -e "$CACHE_FILE" ]]; then
+        local kind key csum ccnt
+        while IFS='|' read -r kind key csum ccnt; do
+            case "$kind" in
+                BUCKET) TYPICAL_WAIT_SUM[$key]=$csum; TYPICAL_WAIT_CNT[$key]=$ccnt ;;
+                ANYWT)  TYPICAL_WAIT_SUM_ANYWT[$key]=$csum; TYPICAL_WAIT_CNT_ANYWT[$key]=$ccnt ;;
+            esac
+        done < "$CACHE_FILE"
+    fi
+}
+
+# Given a requested node count and requested walltime (seconds), find the
+# closest node-count bucket *within the same walltime range* that has at
+# least 2 samples ("~1h30m (n=4,~4N,<=4h)"); if there isn't enough data in
+# that walltime range, fall back to matching on node count alone, ignoring
+# requested walltime, and flag that in the label ("(any wt)").
 _typical_wait_str() {
-    local want=$1 best_n="" best_diff=999999 n diff
-    for n in "${!TYPICAL_WAIT_CNT[@]}"; do
-        (( ${TYPICAL_WAIT_CNT[$n]} < 2 )) && continue
+    local want=$1 want_tsecs=$2 want_bidx best_n="" best_diff=999999 n key nn bidx diff
+    want_bidx=$(_walltime_bucket_idx "$want_tsecs")
+
+    for key in "${!TYPICAL_WAIT_CNT[@]}"; do
+        nn="${key%_*}"; bidx="${key#*_}"
+        [[ "$bidx" != "$want_bidx" ]] && continue
+        (( ${TYPICAL_WAIT_CNT[$key]} < 2 )) && continue
+        diff=$(( nn > want ? nn - want : want - nn ))
+        if (( diff < best_diff )); then best_diff=$diff; best_n=$nn; fi
+    done
+    if [[ -n "$best_n" ]]; then
+        local key="${best_n}_${want_bidx}"
+        local avg=$(( TYPICAL_WAIT_SUM[$key] / TYPICAL_WAIT_CNT[$key] ))
+        local h=$(( avg/3600 )) m=$(( (avg%3600)/60 ))
+        printf "~%dh%02dm (n=%d,~%dN,%s)" "$h" "$m" "${TYPICAL_WAIT_CNT[$key]}" "$best_n" "${WALLTIME_BUCKET_LABELS[$want_bidx]}"
+        return
+    fi
+
+    best_n=""; best_diff=999999
+    for n in "${!TYPICAL_WAIT_CNT_ANYWT[@]}"; do
+        (( ${TYPICAL_WAIT_CNT_ANYWT[$n]} < 2 )) && continue
         diff=$(( n > want ? n - want : want - n ))
         if (( diff < best_diff )); then best_diff=$diff; best_n=$n; fi
     done
-    [[ -z "$best_n" ]] && { echo "n/a"; return; }
-    local avg=$(( TYPICAL_WAIT_SUM[$best_n] / TYPICAL_WAIT_CNT[$best_n] ))
-    local h=$(( avg/3600 )) m=$(( (avg%3600)/60 ))
-    printf "~%dh%02dm (n=%d,~%dN)" "$h" "$m" "${TYPICAL_WAIT_CNT[$best_n]}" "$best_n"
+    if [[ -n "$best_n" ]]; then
+        local avg=$(( TYPICAL_WAIT_SUM_ANYWT[$best_n] / TYPICAL_WAIT_CNT_ANYWT[$best_n] ))
+        local h=$(( avg/3600 )) m=$(( (avg%3600)/60 ))
+        printf "~%dh%02dm (n=%d,~%dN,any wt)" "$h" "$m" "${TYPICAL_WAIT_CNT_ANYWT[$best_n]}" "$best_n"
+        return
+    fi
+    echo "n/a"
 }
 
 while true; do
@@ -202,7 +341,7 @@ while true; do
             PENDING)
                 start=$(squeue --me -h -j "$jobid" --start -o "%S" 2>/dev/null)
                 [[ -z "$start" ]] && start="N/A"
-                twait=$(_typical_wait_str "$nodes")
+                twait=$(_typical_wait_str "$nodes" "$(_dhms_to_secs "$timelimit")")
                 if [[ -n "$submit" && "$submit" != "Unknown" && "$submit" != "N/A" ]]; then
                     submit_epoch=$(date -d "$submit" +%s 2>/dev/null)
                     if [[ -n "$submit_epoch" ]]; then
@@ -219,7 +358,7 @@ while true; do
                 else
                     submitted_str="N/A"
                 fi
-                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  req:%-11s submitted: %s\n                  est.start: %-14s typ.wait: %-22s reason: %s" \
+                MY_JOBS_PENDING+=$(printf "  \033[1;34m%-12s\033[0m %-12s %-8s [%-10s] %sN×%st×%sc  req:%-11s submitted: %s\n                  est.start: %-14s typ.wait: %-30s reason: %s" \
                     "$jobid" "$name" "$account" "$jobpart" "$nodes" "$tasks_per_node" "$cpus_per_task" "$timelimit" "$submitted_str" "$start" "$twait" "$reason")
                 MY_JOBS_PENDING+=$'\n'
                 while read -r node; do
