@@ -27,13 +27,18 @@ import os
 
 try:
     from mpi4py import MPI
-    MPI_SIZE = MPI.COMM_WORLD.size
-    RANK=MPI.COMM_WORLD.rank
-    LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    RANK=DDFacet.Other.MPIManager.RANK
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
 except:
     MPI_SIZE = 0
     RANK=0
     LOCAL_RANK=0
+    NODE_ID=0
+
+MAIN_PROCESS_RANKS=("%i,%i,%i,%i"%(RANK,LOCAL_RANK,NODE_ID,MPI_SIZE))
 
 USE_MPI=(MPI_SIZE>1)
 
@@ -841,7 +846,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             warn('Solutions file '+checkname+' already exists, not running killMS step')
 
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
+            runcommand = "env MAIN_PROCESS_RANKS=%s kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(MAIN_PROCESS_RANKS,f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
 
             # check for option to stop pdb call and use it if present
 
@@ -870,6 +875,8 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 runcommand+=' --DoBar=0'
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
+            if not options['do_decorr']:
+                runcommand+=' --Decorrelation=NO'
 
             if PreApplySols:
                 if isinstance(PreApplySols,str):
@@ -1671,8 +1678,8 @@ def main(o):
         
     DoResetCounter=0
     mpi_manager.Print("run MemMobitor")
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i MemMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i IOMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s MemMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s IOMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
     mpi_manager.Print("Barrier after Monitors")
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     mpi_manager.Print("   ... barrier ok")
