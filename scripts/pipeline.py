@@ -219,6 +219,7 @@ def ddf_image(
     peakfactor=0.1,
     rms_factor=3.0,
     threshold=None,
+    facets_skip_th=None,
 
     # Masking
     cleanmask=None,
@@ -294,6 +295,7 @@ def ddf_image(
     if imsize             is None: imsize             = options['imsize']
     if cellsize           is None: cellsize           = options['cellsize']
     if automask_threshold is None: automask_threshold = options['thresholds'][STEP]
+    if facets_skip_th     is None: facets_skip_th     = options['facets_skip_th']
 
     # pull default WSCMS settings from parset if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
@@ -1150,6 +1152,10 @@ def subtractOuterSquare(o):
         #wide_imsize=o['imsize']*o['cellsize']/o['wide_cell']
     extmask=None
 
+    # if skipping is disabled, disable it here as well
+    # when enabled limit the effect; full_wide is supposed to be wide
+    wide_facet_skip_th = min(o['facets_skip_th'], 0.001)
+    
     ddf_image('image_full_wide', o['mslist'],
             cleanmode=o['cleanmode'],
             colname=colname,
@@ -1172,6 +1178,7 @@ def subtractOuterSquare(o):
             smooth=True,
             catcher=catcher,
             STEP=0,
+            facets_skip_th=wide_facet_skip_th,
     )
 
 
@@ -1204,6 +1211,7 @@ def subtractOuterSquare(o):
             smooth=True,
             catcher=catcher,
             STEP=0,
+            facets_skip_th=wide_facet_skip_th,
     )
 
     # predict outside the central rectangle
@@ -1237,6 +1245,7 @@ def subtractOuterSquare(o):
                   use_weightspectrum=o['use_weightspectrum'],
                   catcher=catcher,
                   STEP=0,
+                  facets_skip_th=wide_facet_skip_th,
         )
         
         if not o['dryrun']:
@@ -1277,6 +1286,7 @@ def subtractOuterSquare(o):
               smooth=True,
               catcher=catcher,
               STEP=0,
+              facets_skip_th=0, # im_sub is a sanity check, so disable skipping
     )
 
 
