@@ -28,13 +28,16 @@ else:
 
 try:
     from mpi4py import MPI
-    MPI_SIZE = MPI.COMM_WORLD.size
-    RANK=MPI.COMM_WORLD.rank
-    LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    RANK=DDFacet.Other.MPIManager.RANK
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
 except:
     MPI_SIZE = 0
     RANK=0
     LOCAL_RANK=0
+    NODE_ID=0
 
 from subprocess import call
 from astropy.io import fits
@@ -77,10 +80,10 @@ def die(s,database=True):
     raise RuntimeError(s)
 
 def report(s):
-    print(bcolors.OKGREEN+s+bcolors.ENDC)
+    print(bcolors.OKGREEN+f"[{HOSTNAME}#{RANK}@{NODE_ID}] "+s+bcolors.ENDC)
 
 def warn(s):
-    print(bcolors.OKBLUE+s+bcolors.ENDC)
+    print(bcolors.OKBLUE+f"[{HOSTNAME}#{RANK}@{NODE_ID}] "+s+bcolors.ENDC)
     
 
 def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None, mpi_disabled_in_serial_call=True,local_rank=None):
@@ -88,7 +91,7 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
         jobs=[]
         for h in mpiManager.ListNodesBeingUsed:
             jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database,local_rank), {}])
-        print(f"[{HOSTNAME}#{mpi_manager.RANK}@{mpi_manager.LOCAL_RANK}] run: {jobs}")
+        print(f"[{HOSTNAME}#{mpi_manager.RANK}@{mpi_manager.NODE_ID}] run: {jobs}")
         res=mpi_manager.callParallel(jobs)
         print(res)
     else:
@@ -100,10 +103,10 @@ def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiMana
     
 def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True,local_rank=None):
     if local_rank is not None:
-        report(f"[{HOSTNAME}#{RANK}@{LOCAL_RANK}] run_serial: skipping due to non-local rank match")
+        report(f"run_serial: skipping due to non-local rank match")
         if LOCAL_RANK!=local_rank: return 0
         
-    report(f"[{HOSTNAME}#{RANK}@{LOCAL_RANK}] run_serial: {s}")
+    report(f"run_serial: {s}")
     if not dryrun:
         if log is None:
             print("   Call %s"%s)

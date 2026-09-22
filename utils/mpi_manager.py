@@ -4,15 +4,17 @@ LOCAL_RANK = 0 # local process ID on the node
 LOCAL_SIZE = 1 # number of mpi process on the node
 HOSTNAME = "localhost"
 USE_MPI=False
-
+NODE_ID=0
 
 try:
     from mpi4py import MPI
-    MPI_SIZE = MPI.COMM_WORLD.size
-    RANK=MPI.COMM_WORLD.rank
-    shared_comm = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED)
-    LOCAL_RANK = shared_comm.rank
-    LOCAL_SIZE = shared_comm.size
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    RANK=DDFacet.Other.MPIManager.RANK
+    #shared_comm = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED)
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    LOCAL_SIZE = DDFacet.Other.MPIManager.LOCAL_SIZE
+    NODE_ID=DDFacet.Other.MPIManager.NODE_ID
     HOSTNAME = MPI.Get_processor_name()
     if MPI_SIZE>1:
         USE_MPI=True
@@ -27,7 +29,7 @@ except Error as e:
 
 def Print(*args):
     if USE_MPI:
-        print("[%s#%i@%i]"%(HOSTNAME,RANK,LOCAL_RANK),*args)
+        print("[%s#%i@%i]"%(HOSTNAME,RANK,NODE_ID),*args)
     else:
         print(*args)
     
@@ -111,9 +113,30 @@ class MSSet():
             self.ListNodesBeingUsed = LIST_SITES_BEING_USED
 
             mslist=list(zip(itertools.cycle(LIST_SITES_BEING_USED), nodes2ms[None]))
+            
+
+            # Get a balanced list of MSs (not all hogh freq MSs on the last node in the list)
+            L_node_ms=[]
+            mslist=nodes2ms[None]
+            ListNodes=sorted(list(set([node.split("@")[0] for node in self.ListNodesBeingUsed])))
+            DicoNodesToLSites={}
+            for site in self.ListNodesBeingUsed:
+                node,local_rank=site.split("@")
+                L=DicoNodesToLSites.get(node,[])
+                L.append(site)
+                DicoNodesToLSites[node]=L
+            iNode=0
+            for ThisMS in mslist:
+                node=ListNodes[iNode]
+                site=DicoNodesToLSites[node][0]
+                DicoNodesToLSites[node].remove(site)
+                L_node_ms.append((site,ThisMS))
+                iNode+=1
+                if iNode==len(ListNodes): iNode=0
+            
             del nodes2ms[None]
 
-            for node,ms in mslist:
+            for node,ms in L_node_ms:
                 l=nodes2ms.get(node,[])
                 l.append(ms)
                 nodes2ms[node] = l

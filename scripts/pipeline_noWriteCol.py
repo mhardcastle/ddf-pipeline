@@ -24,7 +24,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
-
+import gc
 try:
     from mpi4py import MPI
     import DDFacet.Other.MPIManager
@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
 import subprocess
-
+from DDFacet.Other.ClassTimeIt import ClassTimeIt
 import mpi_manager
 global SetMS,Register
 Register=None
@@ -385,6 +385,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
 
     runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s  --Deconv-FluxThreshold %f --Beam-Model=%s --Weight-Robust %f --Image-NPix=%i --CF-wmax %f --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=%i --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax %f --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 0 --Cache-VisData 0 --Cache-CF 0"%(imagename,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,options['flux_threshold'],options['BeamModel'],robust,imsize,options['wmax'],saveimages,float(cellsize),options['nfacets_di'],options['facets_diammax'],rms_factor,cache_dir,cache_dir)
     runcommand += " --Data-MS=%s"%mslist
+    
 
     if options['chunk_hours'] > 0:
         runcommand += " --Data-ChunkHours=%f"%options['chunk_hours']
@@ -794,6 +795,7 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,ApplyJonesCorr),{ }))
 
 
+    MPI.COMM_WORLD.Barrier()
     res=mpi_manager.callParallel(ListJobs)
     MPI.COMM_WORLD.Barrier()
 
@@ -897,7 +899,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 NChanSols=1 # reproduce old behaviour
             runcommand+=' --NChanSols %i' % NChanSols
             runcommand+=' --BeamMode %s'%options['BeamModel']
-            print(f"keywords={keywords}")
+            #print(f"keywords={keywords}")
             if 'Beam-PhasedArrayMode' in keywords: # incompatible change
                 runcommand+=' --PhasedArrayMode=A'
             else:
@@ -921,12 +923,19 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 runcommand+=' --DicoModel '+dicomodel
             
                 _,_,ModelColName,_=DISettings
-                print(socket.gethostname(),f,colname,ModelColName)
+                #print(socket.gethostname(),f,colname,ModelColName)
 
+                report("give_dt_dnu...")
                 _,dt_give,_,n_df_give=give_dt_dnu(f,
                                                   DataCol=colname,
                                                   #ModelCol=ModelColName,
                                                   T=10.)
+                report("give_dt_dnu...: done")
+                gc.collect()
+                # MPI.COMM_WORLD.Barrier()
+                # stoppp
+                
+                
                 if dt is None:
                     dt=dt_give
                 if NChanSols is None:
@@ -1249,14 +1258,26 @@ def subtract_data(mslist,col1,col2):
 
 def give_dt_dnu(msname,DataCol="DATA",
                 #ModelCol="DI_PREDICT",
-                T=10.):
+                T=10.,rowincr=1):
+    TT=ClassTimeIt("[#%i@%i] give_dt_dnu"%(RANK,NODE_ID))
+    report("read %s"%msname)
     t=pt.table(msname,ack=False)
-    d=t.getcol(DataCol)
+    nrows=t.nrows()//100
+    row0=t.nrows()//2
+    d=t.getcol(DataCol,startrow=row0, nrow=nrows,rowincr=rowincr)
+    TT.timeit("d=t.getcol(DataCol,startrow=row0, nrow=nrows,rowincr=rowincr)")
     dt_bin_sec=t.getcol("INTERVAL",0,1,1)[0]
+    TT.timeit("t.getcol(INTERVAL,0,1,1)[0]")
     _,nch,_=d.shape
-    f=t.getcol("FLAG")
-    #p=t.getcol(ModelCol)
+    f=t.getcol("FLAG",startrow=row0, nrow=nrows,rowincr=rowincr)
+    TT.timeit("t.getcol(FLAG,startrow=row0, nrow=nrows,rowincr=rowincr)")
+    # d0=t.getcol(DataCol)
+    # TT.timeit("t.getcol(DataCol)")
+    # f0=t.getcol("FLAG")
+    # TT.timeit("t.getcol(FLAG)")
+    # report("shape %s"%str((f0.shape,d0.shape)))
     t.close()
+    report("done reading %s"%msname)
     fp=f[:,:,np.array([1,2])]
     dp=d[:,:,np.array([1,2])]
     dps=dp[fp==0]
@@ -1264,12 +1285,13 @@ def give_dt_dnu(msname,DataCol="DATA",
     S=np.std(dps)
     M=np.mean(da)
     nb=T**2/(M/S)**2
+    report("done nb")
 
     # find the size of the channel step
     nch_step=int(round(np.sqrt(nb)))
     nch_step=np.max([1,nch_step])
     nch_step=np.min([nch,nch_step])
-    warn('nch_step=%i'%(nch_step))
+    report('nch_step=%i'%(nch_step))
 
     # find the step to have equal interval size
     #nch_bin=int(nch/nch_step)+1
@@ -1279,12 +1301,14 @@ def give_dt_dnu(msname,DataCol="DATA",
     nch_step=lDiv[inch]
     nch_step=np.max([1,nch_step])
     nch_step=np.min([nch,nch_step])
+    report('nch_step2=%i'%(nch_step))
 
     nt_step=int(round(nb/float(nch_step)))
     nt_step=np.max([1,nt_step])
 
     SNR=np.sqrt(nt_step*nch_step)*M/S
-    warn('Using (dt,df)=(%i,%i) for self-cal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
+    TT.timeit("rest")
+    report('Using (dt,df)=(%i,%i) for self-cal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
 
     return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
 
@@ -1659,6 +1683,7 @@ def main(o):
         o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
     
 
+    ################################
     separator('Run MemMonitor')
     mpi_manager.Print("kill MemMobitor")
     def PKILL(exe="MemMonitor.py"):
@@ -1669,7 +1694,6 @@ def main(o):
         if is_running:
             mpi_manager.Print("-- kill %s"%exe)
             run_serial("""pkill -f "%s" """%(exe), proceed=True)
-        
     if LOCAL_RANK==0:
         PKILL(exe="MemMonitor.py")
         PKILL(exe="IOMonitor.py")
@@ -1680,6 +1704,7 @@ def main(o):
     mpi_manager.Print("run MemMobitor")
     run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s MemMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
     run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s IOMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    
     mpi_manager.Print("Barrier after Monitors")
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     mpi_manager.Print("   ... barrier ok")
@@ -1688,8 +1713,12 @@ def main(o):
     global Register
     Register=DDFacet.MemMonitor.ClassRegister(Reset=DoResetCounter)
     Register.register("Start","Start")
+    ################################
 
+
+    
     mpi_manager.Print("BBBB")
+    
 
     if MPI_Manager.UseMPI:
         checkColName_mpi(MPI_Manager, o)
