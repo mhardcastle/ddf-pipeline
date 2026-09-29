@@ -75,9 +75,11 @@ def do_polcubes(colname,
 		uvrange,imageoutname,mslistname,
 		ddf_kw,
                 beamsize,imsize,cellsize,robust,
-                options,catcher):
+                options,catcher,beamsize_minor=None,beamsize_pa=None):
 
     o=options
+    if beamsize_minor is not None and beamsize_pa is None:
+        die('If cube minor axis is supplied, position angle must be supplied too')
     mslists=[]
     m=MSList(mslistname)
     ufreqs=sorted(set(m.freqs))
@@ -118,17 +120,19 @@ def do_polcubes(colname,
         ThisImageName = '%s_IQU_Cube%s'%(imageoutname,i)
 
         ddf_image(ThisImageName,mslistname,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   polcubemode=True,
-		  AllowNegativeInitHMP=True,
+                  AllowNegativeInitHMP=True,
                   majorcycles=0,robust=robust,
                   colname=colname,use_dicomodel=False,
                   uvrange=uvrange,beamsize=beamsize,
+                  beamsize_minor=beamsize_minor,beamsize_pa=beamsize_pa,
                   imsize=imsize,cellsize=cellsize,peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],channels=channels,
                   startchan=0,endchan=channels,options=o,
-                  catcher=catcher)
+                  catcher=catcher,
+                  STEP=1)
 
     if o['split_polcubes']:
 
