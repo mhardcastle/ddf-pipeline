@@ -18,8 +18,8 @@ export UV_CACHE_DIR=$PWD/uv_cache
 export METHOD_CLONE="git@github.com:"
 
 
-git clone ${METHOD_CLONE}cyriltasse/DDFacet -b HackathonRennes_June26  ../DDFacet || true
-git clone ${METHOD_CLONE}cyriltasse/killMS -b HackathonRennes_June26 ../killMS || true
+git clone ${METHOD_CLONE}cyriltasse/DDFacet -b HackathonRennes_June26_Adastra  ../DDFacet || true
+git clone ${METHOD_CLONE}cyriltasse/killMS -b HackathonRennes_June26_Adastra ../killMS || true
 # git clone ${METHOD_CLONE}dguibert/ddf-pipeline -b Hackaton_mpipool_test_NancepMPI_Herts ../ddf-pipeline || true
 
 uv venv -p 3.12
