@@ -331,6 +331,9 @@ def ddf_image(
     runcommand += f' --DDESolutions-SolsDir={options["SolsDir"]}'
     runcommand += ' --Cache-Weight=reset'
 
+    if options['weight_beam_power'] and 'Weight-BeamPower' in keywords:
+        runcommand += ' --Weight-BeamPower=1'
+
     if 'Beam-PhasedArrayMode' in keywords: # incompatible change
         runcommand += ' --Beam-PhasedArrayMode=A'
     else:
