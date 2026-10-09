@@ -12,17 +12,20 @@ def run_log(cmd,logfile,quiet=False):
     proc=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,universal_newlines=True)
     while True:
         try:
-            select.select([proc.stdout],[],[proc.stdout])
-        except select.error:
-            pass
-        line=proc.stdout.readline()
-        if line=='':
+            ready = select.select([proc.stdout], [], [], 1.0)[0]
+        except OSError:
+            ready = []
+        if ready:
+            line = proc.stdout.readline()
+            if line == '':
+                break
+            if not quiet:
+                sys.stdout.write(line)
+            ts = '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+            logfile.write(ts+': '+line)
+            logfile.flush()
+        elif proc.poll() is not None:
             break
-        if not quiet:
-            sys.stdout.write(line)
-        ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
-        logfile.write(ts+': '+line)
-        logfile.flush()
     retval=proc.wait()
     logfile.write('Process terminated with return value %i\n' % retval)
     return retval
