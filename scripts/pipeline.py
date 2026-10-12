@@ -452,7 +452,9 @@ def ddf_image(
         runcommand += f' --WSCMS-AutoMask={automask}'
         if automask:
             runcommand += f' --WSCMS-AutoMaskRMSFactor={wscms_automask_rms_factor}'
-            runcommand += ' --WSCMS-AutoMaskForceLast=False'
+            # if majorcycles is 0 or 1, disable forcelast, since that would fire freeze instantly.
+            if majorcycles <= 1:
+                runcommand += ' --WSCMS-AutoMaskForceLast=False'
         if wscms_compact_margin is not None:
             runcommand += f' --WSCMS-CompactMargin={float(wscms_compact_margin)}'
         if wscms_rescue_rms_factor is not None:
