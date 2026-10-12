@@ -264,6 +264,8 @@ def ddf_image(
     wscms_remove_1px_scale=True,
     wscms_use_local_rms=None,
     wscms_placement_threshold=None,
+    wscms_allow_refreeze=False,
+    wscms_refreeze_depth=None,
 
     # Input model
     use_dicomodel=False,
@@ -468,6 +470,12 @@ def ddf_image(
             runcommand += f' --WSCMS-PlacementSigTh={options['thresholds'][STEP]}'
         else:
             runcommand += f' --WSCMS-PlacementSigTh={wscms_placement_threshold}'
+
+        # handle refreeze
+        if wscms_allow_refreeze:
+            runcommand += ' --WSCMS-AllowRefreeze=True'
+        if wscms_refreeze_depth is not None:
+            runcommand += f' --WSCMS-RefreezeDepth={wscms_refreeze_depth}'
 
     if clusterfile is not None:
         runcommand += f' --Facets-CatNodes={clusterfile}'
