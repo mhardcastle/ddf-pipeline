@@ -262,6 +262,8 @@ def ddf_image(
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
     wscms_remove_1px_scale=True,
+    wscms_use_local_rms=None,
+    wscms_placement_threshold=None,
 
     # Input model
     use_dicomodel=False,
@@ -310,6 +312,7 @@ def ddf_image(
     if wscms_neg_max_scale       is None: wscms_neg_max_scale       = options['wscms_neg_max_scale']
     if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
     if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
+    if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
 
     cache_dir=find_cache_dir(options)
 
@@ -425,7 +428,7 @@ def ddf_image(
             die('wscms_scale_density must be > 1 to avoid infinite scales')
 
         # parameters shared between WSCMS versions
-        runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --WSCMS-ScaleDensity={wscms_scale_density} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor}'
+        runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --WSCMS-ScaleDensity={wscms_scale_density} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor} --WSCMS-LocalRMS={wscms_use_local_rms}'
         
         # wscms max scale is not aware of cellsizes, it only knows pixels
         # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding.
@@ -458,6 +461,11 @@ def ddf_image(
         runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
         runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold} --Mask-FluxImageType=ModelConv'
 
+        # optional placement threshold. Follows thresholds when unset.
+        if wscms_placement_threshold is None:
+            runcommand += f' --WSCMS-PlacementSigTh={options['thresholds'][STEP]}'
+        else:
+            runcommand += f' --WSCMS-PlacementSigTh={wscms_placement_threshold}'
 
     if clusterfile is not None:
         runcommand += f' --Facets-CatNodes={clusterfile}'
