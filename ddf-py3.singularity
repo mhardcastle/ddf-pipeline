@@ -598,6 +598,11 @@ pip install imageio==2.14.1
   pip list --format=columns
 
 
+  # Remove apt-installed matplotlib files so the pip-installed matplotlib is the only one Python sees
+  # fixes the Axes3D import error
+  rm -rf /usr/lib/python3/dist-packages/mpl_toolkits
+  rm -rf /usr/lib/python3/dist-packages/matplotlib /usr/lib/python3/dist-packages/matplotlib-*.egg-info
+  rm -f /usr/lib/python3/dist-packages/matplotlib-*-nspkg.pth
 
   pip cache purge
   #apt-get purge -y cmake
