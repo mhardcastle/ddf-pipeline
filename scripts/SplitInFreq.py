@@ -6,7 +6,7 @@ import numpy as np
 
 
 def split(MSName):
-    tf=table("%s/SPECTRAL_WINDOW/"%MSName)
+    tf=table("%s::SPECTRAL_WINDOW"%MSName)
     _,nch=tf.getcol("CHAN_FREQ").shape
 
     nMS=20

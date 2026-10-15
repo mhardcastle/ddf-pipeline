@@ -273,7 +273,7 @@ def check_imaging_weight(mslist_name):
             if ColMachine.exists('IMAGING_WEIGHT'):
                 warn('Table '+ms+' already has imaging weights')
             else:
-                nchan=pt.table("%s/SPECTRAL_WINDOW"%ms).getcol("CHAN_FREQ").size
+                nchan=pt.table("%s::SPECTRAL_WINDOW"%ms).getcol("CHAN_FREQ").size
                 print("  Putting column %s in %s (zarr)"%('IMAGING_WEIGHT',ms))
                 ColMachine.addcol("IMAGING_WEIGHT", (nrows,nchan), dtype=np.float32, fill_value=1, max_chunk_bytes=1e6)
                 result=True
@@ -456,7 +456,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
         freqs=[]
         mss=[l.rstrip() for l in open(mslist).readlines()]
         for ms in mss:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+            t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
             freq=t[0]['REF_FREQUENCY']
             if freq not in freqs:
                 freqs.append(freq)
@@ -471,6 +471,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     if stokes:
         runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
 
+    print(runcommand,cubemode,polcubemode)
 
     if do_decorr:
         runcommand += ' --RIME-DecorrMode=FT'
@@ -581,6 +582,8 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
 
 
         # runcommand+=" --GAClean-NSourceKin=20 "
+        
+        runcommand += ' --Beam-Model=None'
 
         try:
             Register.register("[DDFacet] %s"%imagename,"Imaging")

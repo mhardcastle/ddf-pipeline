@@ -404,7 +404,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         freqs=[]
         mss=[l.rstrip() for l in open(mslist).readlines()]
         for ms in mss:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+            t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
             freq=t[0]['REF_FREQUENCY']
             if freq not in freqs:
                 freqs.append(freq)

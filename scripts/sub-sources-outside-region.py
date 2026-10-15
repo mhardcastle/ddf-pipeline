@@ -106,7 +106,7 @@ def add_dummyms(msfiles):
 
     # Check for wrong REF_FREQUENCY which happens after a DP3 split in frequency
     for ms in msfiles:        
-        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(ms + '::SPECTRAL_WINDOW', readonly=True)
         freq = t.getcol('REF_FREQUENCY')[0]
         t.close()
         freqaxis.append(freq)
@@ -118,7 +118,7 @@ def add_dummyms(msfiles):
     
     freqaxis = [] 
     for ms in msfiles:        
-        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(ms + '::SPECTRAL_WINDOW', readonly=True)
         if keyname == 'CHAN_FREQ':
           freq = t.getcol(keyname)[0][0]
         else:
@@ -525,7 +525,7 @@ if args['h5sols'] == None:
 msfiles   = ascii.read(args['mslist'],data_start=0)
 msfiles   = list(msfiles[:][msfiles.colnames[0]]) # convert to normal list of strings
 
-t = pt.table(msfiles[0] + '/OBSERVATION')
+t = pt.table(msfiles[0] + '::OBSERVATION')
 fieldname = t.getcol('LOFAR_TARGET')['array'][0]
 t.close()
 
@@ -887,7 +887,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
     if split:
 
         nchanperblock = int(20/freqstepavg)
-        t = pt.table(currentmsoutconcat + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(currentmsoutconcat + '::SPECTRAL_WINDOW', readonly=True)
         nchan = t.getcol('NUM_CHAN')[0]
         t.close()
  

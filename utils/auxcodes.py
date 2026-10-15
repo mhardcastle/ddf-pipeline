@@ -373,10 +373,10 @@ def sepn(r1,d1,r2,d2):
 
 def getpos(ms):
     import pyrap.tables as pt
-    t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
+    t = pt.table(ms+ '::OBSERVATION', readonly=True, ack=False)
     name=t[0]['LOFAR_TARGET']
 
-    t = pt.table(ms+'/FIELD', readonly=True, ack=False)
+    t = pt.table(ms+'::FIELD', readonly=True, ack=False)
 
     direction = t[0]['PHASE_DIR']
     ra, dec = direction[0]
@@ -439,7 +439,7 @@ class MSList(object):
             self.hascorrected.append(not(dummy is None))
             self.dysco.append('Dysco' in t.showstructure())
             t.close()
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=False, ack=False)
+            t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=False, ack=False)
 
             # Check freqs due to https://github.com/lofar-astron/DP3/issues/217
             freqest1 = np.mean(t.getcol('CHAN_FREQ')[0])

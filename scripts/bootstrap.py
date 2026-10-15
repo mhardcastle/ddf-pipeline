@@ -178,7 +178,7 @@ def run_bootstrap(o):
         if os.path.isfile(obsid+'crossmatch-1.fits'):
             warn('Crossmatch table exists, skipping crossmatch')
         else:
-            t = pt.table(omslist[0]+ '/FIELD', readonly=True, ack=False)
+            t = pt.table(omslist[0]+ '::FIELD', readonly=True, ack=False)
             direction = t[0]['PHASE_DIR']
             ra, dec = direction[0]
 
@@ -254,7 +254,7 @@ def run_bootstrap(o):
                     warn('Table '+ms+' has already been corrected, skipping')
                 else:
                     # in this version we need to scale both the original data and the data in colname
-                    t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+                    t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
                     print(frq,factor)

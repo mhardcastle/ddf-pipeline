@@ -38,7 +38,7 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
     avl=[]
     for ms in mss:
         print('Doing',ms)
-        t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+        t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
         freq = t[0]['REF_FREQUENCY']
         channels = t[0]['NUM_CHAN']
         chlist=t[0]['CHAN_FREQ']
