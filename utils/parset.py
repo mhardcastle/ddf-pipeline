@@ -59,6 +59,7 @@ option_list = (
     ( 'image',      'HMPsize',                int,   10,     'Island size to use HMP initialization' ),
     ( 'image',      'uvmin',                  float, 0.1,    'Minimum baseline length to use in imaging (km)'),
     ( 'image',      'uvmax',                  float, 1000.0, 'Maximum baseline length to use in imaging (km)'),
+    ( 'image',      'use_tapered_short_spacings', bool, False, 'Include 0-uvmin baselines at sigmoid-tapered weight instead of cutting them (imaging only)'),
     ( 'image',      'apply_weights',          list,  [False, True, True, True], 'Use IMAGING_WEIGHT column from killms'),
     ( 'image',      'use_weightspectrum',     bool,  False,  'Use WEIGHT_SPECTRUM column when not using IMAGING_WEIGHT column from killms'),
     ( 'image',      'clusterfile',            str,   None,   'User-defined cluster file to use'),

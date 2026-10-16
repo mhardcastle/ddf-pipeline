@@ -250,6 +250,7 @@ def ddf_image(
     imsize=None,
     cellsize=None,
     uvrange=None,
+    use_tapered_short_spacings=None,
     beamsize=None,
     beamsize_minor=None,
     beamsize_pa=None,
@@ -365,6 +366,7 @@ def ddf_image(
     if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
     if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
     if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
+    if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
 
     cache_dir=find_cache_dir(options)
 
@@ -528,6 +530,11 @@ def ddf_image(
         
     if threshold is not None:
         runcommand += f' --Deconv-FluxThreshold={threshold}'
+    if use_tapered_short_spacings:
+        # include 0-uvmin at reduced weight instead of cutting it
+        uvrange = [0, uvrange[1]] if uvrange is not None else [0, options['uvmax']]
+        # lower weight between 0-0.1 km, full weight by 0.1 km
+        runcommand += ' --Weight-EnableSigmoidTaper=1 --Weight-SigmoidTaperInnerCutoff=25 --Weight-SigmoidTaperInnerRolloffStrength=0.35 --Weight-SigmoidTaperOuterCutoff=1000000 --Weight-SigmoidTaperOuterRolloffStrength=1'
     if uvrange is not None:
         runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
     if dirty_from_resid and reuse_dirty:
