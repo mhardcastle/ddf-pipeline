@@ -69,7 +69,7 @@ option_list = (
     ( 'image',      'facets_skip_th',         float, 0.0,    'Skip gridding/degridding facets below this mean Jones power; for multi-pointing mode (default: 0, disable)'),
     ( 'image',      'weight_beam_power',      bool,  False,  'Multiply imaging weights by the beam power in DDF (--Weight-BeamPower); for multi-pointing mode (default: False)'),
     ( 'image',      'wscms_multiscale_bias',  float, 0.55,   'WSCMS specific multiscale bias parameter, determines bias for smaller/larger scales'),
-    ( 'image',      'wscms_scale_density',    float, 1.6,    'WSCMS auto scale-bank density; geometric factor between consecutive scales (must be > 1)'),
+    ( 'image',      'wscms_scale_density',    float, 2,      'WSCMS auto scale-bank density; geometric factor between consecutive scales (must be > 1)'),
     ( 'image',      'wscms_scales',           list,  None,   'Scales to be used in the WSCMS cleaning (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_max_scale',        list,  [150, 300, 300, 600], 'Maximum WSCMS cleaning scale (pixels), autoscales with [cellsize] parameter'),
     ( 'image',      'wscms_rms_factor',       list,  [8, 5, 3, 1], "WSCMS2 clean floor based on RMS. Separate from SSD to keep backwards compatibility"),

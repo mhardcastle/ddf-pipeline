@@ -182,6 +182,57 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename(f'DDF-{imagename}_shift.log',options=options),quiet=options['quiet'])
 
+def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, options):
+    # This function takes care of creating the scalebank required by WSCMS2.
+    # The scale can be provided in parset, in a single list, 
+    # or automatically generated based on a given beam, scale density, and max scale.
+    # This function exists since scalebanks cannot be trivially merged when beam_start / beam_final does not equal a factor of scale_density.
+    # We choose to pin the first two non-0 scales to the beams, and only invoke geometric progression afterwards.
+    # [0, 2*final_beam, d * 2*final_beam, ...] + [0, 2*start_beam, d * 2*start_beam, ...]
+    # becomes 
+    # [0, 2*final_beam, 2*start_beam, d * 2*start_beam, d^2 * 2*start_beam, ...]
+    
+    final_cellsize = options["cellsize"]
+    beam_start_px  = options["psf_arcsec"] / final_cellsize
+    beam_final_px  = options["final_psf_arcsec"] / final_cellsize
+    geo_density    = options["wscms_scale_density"]
+    
+    cell_ratio = final_cellsize / current_cellsize
+    
+    if options["wscms_scale_density"] <=1:
+        die('wscms_scale_density must be > 1 to avoid infinite scales')
+    
+    # if no cap is provided in the parset, we can set it internally
+    if scale_cap is None:
+        if scales is not None:
+            scale_cap = max(scales) + 1
+        else:
+            die('wscms_max_scale must be provided if no wscms_scales is given')
+    
+    # if no list provided, we must make our own 
+    if scales is None:
+        scales = [0, 2 * beam_final_px, 2 * beam_start_px]
+        while scales[-1] <= scale_cap: scales += [np.ceil(scales[-1]*geo_density)]
+        scales = [int(s) for s in scales if s <= scale_cap]
+    
+    # wscms max scale is not aware of cellsizes, it only knows pixels. 
+    # Therefore we scale it relative to the final cellsize (which we assume the scales are relative to)
+    scaled         = {int(float(s) * cell_ratio) for s in scales}
+    scaled_cap     = int(float(scale_cap) * cell_ratio)
+    scaled_neg_cap = int(float(scale_neg_cap) * cell_ratio) if scale_neg_cap is not None else None
+    
+    # have to make all scales odd before deduplication to avoid double values when using dense scale bank
+    scaled = {s + 1 if s % 2 == 0 and s > 0 else s for s in scaled}
+
+    # we also exclude the scale px=1, to avoid pointsource-fitting divergence,
+    # as a 1px scale is not separable from the delta function
+    scaled -= {1}
+
+    # turn into a zero-spaced string that can be fed to DDF
+    wscms_scales_px = str(sorted(scaled)).replace(" ", "")
+
+    return wscms_scales_px, scaled_cap, scaled_neg_cap
+
 def ddf_image(
     imagename,
     mslist,
@@ -249,8 +300,8 @@ def ddf_image(
     # allows the option for per pipeline-step scale adjustments
     wscms_MultiScaleBias=None,
     wscms_scale_density=None,
-    wscms_Scales=None,
-    wscms_MaxScale=None,
+    wscms_scales=None,
+    wscms_max_scale=None,
     wscms_rms_factor=None,
     wscms_peakfactor=None,
     wscms_automask_rms_factor=None,
@@ -261,7 +312,6 @@ def ddf_image(
     wscms_rescue_rms_factor=None,
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
-    wscms_remove_1px_scale=True,
     wscms_use_local_rms=None,
     wscms_placement_threshold=None,
     wscms_allow_refreeze=False,
@@ -303,9 +353,8 @@ def ddf_image(
 
     # pull default WSCMS settings from parset if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
-    if wscms_scale_density       is None: wscms_scale_density       = options['wscms_scale_density']
-    if wscms_Scales              is None: wscms_Scales              = options['wscms_scales']
-    if wscms_MaxScale            is None: wscms_MaxScale            = options['wscms_max_scale'][STEP]
+    if wscms_scales              is None: wscms_scales              = options['wscms_scales']
+    if wscms_max_scale           is None: wscms_max_scale           = options['wscms_max_scale'][STEP]
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
     if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
     if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
@@ -426,30 +475,14 @@ def ddf_image(
     #### WSCMS / WSCMS2 ####
     ########################
     elif cleanmode in ('WSCMS', 'WSCMS2'):
-        if wscms_scale_density <=1:
-            die('wscms_scale_density must be > 1 to avoid infinite scales')
-
         # parameters shared between WSCMS versions
         runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --WSCMS-ScaleDensity={wscms_scale_density} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor} --WSCMS-LocalRMS={wscms_use_local_rms}'
         
-        # wscms max scale is not aware of cellsizes, it only knows pixels
-        # to prevent divergence at the wide, low, and vlow steps, scale by the standard cellsize (usually 1.5"/px), and ensure no duplicates are created due to rounding.
-        # we also exclude the scale px=1 (default:True), to avoid pointsource-fitting divergence
-        if wscms_MaxScale is not None:
-            wscms_MaxScale_px = int(float(wscms_MaxScale) / cellsize * options['cellsize'])
-            runcommand += f' --WSCMS-MaxScale={wscms_MaxScale_px}'
-        if wscms_Scales is not None:
-            scaled = {int(float(s) / cellsize * options['cellsize']) for s in wscms_Scales}
-            # have to make all scales odd before deduplication to avoid double values when using dense scale bank
-            scaled = {s + 1 if s % 2 == 0 and s > 0 else s for s in scaled}
-            if wscms_remove_1px_scale: scaled -= {1}
-            wscms_Scales_px = str(sorted(scaled)).replace(" ", "")
-            runcommand += f' --WSCMS-Scales={wscms_Scales_px}'
-        if wscms_neg_max_scale is not None:
-            # also scale wscms_neg_max_scale_px by cellsize to keep it consistent
-            wscms_neg_max_scale_px = int(float(wscms_neg_max_scale) / cellsize * options['cellsize'])
-            runcommand += f' --WSCMS-NegMaxScale={wscms_neg_max_scale_px}'
-
+        # inputs related to the scalebank
+        wscms_scales_px, wscms_max_scale_px, wscms_neg_max_scale_px = wscms_make_scalebank(cellsize, wscms_scales, wscms_max_scale, wscms_neg_max_scale, options)
+        runcommand += f' --WSCMS-Scales={wscms_scales_px} --WSCMS-MaxScale={wscms_max_scale_px}'
+        if wscms_neg_max_scale_px is not None: runcommand += f' --WSCMS-NegMaxScale={wscms_neg_max_scale_px}'
+        
         # dedicated automasking inputs
         runcommand += f' --WSCMS-AutoMask={automask}'
         if automask:
