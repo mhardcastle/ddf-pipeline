@@ -2375,6 +2375,7 @@ def main(o=None):
             smooth=True,
             catcher=catcher,
             STEP=3,
+            wscms_allow_refreeze=True,
             **ddf_kw
     )
 
