@@ -217,7 +217,7 @@ def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, opt
     
     # wscms max scale is not aware of cellsizes, it only knows pixels. 
     # Therefore we scale it relative to the final cellsize (which we assume the scales are relative to)
-    scaled         = {int(float(s) * cell_ratio) for s in scales}
+    scaled         = {int(np.ceil(float(s) * cell_ratio)) for s in scales}
     scaled_cap     = int(float(scale_cap) * cell_ratio)
     scaled_neg_cap = int(float(scale_neg_cap) * cell_ratio) if scale_neg_cap is not None else None
     
@@ -353,6 +353,7 @@ def ddf_image(
 
     # pull default WSCMS settings from parset if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
+    if wscms_scale_density       is None: wscms_scale_density       = options['wscms_scale_density']
     if wscms_scales              is None: wscms_scales              = options['wscms_scales']
     if wscms_max_scale           is None: wscms_max_scale           = options['wscms_max_scale'][STEP]
     if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
