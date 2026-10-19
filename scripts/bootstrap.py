@@ -11,6 +11,8 @@ from builtins import range
 from past.utils import old_div
 import os,sys
 import os.path
+import copy
+import socket
 try:
     import bdsf as bdsm
 except ImportError:
@@ -310,7 +312,11 @@ def driver():
     global o
     o=options(sys.argv[1:],option_list)
     SetMS=mpi_manager.MSSet(o['mslist'])
-    MPI_Manager=mpi_manager.mpi_manager(o, SetMS, None)
+    MainNode=None
+    if mpi_manager.RANK==0: MainNode=socket.gethostname()
+    if mpi_manager.USE_MPI:
+        MainNode=mpi_manager.MPI.COMM_WORLD.bcast(MainNode, root=0)
+    MPI_Manager=mpi_manager.mpi_manager(o, SetMS, None, MainNode)
     if MPI_Manager.UseMPI:
         run_bootstrap_mpi(MPI_Manager, o)
     else:
