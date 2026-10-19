@@ -170,7 +170,7 @@ parser = argparse.ArgumentParser(description='fitsimage')
 parser.add_argument('fitsimage', type=str, help='fitsimage')
 parser.add_argument('catalogue', type=str, help='The LoTSS-DR2 catalogue or catalogue from another field')
 parser.add_argument('regionfile', type=str, help='extractionregion')
-parser.add_argument('--fieldname', type=str,default='LoTSS-DR2',help='field name if not LoTSS-DR2 but using surveys database')
+parser.add_argument('--fieldname', type=str,default='LoTSS-DR2',help='field name if not LoTSS-DR2 or LoTSS-DR3 but using surveys database')
 parser.add_argument('--nodatabase', help='Do not use LOFAR surveys fields database', action='store_true')
 parser.add_argument('--fieldfactor', help='Scaling factor of the field if not using surveys database',type=float)
 args = parser.parse_args()
@@ -207,6 +207,8 @@ lotssdr2 = filter_outside_extract(regionfile,infile,lotssdr2)
 print(len(lotssdr2),'region filtered')
 if fieldname == 'LoTSS-DR2':
     print(lotssdr2['Mosaic_ID'][0])
+elif fieldname == 'LoTSS-DR3':
+	print('Using DR3 catalog')
 else:
     if nodatabase:
         print('Scaling factor being used for field catalogue',fieldfactor)

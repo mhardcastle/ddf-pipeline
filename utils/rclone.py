@@ -63,7 +63,7 @@ class RClone(object):
         if isinstance(command,str):
             command=command.split()
         
-        fullcommand=[self.command,'--multi-thread-streams','1','--config='+self.config_file]+command
+        fullcommand=[self.command,'--no-check-certificate','--multi-thread-streams','1','--config='+self.config_file]+command
         if self.debug:
             print('Running command',' '.join(fullcommand))
         proc=subprocess.Popen(fullcommand,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -86,7 +86,7 @@ class RClone(object):
         if isinstance(command,str):
             command=command.split()
         
-        fullcommand=[self.command,'--multi-thread-streams','1','--config='+self.config_file]+command
+        fullcommand=[self.command,'--no-check-certificate','--multi-thread-streams','1','--config='+self.config_file]+command
         if self.debug:
             print('Running command',' '.join(fullcommand))
         proc=subprocess.Popen(fullcommand)
@@ -152,6 +152,8 @@ class RClone(object):
             remote=self.remote
 
         d=self.execute(['lsf',remote+base])
+        if d['code']!=0 or d['err']:
+            raise RuntimeError('lsf returned error '+' '.join(d['err']))
         return [l for l in d['out'] if not exclude_dirs or not l.endswith('/')]
     
     def get_fileinfo(self,base='',remote=None):
@@ -167,6 +169,18 @@ class RClone(object):
         if d['code']>0:
             return None
         return json.loads(''.join(d['out']))
+
+    def delete(self,filename='',remote=None):
+        '''
+        delete the single file filename, using the default remote if none is specified
+        '''
+        if remote is None:
+            if self.remote is None:
+                self.get_remote()
+            remote=self.remote
+
+        d=self.execute(['delete',remote+filename])
+        return d
     
     def get_checksum(self,filename):
         ''' Use ada to get the checksum. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
@@ -177,3 +191,24 @@ class RClone(object):
         if self.debug:
             print('Output was:\n'+t)
         return t.split()[1].replace('ADLER32=','')
+
+    def stage(self,filename):
+        ''' Use ada to stage a file. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. '''
+        command=self.ada_command+' --tokenfile '+self.config_file+' --stage %s'% filename
+        if self.debug:
+            print('Running '+command)
+        t = os.popen(command).read()
+        if self.debug:
+            print('Output was:\n'+t)
+
+    def check_stage(self,filename):
+        ''' Use ada to check the status of a filename. Filename is the remote filename. ada does not use the remote. ada config file should contain the API information. Returns a status string. For staged fields this will contain the string 'ONLINE'.'''
+        command=self.ada_command+' --tokenfile '+self.config_file+' --longlist %s'% filename
+        if self.debug:
+            print('Running '+command)
+        t = os.popen(command).read()
+        if self.debug:
+            print('Output was:\n'+t)
+        return t
+    
+

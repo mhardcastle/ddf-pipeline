@@ -3,9 +3,7 @@
 # intended as a one-stop shop for mosaicing
 # contains some of the same arguments as mosaic.py
 
-from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import division
 from builtins import range
 import argparse
 from find_mosaic_pointings import read_pointingfile, find_pointings_to_mosaic
@@ -89,6 +87,7 @@ if __name__=='__main__':
     parser.add_argument('--do_scaling',dest='do_scaling',action='store_true',help='Apply scale factor from quality database')
     parser.add_argument('--save-header',dest='save_header',action='store_true',help='Save the mosaic header')
     parser.add_argument('--apply-shift',dest='apply_shift',action='store_true',help='Apply per-facet shifts from an offset file')
+    parser.add_argument('--use_scalefactor',action='store_true',help='Apply scaling factors from a file')
     parser.add_argument('mospointingname', type=str, help='Mosaic central pointing name')
     parser.add_argument('--ignorepointings', type=str, default='', help='Pointings to ignore')
     parser.add_argument('--ignore_field', type=str, default='', help='Ignore pointings without this DB field set positive')
@@ -235,6 +234,12 @@ if __name__=='__main__':
         print('Applying scales',scales)
         mos_args.scale=scales
 
+    if args.use_scalefactor:
+        print('Using a scale factor')
+        mos_args.use_scalefactor=True
+    else:
+        mos_args.use_scalefactor=False
+        
     if not(args.no_highres):
         print('Making the high-resolution mosaic')
         header,himsize=make_header(maxsep,mospointingname,pointingdict[mospointingname][1],pointingdict[mospointingname][2],1.5,high_resolution,history=checksums)
@@ -257,7 +262,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='low'
         mos_args.do_lowres=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
         mos_args.convolve=None
 
         if args.save_header:
@@ -276,7 +281,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_wsclean=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('vlow-mosaic-header.pickle','w') as f:
@@ -294,7 +299,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='vlow'
         mos_args.do_vlow=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('vlow-mosaic-header.pickle','w') as f:
@@ -313,7 +318,7 @@ if __name__=='__main__':
         mos_args.header=header
         mos_args.rootname='stokesV'
         mos_args.do_stokesV=True
-        mos_args.astromap_blank=False # don't bother with low-res map
+        mos_args.astromap_blank=False
 
         if args.save_header:
             with open('stokesV-mosaic-header.pickle','w') as f:

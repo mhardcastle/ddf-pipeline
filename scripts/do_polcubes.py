@@ -2,7 +2,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import numpy as np
 from pipeline import *
 from pyrap.tables import table
@@ -73,14 +72,16 @@ def make_cube_stokes(freqs,hdus,outfile,stokesparam):
 
 def do_polcubes(colname,
                 CurrentDDkMSSolName,
-		uvrange,imageoutname,
+		uvrange,imageoutname,mslistname,
 		ddf_kw,
                 beamsize,imsize,cellsize,robust,
-                options,catcher):
+                options,catcher,beamsize_minor=None,beamsize_pa=None):
 
     o=options
+    if beamsize_minor is not None and beamsize_pa is None:
+        die('If cube minor axis is supplied, position angle must be supplied too')
     mslists=[]
-    m=MSList(o['full_mslist'])
+    m=MSList(mslistname)
     ufreqs=sorted(set(m.freqs))
 
     # do a first pass to try to separate out non-matching frequencies
@@ -103,7 +104,7 @@ def do_polcubes(colname,
             die('Too many frequencies for Stokes cube')
                 
     for i,freq in enumerate(ufreqs):
-        print('Image %i: channel map for frequency %.3f MHz' % (i,old_div(freq,1e6)))
+        print('Image %i: channel map for frequency %.3f MHz' % (i,freq/1e6))
         # iterate over frequencies, finding all MS with the same values
         fmslist=[]
         for ms,f,chan in zip(m.mss,m.freqs,m.channels):
@@ -119,17 +120,19 @@ def do_polcubes(colname,
         ThisImageName = '%s_IQU_Cube%s'%(imageoutname,i)
 
         ddf_image(ThisImageName,mslistname,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
+                  cleanmode=o['cleanmode'],ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   polcubemode=True,
-		  AllowNegativeInitHMP=True,
+                  AllowNegativeInitHMP=True,
                   majorcycles=0,robust=robust,
                   colname=colname,use_dicomodel=False,
                   uvrange=uvrange,beamsize=beamsize,
+                  beamsize_minor=beamsize_minor,beamsize_pa=beamsize_pa,
                   imsize=imsize,cellsize=cellsize,peakfactor=0.001,
                   smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],channels=channels,
                   startchan=0,endchan=channels,options=o,
-                  catcher=catcher)
+                  catcher=catcher,
+                  STEP=1)
 
     if o['split_polcubes']:
 

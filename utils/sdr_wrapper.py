@@ -95,7 +95,7 @@ class SDR(object):
         status=files[filename]
         if status!='DUL':
             raise RuntimeError('File not online!')
-        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar,verify=False)
+        download_file(self.url+field+'/files/'+filename+self.tokenstr,self.target+'/'+filename,catch_codes=(500,),retry_partial=True,progress_bar=progress_bar,verify=False,maxsleep=10)
         
     def download_and_stage(self,field,filenames,progress_bar=False):
         field=self.fc(field)
@@ -113,6 +113,9 @@ class SDR(object):
             files=self.get_status(field)
             count=0
             for f in filenames:
+                if f not in files:
+                    print('Error, files do not match original list -- skipping',f)
+                    continue
                 if files[f]=='DUL':
                     count+=1
             print('%i/%i... ' % (count,len(filenames)),end='')

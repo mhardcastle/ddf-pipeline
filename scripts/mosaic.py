@@ -29,6 +29,7 @@ import multiprocessing as mp
 from queue import Empty
 from convolve import do_convolve
 from time import sleep
+from scipy.signal import medfilt2d
 
 def reproj_inner(q,reproj,hdu,header,shift,direction,ds9region,guard=20):
     print('Direction',direction,'starting')
@@ -172,15 +173,19 @@ def make_mosaic(args):
     else:
         reproj=reproject_interp_chunk_2d
 
+    cellsize=1.5
     if args.do_vlow:
         intname='image_full_vlow_nocut_m.int.restored.fits'
         appname='image_full_vlow_nocut_m.app.restored.fits'
+        cellsize=15
     elif args.do_wsclean:
         intname='WSCLEAN_low-MFS-image-int.fits'
         appname='WSCLEAN_low-MFS-image.fits'
+        cellsize=15
     elif args.do_lowres:
         intname='image_full_low_m.int.restored.fits'
         appname='image_full_low_m.app.restored.fits'
+        cellsize=4.5
     elif args.do_stokesV:
         intname='image_full_high_stokesV.dirty.corr.fits'
         appname='image_full_high_stokesV.dirty.fits'
@@ -196,7 +201,10 @@ def make_mosaic(args):
     else:
         intname='image_full_ampphase_di_m.NS.int.restored.fits'
         appname='image_full_ampphase_di_m.NS.app.restored.fits'
-    
+
+    if args.use_scalefactor:
+        sfname=appname.replace('.fits','.scalefactors.fits')
+        
     if args.convolve:
         orig_intname=intname
         orig_appname=appname
@@ -222,6 +230,7 @@ def make_mosaic(args):
     shifts=[]
     polylists=[]
     badfacets=[]
+    imcropsizes=[]
     if args.directories is None:
         raise RuntimeError("At least one directory name must be supplied")
     for d in args.directories:
@@ -230,8 +239,9 @@ def make_mosaic(args):
         if not os.path.isfile(infile):
             if args.convolve:
                 print('Convolved file',infile,'does not exist, making it')
-                do_convolve(d+'/'+orig_intname,float(args.convolve),d+'/'+intname)
-                do_convolve(d+'/'+orig_appname,float(args.convolve),d+'/'+appname)
+                do_convolve(d+'/'+orig_intname.replace('restored','model'),float(args.convolve),outfile=d+'/'+intname,appout=d+'/'+appname,scale=False,restore_image=d+'/'+orig_intname.replace('restored','residual'),intimage=d+'/'+orig_intname,appimage=d+'/'+orig_appname)
+                #do_convolve(d+'/'+orig_intname,float(args.convolve),d+'/'+intname)
+                #do_convolve(d+'/'+orig_appname,float(args.convolve),d+'/'+appname)
             else:
                 raise RuntimeError('Expected file',infile,'does not exist')
         hdu=fits.open(infile)
@@ -243,14 +253,6 @@ def make_mosaic(args):
         if args.do_stokesV:
             hdu[0].data[0][0] = hdu[0].data[0][1]
 
-        if args.find_noise:
-            print('Estimating noise for', d+'/' + intname)
-            if args.do_vlow or args.do_wsclean:
-                noise.append(get_rms(hdu,boxsize=500,niter=50))
-            elif args.do_lowres:
-                noise.append(get_rms(hdu,boxsize=1500))
-            else:
-                noise.append(get_rms(hdu))
         hdus.append(flatten(hdu))
 
         imagefilename=d+'/'+appname
@@ -262,12 +264,31 @@ def make_mosaic(args):
         else:
                 app.append(flatten(fits.open(imagefilename)))
 
+        if args.use_scalefactor:
+            print('Applying scale factor',d+'/'+sfname)
+            if os.path.isfile(d+'/'+sfname):
+                sfimg=flatten(fits.open(d+'/'+sfname))
+                hdus[-1].data*=sfimg.data
+                app[-1].data*=sfimg.data
+            else:
+                print('Scale factor image not found, not scaling image')
+                
+        if args.find_noise:
+            print('Estimating noise for', d+'/' + intname)
+            if args.do_vlow or args.do_wsclean:
+                noise.append(get_rms(hdus[-1],boxsize=500,niter=50))
+            elif args.do_lowres:
+                noise.append(get_rms(hdus[-1],boxsize=1500))
+            else:
+                noise.append(get_rms(hdus[-1]))
+                
         if bth:
             astromaps.append(flatten(fits.open(d+'/astromap.fits')))
 
         if args.read_noise:
             noisename=d+'/'+appname.replace('.fits','_facetnoise.fits')
             if not os.path.isfile(noisename):
+                print('Noise map',noisename,'does not exist, creating it')
                 g=glob.glob(d+'/*.tessel.reg')
                 get_rms_map3(d+'/'+appname,g[0],noisename,database=False)
             noisefiles.append(flatten(fits.open(noisename)))
@@ -316,6 +337,19 @@ def make_mosaic(args):
         else:
             badfacets.append(None)
 
+        if args.use_imcrop:
+            imcropfile=d+'/imcrop.txt'
+            if os.path.isfile(imcropfile):
+                print('Reading the image crop file')
+                # File contains one number, which is the dimension in
+                # pixels of the valid sub-image. The rest should be
+                # zero-weighted
+                lines=open(imcropfile).readlines()
+                imcrop=int(lines[0].rstrip())
+            else:
+                imcrop=None
+            imcropsizes.append(imcrop)
+
     if args.find_noise:
         args.noise=noise
         print('Noise values are:')
@@ -327,8 +361,24 @@ def make_mosaic(args):
     for i in range(len(app)):
         np.seterr(divide='ignore')
         app[i].data=np.divide(app[i].data,hdus[i].data)
+        app[i].data=medfilt2d(app[i].data)
         app[i].data[app[i].data<threshold]=0
- # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
+
+        if args.use_imcrop and imcropsizes[i] is not None:
+            imcrop=int(imcropsizes[i]*0.95*1.5/cellsize) # defined in 1.5 arcsec pixels
+            print('Applying imcrop, size =',imcrop)
+            imsize,_=app[i].data.shape
+            if imsize>imcrop:
+                minxy=int((imsize-imcrop)/2)
+                maxxy=minxy+imcrop
+                app[i].data[:minxy,:]=0
+                app[i].data[maxxy:,:]=0
+                app[i].data[:,:minxy]=0
+                app[i].data[:,maxxy:]=0
+            else:
+                print('** imcrop size is larger than actual size!')
+        
+        # at this point this is the beam factor: we want 1/sigma**2.0, so divide by noise and square
         if args.noise is not None:
             app[i].data/=args.noise[i]
         elif noisefiles:
@@ -516,7 +566,8 @@ def make_mosaic(args):
         isum/=wsum
         # mask now contains True where a non-nan region was present in either map
         isum[~mask]=np.nan
-        if np.any(np.isnan(isum)):
+
+        if np.sum(np.isnan(isum))>100:
             # blank small islands -- due to beam errors
             island_mask=make_blank_mask(isum,verbose=True)
             isum[island_mask]=np.nan
@@ -563,6 +614,8 @@ if __name__=='__main__':
     parser.add_argument('--find_noise', dest='find_noise', action='store_true', help='Find noise from image')
     parser.add_argument('--read_noise', action='store_true', help='Read noise from a pre-existing per-facet noise file')
     parser.add_argument('--use_badfacet', action='store_true', help='Read a bad facet file')
+    parser.add_argument('--use_imcrop', action='store_true', help='Read a crop file')
+    parser.add_argument('--use_scalefactor', action='store_true', help='Read a scale factor image')
     parser.add_argument('--do_lowres',dest='do_lowres', action='store_true', help='Mosaic low-res images instead of high-res')
     parser.add_argument('--do_vlow',dest='do_vlow', action='store_true', help='Mosaic vlow images instead of high-res')
     parser.add_argument('--do_wsclean',dest='do_wsclean', action='store_true', help='Mosaic subtracted vlow images instead of high-res')

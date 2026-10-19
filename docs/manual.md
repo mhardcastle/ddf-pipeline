@@ -327,7 +327,7 @@ ddf-pipeline can correct for astrometric offsets using a version of
 the method of Smith et al (2011) &mdash;
 http://adsabs.harvard.edu/abs/2011MNRAS.416..857S . Empirically we
 have found that the best results come from aligning with PanSTARRS,
-which works anywhere in the Northern hemisphere. The correction method 'pslocal' uses a version of the PanSTARRS catalogue optimized for this and made available through the Hertfordshire cluster, and is recommended.
+which works anywhere in the Northern hemisphere. The correction method 'pslocal' uses a version of the PanSTARRS catalogue optimized for this and made available through the Hertfordshire cluster, and is recommended if you are using this process. However this is not part of the LoTSS DR3 workflow (corrections are made at the mosaicing stage instead) and it should only be enabled if you know that it will improve the final results.
 
 Set
 ```
@@ -336,8 +336,7 @@ method=pslocal
 fit=mcmc
 ```
 to determine and correct for the per-direction offset from the
-PanSTARRS frame. This is particularly useful if you intend to do
-optical crossmatching or any form of mosaicing. Output images after
+PanSTARRS frame. Output images after
 shifting have names of the form
 `image_full_ampphase1m_shift.*.facetRestored.fit`
 
