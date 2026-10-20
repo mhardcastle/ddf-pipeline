@@ -24,7 +24,7 @@ try:
 except ModuleNotFoundError:
     print(" Could not initialise mpi4py ")
     pass
-except Error as e:
+except Exception as e:
     raise RuntimeError(e)
 
 def Print(*args):
