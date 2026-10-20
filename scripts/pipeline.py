@@ -1579,8 +1579,6 @@ def ingest_dynspec(obsid='*'):
                 print(sExec)
                 sdb.cur.execute(sExec)
 
-
-
 def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
                  mpiManager=None, mslist_str=""):
     if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1 and mslist_str != "":
@@ -1626,7 +1624,6 @@ def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_S
             t.addcols(desc)
         t.putcol(out_colname,d)
         t.close()
-
 
 def subtractOuterSquare(o, mpiManager=None):
     #wide_imsize=o['wide_imsize']
@@ -3326,6 +3323,3 @@ def driver():
 
 if __name__=='__main__':
     driver()
-
-
-    
