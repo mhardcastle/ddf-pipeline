@@ -1,3 +1,4 @@
+import numpy as np
 MPI_SIZE = 0
 RANK=0
 LOCAL_RANK = 0 # local process ID on the node
@@ -126,11 +127,15 @@ class MSSet():
                 L.append(site)
                 DicoNodesToLSites[node]=L
             iNode=0
-            for ThisMS in mslist:
+            Current_iSite=np.zeros((len(ListNodes),))
+            for iMS,ThisMS in enumerate(mslist):
                 node=ListNodes[iNode]
-                site=DicoNodesToLSites[node][0]
-                DicoNodesToLSites[node].remove(site)
+                nsites=len(DicoNodesToLSites[node])
+                iSite=Current_iSite[iNode]
+                site=DicoNodesToLSites[node][int(iSite)]
                 L_node_ms.append((site,ThisMS))
+                Current_iSite[iNode]+=1
+                if Current_iSite[iNode]==nsites: Current_iSite[iNode]=0
                 iNode+=1
                 if iNode==len(ListNodes): iNode=0
             
@@ -259,7 +264,12 @@ class mpi_manager():
         for Node in self.DicoNode2mslist.keys():
             LMS=self.FullMSSet.DicoNodes2ListMS[Node]
             for MSName in self.MSSet.DicoNodes2ListMS[Node]:
-                if MSName not in LMS: raise Exception(f"MSs lists not consistent: {MSName} not in {LMS}")
+                if MSName not in LMS:
+                    print(f"MSs lists not consistent: {MSName} not in {LMS}")
+                    import time
+                    time.sleep(1)
+                    raise Exception(f"MSs lists not consistent: {MSName} not in {LMS}")
+        Print("LDSLDFKJLD 7")
 
 
     def callParallel(self,*args,**kwargs):

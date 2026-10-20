@@ -1914,11 +1914,11 @@ def main(o):
         MPI_Manager.scpScatter(o['full_mslist'])
         mpi_manager.Print("  done")
 
-    mpi_manager.Print("  Before barrier")
+    mpi_manager.Print("  Before barrier AAA")
     if USE_MPI:
         MPI.COMM_WORLD.Barrier()
-    mpi_manager.Print("  Done barrier")
-        
+    mpi_manager.Print("  Done barrier AAA")
+
     mpi_manager.Print("setting MPI_Manager")
     SetMS=mpi_manager.MSSet(o['mslist'])
     FullSetMS=mpi_manager.MSSet(o['full_mslist'])
