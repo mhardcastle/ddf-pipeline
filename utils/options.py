@@ -36,7 +36,7 @@ def options(optlist,option_list):
     for o in optlist:
         if o[:2]=='--':
             optstring=o[2:]
-            result=re.match('(\w*)-(\w*)\s*=\s*(.*)',optstring)
+            result=re.match(r'(\w*)-(\w*)\s*=\s*(.*)',optstring)
             if result is None:
                 print('Cannot parse option',optstring)
             else:

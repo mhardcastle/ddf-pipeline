@@ -30,10 +30,13 @@ try:
     MPI_SIZE = MPI.COMM_WORLD.size
     RANK=MPI.COMM_WORLD.rank
     LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+    import DDFacet.Other.MPIManager
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
 except:
     MPI_SIZE = 0
     RANK=0
     LOCAL_RANK=0
+    NODE_ID=0
 
 USE_MPI=(MPI_SIZE>1)
 
@@ -769,7 +772,8 @@ def ddf_image(
             import DDFacet.DDF
             SaveFile1="last_DDFacet.finalised.obj"
             mpiManager.scpScatter(SaveFile1)
-            MPI.COMM_WORLD.Barrier()
+            if USE_MPI:
+                MPI.COMM_WORLD.Barrier()
 
             OP=MyPickle.Load(SaveFile1)
             ListJobs=[]
@@ -988,16 +992,19 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
 
 
     res=mpi_manager.callParallel(ListJobs)
-    MPI.COMM_WORLD.Barrier()
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
 
     if RANK==0:
         mpiManager.scpGatherSolutions(outsols)
-    MPI.COMM_WORLD.Barrier()
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
                                  SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options,mpiManager=mpiManager)
-    MPI.COMM_WORLD.Barrier()
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
     
     return outsols
 
@@ -1935,8 +1942,8 @@ def main(o):
         
     DoResetCounter=0
     mpi_manager.Print("run MemMobitor")
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i MemMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i IOMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i,%i,%i MemMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,NODE_ID,MPI_SIZE,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i,%i,%i IOMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,NODE_ID,MPI_SIZE,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
     mpi_manager.Print("Barrier after Monitors")
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     mpi_manager.Print("   ... barrier ok")
@@ -1967,7 +1974,8 @@ def main(o):
     run("mkdir -p logs",dryrun=o['dryrun'], mpiManager=MPI_Manager,proceed=True)
 
     mpi_manager.Print("DDD")
-    MPI.COMM_WORLD.Barrier()
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
     
     # Pipeline started!
     if use_database():
