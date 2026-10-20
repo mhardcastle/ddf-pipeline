@@ -27,13 +27,18 @@ import os
 
 try:
     from mpi4py import MPI
-    MPI_SIZE = MPI.COMM_WORLD.size
-    RANK=MPI.COMM_WORLD.rank
-    LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    RANK=DDFacet.Other.MPIManager.RANK
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
 except:
     MPI_SIZE = 0
     RANK=0
     LOCAL_RANK=0
+    NODE_ID=0
+
+MAIN_PROCESS_RANKS=("%i,%i,%i,%i"%(RANK,LOCAL_RANK,NODE_ID,MPI_SIZE))
 
 USE_MPI=(MPI_SIZE>1)
 
@@ -467,7 +472,8 @@ def ddf_image(
     if options is None:
         options = o # attempt to get global if it exists
 
-    keywords = parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
+    import DDFacet.Parset
+    keywords = parse_parset(["%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)],use_headings=True)
 
     for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
@@ -543,6 +549,7 @@ def ddf_image(
         f" --Debug-Pdb=never --Log-Memory 1"
     )
 
+    
     if facets_skip_th is not None:
         runcommand += f" --Facets-SkipTh {facets_skip_th}"
 
@@ -634,7 +641,7 @@ def ddf_image(
         # SSD3 specific parameters
         if cleanmode == 'SSD3':
              runcommand += ' --SSD3-InitType ["HMP_0-100","MultiSlice:Orieux"]'
-             runcommand += ' --SSD3-NLookBackModels 5'
+             runcommand += ' --SSD3-NLookBackModels 0'
              runcommand += ' --SSD3-NLastCyclesDeconvAll 2'
              runcommand += ' --SSD3-AllowFacetOverlap 0'
              runcommand += ' --SSD3-RunSimpleClean 0'
@@ -1642,7 +1649,8 @@ def subtractOuterSquare(o, mpiManager=None):
     # if skipping is disabled, disable it here as well
     # when enabled limit the effect; full_wide is supposed to be wide
     wide_facet_skip_th = min(o['facets_skip_th'], 0.001)
-    
+
+
     ddf_image('image_full_wide', o['mslist'],
             cleanmode=o['cleanmode'],
             colname=colname,
@@ -1935,8 +1943,8 @@ def main(o):
         
     DoResetCounter=0
     mpi_manager.Print("run MemMobitor")
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i MemMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
-    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%i,%i IOMonitor.py --Mode Dump --Reset %i &"%(RANK,LOCAL_RANK,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s MemMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s IOMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
     mpi_manager.Print("Barrier after Monitors")
     if USE_MPI: MPI.COMM_WORLD.Barrier()
     mpi_manager.Print("   ... barrier ok")
@@ -2078,7 +2086,6 @@ def main(o):
             stop(2)
     
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
-    
     mpi_manager.Print("Start the real stuff")
     if o['basedicomodel'] is None:
         # ##########################################################
