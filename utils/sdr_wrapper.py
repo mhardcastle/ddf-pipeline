@@ -19,6 +19,9 @@ def request_with_retry(url,rfunction=requests.get):
             print('Timeout fetching URL ',url,': retrying')
             # fuzzy sleep to avoid synchronized retries from multiple clients
             sleep(abs(np.random.normal(30,5)))
+        except Exception as e:
+            print('Something else %s ... retrying'%str(e))
+            sleep(abs(np.random.normal(30,5)))
         else:
             done=True
     return r

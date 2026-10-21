@@ -9,6 +9,7 @@ import datetime
 def run_log(cmd,logfile,quiet=False):
     logfile = open(logfile, 'w')
     logfile.write('Running process with command: '+cmd+'\n')
+
     proc=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,universal_newlines=True)
     while True:
         try:

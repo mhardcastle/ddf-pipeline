@@ -67,7 +67,7 @@ def list_db_update(success,workdir=None):
     else:
         update_status(None,'List failed',workdir=workdir)
 
-if __name__=='__main__':
+def driver():
     import sys
     if len(sys.argv)>1:
         force=sys.argv[1]=='force'
@@ -77,3 +77,6 @@ if __name__=='__main__':
     success=make_list(workdir=os.getcwd(),force=force)
     if use_database():
         list_db_update(success)
+
+if __name__=="__main__":
+    driver()

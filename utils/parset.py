@@ -1,13 +1,20 @@
 from __future__ import absolute_import
-from getcpus import getcpus
+import os
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from getcpus import getcpus
+else:
+    from utils.getcpus import getcpus
 
 option_list = (
     ( 'machine',    'NCPU_DDF',    int, getcpus(),'Number of CPUS to use for DDF'),
     ( 'machine',    'NCPU_killms', int, getcpus(),'Number of CPUS to use for KillMS' ),
-    
-    ( 'data',       'mslist',      str, None, 'Initial measurement set list to use -- must be specified' ),
-    ( 'data',       'full_mslist', str, None, 'Full-bandwidth measurement set to use for final step, if any' ),
-    ( 'data',       'colname',     str, 'CORRECTED_DATA', 'MS column to use' ),
+
+    ( 'data',       'mslist',      str,   None, 'Initial measurement set list to use -- must be specified' ),
+    ( 'data',       'full_mslist', str,   None, 'Full-bandwidth measurement set to use for final step, if any' ),
+    ( 'data',       'colname',     str,   'CORRECTED_DATA', 'MS column to use' ),
+    ( 'data',       'chunk_hours', float, 0,    'Process data in chunks of <=N hours. Use 0 for no chunking.' ),
 
     ( 'solutions',  'ndir',             int,   45,    'Number of directions' ),
     ( 'solutions',  'SolsDir',          str,   "SOLSDIR", 'Directory for solutions' ),
@@ -18,6 +25,7 @@ option_list = (
     ( 'solutions',  'dt_very_slow',     float, 43.63, 'Time interval for killMS (minutes)' ),
     ( 'solutions',  'dt_di',            float, None,  'Time interval for DI killMS (minutes): auto-selected if None' ),
     ( 'solutions',  'dt_fast',          float, 0.5,   'Time interval for full-bandwidth killMS (minutes)' ),
+    ( 'solutions',  'di_cal_mode',      str,   "IFull", 'DI calibration mode (Scalar, IDiag, IFull)' ),
     ( 'solutions',  'LambdaKF',         float, 0.5,   'Kalman filter lambda for killMS' ),
     ( 'solutions',  'NIterKF',          list,  [1, 1, 1, 1, 6, 1, 6], 'Kalman filter iterations for killMS for the 7 killMS steps' ),
     ( 'solutions',  'normalize',        list,  ['BLBased', 'BLBased', 'SumBLBased'], 'How to normalize solutions for the three self-cal steps' ),
@@ -39,6 +47,7 @@ option_list = (
     ( 'image',      'imsize',                 int,   20000,  'Image size in pixels' ),
     ( 'image',      'cellsize',               float, 1.5,    'Pixel size in arcsec' ),
     ( 'image',      'robust',                 float, -0.15,  'Imaging robustness' ),
+    ( 'image',      'wmax',                   float, 50000., 'maximum w to be used for imaging' ),
     ( 'image',      'final_robust',           float, -0.5,   'Final imaging robustness' ),
     ( 'image',      'psf_arcsec',             float, 12.0,   'Force restore with this PSF size in arcsec if set, otherwise use default' ),
     ( 'image',      'final_psf_arcsec',       float, 6.0,    'Final image restored with this PSF size in arcsec' ),
@@ -57,6 +66,9 @@ option_list = (
     ( 'image',      'vlow_imsize',            int,   500,    'Very low-resolution QU image size in pixels' ),
     ( 'image',      'do_decorr',              bool,  True,   'Use DDF\'s decorrelation mode' ),
     ( 'image',      'HMPsize',                int,   10,     'Island size to use HMP initialization' ),
+    ( 'image',      'flux_threshold',         float, 0,      'Flux Threshold for the minor cycle' ),
+    ( 'image',      'nfacets_di',             int,   11,     'Number of facets in the DI init' ),
+    ( 'image',      'facets_diammax',         float, 1.5,    'Maximum facet diameter (deg) in the DI init' ),
     ( 'image',      'uvmin',                  float, 0.1,    'Minimum baseline length to use in imaging (km)'),
     ( 'image',      'uvmax',                  float, 1000.0, 'Maximum baseline length to use in imaging (km)'),
     ( 'image',      'use_tapered_short_spacings', bool, False, 'Include 0-uvmin baselines at sigmoid-tapered weight instead of cutting them (imaging only)'),
@@ -66,6 +78,8 @@ option_list = (
     ( 'image',      'centralfreqs',           list,  [128.0, 143.7, 160.2],'Central frequencies to use for channel images (MHz)'),
     ( 'image',      'use_splitisland',        bool,  False,  'Use the SSDClean-MaxIslandSize option in DDFacet'),
     ( 'image',      'splitisland_size',       float, 100,    'Size to use for SSDClean-MaxIslandSize option in DDFacet'),
+    ( 'image',      'BeamModel',              str,   "LOFAR", 'Beam model' ),
+    ( 'image',      'AutoFlagNyquist',        bool,  False,  'AutoFlagNyquist' ),
     ( 'image',      'phasecenter',            list,  None,   'Desired RA and DEC of image phase centre (["hh:mm:ss", "dd:mm:ss"])'),
     ( 'image',      'facets_skip_th',         float, 0.0,    'Skip gridding/degridding facets below this mean Jones power; for multi-pointing mode (default: 0, disable)'),
     ( 'image',      'weight_beam_power',      bool,  False,  'Multiply imaging weights by the beam power in DDF (--Weight-BeamPower); for multi-pointing mode (default: False)'),
@@ -86,7 +100,9 @@ option_list = (
     ( 'masking',    'use_external_mask',         list,  [True, True, True, True], 'Use the external/step mask as cleanmask and calibration-model clip, per pipeline step (default: True)'),
     ( 'masking',    'thresholds',                list,  [15, 10, 10, 5], 'sigmas to use in (auto)masking for initial clean and 3 self-cals'),
     ( 'masking',    'low_threshold',             float, 3.0,   'Mask sigma for low-res masking' ),
+    ( 'masking',    'clustering_threshold',      float, 10.0,  'MakeCatalog.py threshold' ),
     ( 'masking',    'wide_threshold',            float, 3.0,   'Mask sigma for wide-field masking' ),
+    ( 'masking',    'force_disable_extmask',     bool,  False, 'Disable all external masking below' ),
     ( 'masking',    'tgss',                      str,   None,  'Path to TGSS catalogue file' ),
     ( 'masking',    'tgss_radius',               float, 8.0,   'TGSS mask radius in pixels' ),
     ( 'masking',    'tgss_flux',                 float, 300,   'Use TGSS components with peak flux in catalogue units (mJy) above this value' ),
@@ -99,7 +115,8 @@ option_list = (
     ( 'masking',    'rmsfacet',                  bool,  False, 'If True calculate one rms per facet rather than per image when making the extended rms maps' ),
     ( 'masking',    'thres_outmaskextended',     float, 15,    'Masking threshold for masking image_dirin_SSD.residual01.fits'),
     ( 'masking',    'use_maskdiffuse',           bool,  True,  'Use MaskDiffuse'),
-    
+    ( 'masking',    'box_size',                  int,   50,    'MakeMask.py Box size'),
+
     ( 'control',    'quiet',             bool, False,   'If True, do not log to screen' ),
     ( 'control',    'nobar',             bool, False,   'If True, do not print progress bars' ),
     ( 'control',    'logging',           str,  'logs',  'Name of directory to save logs to, or \'None\' for no logging' ),
@@ -112,37 +129,38 @@ option_list = (
     ( 'control',    'skip_di',           bool, False,   'If True, skip the DI calibration steps' ),
     ( 'control',    'bootstrap',         bool, False,   'If True, do bootstrap' ),
     ( 'control',    'catch_signal',      bool, True,    'If True, catch SIGUSR1 as graceful exit signal -- stops when control returns to the pipeline.'),
-    ( 'control',    'exitafter',         str,  None,    'Step to exit after -- cleanup, wide, dirin, dirin_di, bootstrap, phase, ampphase, fulllow'),
+    ( 'control',    'exitafter',         str,  None,    'Step to exit after -- cleanup, wide, initial, dirin, dirin_di, bootstrap, phase, ampphase, ampphase_di, fullampphase, fulllow'),
     ( 'control',    'redofrom',          str,  None,    'Step to redo from after -- start or dirin'),
     ( 'control',    'archive_dir',       str,  'old',   'Directory to archive to if redofrom is set'),
     ( 'control',    'msss_mode',         bool, False,   'Work in "MSSS mode" where a smooth beam and spectral cube are computed in the ampphase1 step' ),
     ( 'control',    'remove_columns',    bool, False,   'Remove all pipeline-generated columns before the run' ),
     ( 'control',    'spectral_restored', bool, False,   'Make multi-frequency images ' ),
     ( 'control',    'polcubes',          bool, False,   'Make polarization cubes' ),
-    ( 'control',    'split_polcubes',    bool, False,   'Split polarization cubes into Q and U' ),	
+    ( 'control',    'split_polcubes',    bool, False,   'Split polarization cubes into Q and U' ),
     ( 'control',    'stokesv',           bool, False,   'Make Stokes V image' ),
     ( 'control',    'redo_DI',           bool, False,   'Redo DI cal with DP3' ),
     ( 'control',    'redo_DI_type',      str,  'GSM',   'Sky model for redoing DI -- TGSS or GSM'),
-    ( 'control',    'beam_at',           str,  'facet', 'Where to compute beam in DDF and kMS. Leave unset for default behaviour which will be "facet" for new DDF versions and "tessel" for old ones. Set to "tessel" to force old behaviour.'), 
-    
+    ( 'control',    'beam_at',           str,  'facet', 'Where to compute beam in DDF and kMS. Leave unset for default behaviour which will be "facet" for new DDF versions and "tessel" for old ones. Set to "tessel" to force old behaviour.'),
+
     ( 'bootstrap',  'catalogues',   list, None, 'File names of catalogues for doing bootstrap' ),
-    ( 'bootstrap',  'groups',       list, None, 'Group numbers for catalogues. At least one match must be found in each group. Optional -- if not present each catalogue is in a different group.' ), 
-    ( 'bootstrap',  'frequencies',  list, None, 'Frequencies for catalogues (Hz)' ), 
-    ( 'bootstrap',  'names',        list, None, 'Short names for catalogues' ), 
+    ( 'bootstrap',  'groups',       list, None, 'Group numbers for catalogues. At least one match must be found in each group. Optional -- if not present each catalogue is in a different group.' ),
+    ( 'bootstrap',  'frequencies',  list, None, 'Frequencies for catalogues (Hz)' ),
+    ( 'bootstrap',  'names',        list, None, 'Short names for catalogues' ),
     ( 'bootstrap',  'radii',        list, None, 'Crossmatch radii for catalogues (arcsec)' ),
-    
+
     ( 'compression', 'compress_polcubes',   bool, False, 'Compress polarization cubes'),
     ( 'compression', 'fpack_q',             int,  4,     'fpack compression factor to use'),
     ( 'compression', 'delete_compressed',   bool, False, 'Delete original cube files after compression'),
     ( 'compression', 'compress_ms',         bool, False, 'Compress measurement sets with dysco'),
-    
+
     ( 'offsets',    'method', str, None,     'Offset correction method to use. None -- no correction'),
     ( 'offsets',    'fit',    str, 'mcmc',   'Histogram fit method' ),
     ( 'offsets',    'mode',   str, 'normal', 'Mode of operation: normal or test' ),
-    
+
     ( 'spectra',    'do_dynspec',       bool,  False, 'Do dynamic spectra'),
     ( 'spectra',    'bright_threshold', float, 1.0,   'Threshold for auto-selection of bright sources'),
-    
+
     ( 'inputmodel', 'basedicomodel', str, None, 'Input dicomodel for calibration'),
     ( 'inputmodel', 'basemaskname',  str, None, 'Input mask for calibration'),
     ( 'inputmodel', 'baseimagename', str, None, 'Input image for calibration'))
+

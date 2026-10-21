@@ -11,7 +11,8 @@ from builtins import range
 from past.utils import old_div
 import os,sys
 import os.path
-from auxcodes import run,warn,die,MSList
+import copy
+import socket
 try:
     import bdsf as bdsm
 except ImportError:
@@ -19,15 +20,34 @@ except ImportError:
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
-from pipeline import ddf_image,make_external_mask
 import shutil
 from astropy.io import fits
+
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+if not LOCAL_DEV:
+    from auxcodes import run,warn,die,MSList
+    from pipeline import ddf_image,make_external_mask
+    import mpi_manager
+else:
+    from utils.auxcodes import run,warn,die,MSList
+    from scripts.pipeline import ddf_image,make_external_mask
+    from utils import mpi_manager
 
 def logfilename(s):
     if o['logging'] is not None:
         return o['logging']+'/'+s 
     else:
         return None
+
+def run_bootstrap_mpi(MPI_Manager,o):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2mslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            ListJobs.append((Node,run_bootstrap,(oc,),{}))
+        
+    mpi_manager.callParallel(ListJobs)
 
 def run_bootstrap(o):
 
@@ -140,6 +160,7 @@ def run_bootstrap(o):
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
             os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl')):
+
             warn('Source list exists, skipping source extraction')
         else:
             warn('Running PyBDSM, please wait...')
@@ -148,15 +169,19 @@ def run_bootstrap(o):
             img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
             img.export_image(img_type='rms',img_format='fits')
 
-        from make_fitting_product import make_catalogue
-        import fitting_factors
-        import find_outliers
+        if not LOCAL_DEV:
+            from make_fitting_product import make_catalogue
+            import fitting_factors
+            import find_outliers
+        else:
+            from utils.make_fitting_product import make_catalogue
+            from utils import fitting_factors,find_outliers
 
         # generate the fitting product
         if os.path.isfile(obsid+'crossmatch-1.fits'):
             warn('Crossmatch table exists, skipping crossmatch')
         else:
-            t = pt.table(omslist[0]+ '/FIELD', readonly=True, ack=False)
+            t = pt.table(omslist[0]+ '::FIELD', readonly=True, ack=False)
             direction = t[0]['PHASE_DIR']
             ra, dec = direction[0]
 
@@ -166,6 +191,7 @@ def run_bootstrap(o):
             dec*=180.0/np.pi
 
             cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
+            #make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl',ra,dec,2.5,cats,outnameprefix=obsid)
             filenames=['image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl','image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl']
             for filename in filenames:
                 if os.path.isfile(filename):
@@ -174,6 +200,7 @@ def run_bootstrap(o):
                 die('Catalogue file does not exist!')
 
             make_catalogue(filename,ra,dec,2.5,cats,outnameprefix=obsid)
+
     
         freqlist=open(obsid+'frequencies.txt','w')
         for n,f in zip(o['names'],o['frequencies']):
@@ -230,7 +257,7 @@ def run_bootstrap(o):
                     warn('Table '+ms+' has already been corrected, skipping')
                 else:
                     # in this version we need to scale both the original data and the data in colname
-                    t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+                    t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
                     print(frq,factor)
@@ -275,8 +302,25 @@ def run_bootstrap(o):
         hdus[0][0].data/=len(Uobsid)
         hdus[0].writeto('image_bootstrap.app.mean.fits')
                 
-if __name__=='__main__':
-    from parset import option_list
-    from options import options
+def driver():
+    if not LOCAL_DEV:
+        from parset import option_list
+        from options import options
+    else:
+        from utils.parset import option_list
+        from utils.options import options
+    global o
     o=options(sys.argv[1:],option_list)
-    run_bootstrap(o)
+    SetMS=mpi_manager.MSSet(o['mslist'])
+    MainNode=None
+    if mpi_manager.RANK==0: MainNode=socket.gethostname()
+    if mpi_manager.USE_MPI:
+        MainNode=mpi_manager.MPI.COMM_WORLD.bcast(MainNode, root=0)
+    MPI_Manager=mpi_manager.mpi_manager(o, SetMS, None, MainNode)
+    if MPI_Manager.UseMPI:
+        run_bootstrap_mpi(MPI_Manager, o)
+    else:
+        run_bootstrap(o)
+
+if __name__=='__main__':
+    driver()
