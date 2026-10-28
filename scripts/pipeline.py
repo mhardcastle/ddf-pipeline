@@ -547,7 +547,6 @@ def ddf_image(
         f" --Image-Cell {float(cellsize)} --Facets-NFacets={options['nfacets_di']}"
         f" --Freq-NDegridBand 1 --Beam-NBand 1"
         f" --Facets-DiamMax {options['facets_diammax']} --Facets-DiamMin 0.1"
-        f" --SSDClean-NEnlargeData 0 --SSDClean-ConvFFTSwitch 10000"
         f" --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir}"
         f" --Debug-Pdb=never --Log-Memory 1"
     )
