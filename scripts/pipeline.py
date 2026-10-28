@@ -543,7 +543,7 @@ def ddf_image(
         f" --Deconv-PeakFactor {peakfactor} --Deconv-FluxThreshold {options['flux_threshold']}"
         f" --Deconv-RMSFactor={rms_factor}"
         f" --Beam-Model={options['BeamModel']} --Weight-Robust {robust} --Image-NPix={imsize}"
-        f" --CF-wmax {options['wmax']} --CF-Nw 140 --Output-Also {saveimages}"
+        f" --CF-wmax {options['wmax']} --CF-Nw 100 --Output-Also {saveimages}"
         f" --Image-Cell {float(cellsize)} --Facets-NFacets={options['nfacets_di']}"
         f" --Freq-NDegridBand 1 --Beam-NBand 1"
         f" --Facets-DiamMax {options['facets_diammax']} --Facets-DiamMin 0.1"
