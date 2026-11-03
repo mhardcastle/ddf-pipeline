@@ -91,8 +91,10 @@ option_list = (
     ( 'image',      'wscms_peakfactor',       list,  [0.1, 0.01, 0.01, 0.001], "WSCMS2 clean floor based on dirty image peak"),
     ( 'image',      'wscms_neg_model_mode',   list,  [0, 1, 1, 1], "WSCMS2 negative-component policy per step: 0=positive-only, 1=safe (model flux + scale cap), 2=free (default: safe)"),
     ( 'image',      'wscms_flux_threshold',   list,  [1e-5, 1e-5, 1e-6, 1e-6], "WSCMS2 absolute clean floor (Jy) per pipeline step; backstop against over-cleaning"),
-    ( 'image',      'wscms_neg_max_scale',    int,   None, "WSCMS2 largest scale (px) allowed to fit negative components, scales with cellsize (default: None)"),
-    ( 'image',      'wscms_use_local_rms',    bool,  True, "Weight image data by artifact noise. WSCMS2 then decides peaks based on SNR instead of raw Jy."),
+    ( 'image',      'wscms_neg_max_scale',    int,   None,      "WSCMS2 largest scale (px) allowed to fit negative components, scales with cellsize (default: None)"),
+    ( 'image',      'wscms_use_local_rms',    bool,  True,      "Feed the local artifact-noise map into WSCMS2 for peak selection"),
+    ( 'image',      'wscms_local_rms_sig',    list,  [5,3,1,0], "WSCMS2 local-RMS mask threshold X per STEP (mask pixels below X sigma; 0 = no mask)"),
+    ( 'image',      'wscms_local_rms_strength', float, 0.8,     "WSCMS2 local-RMS weight exponent (0 = off)"),
 
     ( 'masking',    'wscms_automask_rms_factor', list,  [10, 7, 5, 3], 'WSCMS2 automask freeze sigma per (self)cal step'),
     ( 'masking',    'wscms_compact_margin',      float, None, 'WSCMS2 history margin: min ratio of biased scale-0 to scale-s response for compact-test (default: 1.0 if unset)'),
@@ -163,4 +165,3 @@ option_list = (
     ( 'inputmodel', 'basedicomodel', str, None, 'Input dicomodel for calibration'),
     ( 'inputmodel', 'basemaskname',  str, None, 'Input mask for calibration'),
     ( 'inputmodel', 'baseimagename', str, None, 'Input image for calibration'))
-

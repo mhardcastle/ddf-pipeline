@@ -450,7 +450,8 @@ def ddf_image(
     wscms_NSubMinorIter=250,
     wscms_SubMinorPeakFact=0.85,
     wscms_use_local_rms=None,
-    wscms_placement_threshold=None,
+    wscms_local_rms_sig=None,
+    wscms_local_rms_strength=None,
     wscms_allow_refreeze=False,
     wscms_refreeze_depth=None,
 
@@ -478,7 +479,7 @@ def ddf_image(
     import DDFacet.Parset
     keywords = parse_parset(["%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)],use_headings=True)
 
-    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'thresholds', 'use_external_mask'):
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'wscms_local_rms_sig', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
 
@@ -506,6 +507,8 @@ def ddf_image(
     if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
     if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
     if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
+    if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
+    if wscms_local_rms_strength  is None: wscms_local_rms_strength  = options['wscms_local_rms_strength']
     if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
 
     import DDFacet.Parset
@@ -682,11 +685,11 @@ def ddf_image(
         runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
         runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold} --Mask-FluxImageType=ModelConv'
 
-        # optional placement threshold. Follows thresholds when unset.
-        if wscms_placement_threshold is None:
-            runcommand += f" --WSCMS-PlacementSigTh={options['thresholds'][STEP]}"
-        else:
-            runcommand += f' --WSCMS-PlacementSigTh={wscms_placement_threshold}'
+        # optional local-RMS mask threshold (0 = no mask) and weight exponent.
+        if wscms_local_rms_sig is not None:
+            runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
+        if wscms_local_rms_strength is not None:
+            runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
 
         # handle refreeze
         if wscms_allow_refreeze:
