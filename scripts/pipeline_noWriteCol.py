@@ -583,7 +583,7 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
 
         # runcommand+=" --GAClean-NSourceKin=20 "
         
-        runcommand += ' --Beam-Model=None'
+        # runcommand += ' --Beam-Model=None'
 
         try:
             Register.register("[DDFacet] %s"%imagename,"Imaging")
@@ -2084,7 +2084,6 @@ def main(o):
 
 
 
-
         separator("DD calibration")
         CurrentDDkMSSolName=None
         CurrentDDkMSSolName=killms_data(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
@@ -2139,6 +2138,7 @@ def main(o):
                                            ResetWeight=True
                                            )
         ###
+
 
         if o['exitafter'] == 'phase':
             warn('User specified exit after phase-only deconvolution.')
