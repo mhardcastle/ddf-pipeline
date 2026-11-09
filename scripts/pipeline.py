@@ -2875,13 +2875,20 @@ def main(o):
             ddf_kw['beamsize_minor']=o['low_psf_minor_arcsec']
             ddf_kw['beamsize_pa']=o['low_psf_pa_deg']
 
-        low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+        # allow for uv-override to image_low, but fallback to global uvmin if not given
+        low_uvmax = 2.5*206.0/o['low_psf_arcsec']
+        if o['low_uvmin'] is not None:
+            low_uvrange=[o['low_uvmin'], low_uvmax]
+        else:
+            low_uvrange=[o['image_uvmin'], low_uvmax]
+
+        # allow image_low imsize over-ride, but fallback to angular-coverage of main image if not given
         if o['low_imsize'] is not None:
-            low_imsize=o['low_imsize'] # allow over-ride
+            low_imsize=o['low_imsize']
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # if mask-low exists then use it
         
+        # if mask-low exists then use it
         extmask=None
         if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
