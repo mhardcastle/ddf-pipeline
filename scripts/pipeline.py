@@ -452,6 +452,7 @@ def ddf_image(
     wscms_use_local_rms=None,
     wscms_local_rms_sig=None,
     wscms_local_rms_strength=None,
+    wscms_signed_log_basis=None,
     wscms_allow_refreeze=False,
     wscms_refreeze_depth=None,
 
@@ -509,6 +510,7 @@ def ddf_image(
     if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
     if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
     if wscms_local_rms_strength  is None: wscms_local_rms_strength  = options['wscms_local_rms_strength']
+    if wscms_signed_log_basis    is None: wscms_signed_log_basis    = options['wscms_signed_log_basis']
     if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
 
     import DDFacet.Parset
@@ -690,6 +692,8 @@ def ddf_image(
             runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
         if wscms_local_rms_strength is not None:
             runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
+        if cleanmode == 'WSCMS2' and int(wscms_signed_log_basis or 0):
+            runcommand += ' --WSCMS-SignedLogBasis=1'
 
         # handle refreeze
         if wscms_allow_refreeze:
