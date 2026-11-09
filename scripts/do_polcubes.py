@@ -115,7 +115,8 @@ def do_polcubes(colname,
         with open(mslistname,'w') as file:
             for ms in fmslist:
                 file.write(ms+'\n')
-        channels=len(chan)
+
+        n_chan = len(chan)
                 
         ThisImageName = '%s_IQU_Cube%s'%(imageoutname,i)
 
@@ -129,8 +130,8 @@ def do_polcubes(colname,
                   uvrange=uvrange,beamsize=beamsize,
                   beamsize_minor=beamsize_minor,beamsize_pa=beamsize_pa,
                   imsize=imsize,cellsize=cellsize,peakfactor=0.001,
-                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],channels=channels,
-                  startchan=0,endchan=channels,options=o,
+                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
+                  startchan=0,endchan=n_chan,options=o,
                   catcher=catcher,
                   STEP=1)
 

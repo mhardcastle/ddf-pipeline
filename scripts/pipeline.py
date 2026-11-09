@@ -399,11 +399,10 @@ def ddf_image(
     normalization=None,
     cubemode=False,
     polcubemode=False,
-    channels=None,
     startchan=None,
     endchan=None,
     stokes=None,
-    freq_nband=2,
+    freq_nband=4,
     peakfactor=0.1,
     rms_factor=3.0,
     threshold=None,
@@ -611,7 +610,7 @@ def ddf_image(
             runcommand += ' --Weight-ColName="WEIGHT_SPECTRUM"'
 
     if cubemode or polcubemode:
-        # number of channels equals number of distinct freqs in data
+        # number of slices equals number of distinct freqs in data
         freqs=[]
         mss=[l.rstrip() for l in open(mslist).readlines()]
         for ms in mss:
@@ -620,10 +619,10 @@ def ddf_image(
                 if freq not in freqs:
                     freqs.append(freq)
 
-        channels=len(freqs)
+        n_cube_slices = len(freqs)
         
-        if cubemode:    runcommand += f' --Output-Cubes I --Freq-NBand={channels}'
-        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty --Freq-NBand={channels} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
+        if cubemode:    runcommand += f' --Output-Cubes I --Freq-NBand={n_cube_slices}'
+        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty --Freq-NBand={n_cube_slices} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
     else:
         #if not cubemode and not polcubemode
         runcommand += f' --Freq-NBand={freq_nband}'
@@ -692,6 +691,9 @@ def ddf_image(
             runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
         if wscms_local_rms_strength is not None:
             runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
+        
+        # frequency-axis behaviour
+        runcommand += f' --WSCMS-NumFreqBasisFuncs=2'
         if cleanmode == 'WSCMS2' and int(wscms_signed_log_basis or 0):
             runcommand += ' --WSCMS-SignedLogBasis=1'
 
