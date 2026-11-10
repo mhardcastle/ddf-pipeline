@@ -96,7 +96,7 @@ option_list = (
     ( 'image',      'wscms_use_local_rms',    bool,  True,      "Feed the local artifact-noise map into WSCMS2 for peak selection"),
     ( 'image',      'wscms_local_rms_sig',    list,  [5,3,1,0], "WSCMS2 local-RMS mask threshold X per STEP (mask pixels below X sigma; 0 = no mask)"),
     ( 'image',      'wscms_local_rms_strength', float, 0.8,     "WSCMS2 local-RMS weight exponent (0 = off)"),
-    ( 'image',      'wscms_signed_log_basis',   int,   0,       "WSCMS2 signed-log (arcsinh) spectral basis: 1 = fit flux/alpha in log-log, 0 = linear polyfit (default: 0)"),
+    ( 'image',      'wscms_signed_log_basis',   bool,  False,   "WSCMS2 signed-log (arcsinh) spectral basis: True = fit flux/alpha in log-log, False = linear polyfit (default: False)"),
 
     ( 'masking',    'wscms_automask_rms_factor', list,  [10, 7, 5, 3], 'WSCMS2 automask freeze sigma per (self)cal step'),
     ( 'masking',    'wscms_compact_margin',      float, None, 'WSCMS2 history margin: min ratio of biased scale-0 to scale-s response for compact-test (default: 1.0 if unset)'),

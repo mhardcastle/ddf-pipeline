@@ -694,7 +694,7 @@ def ddf_image(
         
         # frequency-axis behaviour
         runcommand += f' --WSCMS-NumFreqBasisFuncs=2'
-        if cleanmode == 'WSCMS2' and int(wscms_signed_log_basis or 0):
+        if cleanmode == 'WSCMS2' and wscms_signed_log_basis:
             runcommand += ' --WSCMS-SignedLogBasis=1'
 
         # handle refreeze
