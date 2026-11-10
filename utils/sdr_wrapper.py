@@ -24,7 +24,7 @@ import re
 import uuid
 from html.parser import HTMLParser
 from time import monotonic, sleep
-from urllib.parse import quote, urljoin, urlsplit
+from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import requests
 from download_file import download_file
@@ -123,6 +123,8 @@ class _FileTableParser(HTMLParser):
             status = None
             if label == 'online' and row['download_url']:
                 status = 'DUL'
+            elif label == 'external' and row['download_url']:
+                status = 'EXT'  # Resolve the linked file; this is not an online label.
             elif label == 'offline' and row['request_url']:
                 status = 'OFL'
             elif any(w in label for w in ('restor', 'stag', 'request', 'pending', 'retriev')):
@@ -231,7 +233,10 @@ class SDR(object):
         return parser.files
 
     def _entries(self, field):
-        listing = self._json(self._get_record(field)['links']['files'])
+        return self._record_entries(self._get_record(field))
+
+    def _record_entries(self, record):
+        listing = self._json(record['links']['files'])
         raw = listing.get('entries')
         if isinstance(raw, dict):
             return {key: dict(value, key=value.get('key', key))
@@ -239,6 +244,65 @@ class SDR(object):
         if isinstance(raw, list):
             return {entry['key']: entry for entry in raw}
         raise RuntimeError('Unexpected SURF file-list response')
+
+    def _external_file(self, entry, records):
+        """Resolve published external links without GETting/staging the linked data.
+
+        Some DR3 files point via EPIC handles to archived files in DR2 records.
+        Stop at the target SURF file URL and read its live metadata/file table.
+        The per-snapshot cache must not retain availability across polling calls.
+        """
+        url = urljoin(self.url, entry['links']['content'])
+        visited = set()
+        origin = urlsplit(self.url)
+        for _ in range(10):
+            if url in visited:
+                break
+            visited.add(url)
+            response = request_with_retry(url, rfunction=self.session.head,
+                                          allow_redirects=False)
+            try:
+                self._check_response(response)
+                if response.status_code in (301, 302, 303, 307, 308):
+                    location = response.headers.get('Location')
+                    if not location:
+                        raise RuntimeError('External file redirect has no Location')
+                    url = urljoin(response.url, location)
+                elif (response.status_code == 200 and
+                      response.headers.get('Content-Length') == str(entry['size']) and
+                      response.headers.get('Content-Type', '').split(';')[0].strip().lower()
+                      not in ('', 'text/html', 'application/json')):
+                    return entry, {'status': 'DUL', 'request_url': None,
+                                   'download_url': url}
+                else:
+                    raise RuntimeError('Cannot determine external availability for %s '
+                                       '(HTTP %s)' % (entry['key'], response.status_code))
+            finally:
+                response.close()
+            target = urlsplit(url)
+            match = re.search(r'/(?:api/)?records/([^/]+)/files/([^/]+)(?:/content)?/?$', target.path)
+            if (target.scheme, target.netloc) == (origin.scheme, origin.netloc) and match:
+                record_id, filename = (unquote(value) for value in match.groups())
+                if record_id not in records:
+                    record = self._json(self.url + quote(record_id, safe=''))
+                    records[record_id] = (self._record_entries(record), None, record)
+                entries, actions, record = records[record_id]
+                if filename not in entries:
+                    raise RuntimeError('External file missing from linked SURF record: %s' % filename)
+                entry = entries[filename]
+                if str(entry.get('storage_status', '')).upper() == 'STANDARD':
+                    return entry, {'status': 'DUL', 'request_url': None,
+                                   'download_url': entry['links']['content']}
+                if actions is None:
+                    actions = self._page_files(record)
+                    records[record_id] = (entries, actions, record)
+                action = actions.get(filename)
+                if action and action['status'] != 'EXT':
+                    return entry, action
+                if not action:
+                    raise RuntimeError('Cannot determine linked SURF availability for %s' % filename)
+                url = urljoin(self.url, entry['links']['content'])
+        raise RuntimeError('External SURF file link contains a redirect loop: %s' % entry['key'])
 
     def _snapshot(self, field):
         entries = self._entries(field)
@@ -250,8 +314,13 @@ class SDR(object):
             # The restore boolean alone does not establish readiness. Use the
             # live UI's Online/Offline label, including restored GLACIER files.
             actions = self._page_files(self._get_record(field))
+            external_records = {}
             for name in entries:
                 if name in actions:
+                    if actions[name]['status'] == 'EXT':
+                        entry, action = self._external_file(entries[name], external_records)
+                        entries[name] = dict(entry, key=name)
+                        actions[name] = action
                     statuses[name] = actions[name]['status']
                 elif name not in statuses:
                     raise RuntimeError('Cannot determine storage availability for %s; '
