@@ -517,17 +517,6 @@ def ddf_image(
     warn(f"loading {parset_file}")
     keywords=parse_parset([parset_file],use_headings=True)
 
-    if HMPsize is None:
-        HMPsize=options['HMPsize']
-    if do_decorr is None:
-        do_decorr=options['do_decorr']
-    if beamsize is None:
-        beamsize=options['psf_arcsec']
-    if imsize is None:
-        imsize=options['imsize']
-    if cellsize is None:
-        cellsize=options['cellsize']
-
     cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
