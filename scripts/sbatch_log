@@ -1,16 +1,50 @@
 #!/usr/bin/env bash
-# mysbatch <sbatch_file>
-# Submits a job, waits for its log file to appear, then tails it.
+# sbatch_log [--no-build] <sbatch_file> [sbatch args...]
+# If the job uses ddf-pystage, first makes sure the staged Python stack
+# (ddf-pystage.tar) matches the current code and venv, rebuilding it if not.
+# Then submits the job, waits for its log file to appear, and tails it.
+
+BUILD=1
+if [[ "$1" == "--no-build" ]]; then BUILD=0; shift; fi
 
 if [[ $# -lt 1 ]]; then
-    echo "Usage: mysbatch <sbatch_file>" >&2
+    echo "Usage: sbatch_log [--no-build] <sbatch_file> [sbatch args...]" >&2
     exit 1
 fi
 
-SBATCH_FILE="$1"
+SBATCH_FILE="$1"; shift
+PYSTAGE="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/ddf-pystage"
+
+banner() { printf '%s\n' "------------------------- Python stack (ddf-pystage) -------------------------"; }
+line()   { printf '  %-8s: %s\n' "$1" "$2"; }
+
+# Refresh the Python stack tar if this job uses it
+if grep -q 'ddf-pystage' "$SBATCH_FILE" && [[ -x "$PYSTAGE" ]]; then
+    banner
+    if [[ $BUILD == 0 ]]; then
+        line "Check" "skipped (--no-build)"
+        line "Note" "if the tar is out of date, the job will run Python from the original tree (slower)"
+    elif STATE=$("$PYSTAGE" check); then
+        line "Status" "$STATE"
+        line "Action" "none, the job will use it as is"
+    else
+        line "Status" "$STATE"
+        line "Action" "rebuilding before submission (takes a few minutes)..."
+        T0=$(date +%s)
+        if "$PYSTAGE" build > pystage_build.log 2>&1; then
+            line "Result" "rebuilt in $(( $(date +%s) - T0 ))s ($(grep -o 'done: [^ ]*' pystage_build.log | cut -d' ' -f2)), log: pystage_build.log"
+        else
+            line "Result" "BUILD FAILED, job NOT submitted. See pystage_build.log:"
+            tail -5 pystage_build.log | sed 's/^/            /'
+            banner
+            exit 1
+        fi
+    fi
+    banner
+fi
 
 # Submit and capture the job ID
-JID=$(sbatch --parsable "$SBATCH_FILE") || { echo "sbatch failed" >&2; exit 1; }
+JID=$(sbatch --parsable "$@" "$SBATCH_FILE") || { echo "sbatch failed" >&2; exit 1; }
 echo "Submitted job $JID"
 
 # Find the log file from the #SBATCH -o / --output= directive
@@ -26,7 +60,7 @@ fi
 
 echo "Waiting for log: $LOG"
 
-# Wait up to 3000s for the log to appear
+# Wait (practically forever: queued jobs can wait hours) for the log to appear
 for (( i=0; i<3000000; i++ )); do
     if [[ -f "$LOG" ]]; then
         echo "Log appeared after ${i}s — tailing (Ctrl+C to stop):"
@@ -38,6 +72,6 @@ for (( i=0; i<3000000; i++ )); do
     (( i % 15 == 14 )) && echo "  ... waiting ${i}s (job $JID, checking: $LOG)"
 done
 
-echo "Timeout: $LOG never appeared after 300s. Is the job running?" >&2
+echo "Timeout: $LOG never appeared. Is the job running?" >&2
 echo "Check: squeue --me --start"
 exit 1

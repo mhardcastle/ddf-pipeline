@@ -1146,11 +1146,20 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
         checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
         if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+            if SkipSmooth:
+                smoothoutname='%s_%.2f_merged.npz'%(ddsols,start_time)
+                smoothoutname_zarr='%s_%.2f_merged.zarr'%(ddsols,start_time)
+            else:
+                smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+                smoothoutname_zarr='%s_%.2f_smoothed.zarr'%(ddsols,start_time)
         elif SkipSmooth:
             warn('Skipping smoothing Solutions file')
+            smoothoutname='%s_%.2f_merged.npz'%(ddsols,start_time)
+            smoothoutname_zarr='%s_%.2f_merged.zarr'%(ddsols,start_time)
         else:
             run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,options['smoothingtype'],options['NCPU_killms']),dryrun=dryrun)
-        smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+            smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+            smoothoutname_zarr='%s_%.2f_smoothed.zarr'%(ddsols,start_time)
 
 
 
@@ -1165,7 +1174,6 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
                 run(command,dryrun=dryrun)
 
 
-        smoothoutname_zarr='%s_%.2f_smoothed.zarr'%(ddsols,start_time)
         checkname=smoothoutname_zarr
         if options['restart'] and os.path.isfile(checkname):
             warn('Solutions file '+checkname+' already exists, not running InterpSols step')
@@ -2151,30 +2159,48 @@ def main(o):
         MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
 
         separator("DD calibration")
-        CurrentDDkMSSolName_Phase=CurrentDDkMSSolName
-        CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                        CovQ=0.02,
-                                        clusterfile=ClusterFile,
-                                        niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
-                                        dt=o['dt_slow'],
-                                        catcher=catcher,NChanSols=o['NChanSols'],
-                                        # ####################
-                                        #EvolutionSolFile=CurrentDDkMSSolName,
-                                        PreApplySols=[[CurrentDDkMSSolName,"P"]],
-                                        # ####################
-                                        options=o, # required to get the global variable o
-                                        MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist',
-                                        ApplyJonesCorr=CurrentDIkMSSolName,
-                                        )
+
+        CurrentDDkMSSolName_Fast=killms_data('image_phase1',o['mslist'],'DDS1_Fast',colname=colname,
+                                             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                             CovQ=0.02,
+                                             clusterfile=ClusterFile,
+                                             niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                             dt=o['dt_fast'],
+                                             catcher=catcher,NChanSols=o['NChanSols'],
+                                             # ####################
+                                             #EvolutionSolFile=CurrentDDkMSSolName,
+                                             #PreApplySols=[[CurrentDDkMSSolName,"P"]],
+                                             # ####################
+                                             options=o, # required to get the global variable o
+                                             MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist',
+                                             ApplyJonesCorr=CurrentDIkMSSolName,
+                                             )
+
+        CurrentDDkMSSolName_Slow=killms_data('image_phase1',o['mslist'],'DDS1_Slow',colname=colname,
+                                             dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                             clusterfile=ClusterFile,
+                                             niterkf=o['NIterKF'][2],uvrange=[o['uvmin_very_slow'],1000.],wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                             dt=o['dt_very_slow'],
+                                             catcher=catcher,NChanSols=o['NChanSols'],
+                                             # ####################
+                                             PreApplySols=[[CurrentDDkMSSolName_Fast,"AP"]],
+                                             # ####################
+                                             options=o, # required to get the global variable o
+                                             SkipSmooth=True,MergeSmooth=True,
+                                             mpiManager=MPI_Manager, mslist_str='mslist',
+                                             ApplyJonesCorr=CurrentDIkMSSolName,
+                                             SigmaFilterOutliers=o['sigma_clip'],
+                                             )
+
+        
         ##############################################
 
         separator("AmpPhase deconv")
         CurrentBaseDicoModelName=ddf_image('image_ampphase1',o['mslist'],
                                            cleanmask=CurrentMaskName,cleanmode=DeconvMode,
                                            #ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][1],
-                                           DDSols=[[CurrentDDkMSSolName_Phase,"P"],
-                                                   [CurrentDDkMSSolName,"AP"]],
+                                           DDSols=[[CurrentDDkMSSolName_Fast,"AP"],
+                                                   [CurrentDDkMSSolName_Slow,"AP"]],
                                            majorcycles=1,robust=o['image_robust'],
                                            colname=colname,peakfactor=0.001,automask=True,
                                            automask_threshold=o['thresholds'][1],
