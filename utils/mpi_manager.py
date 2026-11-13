@@ -261,14 +261,16 @@ class mpi_manager():
         Print("LDSLDFKJLD 5")
         self.createRemoteLocal_fullmslist()
         Print("LDSLDFKJLD 6")
-        for Node in self.DicoNode2mslist.keys():
-            LMS=self.FullMSSet.DicoNodes2ListMS[Node]
-            for MSName in self.MSSet.DicoNodes2ListMS[Node]:
-                if MSName not in LMS:
-                    print(f"MSs lists not consistent: {MSName} not in {LMS}")
-                    import time
-                    time.sleep(1)
-                    raise Exception(f"MSs lists not consistent: {MSName} not in {LMS}")
+        # FullMSSet is None for standalone callers (e.g. bootstrap.py)
+        if self.FullMSSet is not None:
+            for Node in self.DicoNode2mslist.keys():
+                LMS=self.FullMSSet.DicoNodes2ListMS[Node]
+                for MSName in self.MSSet.DicoNodes2ListMS[Node]:
+                    if MSName not in LMS:
+                        print(f"MSs lists not consistent: {MSName} not in {LMS}")
+                        import time
+                        time.sleep(1)
+                        raise Exception(f"MSs lists not consistent: {MSName} not in {LMS}")
         Print("LDSLDFKJLD 7")
 
 

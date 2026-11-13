@@ -13,6 +13,12 @@ import os,sys
 import os.path
 import copy
 import socket
+# When launched as a pipeline subprocess, run() prefixes DDF_FORCE_NOT_USE_MPI=1.
+# Scrub the inherited launcher env as well, or this process' MPI_Init would
+# rejoin the parent job instead of starting a clean singleton.
+if os.environ.get("DDF_FORCE_NOT_USE_MPI") == "1":
+    for _k in [k for k in os.environ if k.startswith(("OMPI_", "PMI_", "PMIX_", "HYDRA_", "I_MPI_", "PRTE_", "MV2_", "SLURM_"))]:
+        del os.environ[_k]
 try:
     import bdsf as bdsm
 except ImportError:
@@ -74,6 +80,9 @@ def run_bootstrap(o):
         warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         sys.exit(2)
 
+    if o["tgss"] is None:
+        die('TGSS catalogue path must be specified (tgss option)')
+
     o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
     o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
     lCat=o["catalogues"]+[o["tgss"]]
@@ -93,11 +102,14 @@ def run_bootstrap(o):
         len(o['names'])!=cl or len(o['groups'])!=cl):
         die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
 
+    # bootstrap images at low resolution: needs an explicit restoring beam
+    if o['low_psf_arcsec'] is None:
+        die('bootstrap needs low_psf_arcsec set (e.g. 50.) in the [image] section')
     low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
     if o['low_imsize'] is not None:
         low_imsize=o['low_imsize'] # allow over-ride
     else:
-        low_imsize=old_div(o['imsize']*o['cellsize'],o['low_cell'])
+        low_imsize=int(round(old_div(o['imsize']*o['cellsize'],o['low_cell'])))
 
     low_robust=o['low_robust']
 

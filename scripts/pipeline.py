@@ -785,7 +785,8 @@ def ddf_image(
     runcommand += ' --Misc-ConserveMemory=1'
 
     OutputExists=os.path.isfile(fname)
-    if USE_MPI:
+    # Bootstrap calls ddf_image with no mpiManager from rank 0 only
+    if USE_MPI and mpiManager is not None:
         OutputExists=MPI.COMM_WORLD.bcast(OutputExists, root=0)
             
     if options['restart'] and OutputExists:
@@ -2401,10 +2402,20 @@ def main(o):
         # run bootstrap, and change the column name if it runs
         if o['bootstrap']:
             separator("Bootstrap")
-            raise NotImplementedError('Bootstrap not implemented in MPI version')
-            report('Running bootstrap')
-            # FIXME run in parallel (to run ddFacet in parallel)
-            run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
+            # The flux-scale fit is global per obsid: run it once on rank 0, not once per rank. Other ranks wait at the barrier below.
+            if USE_MPI and MPI_Manager.DoScatterGather:
+                die('bootstrap needs all MS visible from one node; this run uses per-node local disks. Run bootstrap.py standalone on a shared-filesystem node first, then continue with bootstrap=False')
+            bootstrap_status = None
+            if not USE_MPI or RANK == 0:
+                report('Running bootstrap')
+                try:
+                    run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
+                except Exception as e:
+                    bootstrap_status = '%s: %s' % (type(e).__name__, e)
+            if USE_MPI:
+                bootstrap_status = MPI.COMM_WORLD.bcast(bootstrap_status, root=0)
+            if bootstrap_status is not None:
+                die('bootstrap failed: ' + bootstrap_status)
             colname=colname+'_SCALED' # DI corrected, scaled
             if o['exitafter'] == 'bootstrap':
                 warn('User specified exit after bootstrap.')
