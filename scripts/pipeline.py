@@ -376,60 +376,65 @@ def ddf_image(
     # Data
     colname='CORRECTED_DATA',
 
-    # Solutions
-    ddsols=None,
-    applysols=None,
-
-    # Image
-    cleanmode='HMP',
-    robust=0,
-    imsize=None,
-    cellsize=None,
+    # Selection
     uvrange=None,
-    use_tapered_short_spacings=None,
+
+    # Output
+    saveimages=None,
     beamsize=None,
     beamsize_minor=None,
     beamsize_pa=None,
+
+    # Image
+    imsize=None,
+    cellsize=None,
     phasecenter=None,
-    do_decorr=None,
-    HMPsize=None,
+
+    # Facets
+    facets_skip_th=None,
+    clusterfile=None,
+
+    # Weight
+    robust=0,
     apply_weights=True,
     use_weightspectrum=False,
-    clusterfile=None,
-    normalization=None,
+    use_tapered_short_spacings=None,
+
+    # RIME
+    do_decorr=None,
+
+    # Freq
     cubemode=False,
     polcubemode=False,
     startchan=None,
     endchan=None,
     stokes=None,
     freq_nband=4,
+
+    # DDESolutions
+    ddsols=None,
+    applysols=None,
+    normalization=None,
+
+    # Deconv
+    cleanmode='HMP',
+    majorcycles=3,
     peakfactor=0.1,
     rms_factor=3.0,
-    threshold=None,
-    facets_skip_th=None,
+    flux_threshold=None,
 
-    # Masking
+    # Mask
     cleanmask=None,
     automask=True,
-    automask_threshold=10.0,
-    
-    # Control
-    majorcycles=3,
+    automask_threshold=None,
+
+    # Cache
     reuse_psf=False,
     reuse_dirty=False,
     dirty_from_resid=False,
     conditional_clearcache=False,
-    verbose=False,
-    saveimages=None,
-    predict_column=None,
-    smooth=False,
-    noweights=False,
-    catcher=None,
 
-    # HMP settings
-    RMSFactorInitHMP=1.0,
-    MaxMinorIterInitHMP=10000,
-    AllowNegativeInitHMP=False,
+    # HMP
     OuterSpaceTh=None,
 
     # WSCMS settings
@@ -438,6 +443,8 @@ def ddf_image(
     wscms_scale_density=None,
     wscms_scales=None,
     wscms_max_scale=None,
+    wscms_NSubMinorIter=250,
+    wscms_SubMinorPeakFact=0.85,
     wscms_rms_factor=None,
     wscms_peakfactor=None,
     wscms_automask_rms_factor=None,
@@ -446,24 +453,33 @@ def ddf_image(
     wscms_neg_max_scale=None,
     wscms_compact_margin=None,
     wscms_rescue_rms_factor=None,
-    wscms_NSubMinorIter=250,
-    wscms_SubMinorPeakFact=0.85,
     wscms_use_local_rms=None,
-    wscms_local_rms_sig=None,
     wscms_local_rms_strength=None,
+    wscms_local_rms_sig=None,
     wscms_signed_log_basis=None,
     wscms_allow_refreeze=False,
     wscms_refreeze_depth=None,
 
-    # Input model
+    # GAClean
+    HMPsize=None,
+    RMSFactorInitHMP=1.0,
+    MaxMinorIterInitHMP=10000,
+    AllowNegativeInitHMP=False,
+
+    # Predict
     use_dicomodel=False,
     dicomodel_base=None,
-
-    # Other
-    options=None,
+    predict_column=None,
     PredictSettings=None,
+
+    # Pipeline-only
+    options=None,
     mpiManager=None,
-    STEP=0):
+    STEP=0,
+    catcher=None,
+    smooth=False,
+    noweights=False,  # unused, kept for signature compat
+    verbose=False):
 
     
 
@@ -483,17 +499,19 @@ def ddf_image(
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
 
-    # pull defaults from parset if not specified
-    if HMPsize            is None: HMPsize            = options['HMPsize']
-    if cleanmode          is None: cleanmode          = options['cleanmode']
-    if do_decorr          is None: do_decorr          = options['do_decorr']
+    # pull defaults from options if not specified
     if beamsize           is None: beamsize           = options['psf_arcsec']
     if imsize             is None: imsize             = options['imsize']
     if cellsize           is None: cellsize           = options['cellsize']
-    if automask_threshold is None: automask_threshold = options['thresholds'][STEP]
     if facets_skip_th     is None: facets_skip_th     = options['facets_skip_th']
+    if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
+    if do_decorr          is None: do_decorr          = options['do_decorr']
+    if cleanmode          is None: cleanmode          = options['cleanmode']
+    if flux_threshold     is None: flux_threshold     = options['flux_threshold']
+    if automask_threshold is None: automask_threshold = options['thresholds'][STEP]
+    if HMPsize            is None: HMPsize            = options['HMPsize']
 
-    # pull default WSCMS settings from parset if not specified
+    # pull default WSCMS settings from options if not specified
     if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
     if wscms_scale_density       is None: wscms_scale_density       = options['wscms_scale_density']
     if wscms_scales              is None: wscms_scales              = options['wscms_scales']
@@ -507,10 +525,9 @@ def ddf_image(
     if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
     if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
     if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
-    if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
     if wscms_local_rms_strength  is None: wscms_local_rms_strength  = options['wscms_local_rms_strength']
+    if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
     if wscms_signed_log_basis    is None: wscms_signed_log_basis    = options['wscms_signed_log_basis']
-    if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
 
     import DDFacet.Parset
     parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
@@ -528,53 +545,17 @@ def ddf_image(
         fname = f"_has_predicted_OK.{imagename}.info"
 
 
-    runcommand = (
-        f"DDF.py --Misc-ConserveMemory=1 --Output-Name={imagename} --Data-MS={mslist}"
-        f" --Data-ColName {colname} --Parallel-NCPU={options['NCPU_DDF']}"
-        f" --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000"
-        f" --Deconv-MaxMajorIter={majorcycles} --Deconv-Mode {cleanmode}"
-        f" --Deconv-PeakFactor {peakfactor} --Deconv-FluxThreshold {options['flux_threshold']}"
-        f" --Deconv-RMSFactor={rms_factor}"
-        f" --Beam-Model={options['BeamModel']} --Weight-Robust {robust} --Image-NPix={imsize}"
-        f" --CF-wmax {options['wmax']} --CF-Nw 100 --Output-Also {saveimages}"
-        f" --Image-Cell {float(cellsize)} --Facets-NFacets={options['nfacets_di']}"
-        f" --Freq-NDegridBand 1 --Beam-NBand 1"
-        f" --Facets-DiamMax {options['facets_diammax']} --Facets-DiamMin 0.1"
-        f" --Data-Sort 1 --Cache-Dir={cache_dir} --Cache-DirWisdomFFTW={cache_dir}"
-        f" --Debug-Pdb=never --Log-Memory 1"
-    )
+    runcommand = "DDF.py"
 
-    
-    if facets_skip_th is not None:
-        runcommand += f" --Facets-SkipTh {facets_skip_th}"
-
+    # Data
+    runcommand += f" --Data-MS={mslist}"
+    runcommand += f" --Data-ColName {colname}"
+    runcommand +=  " --Data-Sort 1"
     if options['chunk_hours'] > 0:
         runcommand += f" --Data-ChunkHours={options['chunk_hours']}"
 
-
-    if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
-    if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
-    if AllowNegativeInitHMP:            runcommand += " --GAClean-AllowNegativeInitHMP True"
-    if OuterSpaceTh is not None:        runcommand += f" --HMP-OuterSpaceTh {OuterSpaceTh}"
-
-    if options['AutoFlagNyquist']:
-       runcommand += " --Selection-AutoFlagNyquist 1"
-    runcommand += f' --DDESolutions-SolsDir={options["SolsDir"]}'
-    runcommand+=' --Cache-Weight=reset'
-    if options['weight_beam_power'] and 'Weight-BeamPower' in keywords:
-        runcommand += ' --Weight-BeamPower=1'
-
-    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
-        runcommand += ' --Beam-PhasedArrayMode=A'
-    else:
-        runcommand+=' --Beam-LOFARBeamMode=A'
-    
-    if 'Misc-IgnoreDeprecationMarking' in keywords:
-        runcommand += ' --Misc-IgnoreDeprecationMarking=1'
-
-    if 'Beam-At' in keywords:
-        runcommand += f' --Beam-At={options["beam_at"]}'
-
+    # Predict (Output-Mode and the Predict-* flags stay together: an explicit
+    # predict_column overrides the Predict-ColName from PredictSettings)
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
@@ -584,20 +565,75 @@ def ddf_image(
             runcommand += f" --Output-Mode={PredictSettings[0]} --Predict-ColName {PredictSettings[1]} --Predict-MaskSquare [0,{PredictSettings[2]}]"
         else:
             raise RuntimeError(f'PredictSettings has the wrong dimensions {PredictSettings}')
+    if predict_column is not None:
+        runcommand += f' --Predict-ColName={predict_column}'
+    if use_dicomodel:
+        if dicomodel_base is not None:
+            runcommand += f' --Predict-InitDicoModel={dicomodel_base}.DicoModel'
+        else:
+            raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
 
+    # Selection
+    if options['AutoFlagNyquist']: runcommand += " --Selection-AutoFlagNyquist 1"
+
+    # Output
+    runcommand += f" --Output-Name={imagename}"
+    runcommand += f" --Output-Also {saveimages}"
     if beamsize_minor is not None:
         runcommand += f' --Output-RestoringBeam {beamsize},{beamsize_minor},{beamsize_pa}'
     elif beamsize is not None:
         runcommand += f' --Output-RestoringBeam {beamsize}'
-    
-    if apply_weights:
-        runcommand += ' --Weight-ColName="IMAGING_WEIGHT"'
-    else:
-        if not use_weightspectrum:
-            runcommand += ' --Weight-ColName="None"'
-        else:
-            runcommand += ' --Weight-ColName="WEIGHT_SPECTRUM"'
 
+    # Image
+    runcommand += f" --Image-NPix={imsize}"
+    runcommand += f" --Image-Cell {float(cellsize)}"
+    if phasecenter is not None:
+        runcommand += f' --Image-PhaseCenterRADEC=[{phasecenter[0]},{phasecenter[1]}]'
+
+    # Facets
+    runcommand += f" --Facets-NFacets={options['nfacets_di']}"
+    runcommand += f" --Facets-DiamMax {options['facets_diammax']}"
+    runcommand +=  " --Facets-DiamMin 0.1"
+    if facets_skip_th is not None:
+        runcommand += f" --Facets-SkipTh {facets_skip_th}"
+    if clusterfile is not None:
+        runcommand += f" --Facets-CatNodes={clusterfile}"
+
+    # Weight
+    runcommand += f" --Weight-Robust {robust}"
+    if options['weight_beam_power'] and 'Weight-BeamPower' in keywords:
+        runcommand += ' --Weight-BeamPower=1'
+    weight_col = "IMAGING_WEIGHT" if apply_weights else ("WEIGHT_SPECTRUM" if use_weightspectrum else "None")
+    runcommand += f' --Weight-ColName="{weight_col}"'
+    if use_tapered_short_spacings:
+        # include 0-uvmin at reduced weight instead of cutting it
+        uvrange = [0, uvrange[1]] if uvrange is not None else [0, options['uvmax']]
+        # lower weight between 0-0.1 km, full weight by 0.1 km
+        runcommand += ' --Weight-EnableSigmoidTaper=1 --Weight-SigmoidTaperInnerCutoff=25 --Weight-SigmoidTaperInnerRolloffStrength=0.35 --Weight-SigmoidTaperOuterCutoff=1000000 --Weight-SigmoidTaperOuterRolloffStrength=1'
+    if uvrange is not None:
+        # Selection flag, kept here: the taper above rewrites uvrange
+        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
+
+    # RIME
+    if do_decorr: runcommand +=  ' --RIME-DecorrMode=FT'
+
+    # CF
+    runcommand += f" --CF-wmax {options['wmax']}"
+    runcommand +=  " --CF-Nw 100"
+
+    # Beam (version-compat shims live with the Beam flag they guard)
+    runcommand +=  " --Beam-CenterNorm=1"
+    runcommand += f" --Beam-Model={options['BeamModel']}"
+    runcommand +=  " --Beam-NBand 1"
+    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
+        runcommand += ' --Beam-PhasedArrayMode=A'
+    else:
+        runcommand+=' --Beam-LOFARBeamMode=A'
+    if 'Beam-At' in keywords: runcommand += f' --Beam-At={options["beam_at"]}'
+    if smooth: runcommand += ' --Beam-Smooth=1'
+
+    # Freq
+    runcommand += " --Freq-NDegridBand 1"
     if cubemode or polcubemode:
         # number of slices equals number of distinct freqs in data
         freqs=[]
@@ -615,18 +651,35 @@ def ddf_image(
     else:
         #if not cubemode and not polcubemode
         runcommand += f' --Freq-NBand={freq_nband}'
-    
-    if stokes:    runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
-    if do_decorr: runcommand += ' --RIME-DecorrMode=FT'
-    if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
+
+    # Stokes
+    if stokes: runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
+
+    # DDESolutions
+    runcommand += f" --DDESolutions-SolsDir={options['SolsDir']}"
+    if applysols is not None:
+        if normalization is not None:
+            if normalization[:3]=='Abs':
+                normalization='Mean'+normalization # backward compat. hack
+            runcommand += ' --DDESolutions-GlobalNorm='+normalization
+        runcommand += f' --DDESolutions-DDModeGrid={applysols} --DDESolutions-DDModeDeGrid={applysols} --DDESolutions-DDSols={ddsols}'
+
+    # Deconv
+    runcommand += f" --Deconv-Mode {cleanmode}"
+    runcommand += f" --Deconv-MaxMajorIter={majorcycles}"
+    runcommand +=  " --Deconv-MaxMinorIter=1000000"
+    runcommand += f" --Deconv-RMSFactor={rms_factor}"
+    runcommand += f" --Deconv-FluxThreshold {flux_threshold}"
+    runcommand += f" --Deconv-PeakFactor {peakfactor}"
+    runcommand +=  " --Deconv-CycleFactor=0"
 
     ###########################
     #### SSD / SSD2 / SSD3 ####
     ###########################
     if cleanmode in ('SSD', 'SSD2', 'SSD3'):
         # parameters shared between SSD versions
-        runcommand += f' --Deconv-RMSFactor={rms_factor} --Deconv-PeakFactor={peakfactor} --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0  --SSDClean-ConvFFTSwitch 10000'
-        if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}' 
+        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0  --SSDClean-ConvFFTSwitch 10000'
+        if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}'
         if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options["splitisland_size"]}'
 
         # SSD2 specific parameters
@@ -667,86 +720,69 @@ def ddf_image(
             # if majorcycles is 0 or 1, disable forcelast, since that would fire freeze instantly.
             if majorcycles <= 1:
                 runcommand += ' --WSCMS-AutoMaskForceLast=False'
-        if wscms_compact_margin is not None:
-            runcommand += f' --WSCMS-CompactMargin={float(wscms_compact_margin)}'
-        if wscms_rescue_rms_factor is not None:
-            runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
+        if wscms_compact_margin is not None:    runcommand += f' --WSCMS-CompactMargin={float(wscms_compact_margin)}'
+        if wscms_rescue_rms_factor is not None: runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
 
         runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
         runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold} --Mask-FluxImageType=ModelConv'
 
-        # optional local-RMS mask threshold (0 = no mask) and weight exponent.
-        if wscms_local_rms_sig is not None:
-            runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
-        if wscms_local_rms_strength is not None:
-            runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
+        # optional local-RMS weight exponent and mask threshold (0 = no mask).
+        if wscms_local_rms_strength is not None: runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
+        if wscms_local_rms_sig is not None:      runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
         
         # frequency-axis behaviour
-        runcommand += f' --WSCMS-NumFreqBasisFuncs=2'
+        runcommand += ' --WSCMS-NumFreqBasisFuncs=2'
         if cleanmode == 'WSCMS2' and wscms_signed_log_basis:
             runcommand += ' --WSCMS-SignedLogBasis=1'
 
         # handle refreeze
         if wscms_allow_refreeze:
             runcommand += ' --WSCMS-AllowRefreeze=True'
-        if wscms_refreeze_depth is not None:
-            runcommand += f' --WSCMS-RefreezeDepth={wscms_refreeze_depth}'
+        if wscms_refreeze_depth is not None: runcommand += f' --WSCMS-RefreezeDepth={wscms_refreeze_depth}'
 
-    if clusterfile is not None:
-        runcommand += f' --Facets-CatNodes={clusterfile}'
-    
-    if applysols is not None:
-        if normalization is not None:
-            if normalization[:3]=='Abs':
-                normalization='Mean'+normalization # backward compat. hack
-            runcommand += ' --DDESolutions-GlobalNorm='+normalization
-        runcommand += f' --DDESolutions-DDModeGrid={applysols} --DDESolutions-DDModeDeGrid={applysols} --DDESolutions-DDSols={ddsols}'
-    if use_dicomodel:
-        if dicomodel_base is not None:
-            runcommand += f' --Predict-InitDicoModel={dicomodel_base}.DicoModel'
-        else:
-            raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
-        
-    if threshold is not None and threshold>0:
-        runcommand += f' --Deconv-FluxThreshold={threshold}'
-    if use_tapered_short_spacings:
-        # include 0-uvmin at reduced weight instead of cutting it
-        uvrange = [0, uvrange[1]] if uvrange is not None else [0, options['uvmax']]
-        # lower weight between 0-0.1 km, full weight by 0.1 km
-        runcommand += ' --Weight-EnableSigmoidTaper=1 --Weight-SigmoidTaperInnerCutoff=25 --Weight-SigmoidTaperInnerRolloffStrength=0.35 --Weight-SigmoidTaperOuterCutoff=1000000 --Weight-SigmoidTaperOuterRolloffStrength=1'
+    ###############
+    #### DDMSC ####
+    ###############
+    # elif cleanmode in ('DDMSC'):
+    #     import DDSMC... and do the magic things that need to make it work
+    #
+    #     die("not supported yet")
+    #
 
-    if uvrange is not None:
-        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
-    if dirty_from_resid and reuse_dirty:
-        raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
-    mpi_rank_str=""
-    if mpiManager is not None and mpiManager.UseMPI:
-        mpi_rank_str=".rank_0"
-    if dirty_from_resid:
-        # possible that crashes could destroy the cache, so need to check
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/LastResidual'):
-            runcommand += ' --Cache-Dirty forceresidual'
-    if reuse_dirty:
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/Dirty'):
-            runcommand += ' --Cache-Dirty forcedirty'
-    if reuse_psf:
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/PSF'):
-            runcommand += ' --Cache-PSF force'
+    # Mask
+    if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
 
-    if HMPsize is not None:
-        runcommand += f' --GAClean-MinSizeInit={HMPsize}'
+    # Parallel
+    runcommand += f" --Parallel-NCPU={options['NCPU_DDF']}"
 
-    if options['nobar']:
-        runcommand += ' --Log-Boring=1'
+    # Cache
+    runcommand += f" --Cache-Dir={cache_dir}"
+    runcommand += f" --Cache-DirWisdomFFTW={cache_dir}"
+    runcommand +=  " --Cache-Weight=reset"
+    if dirty_from_resid and reuse_dirty: raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
+    mpi_rank_str = ".rank_0" if (mpiManager is not None and mpiManager.UseMPI) else ""
+    def cache_hit(name): return os.path.exists(cache_dir + '/' + mslist + mpi_rank_str + '.ddfcache/' + name)
+    if dirty_from_resid and cache_hit('LastResidual'): runcommand += ' --Cache-Dirty forceresidual'
+    if reuse_dirty and cache_hit('Dirty'):             runcommand += ' --Cache-Dirty forcedirty'
+    if reuse_psf and cache_hit('PSF'):                 runcommand += ' --Cache-PSF force'
 
-    if smooth:
-        runcommand += ' --Beam-Smooth=1'
+    # HMP
+    if OuterSpaceTh is not None:        runcommand += f" --HMP-OuterSpaceTh {OuterSpaceTh}"
 
-    if predict_column is not None:
-        runcommand += f' --Predict-ColName={predict_column}'
+    # GAClean
+    if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
+    if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
+    if AllowNegativeInitHMP:            runcommand +=  " --GAClean-AllowNegativeInitHMP True"
+    if HMPsize is not None: runcommand += f' --GAClean-MinSizeInit={HMPsize}'
 
-    if phasecenter is not None:
-        runcommand += f' --Image-PhaseCenterRADEC=[{phasecenter[0]},{phasecenter[1]}]'
+    # Log
+    runcommand += " --Log-Memory 1"
+    runcommand += " --Debug-Pdb=never"  # [Debug] section: single flag, kept with Log
+    if options['nobar']: runcommand += ' --Log-Boring=1'
+
+    # Misc
+    if 'Misc-IgnoreDeprecationMarking' in keywords: runcommand += ' --Misc-IgnoreDeprecationMarking=1'
+    runcommand += ' --Misc-ConserveMemory=1'
 
     OutputExists=os.path.isfile(fname)
     if USE_MPI:
