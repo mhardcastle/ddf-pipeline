@@ -17,10 +17,37 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
+
+
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
+import os
+
+try:
+    from mpi4py import MPI
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    #MPI_SIZE = MPI.COMM_WORLD.size
+    RANK=DDFacet.Other.MPIManager.RANK
+    #RANK=MPI.COMM_WORLD.rank
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    #LOCAL_RANK = MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED).rank
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
+except:
+    MPI_SIZE = 0
+    RANK=0
+    LOCAL_RANK=0
+    NODE_ID=0
+
+MAIN_PROCESS_RANKS=("%i,%i,%i,%i"%(RANK,LOCAL_RANK,NODE_ID,MPI_SIZE))
+
+USE_MPI=(MPI_SIZE>1)
+
+import socket
+print(socket.gethostname(),RANK,USE_MPI)
+        
 from future import standard_library
 standard_library.install_aliases()
 from builtins import zip
@@ -29,33 +56,116 @@ from builtins import range
 import sys,os
 if "PYTHONPATH_FIRST" in list(os.environ.keys()) and int(os.environ["PYTHONPATH_FIRST"]):
     sys.path = os.environ["PYTHONPATH"].split(":") + sys.path
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 import os.path
-from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
-from parset import option_list
-from options import options,print_options
-from shutil import copyfile,rmtree,move
-import glob
-import pyrap.tables as pt
-from redo_dppp_di import redo_dppp_di
-from modify_mask import modify_mask
-from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
-from histmsamp import find_uvmin,sumdico
-import numpy as np
-from astropy.io import fits
-from pipeline_version import version
-__version__=version()
-import datetime
-import threading
+import subprocess
+
+import mpi_manager
+global SetMS,Register
+Register=None
+
+import time
+import copy # deepcopy
+
+if not LOCAL_DEV:
+    standard_library.install_aliases()
+    from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList,run_serial
+    from parset import option_list
+    from options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from redo_dppp_di import redo_dppp_di
+    from modify_mask import modify_mask
+    from make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
+    from histmsamp import find_uvmin,sumdico
+    import numpy as np
+    from astropy.io import fits
+    from pipeline_version import version
+    from surveys_db import use_database,update_status,SurveysDB
+    __version__=version()
+    import datetime
+    import threading
+    import mpi_manager
+    from getcpus import getcpus
+
+
+else:
+    print("Using local dev")
+    from utils.getcpus import getcpus
+    from utils.auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList
+    from utils.parset import option_list
+    from utils.options import options,print_options
+    from shutil import copyfile,rmtree,move
+    import glob
+    import pyrap.tables as pt
+    from scripts.redo_dppp_di import redo_dppp_di
+    from utils.modify_mask import modify_mask
+    from utils.make_extended_mask import make_extended_mask,merge_mask,add_manual_mask
+    from utils.histmsamp import find_uvmin,sumdico
+    import numpy as np
+    from astropy.io import fits
+    from utils.pipeline_version import version
+    from others.surveys_db import use_database,update_status,SurveysDB
+    from utils import mpi_manager
+
+    __version__=version()
+    import datetime
+    import threading
 
 try:
     from killMS.Other import MyPickle
 except ImportError:
     MyPickle=None
-from surveys_db import use_database,update_status,SurveysDB
+
+def run_standalone(commands):
+    run_commands = [
+        'srun',
+        '--nodes=1',
+        '--ntasks=1',
+        '--cpus-per-task=5',
+        '--time=01:00:00',
+        '--hint=nomultithread',
+        'singularity',
+        'run',
+        '/lustre/fsn1/singularity/images/udd71uc/ddf.sif'
+    ]
+    commands_list = commands.split()
+    run_commands.extend(commands_list)
+    try:
+        print('LAUNCHED COMMAND', ' '.join(run_commands))
+        result = subprocess.run(run_commands, check=True, capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print("STANDARD ERROR:")
+            print(result.stderr)
+    except subprocess.CalledProcessError as e:
+        print("ERROR:", e.stderr)
+
+def _mpi_rank0_guard():
+    """Return (should_run, comm, size, rank) for rank-0 only sections."""
+    try:
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        size = comm.Get_size()
+        rank = comm.Get_rank()
+    except Exception:
+        comm = None
+        size = 1
+        rank = 0
+    if size > 1 and rank != 0:
+        return False, comm, size, rank
+    return True, comm, size, rank
 
 def summary(o):
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
     with open('summary.txt','w') as f:
-        ts='{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+        ts = f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}"
         f.write('ddf-pipeline completed at '+ts+'\n')
         f.write('ddf-pipeline version was '+__version__+'\n')
         from DDFacet.DDF import report_version as ddf_version
@@ -66,27 +176,31 @@ def summary(o):
             from DynSpecMS import dynspecms_version
             f.write('DynSpecMS version was '+dynspecms_version.version()+'\n\n')
         f.write('Options dictionary was as follows:\n')
-        for k in o:
-            f.write("%-20s : %s\n" % (k,str(o[k])))
+        f.writelines(f"{k:<20} : {value}\n" for k, value in o.items())
 
 def stop(v=2):
     if use_database():
         update_status(None,'Stopped')
     sys.exit(v)
-            
+
 def logfilename(s,options=None):
     if options is None:
         options=o
     if options['logging'] is not None:
-        return options['logging']+'/'+s 
+        return options['logging']+'/'+s
     else:
         return None
 
 def get_solutions_timerange(sols):
-    print('Reading %s'%sols)
+    if not os.path.isfile(sols):
+        if o['dryrun']:
+            return 0.0, 1.0
+        raise FileNotFoundError(f'Solutions file not found: {sols}')
+    print(f'Reading {sols}')
     S=np.load(sols)
     t = np.concatenate([S["Sols"]["t0"],S["Sols"]["t1"]])
-    return np.min(t),np.max(t)
+    TT=np.min(t),np.max(t)
+    return TT
 
 def find_cache_dir(options):
     cache_dir=options['cache_dir']
@@ -99,8 +213,22 @@ def find_cache_dir(options):
         cache_dir='.'
     return cache_dir
 
-def check_imaging_weight(mslist_name):
+def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2mslist.keys():
+            oc=copy.deepcopy(o)
+            if mslist_str=='mslist':
+                oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            elif mslist_str=='full_mslist':
+                oc["mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+            else:
+                raise RuntimeError(f'mslist string not recognised ({mslist_str})')
+            ListJobs.append((Node,check_imaging_weight,(oc["mslist"],),{}))
 
+    mpi_manager.callParallel(ListJobs)
+
+def check_imaging_weight(mslist_name):
     # returns a boolean that says whether it did something
     result=False
     error=False
@@ -131,6 +259,7 @@ def parse_parset(parsets,use_headings=False):
     keywords={}
     for parset in parsets:
         if os.path.isfile(parset):
+            warn(f"{parset} does exist")
             break
     else:
         parset=None
@@ -152,209 +281,575 @@ def parse_parset(parsets,use_headings=False):
                 keywords[prefix+bits[0]]=content
 
         return keywords
-    
+
     else:
         warn('Cannot find parset, some features may not work')
         return {}
 
 def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbose=False):
     if catcher: catcher.check()
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
+
     if options is None:
         options=o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
+    import DDFacet.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
+
     cache_dir=find_cache_dir(options)
     if dicomodel is None:
         dicomodel=imagename+'.DicoModel'
-    runcommand='DDF.py '+imagename+'.parset --Misc-ConserveMemory=1  --Output-Name='+imagename+'_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile='+shiftfile+' --Predict-InitDicoModel '+dicomodel+' --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir='+cache_dir
+    runcommand = f'DDF.py {imagename}.parset --Misc-ConserveMemory=1  --Output-Name={imagename}_shift --Output-Mode=RestoreAndShift --Output-ShiftFacetsFile={shiftfile} --Predict-InitDicoModel {dicomodel} --Cache-SmoothBeam=force --Log-Memory 1 --Cache-Dir={cache_dir}'
     if 'Misc-IgnoreDeprecationMarking' in keywords:
-        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
+        runcommand += ' --Misc-IgnoreDeprecationMarking=1'
     
-    fname=imagename+'_shift.app.facetRestored.fits'
+    fname = imagename+'_shift.app.facetRestored.fits'
+
     if options['restart'] and os.path.isfile(fname):
-        warn('File '+fname+' already exists, skipping DDF-shift step')
+        warn(f'File {fname} already exists, skipping DDF-shift step')
         if verbose:
             print('would have run',runcommand)
     else:
-         run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'_shift.log',options=options),quiet=options['quiet'])
+         run(runcommand,dryrun=options['dryrun'],log=logfilename(f'DDF-{imagename}_shift.log',options=options),quiet=options['quiet'])
 
+def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, options):
+    # This function takes care of creating the scalebank required by WSCMS2.
+    # The scale can be provided in parset, in a single list, 
+    # or automatically generated based on a given beam, scale density, and max scale.
+    # This function exists since scalebanks cannot be trivially merged when beam_start / beam_final does not equal a factor of scale_density.
+    # We choose to pin the first two non-0 scales to the beams, and only invoke geometric progression afterwards.
+    # [0, 2*final_beam, d * 2*final_beam, ...] + [0, 2*start_beam, d * 2*start_beam, ...]
+    # becomes 
+    # [0, 2*final_beam, 2*start_beam, d * 2*start_beam, d^2 * 2*start_beam, ...]
+    
+    final_cellsize = options["cellsize"]
+    beam_start_px  = options["psf_arcsec"] / final_cellsize
+    beam_final_px  = options["final_psf_arcsec"] / final_cellsize
+    geo_density    = options["wscms_scale_density"]
+    
+    cell_ratio = final_cellsize / current_cellsize
+    
+    if options["wscms_scale_density"] <=1:
+        die('wscms_scale_density must be > 1 to avoid infinite scales')
+    
+    # if no cap is provided in the parset, we can set it internally
+    if scale_cap is None:
+        if scales is not None:
+            scale_cap = max(scales) + 1
+        else:
+            die('wscms_max_scale must be provided if no wscms_scales is given')
+    
+    # if no list provided, we must make our own 
+    if scales is None:
+        scales = [0, 2 * beam_final_px, 2 * beam_start_px]
+        while scales[-1] <= scale_cap: scales += [np.ceil(scales[-1]*geo_density)]
+        scales = [int(s) for s in scales if s <= scale_cap]
+    
+    # wscms max scale is not aware of cellsizes, it only knows pixels. 
+    # Therefore we scale it relative to the final cellsize (which we assume the scales are relative to)
+    scaled         = {int(np.ceil(float(s) * cell_ratio)) for s in scales}
+    scaled_cap     = int(float(scale_cap) * cell_ratio)
+    scaled_neg_cap = int(float(scale_neg_cap) * cell_ratio) if scale_neg_cap is not None else None
+    
+    # have to make all scales odd before deduplication to avoid double values when using dense scale bank
+    scaled = {s + 1 if s % 2 == 0 and s > 0 else s for s in scaled}
 
-def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applysols=None,threshold=None,majorcycles=3,use_dicomodel=False,robust=0,beamsize=None,beamsize_minor=None,beamsize_pa=None,reuse_psf=False,reuse_dirty=False,verbose=False,saveimages=None,imsize=None,cellsize=None,uvrange=None,colname='CORRECTED_DATA',peakfactor=0.1,dicomodel_base=None,options=None,do_decorr=None,normalization=None,dirty_from_resid=False,clusterfile=None,HMPsize=None,automask=True,automask_threshold=10.0,smooth=False,noweights=False,cubemode=False,apply_weights=True,use_weightspectrum=False,catcher=None,rms_factor=3.0,predict_column=None,conditional_clearcache=False,PredictSettings=None,RMSFactorInitHMP=1.,MaxMinorIterInitHMP=10000,OuterSpaceTh=None,AllowNegativeInitHMP=False,phasecenter=None,polcubemode=False,channels=None,startchan=None,endchan=None,stokes=None,freq_nband=2):
+    # we also exclude the scale px=1, to avoid pointsource-fitting divergence,
+    # as a 1px scale is not separable from the delta function
+    scaled -= {1}
+
+    # turn into a zero-spaced string that can be fed to DDF
+    wscms_scales_px = str(sorted(scaled)).replace(" ", "")
+
+    return wscms_scales_px, scaled_cap, scaled_neg_cap
+
+    
+def ddf_image(
+    imagename,
+    mslist,
+
+    # Data
+    colname='CORRECTED_DATA',
+
+    # Selection
+    uvrange=None,
+
+    # Output
+    saveimages=None,
+    beamsize=None,
+    beamsize_minor=None,
+    beamsize_pa=None,
+
+    # Image
+    imsize=None,
+    cellsize=None,
+    phasecenter=None,
+
+    # Facets
+    facets_skip_th=None,
+    clusterfile=None,
+
+    # Weight
+    robust=0,
+    apply_weights=True,
+    use_weightspectrum=False,
+    use_tapered_short_spacings=None,
+
+    # RIME
+    do_decorr=None,
+
+    # Freq
+    cubemode=False,
+    polcubemode=False,
+    startchan=None,
+    endchan=None,
+    stokes=None,
+    freq_nband=4,
+
+    # DDESolutions
+    ddsols=None,
+    applysols=None,
+    normalization=None,
+
+    # Deconv
+    cleanmode='HMP',
+    majorcycles=3,
+    peakfactor=0.1,
+    rms_factor=3.0,
+    flux_threshold=None,
+
+    # Mask
+    cleanmask=None,
+    automask=True,
+    automask_threshold=None,
+
+    # Cache
+    reuse_psf=False,
+    reuse_dirty=False,
+    dirty_from_resid=False,
+    conditional_clearcache=False,
+
+    # HMP
+    OuterSpaceTh=None,
+
+    # WSCMS settings
+    # allows the option for per pipeline-step scale adjustments
+    wscms_MultiScaleBias=None,
+    wscms_scale_density=None,
+    wscms_scales=None,
+    wscms_max_scale=None,
+    wscms_NSubMinorIter=250,
+    wscms_SubMinorPeakFact=0.85,
+    wscms_rms_factor=None,
+    wscms_peakfactor=None,
+    wscms_automask_rms_factor=None,
+    wscms_neg_model_mode=None,
+    wscms_flux_threshold=None,
+    wscms_neg_max_scale=None,
+    wscms_compact_margin=None,
+    wscms_rescue_rms_factor=None,
+    wscms_use_local_rms=None,
+    wscms_local_rms_strength=None,
+    wscms_local_rms_sig=None,
+    wscms_signed_log_basis=None,
+    wscms_allow_refreeze=False,
+    wscms_refreeze_depth=None,
+
+    # GAClean
+    HMPsize=None,
+    RMSFactorInitHMP=1.0,
+    MaxMinorIterInitHMP=10000,
+    AllowNegativeInitHMP=False,
+
+    # Predict
+    use_dicomodel=False,
+    dicomodel_base=None,
+    predict_column=None,
+    PredictSettings=None,
+
+    # Pipeline-only
+    options=None,
+    mpiManager=None,
+    STEP=0,
+    catcher=None,
+    smooth=False,
+    noweights=False,  # unused, kept for signature compat
+    verbose=False):
+
+    
 
     if catcher: catcher.check()
 
     # saveimages lists _additional_ images to save
     if saveimages is None:
-        saveimages=''
-    saveimages+='onNeds'
+        saveimages = ''
+    saveimages += 'onNeds'
     if options is None:
-        options=o # attempt to get global if it exists
+        options = o # attempt to get global if it exists
 
-    keywords=parse_parset([os.environ['DDF_DIR']+'/DDFacet/DDFacet/Parset/DefaultParset.cfg'],use_headings=True)
-        
-    if HMPsize is None:
-        HMPsize=options['HMPsize']
-    if do_decorr is None:
-        do_decorr=options['do_decorr']
-    if beamsize is None:
-        beamsize=options['psf_arcsec']
-    if imsize is None:
-        imsize=options['imsize']
-    if cellsize is None:
-        cellsize=options['cellsize']
-        
+    import DDFacet.Parset
+    keywords = parse_parset(["%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)],use_headings=True)
+
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'wscms_local_rms_sig', 'thresholds', 'use_external_mask'):
+        if STEP > len(options[key]) - 1:
+            raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
+
+    # pull defaults from options if not specified
+    if beamsize           is None: beamsize           = options['psf_arcsec']
+    if imsize             is None: imsize             = options['imsize']
+    if cellsize           is None: cellsize           = options['cellsize']
+    if facets_skip_th     is None: facets_skip_th     = options['facets_skip_th']
+    if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
+    if do_decorr          is None: do_decorr          = options['do_decorr']
+    if cleanmode          is None: cleanmode          = options['cleanmode']
+    if flux_threshold     is None: flux_threshold     = options['flux_threshold']
+    if automask_threshold is None: automask_threshold = options['thresholds'][STEP]
+    if HMPsize            is None: HMPsize            = options['HMPsize']
+
+    # pull default WSCMS settings from options if not specified
+    if wscms_MultiScaleBias      is None: wscms_MultiScaleBias      = options['wscms_multiscale_bias']
+    if wscms_scale_density       is None: wscms_scale_density       = options['wscms_scale_density']
+    if wscms_scales              is None: wscms_scales              = options['wscms_scales']
+    if wscms_max_scale           is None: wscms_max_scale           = options['wscms_max_scale'][STEP]
+    if wscms_rms_factor          is None: wscms_rms_factor          = options['wscms_rms_factor'][STEP]
+    if wscms_peakfactor          is None: wscms_peakfactor          = options['wscms_peakfactor'][STEP]
+    if wscms_automask_rms_factor is None: wscms_automask_rms_factor = options['wscms_automask_rms_factor'][STEP]
+    if wscms_neg_model_mode      is None: wscms_neg_model_mode      = options['wscms_neg_model_mode'][STEP]
+    if wscms_flux_threshold      is None: wscms_flux_threshold      = options['wscms_flux_threshold'][STEP]
+    if wscms_neg_max_scale       is None: wscms_neg_max_scale       = options['wscms_neg_max_scale']
+    if wscms_compact_margin      is None: wscms_compact_margin      = options['wscms_compact_margin']
+    if wscms_rescue_rms_factor   is None: wscms_rescue_rms_factor   = options['wscms_rescue_rms_factor']
+    if wscms_use_local_rms       is None: wscms_use_local_rms       = options['wscms_use_local_rms']
+    if wscms_local_rms_strength  is None: wscms_local_rms_strength  = options['wscms_local_rms_strength']
+    if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
+    if wscms_signed_log_basis    is None: wscms_signed_log_basis    = options['wscms_signed_log_basis']
+
+    import DDFacet.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
+
     cache_dir=find_cache_dir(options)
 
     if majorcycles>0:
-        fname=imagename+'.app.restored.fits'
+        fname = imagename+'.app.restored.fits'
     else:
-        fname=imagename+'.dirty.fits'
+        fname = imagename+'.dirty.fits'
 
     if PredictSettings is not None and PredictSettings[0]=="Predict":
-        fname="_has_predicted_OK.%s.info"%imagename
+        fname = f"_has_predicted_OK.{imagename}.info"
 
-    runcommand = "DDF.py --Misc-ConserveMemory=1 --Output-Name=%s --Data-MS=%s --Deconv-PeakFactor %f --Data-ColName %s --Parallel-NCPU=%i --Beam-CenterNorm=1 --Deconv-CycleFactor=0 --Deconv-MaxMinorIter=1000000 --Deconv-MaxMajorIter=%s --Deconv-Mode %s --Beam-Model=LOFAR --Weight-Robust %f --Image-NPix=%i --CF-wmax 50000 --CF-Nw 100 --Output-Also %s --Image-Cell %f --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=%f --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=%s --Cache-DirWisdomFFTW=%s --Debug-Pdb=never --Log-Memory 1"%(imagename,mslist,peakfactor,colname,options['NCPU_DDF'],majorcycles,cleanmode,robust,imsize,saveimages,float(cellsize),rms_factor,cache_dir,cache_dir)
 
-    runcommand += " --GAClean-RMSFactorInitHMP %f"%RMSFactorInitHMP
-    runcommand += " --GAClean-MaxMinorIterInitHMP %f"%MaxMinorIterInitHMP
-    if AllowNegativeInitHMP:
-        runcommand += " --GAClean-AllowNegativeInitHMP True"
-    if OuterSpaceTh is not None:
-        runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
-    if options['use_splitisland']:
-       runcommand += " --SSDClean-MaxIslandSize %s"%options['splitisland_size']
+    runcommand = "DDF.py"
 
-    runcommand+=' --DDESolutions-SolsDir=%s'%options["SolsDir"]
-    runcommand+=' --Cache-Weight=reset'
+    # Data
+    runcommand += f" --Data-MS={mslist}"
+    runcommand += f" --Data-ColName {colname}"
+    runcommand +=  " --Data-Sort 1"
+    if options['chunk_hours'] > 0:
+        runcommand += f" --Data-ChunkHours={options['chunk_hours']}"
 
-    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
-        runcommand+=' --Beam-PhasedArrayMode=A'
-    else:
-        runcommand+=' --Beam-LOFARBeamMode=A'
-    
-    if 'Misc-IgnoreDeprecationMarking' in keywords:
-        runcommand+=' --Misc-IgnoreDeprecationMarking=1'
-
-    if 'Beam-At' in keywords:
-        runcommand+=' --Beam-At=%s'%options['beam_at']
-        
+    # Predict (Output-Mode and the Predict-* flags stay together: an explicit
+    # predict_column overrides the Predict-ColName from PredictSettings)
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
         if len(PredictSettings) == 2:
-            runcommand += " --Output-Mode=%s --Predict-ColName %s"%PredictSettings
+            runcommand += f" --Output-Mode={PredictSettings[0]} --Predict-ColName {PredictSettings[1]}"
         elif len(PredictSettings) == 3:
-            runcommand += " --Output-Mode=%s --Predict-ColName %s --Predict-MaskSquare [0,%i]"%PredictSettings
+            runcommand += f" --Output-Mode={PredictSettings[0]} --Predict-ColName {PredictSettings[1]} --Predict-MaskSquare [0,{PredictSettings[2]}]"
         else:
-            raise RuntimeError('PredictSettings has the wrong dimensions %s '%PredictSettings)
+            raise RuntimeError(f'PredictSettings has the wrong dimensions {PredictSettings}')
+    if predict_column is not None:
+        runcommand += f' --Predict-ColName={predict_column}'
+    if use_dicomodel:
+        if dicomodel_base is not None:
+            runcommand += f' --Predict-InitDicoModel={dicomodel_base}.DicoModel'
+        else:
+            raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
 
+    # Selection
+    if options['AutoFlagNyquist']: runcommand += " --Selection-AutoFlagNyquist 1"
+
+    # Output
+    runcommand += f" --Output-Name={imagename}"
+    runcommand += f" --Output-Also {saveimages}"
     if beamsize_minor is not None:
-        runcommand += ' --Output-RestoringBeam %f,%f,%f'%(beamsize,beamsize_minor,beamsize_pa)
+        runcommand += f' --Output-RestoringBeam {beamsize},{beamsize_minor},{beamsize_pa}'
     elif beamsize is not None:
-        runcommand += ' --Output-RestoringBeam %f'%(beamsize)
-    
-    if apply_weights:
-        runcommand+=' --Weight-ColName="IMAGING_WEIGHT"'
-    else:
-        if not use_weightspectrum:
-            runcommand+=' --Weight-ColName="None"'
-        else:
-            runcommand+=' --Weight-ColName="WEIGHT_SPECTRUM"'
+        runcommand += f' --Output-RestoringBeam {beamsize}'
 
-    if cubemode:
-        # number of channels equals number of distinct freqs in data
+    # Image
+    runcommand += f" --Image-NPix={imsize}"
+    runcommand += f" --Image-Cell {float(cellsize)}"
+    if phasecenter is not None:
+        runcommand += f' --Image-PhaseCenterRADEC=[{phasecenter[0]},{phasecenter[1]}]'
+
+    # Facets
+    runcommand += f" --Facets-NFacets={options['nfacets_di']}"
+    runcommand += f" --Facets-DiamMax {options['facets_diammax']}"
+    runcommand +=  " --Facets-DiamMin 0.1"
+    if facets_skip_th is not None:
+        runcommand += f" --Facets-SkipTh {facets_skip_th}"
+    if clusterfile is not None:
+        runcommand += f" --Facets-CatNodes={clusterfile}"
+
+    # Weight
+    runcommand += f" --Weight-Robust {robust}"
+    if options['weight_beam_power'] and 'Weight-BeamPower' in keywords:
+        runcommand += ' --Weight-BeamPower=1'
+    weight_col = "IMAGING_WEIGHT" if apply_weights else ("WEIGHT_SPECTRUM" if use_weightspectrum else "None")
+    runcommand += f' --Weight-ColName="{weight_col}"'
+    if use_tapered_short_spacings:
+        # include 0-uvmin at reduced weight instead of cutting it
+        uvrange = [0, uvrange[1]] if uvrange is not None else [0, options['uvmax']]
+        # lower weight between 0-0.1 km, full weight by 0.1 km
+        runcommand += ' --Weight-EnableSigmoidTaper=1 --Weight-SigmoidTaperInnerCutoff=25 --Weight-SigmoidTaperInnerRolloffStrength=0.35 --Weight-SigmoidTaperOuterCutoff=1000000 --Weight-SigmoidTaperOuterRolloffStrength=1'
+    if uvrange is not None:
+        # Selection flag, kept here: the taper above rewrites uvrange
+        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
+
+    # RIME
+    if do_decorr: runcommand +=  ' --RIME-DecorrMode=FT'
+
+    # CF
+    runcommand += f" --CF-wmax {options['wmax']}"
+    runcommand +=  " --CF-Nw 100"
+
+    # Beam (version-compat shims live with the Beam flag they guard)
+    runcommand +=  " --Beam-CenterNorm=1"
+    runcommand += f" --Beam-Model={options['BeamModel']}"
+    runcommand +=  " --Beam-NBand 1"
+    if 'Beam-PhasedArrayMode' in keywords: # incompatible change
+        runcommand += ' --Beam-PhasedArrayMode=A'
+    else:
+        runcommand+=' --Beam-LOFARBeamMode=A'
+    if 'Beam-At' in keywords: runcommand += f' --Beam-At={options["beam_at"]}'
+    if smooth: runcommand += ' --Beam-Smooth=1'
+
+    # Freq
+    runcommand += " --Freq-NDegridBand 1"
+    if cubemode or polcubemode:
+        # number of slices equals number of distinct freqs in data
         freqs=[]
         mss=[l.rstrip() for l in open(mslist).readlines()]
         for ms in mss:
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
-            freq=t[0]['REF_FREQUENCY']
-            if freq not in freqs:
-                freqs.append(freq)
-        channels=len(freqs)
-        runcommand+=' --Output-Cubes I --Freq-NBand=%i' % channels
+            with pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False) as t:
+                freq=t[0]['REF_FREQUENCY']
+                if freq not in freqs:
+                    freqs.append(freq)
 
-    if polcubemode:
-        runcommand+=' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty  --Freq-NBand=%i --Selection-ChanStart=%s --Selection-ChanEnd=%s' % (channels,startchan,endchan)
+        n_cube_slices = len(freqs)
+        
+        if cubemode:    runcommand += f' --Output-Cubes I --Freq-NBand={n_cube_slices}'
+        if polcubemode: runcommand += f' --Output-Cubes=dD --RIME-PolMode=IQU --Output-Mode=Dirty --Freq-NBand={n_cube_slices} --Selection-ChanStart={startchan} --Selection-ChanEnd={endchan}'
+    else:
+        #if not cubemode and not polcubemode
+        runcommand += f' --Freq-NBand={freq_nband}'
 
-    if not cubemode and not polcubemode:
-        runcommand+=' --Freq-NBand=%i' % freq_nband
-    if stokes:
-        runcommand +=' --RIME-PolMode=%s --Output-Mode=Dirty'%stokes
+    # Stokes
+    if stokes: runcommand += f' --RIME-PolMode={stokes} --Output-Mode=Dirty'
 
-
-    if do_decorr:
-        runcommand += ' --RIME-DecorrMode=FT'
-
-    if cleanmode == 'SSD':
-        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0'
-    if clusterfile is not None:
-        runcommand += ' --Facets-CatNodes=%s' % clusterfile
-    if automask:
-        runcommand += ' --Mask-Auto=1 --Mask-SigTh=%.2f' % automask_threshold
-    if cleanmask is not None:
-        runcommand += ' --Mask-External=%s'%cleanmask
+    # DDESolutions
+    runcommand += f" --DDESolutions-SolsDir={options['SolsDir']}"
     if applysols is not None:
         if normalization is not None:
             if normalization[:3]=='Abs':
                 normalization='Mean'+normalization # backward compat. hack
             runcommand += ' --DDESolutions-GlobalNorm='+normalization
-        runcommand += ' --DDESolutions-DDModeGrid=%s --DDESolutions-DDModeDeGrid=%s --DDESolutions-DDSols=%s'%(applysols,applysols,ddsols)
-    if use_dicomodel:
-        if dicomodel_base is not None:
-            runcommand += ' --Predict-InitDicoModel=%s.DicoModel' % dicomodel_base
-        else:
-            raise RuntimeError('use_dicomodel is set but no dicomodel supplied')
+        runcommand += f' --DDESolutions-DDModeGrid={applysols} --DDESolutions-DDModeDeGrid={applysols} --DDESolutions-DDSols={ddsols}'
+
+    # Deconv
+    runcommand += f" --Deconv-Mode {cleanmode}"
+    runcommand += f" --Deconv-MaxMajorIter={majorcycles}"
+    runcommand +=  " --Deconv-MaxMinorIter=1000000"
+    runcommand += f" --Deconv-RMSFactor={rms_factor}"
+    runcommand += f" --Deconv-FluxThreshold {flux_threshold}"
+    runcommand += f" --Deconv-PeakFactor {peakfactor}"
+    runcommand +=  " --Deconv-CycleFactor=0"
+
+    ###########################
+    #### SSD / SSD2 / SSD3 ####
+    ###########################
+    if cleanmode in ('SSD', 'SSD2', 'SSD3'):
+        # parameters shared between SSD versions
+        runcommand += ' --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --SSDClean-NEnlargeData 0  --SSDClean-ConvFFTSwitch 10000'
+        if automask:                   runcommand += f' --Mask-Auto=1 --Mask-SigTh={automask_threshold:.2f}'
+        if options['use_splitisland']: runcommand += f' --SSDClean-MaxIslandSize={options["splitisland_size"]}'
+
+        # SSD2 specific parameters
+        if cleanmode == 'SSD2':
+            runcommand += ''
+
+        # SSD3 specific parameters
+        if cleanmode == 'SSD3':
+             runcommand += ' --SSD3-InitType ["HMP_0-100","MultiSlice:Orieux"]'
+             runcommand += ' --SSD3-NLookBackModels 0'
+             runcommand += ' --SSD3-NLastCyclesDeconvAll 2'
+             runcommand += ' --SSD3-AllowFacetOverlap 0'
+             runcommand += ' --SSD3-RunSimpleClean 0'
+             runcommand += ' --SSD3-PropagatePrevGen 0'
+             runcommand += ' --SSD3-AlphaScaleModel 1'
+             runcommand += ' --SSDClean-SSDCostFunc ["Chi2"]'
+             runcommand += ' --GAClean-NMaxGen 30'
+             runcommand += ' --GAClean-NSourceKin 30'
+             runcommand += ' --Mask-ThFilterRFI 3'
+             runcommand += ' --MultiSliceDeconv-HyperSmooth 3.5'
+             
+    ########################
+    #### WSCMS / WSCMS2 ####
+    ########################
+    elif cleanmode in ('WSCMS', 'WSCMS2'):
+        # parameters shared between WSCMS versions
+        runcommand += f' --WSCMS-MultiScale=1 --WSCMS-MultiScaleBias={wscms_MultiScaleBias} --WSCMS-NSubMinorIter={wscms_NSubMinorIter} --WSCMS-SubMinorPeakFact={wscms_SubMinorPeakFact} --WSCMS-ScaleDensity={wscms_scale_density} --Deconv-RMSFactor={wscms_rms_factor} --Deconv-PeakFactor={wscms_peakfactor} --WSCMS-LocalRMS={wscms_use_local_rms}'
         
-    if threshold is not None:
-        runcommand += ' --Deconv-FluxThreshold=%f'%threshold
-    if uvrange is not None:
-        runcommand += ' --Selection-UVRangeKm=[%f,%f]' % (uvrange[0],uvrange[1])
-    if dirty_from_resid and reuse_dirty:
-        raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
-    if dirty_from_resid:
-        # possible that crashes could destroy the cache, so need to check
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/LastResidual'):
-            runcommand += ' --Cache-Dirty forceresidual'
-    if reuse_dirty:
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/Dirty'):
-            runcommand += ' --Cache-Dirty forcedirty'
-    if reuse_psf:
-        if os.path.exists(cache_dir+'/'+mslist+'.ddfcache/PSF'):
-            runcommand += ' --Cache-PSF force'
-
-    if HMPsize is not None:
-        runcommand += ' --GAClean-MinSizeInit=%i' % HMPsize
-
-    if options['nobar']:
-        runcommand += ' --Log-Boring=1'
-
-    if smooth:
-        runcommand += ' --Beam-Smooth=1'
-
-    if predict_column is not None:
-        runcommand += ' --Predict-ColName=%s' % predict_column
+        # inputs related to the scalebank
+        wscms_scales_px, wscms_max_scale_px, wscms_neg_max_scale_px = wscms_make_scalebank(cellsize, wscms_scales, wscms_max_scale, wscms_neg_max_scale, options)
+        runcommand += f' --WSCMS-Scales={wscms_scales_px} --WSCMS-MaxScale={wscms_max_scale_px}'
+        if wscms_neg_max_scale_px is not None: runcommand += f' --WSCMS-NegMaxScale={wscms_neg_max_scale_px}'
         
-    if phasecenter is not None:
-        runcommand += " --Image-PhaseCenterRADEC=[%s,%s]"%(phasecenter[0],phasecenter[1])
-    if options['restart'] and os.path.isfile(fname):
+        # dedicated automasking inputs
+        runcommand += f' --WSCMS-AutoMask={automask}'
+        if automask:
+            runcommand += f' --WSCMS-AutoMaskRMSFactor={wscms_automask_rms_factor}'
+            # if majorcycles is 0 or 1, disable forcelast, since that would fire freeze instantly.
+            if majorcycles <= 1:
+                runcommand += ' --WSCMS-AutoMaskForceLast=False'
+        if wscms_compact_margin is not None:    runcommand += f' --WSCMS-CompactMargin={float(wscms_compact_margin)}'
+        if wscms_rescue_rms_factor is not None: runcommand += f' --WSCMS-RescueRMSFactor={float(wscms_rescue_rms_factor)}'
+
+        runcommand += f' --WSCMS-NegModelMode={int(wscms_neg_model_mode)}'
+        runcommand += f' --Deconv-FluxThreshold={wscms_flux_threshold} --Mask-FluxImageType=ModelConv'
+
+        # optional local-RMS weight exponent and mask threshold (0 = no mask).
+        if wscms_local_rms_strength is not None: runcommand += f' --WSCMS-LocalRMSStrength={float(wscms_local_rms_strength)}'
+        if wscms_local_rms_sig is not None:      runcommand += f' --WSCMS-LocalRMSSig={float(wscms_local_rms_sig)}'
+        
+        # frequency-axis behaviour
+        runcommand += ' --WSCMS-NumFreqBasisFuncs=2'
+        if cleanmode == 'WSCMS2' and wscms_signed_log_basis:
+            runcommand += ' --WSCMS-SignedLogBasis=1'
+
+        # handle refreeze
+        if wscms_allow_refreeze:
+            runcommand += ' --WSCMS-AllowRefreeze=True'
+        if wscms_refreeze_depth is not None: runcommand += f' --WSCMS-RefreezeDepth={wscms_refreeze_depth}'
+
+    ###############
+    #### DDMSC ####
+    ###############
+    # elif cleanmode in ('DDMSC'):
+    #     import DDSMC... and do the magic things that need to make it work
+    #
+    #     die("not supported yet")
+    #
+
+    # Mask
+    if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
+
+    # Parallel
+    runcommand += f" --Parallel-NCPU={options['NCPU_DDF']}"
+
+    # Cache
+    runcommand += f" --Cache-Dir={cache_dir}"
+    runcommand += f" --Cache-DirWisdomFFTW={cache_dir}"
+    runcommand +=  " --Cache-Weight=reset"
+    if dirty_from_resid and reuse_dirty: raise RuntimeError('Cannot combine reuse_dirty and dirty_from_resid')
+    mpi_rank_str = ".rank_0" if (mpiManager is not None and mpiManager.UseMPI) else ""
+    def cache_hit(name): return os.path.exists(cache_dir + '/' + mslist + mpi_rank_str + '.ddfcache/' + name)
+    if dirty_from_resid and cache_hit('LastResidual'): runcommand += ' --Cache-Dirty forceresidual'
+    if reuse_dirty and cache_hit('Dirty'):             runcommand += ' --Cache-Dirty forcedirty'
+    if reuse_psf and cache_hit('PSF'):                 runcommand += ' --Cache-PSF force'
+
+    # HMP
+    if OuterSpaceTh is not None:        runcommand += f" --HMP-OuterSpaceTh {OuterSpaceTh}"
+
+    # GAClean
+    if RMSFactorInitHMP is not None:    runcommand += f" --GAClean-RMSFactorInitHMP {RMSFactorInitHMP}"
+    if MaxMinorIterInitHMP is not None: runcommand += f" --GAClean-MaxMinorIterInitHMP {MaxMinorIterInitHMP}"
+    if AllowNegativeInitHMP:            runcommand +=  " --GAClean-AllowNegativeInitHMP True"
+    if HMPsize is not None: runcommand += f' --GAClean-MinSizeInit={HMPsize}'
+
+    # Log
+    runcommand += " --Log-Memory 1"
+    runcommand += " --Debug-Pdb=never"  # [Debug] section: single flag, kept with Log
+    if options['nobar']: runcommand += ' --Log-Boring=1'
+
+    # Misc
+    if 'Misc-IgnoreDeprecationMarking' in keywords: runcommand += ' --Misc-IgnoreDeprecationMarking=1'
+    runcommand += ' --Misc-ConserveMemory=1'
+
+    OutputExists=os.path.isfile(fname)
+    # Bootstrap calls ddf_image with no mpiManager from rank 0 only
+    if USE_MPI and mpiManager is not None:
+        OutputExists=MPI.COMM_WORLD.bcast(OutputExists, root=0)
+            
+    if options['restart'] and OutputExists:
         warn('File '+fname+' already exists, skipping DDF step')
         if verbose:
             print('would have run',runcommand)
+            
     else:
         if conditional_clearcache:
-            clearcache(mslist,options)
-        run(runcommand,dryrun=options['dryrun'],log=logfilename('DDF-'+imagename+'.log',options=options),quiet=options['quiet'])
+            if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1:
+                clearcache_mpi(mpiManager, mslist, options)
+            else:
+                clearcache(mslist,options)
+
+        try:
+            Register.register("[DDFacet] %s"%imagename,"Imaging")
+        except:
+            pass
+        if mpiManager is not None and mpiManager.UseMPI:
+            if RANK==0:
+                run(" DDF_SAVE_OPTIONS_AND_EXIT=1 "+runcommand)
+                
+            run("CleanSHM.py",dryrun=o['dryrun'], mpiManager=mpiManager,local_rank=0)
+            import DDFacet.DDF
+            SaveFile1="last_DDFacet.finalised.obj"
+            mpiManager.scpScatter(SaveFile1)
+            if USE_MPI:
+                MPI.COMM_WORLD.Barrier()
+
+            OP=MyPickle.Load(SaveFile1)
+            ListJobs=[]
+            for Node in mpiManager.DicoNode2mslist.keys():
+                ListJobs.append((Node,DDFacet.DDF.driver,(),{"OP_IN":OP}))
+
+            res=mpi_manager.callParallel(ListJobs)
+        else:
+            run(runcommand,
+                dryrun=options['dryrun'],
+                log=logfilename('DDF-'+imagename+'.log',options=options),
+                quiet=options['quiet'])
+        try:
+            Register.register("[DDFacet] %s"%imagename,"Stop")
+        except:
+            pass
+
+        if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1:
+            mpiManager.scpScatter("%s.DicoModel"%imagename)
 
         # Ugly way to see if predict has been already done
-        if PredictSettings is not None:
-            fname=os.system("touch %s"%fname)
+        if PredictSettings is not None and not options['dryrun']:
+            os.system(f"touch {fname}")
+            
     return imagename
-        
-def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize'):
+
+def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_use=None,clobber=False,cellsize='cellsize',
+                       mpiManager=None):
     # cellsize specifies which option value to get this from
     if options is None:
         options=o # attempt to get global
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
 
     if options['dryrun']: return
 
@@ -379,24 +874,33 @@ def make_external_mask(fname,templatename,use_tgss=True,options=None,extended_us
             report('Merging with automatic extended mask')
             merge_mask(fname,extended_use,fname)
 
-
 def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None,options=None,use_makemask_products=False):
 
-    if os.path.isfile(OutClusterCat):
-        warn('File %s already exists, skipping clustering step'%OutClusterCat)
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
         return
 
-    if not ".app.restored.fits" in imagename:
+    if os.path.isfile(OutClusterCat):
+        warn(f'File {OutClusterCat} already exists, skipping clustering step')
+        return
+
+    Register.register("[clusterGA]","Cluster")
+    if ".app.restored.fits" not in imagename:
         raise RuntimeError('Input image should be an apparant restored image')
+
 
     if options is None:
         options=o # attempt to get global if it exists
 
     if use_makemask_products:
-        runcommand="MakeCatalog.py --RestoredIm %s --rmsmean_map [Noise.mean.fits,Noise.fits]"%imagename
+        runcommand = f"MakeCatalog.py --RestoredIm {imagename} --rmsmean_map [Noise.mean.fits,Noise.fits]"
     else:
-        runcommand="MakeCatalog.py --RestoredIm %s"%imagename 
+        runcommand = f"MakeCatalog.py --RestoredIm {imagename}"
+
+    runcommand+=" --bdsm_thresh_isl %f --bdsm_thresh_pix %f"%(options['clustering_threshold'],options['clustering_threshold'])
+
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
+
 
     Name=imagename.split(".app.restored.fits")[0]
 
@@ -406,16 +910,38 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         if os.path.isfile(filename):
             break
     else:
-        die('Catalogue file does not exist!')
+        if not options['dryrun']:
+            die('Catalogue file does not exist!')
+        filename=filenames[0]
     if use_makemask_products:
-        runcommand="ClusterCat.py --SourceCat %s --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
+        runcommand = f"ClusterCat.py --SourceCat {filename} --AvoidPolygons MaskDiffuse.pickle --DoPlot=0 --NGen 100 --NCPU {options['NCPU_DDF']}"
     else:
-        runcommand="ClusterCat.py --SourceCat %s --DoPlot=0 --NGen 100 --NCPU %i"%(filename,options['NCPU_DDF'])
+        runcommand = f"ClusterCat.py --SourceCat {filename} --DoPlot=0 --NGen 100 --NCPU {options['NCPU_DDF']}"
     if OutClusterCat is not None:
-        runcommand+=" --OutClusterCat %s"%OutClusterCat
-    runcommand+=" --NCluster %i"%options['ndir']
+        runcommand += f" --OutClusterCat {OutClusterCat}"
+    runcommand += f" --NCluster {options['ndir']}"
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCluster-'+imagename+'.log',options=options),quiet=options['quiet'])
+    Register.register("[clusterGA]","Stop")
 
+def get_phase_centre(fname):
+    """Return (ra, dec) in radians of the MS phase centre, or None on any error."""
+    try:
+        t = pt.table(fname + '/FIELD', ack=False)
+        try:
+            phase_dir = t.getcol('PHASE_DIR')[0, 0]
+        finally:
+            t.close()
+        return float(phase_dir[0]), float(phase_dir[1])
+    except Exception:
+        return None
+
+def get_pointing_id(fname, phase_dir):
+    if phase_dir is not None:
+        return '%.7f_%.7f' % (round(phase_dir[0], 7), round(phase_dir[1], 7))
+    parent = os.path.basename(os.path.dirname(fname.rstrip(os.path.sep)))
+    if parent:
+        return parent
+    return None
 
 def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,catcher=None,OutMaskExtended=None):
     if catcher: catcher.check()
@@ -424,14 +950,19 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     if options is None:
         options=o # attempt to get global
 
-    if options['dryrun']: return
     fname=imagename+'.mask.fits'
-    runcommand = "MakeMask.py --RestoredIm=%s --Th=%s --Box=50,2"%(imagename,thresh)
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return fname
+    if options['dryrun']: return fname
+    
+    runcommand = f"MakeMask.py --RestoredIm={imagename} --Th={thresh} --Box=50,2"
+
     if OutMaskExtended is not None:
-        runcommand += " --OutMaskExtended %s --OutNameNoiseMap Noise"%(OutMaskExtended)
+        runcommand += f" --OutMaskExtended {OutMaskExtended} --OutNameNoiseMap Noise"
 
 
-        
+
     if options['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeMask step')
         if verbose:
@@ -439,35 +970,104 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
     else:
         run(runcommand,dryrun=options['dryrun'],log=logfilename('MM-'+imagename+'.log',options=options),quiet=options['quiet'])
         if external_mask is not None:
-            if isinstance(external_mask,list) or isinstance(external_mask,tuple):
+            if isinstance(external_mask, (list, tuple)):
                 for mask in external_mask:
                     merge_mask(fname,mask,fname)
             else:
                 merge_mask(fname,external_mask,fname)
-    return fname
-            
 
+
+    return fname
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
                 SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
                 DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
-                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None,
+                mpiManager=None, mslist_str=""
+                ):
 
+
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1 and mslist_str != "":
+        SolsDir=options["SolsDir"]
+        os.system("mkdir -p %s"%SolsDir)
+        rep=killms_data_mpi(
+                imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,MergeSmooth,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
+                mpiManager, mslist_str
+        )
+        return rep
+    else:
+        rep=killms_data_serial(
+                imagename,mslist,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,MergeSmooth,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights,
+        )
+        return rep
+
+def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+                uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None, mpiManager=None, mslist_str=""):
+    ListJobs=[]
+    if mslist_str != "":
+        for Node in mpiManager.DicoNode2mslist.keys():
+            mslist_ = None
+            if mslist_str == "mslist":
+                mslist_=mpiManager.DicoNode2mslist[Node]
+            elif mslist_str == "full_mslist":
+                mslist_=mpiManager.DicoNode2fullmslist[Node]
+            else:
+                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+            ListJobs.append((Node,killms_data_serial,(imagename,mslist_,outsols,clusterfile,colname,niterkf,dicomodel,
+                uvrange,wtuv,robust,catcher,dt,options,
+                SolverType,PolMode,False,NChanSols,
+                DISettings,EvolutionSolFile,CovQ,InterpToMSListFreqs,
+                SkipSmooth,PreApplySols,SigmaFilterOutliers,UpdateWeights),{ }))
+
+
+    res=mpi_manager.callParallel(ListJobs)
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+
+    if RANK==0:
+        mpiManager.scpGatherSolutions(outsols)
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+
+    if MergeSmooth:
+        outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
+                                 SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options,mpiManager=mpiManager)
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+    
+    return outsols
+
+def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
+                uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
+                SolverType="KAFCA",PolMode="Scalar",MergeSmooth=False,NChanSols=None,
+                DISettings=None,EvolutionSolFile=None,CovQ=0.1,InterpToMSListFreqs=None,
+                SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None):
     if options is None:
         options=o # attempt to get global if it exists
 
     cache_dir=find_cache_dir(options)
 
-    if 'KILLMS_DIR' in os.environ:
-        # different versions have different locations for the parset, so check them all
-        keywords=parse_parset([os.environ['KILLMS_DIR']+'/killMS/killMS/Parset/DefaultParset.cfg',os.environ['KILLMS_DIR']+'/killMS/Parset/DefaultParset.cfg'])
-    else:
-        keywords={}
-    
+    # different versions have different locations for the parset, so check them all
+    import killMS.Parset
+    parset_file="%s/DefaultParset.cfg" % os.path.dirname(killMS.Parset.__file__)
+    warn(f"loading {parset_file}")
+    keywords=parse_parset([parset_file],use_headings=True)
+
     # run killms individually on each MS -- allows restart if it failed in the middle
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
-    for f in filenames:
+    for iFile,f in enumerate(filenames):
         if catcher: catcher.check()
 
         SolsDir=options["SolsDir"]
@@ -478,123 +1078,178 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             MSName=os.path.abspath(f).split("/")[-1]
             solname =os.path.abspath(SolsDir)+"/"+MSName+'/killMS.'+outsols+'.sols.npz'
         checkname=solname
-
+        clipcal_checkname=checkname.replace('.sols.npz','.clipcal_done')
+        rootfilename=outsols.split('/')[-1]
+        f_=f.replace("/","_")
 
 
         #checkname=f+'/killMS.'+outsols+'.sols.npz'
         if options['restart'] and os.path.isfile(checkname):
 
             warn('Solutions file '+checkname+' already exists, not running killMS step')
-            
+
         else:
-            runcommand = "kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s"%(f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname)
+            runcommand = f"env MAIN_PROCESS_RANKS={MAIN_PROCESS_RANKS} kMS.py --MSName {f} --SolverType {SolverType} --PolMode {PolMode} --BaseImageName {imagename} --NIterKF {niterkf} --CovQ {CovQ} --LambdaKF={options['LambdaKF']} --NCPU {options['NCPU_killms']} --OutSolsName {outsols} --InCol {colname}  --wmax {options['wmax']}"
 
             # check for option to stop pdb call and use it if present
-            
+
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
-                
+
+            if "Actions-NChains" in keywords:
+                NChains=1
+                NChains=3
+                if DISettings is not None:
+                    NChains=options['NCPU_killms']//4
+                runcommand+=' --NChains %i'%NChains
+
             if robust is None:
-                runcommand+=' --Weighting Natural'
+                runcommand += ' --Weighting Natural'
             else:
-                runcommand+=' --Weighting Briggs --Robust=%f' % robust
+                runcommand += f' --Weighting Briggs --Robust={robust}'
             if UpdateWeights is not None:
-                runcommand+=' --UpdateWeights=%f' %UpdateWeights               
+                runcommand += f' --UpdateWeights={UpdateWeights}'               
+
             if uvrange is not None:
                 if wtuv is not None:
-                    runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
+                    runcommand += f' --WTUV={wtuv} --WeightUVMinMax={uvrange[0]},{uvrange[1]}'
                 else:
-                    runcommand+=' --UVMinMax=%f,%f' % (uvrange[0], uvrange[1])
+                    runcommand += f' --UVMinMax={uvrange[0]},{uvrange[1]}'
             if options['nobar']:
-                runcommand+=' --DoBar=0'
+                runcommand += ' --DoBar=0'
 
-            runcommand+=' --SolsDir=%s'%options["SolsDir"]
-            
+
+            runcommand += f' --SolsDir={options["SolsDir"]}'
             if PreApplySols:
-                runcommand+=' --PreApplySols=[%s]'%PreApplySols
+                runcommand += f' --PreApplySols=[{PreApplySols}]'
                 
+
+            # 25/04/2024: Not in master but in my exp branch, not sure it should be there
+            runcommand+=' --WeightInCol=IMAGING_WEIGHT'
+
+
             if DISettings is None:
                 if NChanSols is None:
                     NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode LOFAR'
-                if 'PhasedArrayMode' in keywords: # incompatible change
+                runcommand+=' --BeamMode %s'%options['BeamModel']
+                print(f"keywords={keywords}")
+                if 'Beam-PhasedArrayMode' in keywords: # incompatible change
                     runcommand+=' --PhasedArrayMode=A'
                 else:
-                    runcommand+=' --LOFARBeamMode=A'
-                runcommand+=' --DDFCacheDir='+cache_dir
+                    runcommand += ' --LOFARBeamMode=A'
+                runcommand += ' --DDFCacheDir='+cache_dir
                 if 'BeamAt' in keywords:
-                    runcommand+=' --BeamAt=%s'%options['beam_at']
+                    runcommand += f' --BeamAt={options["beam_at"]}'
 
                 if clusterfile is not None:
-                    runcommand+=' --NodesFile '+clusterfile
+                    runcommand += ' --NodesFile '+clusterfile
+                if options['cluster_cut_deg'] > 0:
+                    runcommand += f' --ClusterAngularCutDeg {options["cluster_cut_deg"]}'
                 if dicomodel is not None:
-                    runcommand+=' --DicoModel '+dicomodel
+                    runcommand += ' --DicoModel '+dicomodel
                 if EvolutionSolFile is not None:
-                    runcommand+=' --EvolutionSolFile '+EvolutionSolFile
+                    runcommand += ' --EvolutionSolFile '+EvolutionSolFile
                 if dt is not None:
-                    runcommand+=' --dt %f' % dt
+                    runcommand += f' --dt {dt}'
             else:
-                runcommand+=" --SolverType %s --PolMode %s --SkyModelCol %s --OutCol %s --ApplyToDir 0"%DISettings
+                runcommand += f" --SolverType {DISettings[0]} --PolMode {DISettings[1]} --SkyModelCol {DISettings[2]} --OutCol {DISettings[3]} --ApplyToDir 0"
                 _,_,ModelColName,_=DISettings
-                _,dt_give,_,n_df_give=give_dt_dnu(f,
-                                        DataCol=colname,
-                                        ModelCol=ModelColName,
-                                        T=10.)
-                if dt is None:
-                    dt=dt_give
-                if NChanSols is None:
-                    NChanSols=n_df_give
-                runcommand+=" --dt %f --NChanSols %i"%(dt+1e-4,NChanSols)
-                
-                
-            rootfilename=outsols.split('/')[-1]
-            f_=f.replace("/","_")
+
+                if not options['dryrun'] or os.path.isfile(f):
+                    print(socket.gethostname(),f,colname,ModelColName)
+                    _,dt_give,_,n_df_give=give_dt_dnu(f,
+                                            DataCol=colname,
+                                            ModelCol=ModelColName,
+                                            T=10.)
+                    if dt is None:
+                        dt=dt_give
+                    if NChanSols is None:
+                        NChanSols=n_df_give
+                else:
+                    if dt is None: dt=1.0
+                    if NChanSols is None: NChanSols=1
+                runcommand += f" --dt {dt+1e-4} --NChanSols {NChanSols}"
+
+            try:
+                Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
+            except:
+                pass
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
-            # Clip anyway - on IMAGING_WEIGHT by default
-            if DISettings is not None:
-                ClipCol=DISettings[-1]
-            else:
-                ClipCol=colname
-            runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
+        # Clip anyway - on IMAGING_WEIGHT by default
+        if DISettings is not None:
+            ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
+        else:
+            ClipCol=colname
+        runcommand = f"ClipCal.py --MSName {f} --ColName {ClipCol}"
+
+        if options['restart'] and os.path.isfile(clipcal_checkname):
+            warn('ClipCal done file '+clipcal_checkname+' already exists, not running ClipCal step')
+        else:
             run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
+            if not options['dryrun']:
+                os.system(f"touch {clipcal_checkname}")
+
+            try:
+                Register.register("[killMS ms%i] %s"%(iFile,outsols),"Stop")
+            except:
+                pass
 
     if MergeSmooth:
         outsols=smooth_solutions(mslist,outsols,catcher=None,dryrun=options['dryrun'],InterpToMSListFreqs=InterpToMSListFreqs,
                                  SkipSmooth=SkipSmooth,SigmaFilterOutliers=SigmaFilterOutliers,options=options)
-        
 
 
 
     return outsols
 
 def compress_fits(filename,q):
-    command='fpack -q %i %s' % (q,filename)
-    run(command,dryrun=o['dryrun'])
-    
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return
+    command = f'fpack -q {q} {filename}'
+    run(command, dryrun=o['dryrun'])
+
 def make_model(maskname,imagename,catcher=None):
     # returns True if the step was run, False if skipped
     if catcher: catcher.check()
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        return False
 
     fname=imagename+'.npy'
     if o['restart'] and os.path.isfile(fname):
         warn('File '+fname+' already exists, skipping MakeModel step')
         return False
     else:
-        runcommand = "MakeModel.py --MaskName=%s --BaseImageName=%s --NCluster=%i --DoPlot=0"%(maskname,imagename,o['ndir'])
+        runcommand = f"MakeModel.py --MaskName={maskname} --BaseImageName={imagename} --NCluster={o['ndir']} --DoPlot=0"
         run(runcommand,dryrun=o['dryrun'],log=logfilename('MakeModel-'+maskname+'.log'),quiet=o['quiet'])
         return True
 
-def mask_dicomodel(indico,maskname,outdico,catcher=None):
+def mask_dicomodel(indico,maskname,outdico,catcher=None,filterneg=True):
     if catcher: catcher.check()
+
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        if comm is not None and size > 1:
+            return comm.bcast(None, root=0)
+        return outdico.split(".")[0]
 
     if o['restart'] and os.path.isfile(outdico):
         warn('File '+outdico+' already exists, skipping MaskDicoModel step')
     else:
-        runcommand = "MaskDicoModel.py --MaskName=%s --InDicoModel=%s --OutDicoModel=%s"%(maskname,indico,outdico) 
-        run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+maskname+'.log'),quiet=o['quiet'])
-    return outdico.split(".")[0]
+        runcommand = f"MaskDicoModel.py --InDicoModel={indico} --OutDicoModel={outdico}"
+        if maskname:
+            runcommand += f" --MaskName={maskname}"
+        if filterneg:
+            runcommand += " --FilterNegComp=1"
+        run(runcommand,dryrun=o['dryrun'],log=logfilename('MaskDicoModel-'+outdico+'.log'),quiet=o['quiet'])
+    result = outdico.split(".")[0]
+    if comm is not None and size > 1:
+        comm.bcast(result, root=0)
+    return result
 
 def rmtglob(path):
     g=glob.glob(path)
@@ -619,6 +1274,21 @@ def mvglob(path,dest):
                 os.remove(real_dst)
         move(f,dest)
 
+def clearcache_mpi(MPI_Manager,mslist_str, o):
+    ListJobs=[]
+    for Node in MPI_Manager.DicoNode2mslist.keys():
+        mslist_ = None
+        if mslist_str == "mslist":
+            mslist_=MPI_Manager.DicoNode2mslist[Node]
+        elif mslist_str == "full_mslist":
+            mslist_=MPI_Manager.DicoNode2fullmslist[Node]
+        else:
+            raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+        oc=copy.deepcopy(o)
+        ListJobs.append((Node,clearcache,(mslist_,oc),{}))
+
+    MPI_Manager.callParallel(ListJobs)
+
 def clearcache(mslist,options):
     cachedir=find_cache_dir(options)
 
@@ -639,87 +1309,143 @@ def clearcache(mslist,options):
         except OSError:
             pass
 
-def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,options=None):
+def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs=None,SkipSmooth=False,SigmaFilterOutliers=None,
+                     options=None,mpiManager=None):
     if options is None:
         options=o
-    filenames=[l.strip() for l in open(mslist,'r').readlines()]
+    
+    should_run, comm, size, rank = _mpi_rank0_guard()
+    if not should_run:
+        if comm is not None and size > 1:
+            outname = comm.bcast(None, root=0)
+            return outname
+        
+    filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
     full_sollist = []
     start_times = []
+    pointing_ids = []
     SolsDir=options["SolsDir"]
+    print("smooth_solutions RANK=%i"%RANK,SolsDir,mslist)
     if SolsDir is None or SolsDir=="":
         for fname in filenames:
             solname =fname+'/killMS.'+ddsols+'.sols.npz'
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
+            pointing_ids.append(get_pointing_id(fname,get_phase_centre(fname)))
     else:
+        print("filenames",filenames)
         for fname in filenames:
             MSName=os.path.abspath(fname).split("/")[-1]
             solname =os.path.abspath(SolsDir)+"/"+MSName+'/killMS.'+ddsols+'.sols.npz'
             t0,t1 = get_solutions_timerange(solname)
             start_times.append(t0)
             full_sollist.append(solname)
+            pointing_ids.append(get_pointing_id(fname,get_phase_centre(fname)))
 
-    Ustart_times = np.unique(start_times)
+    pids = [p if p is not None else 'unknown' for p in pointing_ids]
+    groups = sorted(set(zip(start_times, pids)))
+    outname = ddsols + '_merged' if SkipSmooth else ddsols + '_smoothed'
 
-    for start_time in Ustart_times:
-        with open('solslist_%.2f.txt'%start_time,'w') as f:
-            for i in range(0,len(full_sollist)):
-                if start_times[i] == start_time:
-                    solname = full_sollist[i]
-                    f.write('%s\n'%(solname))
-        
-        checkname='%s_%.2f_merged.npz'%(ddsols,start_time)
-        if options['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+    for start_time, pid in groups:
+        inds = [i for i in range(len(full_sollist))
+                if start_times[i] == start_time and pids[i] == pid]
+        tag = f'{start_time:.2f}_{pid}'
+
+        if not dryrun:
+            with open(f'solslist_{tag}.txt', 'w') as f:
+                for i in inds:
+                    f.write(f'{full_sollist[i]}\n')
+
+        mergedname = f'{ddsols}_{tag}_merged.npz'
+        smoothoutname = f'{ddsols}_{tag}_smoothed.npz'
+
+        if len(inds) == 1:
+            # single MS in this (t0, pointing) group: MergeSols crashes on one
+            # file (SortInFreq reduction over empty diff) and SmoothSols cannot
+            # smooth over a single frequency cell, so symlink the raw (expanded)
+            # solutions as both outputs
+            solname = full_sollist[inds[0]]
+            if options['restart'] and os.path.isfile(mergedname):
+                warn('Solutions file '+mergedname+' already exists, not running MergeSols step')
+            elif not dryrun:
+                if os.path.islink(mergedname):
+                    os.unlink(mergedname)
+                os.symlink(os.path.abspath(solname), mergedname)
+                warn(f'Only one MS in group {tag}, using raw solutions as merged file')
+            if options['restart'] and os.path.isfile(smoothoutname):
+                warn('Solutions file '+smoothoutname+' already exists, not running SmoothSols step')
+            elif SkipSmooth:
+                warn('Skipping smoothing Solutions file')
+            elif not dryrun:
+                nfreq = np.load(solname, allow_pickle=True)['FreqDomains'].shape[0]
+                if nfreq <= 1:
+                    warn(f'Only {nfreq} frequency cell(s) in group {tag}, skipping SmoothSols (TEC fit degenerate)')
+                    if os.path.islink(smoothoutname):
+                        os.unlink(smoothoutname)
+                    os.symlink(os.path.abspath(solname), smoothoutname)
+                else:
+                    run(f'SmoothSols.py --SolsFileIn={mergedname} --SolsFileOut={smoothoutname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
         else:
-            ss='MergeSols.py --SolsFilesIn=solslist_%.2f.txt --SolFileOut=%s '%(start_time,checkname)
-            if SigmaFilterOutliers:
-                ss+=" --SigmaFilterOutliers %f"%SigmaFilterOutliers
-            run(ss,dryrun=dryrun)
-            
-        checkname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
-        if options['restart'] and os.path.isfile(checkname):
-            warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
-        elif SkipSmooth:
-            warn('Skipping smoothing Solutions file')
-        else:
-            run('SmoothSols.py --SolsFileIn=%s_%.2f_merged.npz --SolsFileOut=%s --InterpMode=%s --NCPU=%s'%(ddsols,start_time,checkname,options['smoothingtype'],options['NCPU_killms']),dryrun=dryrun)
+            checkname=mergedname
+            if options['restart'] and os.path.isfile(checkname):
+                warn('Solutions file '+checkname+' already exists, not running MergeSols step')
+            else:
+                ss=f'MergeSols.py --SolsFilesIn=solslist_{tag}.txt --SolFileOut={checkname}'
+                if SigmaFilterOutliers:
+                    ss+=f" --SigmaFilterOutliers {SigmaFilterOutliers}"
+                run(ss,dryrun=dryrun)
 
-        smoothoutname='%s_%.2f_smoothed.npz'%(ddsols,start_time)
+            checkname=smoothoutname
+            if options['restart'] and os.path.isfile(checkname):
+                warn('Solutions file '+checkname+' already exists, not running SmoothSols step')
+            elif SkipSmooth:
+                warn('Skipping smoothing Solutions file')
+            else:
+                run(f'SmoothSols.py --SolsFileIn={mergedname} --SolsFileOut={checkname} --InterpMode={options["smoothingtype"]} --NCPU={options["NCPU_killms"]}',dryrun=dryrun)
 
         if InterpToMSListFreqs:
-            interp_outname="%s_%.2f_interp.npz"%(smoothoutname,start_time)
+            interp_outname=f"{smoothoutname}_interp.npz"
             checkname=interp_outname
             if options['restart'] and os.path.isfile(checkname):
                 warn('Solutions file '+checkname+' already exists, not running InterpSols step')
             else:
-                command="InterpSols.py --SolsFileIn %s --SolsFileOut %s --MSOutFreq %s --NCPU=%s"%(smoothoutname,interp_outname,InterpToMSListFreqs,options['NCPU_killms'])
+                command=f"InterpSols.py --SolsFileIn {smoothoutname} --SolsFileOut {interp_outname} --MSOutFreq {InterpToMSListFreqs} --NCPU={options['NCPU_killms']}"
                 run(command,dryrun=dryrun)
-        
-        for i in range(0,len(full_sollist)):
-            if start_times[i] == start_time:
-                if not SkipSmooth:
-                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
-                else:
-                    symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')                 
+
+        for i in inds:
+            if not SkipSmooth:
+                symsolname = full_sollist[i].replace(ddsols,ddsols+'_smoothed')
+                SolName = os.path.abspath(smoothoutname)
+            else:
+                symsolname = full_sollist[i].replace(ddsols,ddsols+'_merged')
+                SolName = os.path.abspath(mergedname)
+            if not dryrun:
                 # always overwrite the symlink to allow the dataset to move -- costs nothing
                 if os.path.islink(symsolname):
                     warn('Symlink ' + symsolname + ' already exists, recreating')
                     os.unlink(symsolname)
+                os.symlink(SolName,symsolname)
 
-                if not SkipSmooth:
-                    os.symlink(os.path.abspath('%s_%.2f_smoothed.npz'%(ddsols,start_time)),symsolname)
-                else:
-                    os.symlink(os.path.abspath('%s_%.2f_merged.npz'%(ddsols,start_time)),symsolname)
-                    
-                    
-        if SkipSmooth:
-            outname = ddsols + '_merged'
-        else:
-            outname = ddsols + '_smoothed'
+                if mpiManager is not None:
+                    mpiManager.scpScatterSolutions(filenames[i],SolName,symsolname)
+
+    if comm is not None and size > 1:
+        comm.bcast(outname, root=0)
 
     return outname
+
+def full_clearcache_mpi(MPI_Manager,o,extras=None):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2fullmslist.keys():
+            oc=copy.deepcopy(o)
+            print("MPI_Manager.DicoNode2mslist.keys",MPI_Manager.DicoNode2mslist.keys())
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+            ListJobs.append((Node,full_clearcache,(oc,extras),{}))
+
+    mpi_manager.callParallel(ListJobs)
 
 def full_clearcache(o,extras=None):
     clearcache(o['mslist'],o)
@@ -729,6 +1455,17 @@ def full_clearcache(o,extras=None):
     if extras is not None:
         for mslist in extras:
             clearcache(mslist,o)
+
+def redo_dppp_di_mpi(MPI_Manager,o):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2fullmslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+            ListJobs.append((Node,redo_dppp_di,(oc,),{}))
+
+    mpi_manager.callParallel(ListJobs)
 
 def subtract_data(mslist,col1,col2):
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
@@ -759,11 +1496,11 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     M=np.mean(da)
     nb=T**2/(M/S)**2
 
-    # find the size of the channel step  
+    # find the size of the channel step
     nch_step=int(round(np.sqrt(nb)))
     nch_step=np.max([1,nch_step])
     nch_step=np.min([nch,nch_step])
-    warn('nch_step=%i'%(nch_step))
+    warn(f'nch_step={nch_step}')
 
     # find the step to have equal interval size
     #nch_bin=int(nch/nch_step)+1
@@ -773,15 +1510,15 @@ def give_dt_dnu(msname,DataCol="DATA",ModelCol="DI_PREDICT",T=10.):
     nch_step=lDiv[inch]
     nch_step=np.max([1,nch_step])
     nch_step=np.min([nch,nch_step])
-    
+
     nt_step=int(round(nb/float(nch_step)))
     nt_step=np.max([1,nt_step])
 
     SNR=np.sqrt(nt_step*nch_step)*M/S
-    warn('Using (dt,df)=(%i,%i) for self-cal run of %s with (<|model|>,std)=(%.2f,%.2f) giving SNR=%.2f'%(nt_step,nch_step,msname,M,S,SNR))
-    
-    return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch/nch_step
-    
+    warn(f'Using (dt,df)=({nt_step},{nch_step}) for self-cal run of {msname} with (<|model|>,std)=({M:.2f},{S:.2f}) giving SNR={SNR:.2f}')
+
+    return nt_step, nt_step*dt_bin_sec/60.0, nch_step, nch//nch_step
+
 def cubical_data(mslist,
                  NameSol="DI0",
                  n_dt=1,
@@ -794,16 +1531,16 @@ def cubical_data(mslist,
                  ReinitWeights=False):
     if n_DT is None:
         n_DT=10*n_dt
-        
+
     if options is None:
         options=o # attempt to get global if it exists
 
-    
+
     filenames=[l.strip() for l in open(mslist,'r').readlines()]
     for f in filenames:
         ThisMSName=os.path.abspath(f)
         SolsDir=options["SolsDir"]
-        
+
         MSName=ThisMSName.split("/")[-1]
         if SolsDir is None or SolsDir=="":
             solname ="%s/CubiCal_%s"%(MSName,NameSol)
@@ -832,11 +1569,11 @@ def cubical_data(mslist,
         runcommand="ClipCal.py --MSName %s --ColName %s"%(ThisMSName,OutColName)
         if ReinitWeights:
             runcommand+=" --ReinitWeights 1"
-            
+
         run(runcommand,dryrun=o['dryrun'])#,log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log'),quiet=o['quiet'])
 
 def ingest_dynspec(obsid='*'):
-    report('Ingesting dynamic spectra (%s) into the database' % obsid)
+    report(f'Ingesting dynamic spectra ({obsid}) into the database')
     with SurveysDB() as sdb:
         sdb.cur.execute('lock table spectra write')
         field=os.path.basename(os.getcwd())
@@ -847,11 +1584,11 @@ def ingest_dynspec(obsid='*'):
             bits=f.split('_')
             obsid=bits[1]
             CatName=f+'/Catalog.npy'
-            print("Loading %s"%CatName)
+            print(f"Loading {CatName}")
             try:
                 catalogue=np.load(CatName)
             except:
-                print("   %s does not exist"%CatName)
+                print(f"   {CatName} does not exist")
                 continue
             # match filenames to names
             fd={}
@@ -867,47 +1604,70 @@ def ingest_dynspec(obsid='*'):
                 assert(name in fd)
                 fd[name]=ff
                 hdu.close()
-            sdb.cur.execute('delete from spectra where obsid="%s"' % obsid)
+            sdb.cur.execute(f'delete from spectra where obsid="{obsid}"')
             for i,r in enumerate(catalogue):
                 name=r['Name']
                 if isinstance(name,np.bytes_):
                     name=name.decode('utf-8')
-                sExec='insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
+                sExec = 'insert into spectra values ( "%s", "%s", "%s", "%s", "%s", "%s", %.7f, %.7f, %g, %g, %g, %g )' % (field+'_'+obsid+'_'+str(i), name, r['Type'], field, obsid, fd[name], r['ra']*180.0/np.pi, r['dec']*180.0/np.pi, r['FluxI'], r['FluxV'], r['sigFluxI'], r['sigFluxV'])
                 print(sExec)
                 sdb.cur.execute(sExec)
-        
-    
 
-def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
+def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB",
+                 mpiManager=None, mslist_str=""):
+    if mpiManager is not None and mpiManager.UseMPI and mpiManager.MPI_SIZE>1 and mslist_str != "":
+        subtract_vis_mpi(mslist,colname_a,colname_b,out_colname, mpiManager, mslist_str)
+    else:
+        subtract_vis_serial(mslist,colname_a,colname_b,out_colname)
+
+def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str=""):
+    ListJobs=[]
+    if mslist_str != "":
+        for Node in mpiManager.DicoNode2mslist.keys():
+            mslist_ = None
+            if mslist_str == "mslist":
+                mslist_=mpiManager.DicoNode2mslist[Node]
+            elif mslist_str == "full_mslist":
+                mslist_=mpiManager.DicoNode2fullmslist[Node]
+            else:
+                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+            ListJobs.append((Node,subtract_vis_serial,(mslist_,colname_a,colname_b,out_colname), {}))
+
+    res=mpi_manager.callParallel(ListJobs)
+
+def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB"):
     from pyrap.tables import table
-    f=open(mslist)
-    mslist=f.readlines()
-    mslist=[msname.replace("\n","") for msname in mslist]
+
+    if mslist is not None:
+        with open(mslist) as f:
+            mslist = [msname.rstrip() for msname in f]
+    else:
+        raise ValueError("mslist is None")
+
     for msname in mslist:
-        report('Subtracting: %s = %s - %s'%(out_colname,colname_a,colname_b))
+        report(f'Subtracting: {out_colname} = {colname_a} - {colname_b}')
         t=table(msname,readonly=False)
         d=t.getcol(colname_a)
         p=t.getcol(colname_b)
         d-=p
         if out_colname not in t.colnames():
-            report('Adding column %s in %s'%(out_colname,msname))
+            report(f'Adding column {out_colname} in {msname}')
             desc=t.getcoldesc(colname_a)
             desc["name"]=out_colname
             desc['comment']=desc['comment'].replace(" ","_")
             t.addcols(desc)
         t.putcol(out_colname,d)
         t.close()
-    
 
-def subtractOuterSquare(o):
-    
-    wide_imsize=o['wide_imsize']
-    NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
+def subtractOuterSquare(o, mpiManager=None):
+    if o['full_mslist'] is None:
+        die('do_wide needs full_mslist to predict/subtract outer sources')
+    #wide_imsize=o['wide_imsize']
+    #NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
 
-
     wide_uvrange=[o['image_uvmin'],2.5*206.0/o['wide_psf_arcsec']]
-    
+
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
         killms_uvrange[0]=o['solutions_uvmin']
@@ -917,8 +1677,7 @@ def subtractOuterSquare(o):
         catcher=Catcher()
     else:
         catcher=None
-    
-    
+
     #if o['wide_psf_arcsec'] is not None:
     # wide-res image requested
     #if o['wide_imsize'] is not None:
@@ -927,110 +1686,207 @@ def subtractOuterSquare(o):
         #wide_imsize=o['imsize']*o['cellsize']/o['wide_cell']
     extmask=None
 
-    ddf_image('image_full_wide',o['mslist'],
-                cleanmask=extmask,
-                cleanmode='SSD',
-                AllowNegativeInitHMP=True,
-                majorcycles=2,robust=o['wide_robust'],
-                colname=colname,use_dicomodel=False,
-                uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
-                imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-                apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-                smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],phasecenter=o['phasecenter'],
-                catcher=catcher)
+    # if skipping is disabled, disable it here as well
+    # when enabled limit the effect; full_wide is supposed to be wide
+    wide_facet_skip_th = min(o['facets_skip_th'], 0.001)
+
+
+    ddf_image('image_full_wide', o['mslist'],
+            cleanmode=o['cleanmode'],
+            colname=colname,
+            imsize=o['wide_imsize'],
+            cellsize=o['wide_cell'],
+            robust=o['wide_robust'],
+            beamsize=o['wide_psf_arcsec'],
+            phasecenter=o['phasecenter'],
+            majorcycles=2,
+            peakfactor=0.001,
+            cleanmask=extmask,
+            use_dicomodel=False,
+            normalization=o['normalize'][2],
+            uvrange=wide_uvrange,
+            apply_weights=False,
+            use_weightspectrum=o['use_weightspectrum'],
+            AllowNegativeInitHMP=True,
+            smooth=True,
+            catcher=catcher,
+            STEP=0,
+            facets_skip_th=wide_facet_skip_th,
+            mpiManager=mpiManager,
+    )
 
 
     external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
+    wide_mask_name = make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
+    scatter_if_set(mpiManager, wide_mask_name)
     
-    make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
-    
-    ddf_image('image_full_wide_im',o['mslist'],
+    ddf_image('image_full_wide_im', o['mslist'],
+            cleanmode=o['cleanmode'],
+            colname=colname,
+            imsize=o['wide_imsize'],
+            cellsize=o['wide_cell'],
+            robust=o['wide_robust'],
+            beamsize=o['wide_psf_arcsec'],
+            phasecenter=o['phasecenter'],
+            majorcycles=1,
+            peakfactor=0.001,
             cleanmask='image_full_wide.app.restored.fits.mask.fits',
-            cleanmode='SSD',
+            use_dicomodel=True,
+            dicomodel_base='image_full_wide',
+            reuse_psf=True,
+            dirty_from_resid=True,
+            normalization=o['normalize'][2],
+            uvrange=wide_uvrange,
+            apply_weights=False,
+            use_weightspectrum=o['use_weightspectrum'],
             AllowNegativeInitHMP=True,
-            majorcycles=1,robust=o['wide_robust'],
-            uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
-            imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname=colname,phasecenter=o['phasecenter'],
-            reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_wide',
-            catcher=catcher)
-
+            smooth=True,
+            catcher=catcher,
+            STEP=0,
+            facets_skip_th=wide_facet_skip_th,
+            mpiManager=mpiManager,
+    )
 
     # predict outside the central rectangle
-    
-    NpixMaskSquare = np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell'])
-    
-    FileHasPredicted='image_full_wide_predict.HasPredicted'
-    if o['restart'] and os.path.isfile(FileHasPredicted):
-        warn('File %s already exists, skipping Predict step'%FileHasPredicted)
-    else:
-        ddf_image('image_full_wide_predict',o['full_mslist'],colname=colname,robust=o['wide_robust'],
-            cleanmask='image_full_wide.app.restored.fits.mask.fits',
-                  cleanmode='SSD',
-                  #majorcycles=1,automask=True,automask_threshold=o['thresholds'][1],
-                  #ddsols='wide_killms_p1',
-                  #applysols='AP',#normalization=o['normalize'][0],
-                  peakfactor=0.001,
-                  apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-                  #uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
-                  beamsize=o['wide_psf_arcsec'],
-                  imsize=o['wide_imsize'],cellsize=o['wide_cell'],
-                  use_dicomodel=True,catcher=catcher,
-                  PredictSettings=("Predict","DATA_SUB",NpixMaskSquare),phasecenter=o['phasecenter'],
-                  dicomodel_base='image_full_wide_im')
-        os.system("touch %s"%FileHasPredicted)
+    NpixMaskSquare = int(np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell']))
 
+    FileHasPredicted='image_full_wide_predict.HasPredicted'
+    do_predict = not (o['restart'] and os.path.isfile(FileHasPredicted))
+    if USE_MPI:
+        do_predict = MPI.COMM_WORLD.bcast(do_predict, root=0)
+    if not do_predict:
+        warn(f'File {FileHasPredicted} already exists, skipping Predict step')
+    else:
+        ddf_image('image_full_wide_predict', o['full_mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Predict', 'DATA_SUB', NpixMaskSquare),
+                  imsize=o['wide_imsize'],
+                  cellsize=o['wide_cell'],
+                  robust=o['wide_robust'],
+                  beamsize=o['wide_psf_arcsec'],
+                  phasecenter=o['phasecenter'],
+                  #majorcycles=1,
+                  peakfactor=0.001,
+                  #automask_threshold=o['thresholds'][1],
+                  #ddsols='wide_killms_p1',
+                  #applysols='AP'
+                  cleanmask='image_full_wide.app.restored.fits.mask.fits',
+                  use_dicomodel=True,
+                  dicomodel_base='image_full_wide_im',
+                  #normalization=o['normalize'][0],
+                  #uvrange=wide_uvrange,
+                  apply_weights=False,
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=0,
+                  facets_skip_th=wide_facet_skip_th,
+                  mpiManager=mpiManager,
+        )
+        
+        if not o['dryrun']:
+            os.system(f"touch {FileHasPredicted}")
 
 
     # subtract predicted visibilities
     FileHasSubtracted='image_full_wide_predict.HasSubtracted'
-    if o['restart'] and os.path.isfile(FileHasSubtracted):
-        warn('File %s already exists, skipping subtract vis step'%FileHasSubtracted)
-    else:
-        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB")
-        os.system("touch %s"%FileHasSubtracted)
-
+    do_subtract = not (o['restart'] and os.path.isfile(FileHasSubtracted))
+    if USE_MPI:
+        do_subtract = MPI.COMM_WORLD.bcast(do_subtract, root=0)
+    if not do_subtract:
+        warn(f'File {FileHasSubtracted} already exists, skipping subtract vis step')
+    elif not o['dryrun']:
+        subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB",
+                     mpiManager=mpiManager, mslist_str='full_mslist')
+        os.system(f"touch {FileHasSubtracted}")
 
     ## test subtracted...
     ## sanity check
-    ddf_image('image_full_wide_im_sub',o['mslist'],
-            cleanmask='image_full_wide.app.restored.fits.mask.fits',
-            cleanmode='SSD',
-            AllowNegativeInitHMP=True,
-            majorcycles=1,robust=o['wide_robust'],
-            uvrange=wide_uvrange,beamsize=o['wide_psf_arcsec'],
-            imsize=o['wide_imsize'],cellsize=o['wide_cell'],peakfactor=0.001,
-            apply_weights=False,use_weightspectrum=o['use_weightspectrum'],
-            smooth=True,automask=True,automask_threshold=o['thresholds'][0],normalization=o['normalize'][2],colname='DATA_SUB',phasecenter=o['phasecenter'],
-            reuse_psf=True,dirty_from_resid=False,use_dicomodel=False,
-            catcher=catcher)
+    ddf_image('image_full_wide_im_sub', o['mslist'],
+              cleanmode=o['cleanmode'],
+              colname='DATA_SUB',
+              imsize=o['wide_imsize'],
+              cellsize=o['wide_cell'],
+              robust=o['wide_robust'],
+              beamsize=o['wide_psf_arcsec'],
+              phasecenter=o['phasecenter'],
+              majorcycles=1,
+              peakfactor=0.001,
+              cleanmask='image_full_wide.app.restored.fits.mask.fits',
+              use_dicomodel=False,
+              reuse_psf=True,
+              normalization=o['normalize'][2],
+              uvrange=wide_uvrange,
+              apply_weights=False,
+              use_weightspectrum=o['use_weightspectrum'],
+              AllowNegativeInitHMP=True,
+              smooth=True,
+              catcher=catcher,
+              STEP=0,
+              facets_skip_th=0, # im_sub is a sanity check, so disable skipping
+              mpiManager=mpiManager,
+    )
 
+def checkColName_mpi(MPI_Manager, o):
+    listJobs = []
+    for node in MPI_Manager.DicoNode2mslist.keys():
+        o_ = copy.deepcopy(o)
+        o_["mslist"] = MPI_Manager.DicoNode2mslist[node]
+        listJobs.append((node, checkColName, (o_,), {}))
+    mpi_manager.callParallel(listJobs)
 
-def main(o=None):
+def checkColName(o):
+    # Check if the column exists in one MS. Important to do this
+    # before we check imaging weights, because that will create empty
+    # versions of e.g. CORRECTED_DATA
+    colname=o['colname']
+    mslist=[s.strip() for s in open(o['mslist']).readlines()]
+    print("mslist[0]",o['mslist'],mslist)
+    t = pt.table(mslist[0])
+    try:
+        dummy=t.getcoldesc(colname)
+    except RuntimeError as e:
+        print(f"e: {e}")
+        dummy=None
+    t.close()
+    if dummy is None:
+        die('Dataset does not contain the column "%s"' % colname)
+    else:
+        print('Dataset %s does contain the column "%s"' %(mslist[0],colname))
+
+def scatter_if_set(MPI_Manager, fname):
+    # masks can now be None (use_external_mask option), so only scatter real files.
+    # The manager itself can be None for direct calls
+    if MPI_Manager is not None and fname is not None:
+        MPI_Manager.scpScatter(fname)
+
+def main(o):
     if o is None and MyPickle is not None:
         o=MyPickle.Load("ddf-pipeline.last")
+    print(f"{o}")
+
 
     lCat=[]
     if ((o['tgss'] is not None) and ('$$' in o['tgss'])):
         if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
             die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
-        
+
     if (o['catalogues'] is not None) and np.any(['$$' in l for l in o['catalogues']]):
         if "DDF_PIPELINE_CATALOGS" not in list(os.environ.keys()):
             die("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
-        
+
     lCat=[]
     if o['catalogues'] is not None:
         lCat+=o["catalogues"]
     if o['tgss'] is not None:
         lCat+=[o["tgss"]]
-    for fCat in lCat:
-        if not os.path.isfile(fCat):
-            die("Catalog %s does not exist"%fCat)
+    if not o['dryrun']:
+        for fCat in lCat:
+            if not os.path.isfile(fCat):
+                die(f"Catalog {fCat} does not exist")
 
     if o['catch_signal']:
         catcher=Catcher()
@@ -1040,7 +1896,8 @@ def main(o=None):
     if o['remove_columns']:
         warn('Removing all pipeline-created columns')
         run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
-        
+
+    mpi_manager.Print("remove_cols")
     uvrange=[o['image_uvmin'],o['uvmax']]
     killms_uvrange=[0,1000]
     if o['solutions_uvmin'] is not None:
@@ -1048,30 +1905,126 @@ def main(o=None):
     if o['mslist'] is None:
         die('MS list must be specified')
 
+    # In dryrun mode, create placeholder mslist files so the pipeline doesn't crash
+    # They contain a single dummy MS name for command printing.
+    _dryrun_tmpfiles = []
+    if o['dryrun'] and o['dummy_msfile'] and RANK==0:
+        for key in ('mslist', 'full_mslist'):
+            if o[key] is not None and not os.path.isfile(o[key]):
+                with open(o[key], 'w') as f:
+                    f.write('dummy.ms\n')
+                _dryrun_tmpfiles.append(o[key])
+
+    # Dirty check that mslist has no empty row
+    if RANK==0:
+        for mslist in [o['mslist'],o['full_mslist']]:
+            if mslist is None:
+                continue
+            filenames=[l.strip().split(":")[-1] for l in open(mslist,'r').readlines()]
+            for fname in filenames:
+                if fname=="": die('MS list must have no blank lines')
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+
     # Set column name for first steps
     colname=o['colname']
+    global SetMS
+
+    MainNode=None
+    if RANK==0: MainNode=socket.gethostname()
+    if USE_MPI:
+        MainNode=MPI.COMM_WORLD.bcast(MainNode, root=0)
+    
+    
+    # need to copy mslist.txt and big-mslist.txt around
+    if RANK==0:
+        print("Setting/scatter mpi_manager ")
+        mpi_manager.Print("Setting/scatter mpi_manager...")
+        SetMS=mpi_manager.MSSet(o['mslist'])
+        FullSetMS=mpi_manager.MSSet(o['full_mslist'])
+        MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
+        MPI_Manager.scpScatter(o['mslist'])
+        MPI_Manager.scpScatter(o['full_mslist'])
+        mpi_manager.Print("  done")
+
+    mpi_manager.Print("  Before barrier AAA")
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+    mpi_manager.Print("  Done barrier AAA")
+
+    mpi_manager.Print("setting MPI_Manager")
+    SetMS=mpi_manager.MSSet(o['mslist'])
+    FullSetMS=mpi_manager.MSSet(o['full_mslist'])
+    MPI_Manager=mpi_manager.mpi_manager(o,SetMS, FullSetMS, MainNode)
+    mpi_manager.Print("MPI_Manager set")
+    
+    if USE_MPI: MPI.COMM_WORLD.Barrier()
+    
+    # is running is non-mpi mode (no mpirun call), using only the MSs that are on the current node
+    if not MPI_Manager.UseMPI:
+        o['mslist']=MPI_Manager.DicoNode2mslist.get(socket.gethostname(),o['mslist'])
+        o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
+    
+
+    separator('Run MemMonitor')
+    mpi_manager.Print("kill MemMobitor")
+    def PKILL(exe="MemMonitor.py"):
+        # pgrep returns 0 if the process exists, 1 if not. The && ensures pkill only runs if pgrep found something.
+        # The trailing || true makes the whole expression succeed regardless, so even if pgrep returns 1 (no process), the command exits 0.
+        result = subprocess.run(['pgrep', '-f', '%s'%exe], capture_output=True)
+        is_running = (result.returncode == 0)
+        if is_running:
+            mpi_manager.Print("-- kill %s"%exe)
+            run_serial("""pkill -f "%s" """%(exe), proceed=True)
+        
+    if LOCAL_RANK==0:
+        PKILL(exe="MemMonitor.py")
+        PKILL(exe="IOMonitor.py")
+        
+    DoResetCounter=0
+    mpi_manager.Print("run MemMobitor")
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s MemMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    run("env DDF_FORCE_NOT_USE_MPI=1 env MAIN_PROCESS_RANKS=%s IOMonitor.py --Mode Dump --Reset %i &"%(MAIN_PROCESS_RANKS,DoResetCounter),dryrun=o['dryrun'],mpiManager=MPI_Manager,local_rank=0)
+    mpi_manager.Print("Barrier after Monitors")
+    if USE_MPI: MPI.COMM_WORLD.Barrier()
+    mpi_manager.Print("   ... barrier ok")
+    
+    import DDFacet.MemMonitor
+    global Register
+    Register=DDFacet.MemMonitor.ClassRegister(Reset=DoResetCounter)
+    Register.register("Start","Start")
+
+    mpi_manager.Print("BBBB")
 
     # Check if the column exists in one MS. Important to do this
     # before we check imaging weights, because that will create empty
     # versions of e.g. CORRECTED_DATA
-    mslist=[s.strip() for s in open(o['mslist']).readlines()]
-    t = pt.table(mslist[0])
-    try:
-        dummy=t.getcoldesc(colname)
-    except RuntimeError:
-        dummy=None
-    t.close()
-    if dummy is None:
-        die('Dataset does not contain the column "%s"' % colname)
-    
-    # Clear the shared memory
-    run('CleanSHM.py',dryrun=o['dryrun'])    
+    if not o['dryrun']:
+        if MPI_Manager.UseMPI:
+            checkColName_mpi(MPI_Manager, o)
+        else:
+            checkColName(o)
 
+    mpi_manager.Print("CCCC")
+
+    # Clear the shared memory
+    if LOCAL_RANK==0:
+        run_serial("CleanSHM.py")
+        
+    run("pwd",dryrun=o['dryrun'], mpiManager=MPI_Manager,proceed=True)
+    run("mkdir -p logs",dryrun=o['dryrun'], mpiManager=MPI_Manager,proceed=True)
+
+    mpi_manager.Print("DDD")
+    if USE_MPI:
+        MPI.COMM_WORLD.Barrier()
+    
     # Pipeline started!
     if use_database():
         update_status(None,'Running',time='start_date')
-    
+
     if o['redofrom']:
+        # not ported yet to mpi manager
+        raise NotImplementedError('Redofrom not implemented in this version yet')
 
         if not os.path.isdir(o['archive_dir']):
             os.mkdir(o['archive_dir'])
@@ -1095,7 +2048,7 @@ def main(o=None):
             keep+=glob.glob('image_dirin_SSD_init.*') + glob.glob('image_dirin_SSD.*') + glob.glob('image_dirin_SSD_m.*') + glob.glob('MaskDiffuse*') + glob.glob('Noise*.fits')
         else:
             die('Redofrom option not implemented')
-            
+
         if o['full_mslist'] is not None:
             run('remove_columns.py '+o['full_mslist'],log=None,dryrun=o['dryrun'])
         else:
@@ -1108,32 +2061,61 @@ def main(o=None):
             warn('User specified exit after cleanup')
             stop(2)
 
-                
+
+    mpi_manager.Print("EEE")
+
     if o['logging'] is not None and not os.path.isdir(o['logging']):
         os.mkdir(o['logging'])
 
     # Check imaging weights -- needed before DDF
-    if o['full_mslist'] is not None:
-        new=check_imaging_weight(o['full_mslist'])
+    if MPI_Manager.UseMPI:
+        full_clearcache_mpi(MPI_Manager, o)
     else:
-        new=check_imaging_weight(o['mslist'])
+        full_clearcache(o)
+        
+    mpi_manager.Print("FFF")
+
+    # check the full mslist if there is one, so the later full-mslist steps are covered too
+    if not o['dryrun']:
+        weights_mslist_str = 'full_mslist' if o['full_mslist'] is not None else 'mslist'
+        if MPI_Manager.UseMPI:
+            new=check_imaging_weight_mpi(MPI_Manager, o, mslist_str=weights_mslist_str)
+        else:
+            new=check_imaging_weight(o[weights_mslist_str])
+    else:
+        new=False
+        
+    mpi_manager.Print("check_imaging")
 
     if o['clearcache'] or new or o['redofrom']:
         # Clear the cache, we don't know where it's been. If this is a
         # completely new dataset it is always safe (and required) to
         # clear the cache -- solves problems where the cache is not
         # stored per dataset. If we are redoing, cache needs to be removed
-        full_clearcache(o)
+        if MPI_Manager.UseMPI:
+            full_clearcache_mpi(MPI_Manager, o)
+        else:
+            full_clearcache(o)
+
+    mpi_manager.Print("full_clearcache_mpi")
 
     # ##########################################################
     if o['redo_DI']:
         separator('Redo DI correction')
-        redo_dppp_di(o)
+        if MPI_Manager.UseMPI:
+            redo_dppp_di_mpi(MPI_Manager, o)
+        else:
+            redo_dppp_di(o)
+
+
+
+
+
 
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
-        subtractOuterSquare(o)
+        subtractOuterSquare(o, mpiManager=MPI_Manager)
         colname="DATA_SUB"
         #ReduceFactor=o['fact_reduce_field']
         #NPixSmall=int(o['imsize']/float(ReduceFactor))
@@ -1142,31 +2124,63 @@ def main(o=None):
         if o['exitafter'] == 'wide':
             warn('User specified exit after wide field source subtraction')
             stop(2)
+    
     # start of 'Big If' for reducing multiple datasets with a pre-made sky model
+    mpi_manager.Print("Start the real stuff")
     if o['basedicomodel'] is None:
         # ##########################################################
         # Initial dirty image to allow an external (TGSS) mask to be made
         separator("Initial dirty")
-        ddf_image('image_dirin_SSD_init',o['mslist'],cleanmask=None,cleanmode='SSD',majorcycles=0,robust=o['image_robust'],
-                  reuse_psf=False,reuse_dirty=False,peakfactor=0.05,colname=colname,clusterfile=None,phasecenter=o['phasecenter'],
-                  apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'], uvrange=uvrange,catcher=catcher)
+        ddf_image('image_dirin_SSD_init', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=0,
+                  peakfactor=0.05,
+                  cleanmask=None,
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][0],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=0,
+                  mpiManager=MPI_Manager,
+        )
 
-        separator("External mask")
-        external_mask='external_mask.fits'
-        make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
-        
-        if o['external_fits_mask'] is not None:
-            merge_mask(external_mask,o['external_fits_mask'],external_mask)
+        external_mask=None
+        if not o["force_disable_extmask"]:
+            separator("External mask")
+            external_mask='external_mask.fits'
+            make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False)
+
+        if o['external_fits_mask'] is not None and external_mask is not None and not o['dryrun']:
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,o['external_fits_mask'],external_mask)
+
+        if MPI_Manager.UseMPI:
+            scatter_if_set(MPI_Manager, external_mask)
 
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode='SSD',
-                                           majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
-                                           peakfactor=0.01,rms_factor=3,
-                                           colname=colname,clusterfile=None,automask=True,phasecenter=o['phasecenter'],
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0], use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher)
-    
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=1,
+                  peakfactor=0.01,
+                  cleanmask=external_mask,
+                  reuse_psf=True,
+                  reuse_dirty=True,
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][0],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=0,
+                  mpiManager=MPI_Manager,
+        )
+
         separator("Make the diffuse emission mask")
         # Make the diffuse emission mask
         _=make_mask('image_dirin_SSD.residual01.fits',
@@ -1174,34 +2188,45 @@ def main(o=None):
                     external_mask=external_mask,
                     catcher=catcher,
                     OutMaskExtended="MaskDiffuse")
-        if o['use_maskdiffuse']:
+
+        if o['use_maskdiffuse'] and not o['dryrun'] and external_mask is not None:
             separator("Merge diffuse emission mask into external mask")
-            merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
+            should_run, comm, size, rank = _mpi_rank0_guard()
+            if should_run:
+                merge_mask(external_mask,"MaskDiffuse.fits",external_mask)
         
         # make a mask from the final image
         separator("Make mask for next iteration")
         CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
-                              o['thresholds'][0],
-                              external_mask=external_mask,
-                              catcher=catcher)
-    
-    
+                                  o['thresholds'][0],
+                                  external_mask=external_mask,
+                                  catcher=catcher) if o['use_external_mask'][0] else None
+
+        if MPI_Manager.UseMPI:
+            scatter_if_set(MPI_Manager, CurrentMaskName)
+
         separator("Continue deconvolution")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m',o['mslist'],
-                                           cleanmask=CurrentMaskName,cleanmode='SSD',
-                                           majorcycles=2,robust=o['image_robust'],
-                                           reuse_psf=True,
-                                           dicomodel_base=CurrentBaseDicoModelName,
-                                           use_dicomodel=True,
-                                           dirty_from_resid=True,
-                                           peakfactor=0.001,rms_factor=0,
-                                           colname=colname,clusterfile=None,
-                                           automask=True,phasecenter=o['phasecenter'],
-                                           automask_threshold=o['thresholds'][0],apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher,
-                                           RMSFactorInitHMP=1.,
-                                           MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Clean', 'DD_PREDICT'),
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=2,
+                  peakfactor=0.001,
+                  rms_factor=0,
+                  cleanmask=CurrentMaskName,
+                  use_dicomodel=True,
+                  dicomodel_base=CurrentBaseDicoModelName,
+                  reuse_psf=True,
+                  dirty_from_resid=True,
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][0],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=0,
+                  mpiManager=MPI_Manager,
+        )
 
         if o['exitafter'] == 'initial':
             warn('User specified exit after initial image')
@@ -1226,28 +2251,39 @@ def main(o=None):
 
         #########################
         if o['clearcache'] or new or o['redofrom']:
-            clearcache(o['mslist'],o)
+            if MPI_Manager.UseMPI:
+                clearcache_mpi(MPI_Manager, 'mslist', o)
+            else:
+                clearcache(o['mslist'],o)
+
+        if MPI_Manager.UseMPI:
+            MPI_Manager.scpScatter(ClusterFile)
+
 
         separator("Deconv clustered DI image")
-        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c',o['mslist'],
-                                           cleanmask=CurrentMaskName,
-                                           cleanmode='SSD',
-                                           majorcycles=1,robust=o['image_robust'],
-                                           #reuse_psf=True,
-                                           #reuse_dirty=True,
-                                           dicomodel_base=CurrentBaseDicoModelName,
-                                           use_dicomodel=True,
-                                           #dirty_from_resid=True,
-                                           peakfactor=0.001,rms_factor=0,
-                                           colname=colname,
-                                           clusterfile=ClusterFile,
-                                           automask=True,
-                                           automask_threshold=o['thresholds'][0],
-                                           apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],
-                                           uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
-                                           RMSFactorInitHMP=1.,
-                                           MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+        CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Clean', 'DD_PREDICT'),
+                  robust=o['image_robust'],
+                  #reuse_psf=True,
+                  #reuse_dirty=True,
+                  phasecenter=o['phasecenter'],
+                  majorcycles=1,
+                  peakfactor=0.001,
+                  rms_factor=0,
+                  cleanmask=CurrentMaskName,
+                  use_dicomodel=True,
+                  #dirty_from_resid=True,
+                  dicomodel_base=CurrentBaseDicoModelName,
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][0],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  clusterfile=ClusterFile,
+                  catcher=catcher,
+                  STEP=0,
+                  mpiManager=MPI_Manager,
+        )
 
         if o['exitafter'] == 'dirin':
             warn('User specified exit after image_dirin.')
@@ -1256,12 +2292,16 @@ def main(o=None):
         if not o['skip_di']:
             separator("DI CAL")
             ########################
+
+            separator(" DI image calibration")
             killms_data('PredictDI_0',o['mslist'],'DIS0',colname=colname,
-                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                         niterkf=o['NIterKF'][0],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"))
+                        options=o, # required to get the global variable o
+                        DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"), mpiManager=MPI_Manager, mslist_str='mslist')
+
             # cubical_data(o['mslist'],
             #              NameSol="DIS0",
             #              n_dt=1,
@@ -1271,157 +2311,221 @@ def main(o=None):
             #              ModelColName="DD_PREDICT",
             #              OutColName="DATA_DI_CORRECTED",
             #              ReinitWeights=True)
-        
             colname="DATA_DI_CORRECTED"
 
+            separator(" Image DI calibration")
+            _=ddf_image('image_dirin_SSD_m_c_di', o['mslist'],
+                    cleanmode=o['cleanmode'],
+                    colname=colname,
+                    PredictSettings=('Clean', 'DD_PREDICT'),
+                    robust=o['image_robust'],
+                    #reuse_psf=True,
+                    phasecenter=o['phasecenter'],
+                    majorcycles=0,
+                    peakfactor=0.001,
+                    rms_factor=0,
+                    cleanmask=CurrentMaskName,
+                    use_dicomodel=True,
+                    dicomodel_base=CurrentBaseDicoModelName,
+                    #dirty_from_resid=True,
+                    uvrange=uvrange,
+                    #o['apply_weights'][0],
+                    apply_weights=True,
+                    clusterfile=ClusterFile,
+                    catcher=catcher,
+                    STEP=0,
+                    mpiManager=MPI_Manager,
+            )
 
-            _=ddf_image('image_dirin_SSD_m_c_di',o['mslist'],
-                        cleanmask=CurrentMaskName,cleanmode='SSD',
-                        majorcycles=0,robust=o['image_robust'],
-                        #reuse_psf=True,
-                        dicomodel_base=CurrentBaseDicoModelName,
-                        use_dicomodel=True,
-                        #dirty_from_resid=True,
-                        peakfactor=0.001,rms_factor=0,
-                        colname=colname,clusterfile=ClusterFile,
-                        automask=True,
-                        automask_threshold=o['thresholds'][0],
-                        apply_weights=True,#o['apply_weights'][0],
-                        uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
-                        RMSFactorInitHMP=1.,
-                        MaxMinorIterInitHMP=10000,
-                        PredictSettings=("Clean","DD_PREDICT"))
+            # From HEAD: re-make the mask on the DI-corrected image before continuing
+            separator("Make mask for next iteration")
+            CurrentMaskName=make_mask('image_dirin_SSD_m_c_di.app.restored.fits',
+                                    o['thresholds'][0],
+                                    external_mask=external_mask,
+                                    catcher=catcher) if o['use_external_mask'][0] else None
+            scatter_if_set(MPI_Manager, CurrentMaskName)
 
-
-            CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m',o['mslist'],
-                                            cleanmask=CurrentMaskName,cleanmode='SSD',
-                                            majorcycles=1,robust=o['image_robust'],
-                                            reuse_psf=True,
-                                            reuse_dirty=True,
-                                            dicomodel_base=CurrentBaseDicoModelName,
-                                            use_dicomodel=True,
-                                            #dirty_from_resid=True,
-                                            peakfactor=0.001,rms_factor=0,
-                                            colname=colname,clusterfile=ClusterFile,
-                                            automask=True,
-                                            automask_threshold=o['thresholds'][0],
-                                            apply_weights=True,#o['apply_weights'][0],
-                                            uvrange=uvrange,catcher=catcher,phasecenter=o['phasecenter'],
-                                            RMSFactorInitHMP=1.,
-                                            MaxMinorIterInitHMP=10000,
-                                            PredictSettings=("Clean","DD_PREDICT"))
+            CurrentBaseDicoModelName=ddf_image('image_dirin_SSD_m_c_di_m', o['mslist'],
+                      cleanmode=o['cleanmode'],
+                      colname=colname,
+                      PredictSettings=('Clean', 'DD_PREDICT'),
+                      robust=o['image_robust'],
+                      phasecenter=o['phasecenter'],
+                      majorcycles=1,
+                      peakfactor=0.001,
+                      rms_factor=0,
+                      cleanmask=CurrentMaskName,
+                      use_dicomodel=True,
+                      dicomodel_base=CurrentBaseDicoModelName,
+                      #dirty_from_resid=True,
+                      reuse_psf=True,
+                      reuse_dirty=True,
+                      uvrange=uvrange,
+                      #o['apply_weights'][0],
+                      apply_weights=True,
+                      clusterfile=ClusterFile,
+                      catcher=catcher,
+                      STEP=0,
+                      mpiManager=MPI_Manager,
+            )
 
             # make a mask from the full-res image
             separator("Make mask for next iteration")
             CurrentMaskName=make_mask('image_dirin_SSD_m_c_di_m.app.restored.fits',
                                     o['thresholds'][1],
                                     external_mask=external_mask,
-                                    catcher=catcher)
+                                    catcher=catcher) if o['use_external_mask'][1] else None
 
+            scatter_if_set(MPI_Manager, CurrentMaskName)
             if o['exitafter'] == 'dirin_di':
                 warn('User specified exit after image_dirin with DI calibration.')
                 stop(2)
 
 
+
+
         separator("DD calibration")
+        CurrentDDkMSSolName=None
         CurrentDDkMSSolName=killms_data(CurrentBaseDicoModelName,o['mslist'],'DDS0',colname=colname,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                        clusterfile=ClusterFile,
-                                        CovQ=0.02,
-                                        niterkf=o['NIterKF'][1],
-                                        #CovQ=0.1,
-                                        #niterkf=6,
-                                        uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
-                                        catcher=catcher,NChanSols=o['NChanSols'],
-                                        MergeSmooth=o['smoothing'])
+                                dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
+                                clusterfile=ClusterFile,
+                                CovQ=0.02,
+                                niterkf=o['NIterKF'][1],
+                                #CovQ=0.1,
+                                #niterkf=6,
+                                uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],dt=o['dt_slow'],
+                                catcher=catcher,NChanSols=o['NChanSols'],
+                                options=o, # required to get the global variable o
+                                MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
 
         # ##########################################################
         # run bootstrap, and change the column name if it runs
         if o['bootstrap']:
             separator("Bootstrap")
-            report('Running bootstrap')
-            run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
+            # The flux-scale fit is global per obsid: run it once on rank 0, not once per rank. Other ranks wait at the barrier below.
+            if USE_MPI and MPI_Manager.DoScatterGather:
+                die('bootstrap needs all MS visible from one node; this run uses per-node local disks. Run bootstrap.py standalone on a shared-filesystem node first, then continue with bootstrap=False')
+            bootstrap_status = None
+            if not USE_MPI or RANK == 0:
+                report('Running bootstrap')
+                try:
+                    run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
+                except Exception as e:
+                    bootstrap_status = '%s: %s' % (type(e).__name__, e)
+            if USE_MPI:
+                bootstrap_status = MPI.COMM_WORLD.bcast(bootstrap_status, root=0)
+            if bootstrap_status is not None:
+                die('bootstrap failed: ' + bootstrap_status)
             colname=colname+'_SCALED' # DI corrected, scaled
             if o['exitafter'] == 'bootstrap':
                 warn('User specified exit after bootstrap.')
                 stop(2)
 
-
         separator("PhaseOnly deconv")
         print('Smoothing is',o['smoothing'],'Current DDkMS name is',CurrentDDkMSSolName)
-        CurrentBaseDicoModelName=ddf_image('image_phase1',o['mslist'],
-                                           cleanmask=CurrentMaskName,
-                                           cleanmode='SSD',
-                                           ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][0],majorcycles=2,robust=o['image_robust'],
-                                           colname=colname,peakfactor=0.001,automask=True,
-                                           automask_threshold=o['thresholds'][1],
-                                           normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
-                                           use_dicomodel=True,
-                                           dicomodel_base=CurrentBaseDicoModelName,
-                                           catcher=catcher,phasecenter=o['phasecenter'],
-                                           RMSFactorInitHMP=1.,
-                                           MaxMinorIterInitHMP=10000,
-                                           PredictSettings=("Clean","DD_PREDICT"))
+        CurrentBaseDicoModelName=ddf_image('image_phase1', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Clean', 'DD_PREDICT'),
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=2,
+                  peakfactor=0.001,
+                  cleanmask=CurrentMaskName,
+                  ddsols=CurrentDDkMSSolName,
+                  applysols=o['apply_sols'][0],
+                  use_dicomodel=True,
+                  dicomodel_base=CurrentBaseDicoModelName,
+                  normalization=o['normalize'][0],
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][1],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=1,
+                  mpiManager=MPI_Manager,
+        )
+
 
         if o['exitafter'] == 'phase':
             warn('User specified exit after phase-only deconvolution.')
             stop(2)
 
         separator("Mask for deeper deconv")
-        CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-        CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
+        CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
+        scatter_if_set(MPI_Manager, CurrentMaskName)
+        CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_phase1_masked.DicoModel',catcher=catcher)
+        MPI_Manager.scpScatter(f"{CurrentBaseDicoModelName}.DicoModel")
 
         separator("DD calibration")
         CurrentDDkMSSolName=killms_data('image_phase1',o['mslist'],'DDS1',colname=colname,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                         CovQ=0.02,
                                         clusterfile=ClusterFile,
                                         niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                         dt=o['dt_slow'],
                                         catcher=catcher,NChanSols=o['NChanSols'],
                                         EvolutionSolFile=CurrentDDkMSSolName,
-                                        MergeSmooth=o['smoothing'])
+                                        options=o, # required to get the global variable o
+                                        MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist')
         ##############################################
 
         separator("AmpPhase deconv")
-        CurrentBaseDicoModelName=ddf_image('image_ampphase1',o['mslist'],
-                                       cleanmask=CurrentMaskName,cleanmode='SSD',
-                                       ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][1],majorcycles=1,robust=o['image_robust'],
-                                       colname=colname,peakfactor=0.001,automask=True,
-                                       automask_threshold=o['thresholds'][1],
-                                       normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
-                                       use_dicomodel=True,
-                                       dicomodel_base=CurrentBaseDicoModelName,
-                                       catcher=catcher,phasecenter=o['phasecenter'],
-                                       RMSFactorInitHMP=1.,
-                                       #AllowNegativeInitHMP=True,
-                                       MaxMinorIterInitHMP=10000,
-                                       PredictSettings=("Clean","DD_PREDICT"))
+        CurrentBaseDicoModelName=ddf_image('image_ampphase1', o['mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Clean', 'DD_PREDICT'),
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=1,
+                  peakfactor=0.001,
+                  cleanmask=CurrentMaskName,
+                  ddsols=CurrentDDkMSSolName,
+                  applysols=o['apply_sols'][1],
+                  use_dicomodel=True,
+                  dicomodel_base=CurrentBaseDicoModelName,
+                  normalization=o['normalize'][0],
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][1],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  #AllowNegativeInitHMP=True,
+                  catcher=catcher,
+                  STEP=1,
+                  mpiManager=MPI_Manager,
+        )
 
         if o['exitafter'] == 'ampphase':
             warn('User specified exit after amp-phase deconvolution.')
             stop(2)
 
         separator("Make Mask")
-        CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-        CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+        CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
+        scatter_if_set(MPI_Manager, CurrentMaskName)
+        CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+        MPI_Manager.scpScatter(f"{CurrentBaseDicoModelName}.DicoModel")
 
         if not o['skip_di']:
             separator("Second DI calibration")
-            ddf_image('Predict_DI1',o['mslist'],
-                    cleanmask=CurrentMaskName,cleanmode='SSD',
-                    ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][2],majorcycles=1,robust=o['image_robust'],
-                    colname=colname,peakfactor=0.001,automask=True,
-                    automask_threshold=o['thresholds'][1],
-                    normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
-                    use_dicomodel=True,
-                    dicomodel_base=CurrentBaseDicoModelName,
-                    catcher=catcher,phasecenter=o['phasecenter'],
-                    RMSFactorInitHMP=1.,
-                    #AllowNegativeInitHMP=True,
-                    MaxMinorIterInitHMP=10000,
-                    PredictSettings=("Predict","DD_PREDICT"))
-
+            ddf_image('Predict_DI1', o['mslist'],
+                      cleanmode=o['cleanmode'],
+                      colname=colname,
+                      PredictSettings=('Predict', 'DD_PREDICT'),
+                      robust=o['image_robust'],
+                      phasecenter=o['phasecenter'],
+                      majorcycles=1,
+                      peakfactor=0.001,
+                      cleanmask=CurrentMaskName,
+                      ddsols=CurrentDDkMSSolName,
+                      applysols=o['apply_sols'][2],
+                      use_dicomodel=True,
+                      dicomodel_base=CurrentBaseDicoModelName,
+                      normalization=o['normalize'][0],
+                      uvrange=uvrange,
+                      apply_weights=o['apply_weights'][1],
+                      use_weightspectrum=o['use_weightspectrum'],
+                      catcher=catcher,
+                      STEP=1,
+                      mpiManager=MPI_Manager,
+            )
             
             separator("Another DI step")
             if o['bootstrap']:
@@ -1432,12 +2536,18 @@ def main(o=None):
                 colname=o['colname']
 
             killms_data('PredictDI_1',o['mslist'],'DIS1',colname=colname,
-                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                         #clusterfile=ClusterFile,
+                        options=o, # required to get the global variable o
                         niterkf=o['NIterKF'][3],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                         catcher=catcher,
                         dt=o['dt_di'],
-                        DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+                        DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),
+                        UpdateWeights=1,
+                        mpiManager=MPI_Manager, mslist_str='mslist'
+                        )
+
+
             # cubical_data(o['mslist'],
             #              NameSol="DIS1",
             #              n_dt=1,
@@ -1448,21 +2558,28 @@ def main(o=None):
             #              OutColName="DATA_DI_CORRECTED")
 
             colname='DATA_DI_CORRECTED' # again
-            CurrentBaseDicoModelName=ddf_image('image_ampphase1_di',o['mslist'],
-                                        cleanmask=CurrentMaskName,cleanmode='SSD',
-                                        ddsols=CurrentDDkMSSolName,applysols=o['apply_sols'][3],
-                                        majorcycles=1,robust=o['image_robust'],
-                                        colname=colname,peakfactor=0.001,automask=True,
-                                        automask_threshold=o['thresholds'][1],
-                                        normalization=o['normalize'][0],
-                                        apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
-                                        use_dicomodel=True,
-                                        dicomodel_base=CurrentBaseDicoModelName,
-                                        catcher=catcher,
-                                        RMSFactorInitHMP=1.,
-                                        #AllowNegativeInitHMP=True,
-                                        MaxMinorIterInitHMP=10000,phasecenter=o['phasecenter'],
-                                        PredictSettings=("Clean","DD_PREDICT"))
+            CurrentBaseDicoModelName=ddf_image('image_ampphase1_di', o['mslist'],
+                      cleanmode=o['cleanmode'],
+                      colname=colname,
+                      PredictSettings=('Clean', 'DD_PREDICT'),
+                      robust=o['image_robust'],
+                      phasecenter=o['phasecenter'],
+                      majorcycles=1,
+                      peakfactor=0.001,
+                      cleanmask=CurrentMaskName,
+                      ddsols=CurrentDDkMSSolName,
+                      applysols=o['apply_sols'][3],
+                      use_dicomodel=True,
+                      dicomodel_base=CurrentBaseDicoModelName,
+                      normalization=o['normalize'][0],
+                      uvrange=uvrange,
+                      apply_weights=o['apply_weights'][1],
+                      use_weightspectrum=o['use_weightspectrum'],
+                      #AllowNegativeInitHMP=True,
+                      catcher=catcher,
+                      STEP=1,
+                      mpiManager=MPI_Manager,
+            )
 
             if o['exitafter'] == 'ampphase_di':
                 warn('User specified exit after amp-phase plus DI deconvolution.')
@@ -1472,7 +2589,11 @@ def main(o=None):
         # small mslist cache not needed from this point so clear it to
         # save disk space
         if o['clearcache_end']:
-            clearcache(o['mslist'],o)
+            if MPI_Manager.UseMPI:
+                clearcache_mpi(MPI_Manager, 'mslist', o)
+            else:
+                clearcache(o['mslist'],o)
+
 
         if o['full_mslist'] is None:
             warn('No full mslist provided, stopping here')
@@ -1482,6 +2603,8 @@ def main(o=None):
         # #########################################################################
         # ###############                  BIG MSLIST               ###############
         # #########################################################################
+
+        # (full mslist imaging weights are now checked at the start of the run)
 
         if o['bootstrap']:
             colname='SCALED_DATA'
@@ -1493,11 +2616,14 @@ def main(o=None):
 
         if not o['skip_di']:
             separator("Make Mask")
-            CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-            CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
+            CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][1] else None
+            scatter_if_set(MPI_Manager, CurrentMaskName)
+            CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName if o['use_external_mask'][1] else None,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
+            MPI_Manager.scpScatter(f"{CurrentBaseDicoModelName}.DicoModel")
             CurrentImageName= 'image_ampphase1_di'
         else:
             CurrentImageName = 'image_ampphase1'
+
 
     else:
         # alternative branch of massive if!
@@ -1514,7 +2640,7 @@ def main(o=None):
             summary(o)
             stop(4)
         ClusterFile=o['clusterfile']
-        CurrentMaskName = o['basemaskname']
+        CurrentMaskName = o['basemaskname'] if o['use_external_mask'][2] else None
         CurrentBaseDicoModelName = o['basedicomodel']
         CurrentImageName = o['baseimagename']
         external_mask = CurrentMaskName
@@ -1522,9 +2648,10 @@ def main(o=None):
     separator("DD calibration of full mslist")
     CurrentDDkMSSolName=killms_data(CurrentImageName,o['full_mslist'],'DDS2_full',
                                     colname=colname,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                     CovQ=0.1,
                                     clusterfile=ClusterFile,
+                                    options=o, # required to get the global variable o
                                     niterkf=o['NIterKF'][4],
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
@@ -1533,8 +2660,10 @@ def main(o=None):
                                     catcher=catcher,
                                     NChanSols=o['NChanSols'],
                                     # EvolutionSolFile=CurrentDDkMSSolName,
-                                    MergeSmooth=o['smoothing'])
-    
+                                    MergeSmooth=o['smoothing'],
+                                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                    )
+
     # ##########################################################
     # make the extended mask if required and possible
     if os.path.isfile('image_bootstrap.app.mean.fits') and o['extended_size'] is not None:
@@ -1545,18 +2674,32 @@ def main(o=None):
             report('Making the extended source mask')
             mask_base_image='image_bootstrap.app.mean.fits'
             make_extended_mask(mask_base_image,'image_dirin_SSD.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=o['extended_size'],rootname='bootstrap',rmsfacet=o['rmsfacet'])
+
         external_mask='external_mask_ext.fits'
         make_external_mask(external_mask,'image_dirin_SSD_init.dirty.fits',use_tgss=True,clobber=False,extended_use='bootstrap-mask-high.fits')
-        
+
     if not o['skip_di']:
         separator("Compute DD Predict (full mslist)")
-        ddf_image('Predict_DDS2',o['full_mslist'],cleanmode='SSD',
-                applysols=o['apply_sols'][4],majorcycles=1,robust=o['image_robust'],colname=colname,peakfactor=0.01,
-                automask=True,automask_threshold=o['thresholds'][1],normalization=o['normalize'][0],
-                apply_weights=o['apply_weights'][0],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,use_dicomodel=True,
-                dicomodel_base=CurrentBaseDicoModelName,
-                catcher=catcher,phasecenter=o['phasecenter'],
-                ddsols=CurrentDDkMSSolName, PredictSettings=("Predict","DD_PREDICT"))
+        ddf_image('Predict_DDS2', o['full_mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  PredictSettings=('Predict', 'DD_PREDICT'),
+                  robust=o['image_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=1,
+                  peakfactor=0.01,
+                  ddsols=CurrentDDkMSSolName,
+                  applysols=o['apply_sols'][4],
+                  use_dicomodel=True,
+                  dicomodel_base=CurrentBaseDicoModelName,
+                  normalization=o['normalize'][0],
+                  uvrange=uvrange,
+                  apply_weights=o['apply_weights'][0],
+                  use_weightspectrum=o['use_weightspectrum'],
+                  catcher=catcher,
+                  STEP=1,
+                  mpiManager=MPI_Manager,
+        )
 
         separator("Compute DI calibration (full mslist)")
         # cubical_data(o['full_mslist'],
@@ -1568,12 +2711,15 @@ def main(o=None):
         #              ModelColName="DD_PREDICT",
         #              OutColName="DATA_DI_CORRECTED")
         killms_data('Predict_DDS2',o['full_mslist'],'DIS2_full',colname=colname,
-                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
+                    options=o, # required to get the global variable o
                     clusterfile=ClusterFile,
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones","IFull","DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=0)
+                    DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=1,
+                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                    )
         colname="DATA_DI_CORRECTED"
 
     # ###############################################
@@ -1597,65 +2743,93 @@ def main(o=None):
     else:
         ImageName = 'image_full_ampphase'
     
-    ddf_image(ImageName,o['full_mslist'],
-              cleanmask=CurrentMaskName,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols=o['apply_sols'][5],
-              majorcycles=0,
-              robust=o['final_robust'],
-              colname=colname,use_dicomodel=True,
-              dicomodel_base=CurrentBaseDicoModelName,
-              AllowNegativeInitHMP=True,
-              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
-              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,**ddf_kw)
+    ddf_image(ImageName, o['full_mslist'],
+            cleanmode=o['cleanmode'],
+            colname=colname,
+            robust=o['final_robust'],
+            phasecenter=o['phasecenter'],
+            majorcycles=0,
+            peakfactor=0.001,
+            cleanmask=CurrentMaskName,
+            ddsols=CurrentDDkMSSolName,
+            applysols=o['apply_sols'][5],
+            use_dicomodel=True,
+            dicomodel_base=CurrentBaseDicoModelName,
+            normalization=o['normalize'][1],
+            uvrange=uvrange,
+            apply_weights=o['apply_weights'][2],
+            use_weightspectrum=o['use_weightspectrum'],
+            AllowNegativeInitHMP=True,
+            smooth=True,
+            catcher=catcher,
+            STEP=2,
+            mpiManager=MPI_Manager,
+            **ddf_kw
+    )
 
     if o['exitafter'] == 'fullampphase':
         warn('User specified exit after image_ampphase.')
         stop(2)
-        
+
     separator("MakeMask")
-    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
+    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][2] else None
+    scatter_if_set(MPI_Manager, CurrentMaskName)
 
     separator("Finish Deconvolution AP (full mslist)")
     if not o['skip_di']:
         ImageName = 'image_full_ampphase_di_m'
     else:
         ImageName = 'image_full_ampphase_m'
-    CurrentBaseDicoModelName=ddf_image(ImageName,o['full_mslist'],
-                                       cleanmask=CurrentMaskName,
-                                       reuse_psf=True,
-                                       reuse_dirty=True,
-                                       robust=o['final_robust'],
-                                       cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                                       applysols=o['apply_sols'][5],majorcycles=1,
-                                       colname=colname,use_dicomodel=True,
-                                       dicomodel_base=CurrentBaseDicoModelName,
-                                       peakfactor=0.001,automask=True,
-                                       automask_threshold=o['thresholds'][2],
-                                       normalization=o['normalize'][1],uvrange=uvrange,
-                                       apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,
-                                       AllowNegativeInitHMP=True,
-                                       RMSFactorInitHMP=.5,phasecenter=o['phasecenter'],
-                                       MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw)
+
+    CurrentBaseDicoModelName=ddf_image(ImageName, o['full_mslist'],
+              cleanmode=o['cleanmode'],
+              colname=colname,
+              robust=o['final_robust'],
+              phasecenter=o['phasecenter'],
+              majorcycles=1,
+              peakfactor=0.001,
+              cleanmask=CurrentMaskName,
+              ddsols=CurrentDDkMSSolName,
+              applysols=o['apply_sols'][5],
+              use_dicomodel=True,
+              dicomodel_base=CurrentBaseDicoModelName,
+              reuse_psf=True,
+              reuse_dirty=True,
+              normalization=o['normalize'][1],
+              uvrange=uvrange,
+              apply_weights=o['apply_weights'][2],
+              use_weightspectrum=o['use_weightspectrum'],
+              AllowNegativeInitHMP=True,
+              RMSFactorInitHMP=0.5,
+              smooth=True,
+              catcher=catcher,
+              STEP=2,
+              mpiManager=MPI_Manager,
+              **ddf_kw
+    )
 
     separator("MakeMask")
-    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
-    CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName,ImageName+'_masked.DicoModel',catcher=catcher)
+    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher) if o['use_external_mask'][2] else None
+    CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName if o['use_external_mask'][2] else None,ImageName+'_masked.DicoModel',catcher=catcher)
+    MPI_Manager.scpScatter(f"{CurrentBaseDicoModelName}.DicoModel")
+    scatter_if_set(MPI_Manager, CurrentMaskName)
             
     separator("DD Calibration (full mslist)")
     CurrentDDkMSSolName=killms_data(ImageName,
                                     o['full_mslist'],'DDS3_full',
                                     colname=colname,
+                                    options=o, # required to get the global variable o
                                     clusterfile=ClusterFile,
-                                    dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                    dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
                                     niterkf=o['NIterKF'][6],
                                     CovQ=0.1,
                                     uvrange=killms_uvrange,
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
                                     MergeSmooth=o['smoothing'],
-                                    dt=o['dt_fast'],catcher=catcher)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                    dt=o['dt_fast'],catcher=catcher,
+                                    mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                    )#,EvolutionSolFile=CurrentDDkMSSolName)
 
     if o['do_very_slow']:
         separator("Very slow amplitude smooth (full mslist)")
@@ -1666,26 +2840,46 @@ def main(o=None):
                                         colname=colname,
                                         SolverType="KAFCA",
                                         clusterfile=ClusterFile,
-                                        dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
+                                        dicomodel=f'{CurrentBaseDicoModelName}.DicoModel',
+                                        options=o, # required to get the global variable o
                                         uvrange=[o['uvmin_very_slow'],1000.],
                                         wtuv=o['wtuv'],
                                         robust=o['solutions_robust'],
                                         SkipSmooth=True,MergeSmooth=True,
                                         SigmaFilterOutliers=o['sigma_clip'],
                                         dt=o['dt_very_slow'],catcher=catcher,
-                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed)#,EvolutionSolFile=CurrentDDkMSSolName)
+                                        PreApplySols=CurrentDDkMSSolName_FastSmoothed,
+                                        mpiManager=MPI_Manager, mslist_str='full_mslist'
+                                        )#,EvolutionSolFile=CurrentDDkMSSolName)
 
-        CurrentDDkMSSolName="[%s,%s]"%(CurrentDDkMSSolName_FastSmoothed,CurrentDDkMSSolName)
-    
-    if o['low_psf_arcsec'] is not None:
+        CurrentDDkMSSolName=f"[{CurrentDDkMSSolName_FastSmoothed},{CurrentDDkMSSolName}]"
+
+    if o['low_psf_arcsec'] is not None: # low-res image requested
         separator("Low-resolution image")
-        # low-res image requested
-        low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
+
+        ddf_kw={}
+        ddf_kw['beamsize']=o['low_psf_arcsec']
+        if o['low_psf_minor_arcsec'] is not None:
+            if o['low_psf_pa_deg'] is None:
+                die('If low minor axis is supplied, position angle must be supplied too')
+            ddf_kw['beamsize_minor']=o['low_psf_minor_arcsec']
+            ddf_kw['beamsize_pa']=o['low_psf_pa_deg']
+
+        # allow for uv-override to image_low, but fallback to global uvmin if not given
+        low_uvmax = 2.5*206.0/o['low_psf_arcsec']
+        if o['low_uvmin'] is not None:
+            low_uvrange=[o['low_uvmin'], low_uvmax]
+        else:
+            low_uvrange=[o['image_uvmin'], low_uvmax]
+
+        # allow image_low imsize over-ride, but fallback to angular-coverage of main image if not given
         if o['low_imsize'] is not None:
-            low_imsize=o['low_imsize'] # allow over-ride
+            low_imsize=o['low_imsize']
         else:
             low_imsize=o['imsize']*o['cellsize']/o['low_cell']
-            # if mask-low exists then use it
+        
+        # if mask-low exists then use it
+        extmask=None
         if os.path.isfile('bootstrap-mask-low.fits'):
             extmask='bootstrap-mask-low.fits'
             # can be empty, in which case recent versions of DDF throw
@@ -1695,35 +2889,58 @@ def main(o=None):
                 warn('Bootstrap external mask is blank, using only internal masking')
                 extmask=None
             hdu.close()
-        else:
-            extmask=None
 
-        ddf_image('image_full_low',o['full_mslist'],
-                  cleanmask=extmask,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                  applysols=o['apply_sols'][6],
-                  AllowNegativeInitHMP=True,
-                  majorcycles=2,robust=o['low_robust'],
-                  colname=colname,use_dicomodel=False,
-                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-                  imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
-                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher)
+        ddf_image('image_full_low', o['full_mslist'],
+                cleanmode=o['cleanmode'],
+                colname=colname,
+                imsize=low_imsize,
+                cellsize=o['low_cell'],
+                robust=o['low_robust'],
+                phasecenter=o['phasecenter'],
+                majorcycles=2,
+                peakfactor=0.001,
+                cleanmask=extmask,
+                ddsols=CurrentDDkMSSolName,
+                applysols=o['apply_sols'][6],
+                use_dicomodel=False,
+                normalization=o['normalize'][2],
+                uvrange=low_uvrange,
+                AllowNegativeInitHMP=True,
+                smooth=True,
+                catcher=catcher,
+                STEP=3,
+                mpiManager=MPI_Manager,
+                **ddf_kw,
+        )
 
         make_mask('image_full_low.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
+        MPI_Manager.scpScatter('image_full_low.app.restored.fits.mask.fits')
 
-        ddf_image('image_full_low_im',o['full_mslist'],
-              cleanmask='image_full_low.app.restored.fits.mask.fits',
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols=o['apply_sols'][6],
-              AllowNegativeInitHMP=True,
-              majorcycles=1,robust=o['low_robust'],
-              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
-              smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],colname=colname,
-              reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low',
-              catcher=catcher)
-
+        ddf_image('image_full_low_im', o['full_mslist'],
+                  cleanmode=o['cleanmode'],
+                  colname=colname,
+                  imsize=low_imsize,
+                  cellsize=o['low_cell'],
+                  robust=o['low_robust'],
+                  phasecenter=o['phasecenter'],
+                  majorcycles=1,
+                  peakfactor=0.001,
+                  cleanmask='image_full_low.app.restored.fits.mask.fits',
+                  ddsols=CurrentDDkMSSolName,
+                  applysols=o['apply_sols'][6],
+                  use_dicomodel=True,
+                  dicomodel_base='image_full_low',
+                  reuse_psf=True,
+                  dirty_from_resid=True,
+                  normalization=o['normalize'][2],
+                  uvrange=low_uvrange,
+                  AllowNegativeInitHMP=True,
+                  smooth=True,
+                  catcher=catcher,
+                  STEP=3,
+                  mpiManager=MPI_Manager,
+                  **ddf_kw,
+        )
 
         if o['restart'] and os.path.isfile('full-mask-low.fits'):
             warn('Full-bw mask exists, not making it')
@@ -1741,22 +2958,41 @@ def main(o=None):
                 make_extended_mask('image_full_low_im.app.restored.fits','image_full_ampphase.app.restored.fits',rmsthresh=o['extended_rms'],sizethresh=1500,rootname='full',rmsfacet=o['rmsfacet'],ds9region='image_full_ampphase_m.tessel.reg')
             else:
                 # Something may be wrong.
-                die('Could not find the required products for the full-bw extended source mask!')
+                if not o['dryrun']:
+                    die('Could not find the required products for the full-bw extended source mask!')
             report('Make_extended_mask returns')
+
         extmask='full-mask-low.fits'
         make_mask('image_full_low_im.app.restored.fits',o['low_threshold'],external_mask=extmask,catcher=catcher)
+        MPI_Manager.scpScatter('image_full_low_im.app.restored.fits.mask.fits')
 
-        ddf_image('image_full_low_m',o['full_mslist'],
-              cleanmask='image_full_low_im.app.restored.fits.mask.fits',
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols=o['apply_sols'][6],
-              AllowNegativeInitHMP=True,
-              majorcycles=1,robust=o['low_robust'],
-              uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-              imsize=low_imsize,cellsize=o['low_cell'],peakfactor=0.001,phasecenter=o['phasecenter'],
-              smooth=True,automask=True,automask_threshold=4,normalization=o['normalize'][2],colname=colname,
-              reuse_psf=True,dirty_from_resid=True,use_dicomodel=True,dicomodel_base='image_full_low_im',
-              catcher=catcher,rms_factor=o['final_rmsfactor'])
+        ddf_image('image_full_low_m', o['full_mslist'],
+                cleanmode=o['cleanmode'],
+                colname=colname,
+                imsize=low_imsize,
+                cellsize=o['low_cell'],
+                robust=o['low_robust'],
+                phasecenter=o['phasecenter'],
+                majorcycles=1,
+                peakfactor=0.001,
+                rms_factor=o['final_rmsfactor'],
+                cleanmask='image_full_low_im.app.restored.fits.mask.fits',
+                ddsols=CurrentDDkMSSolName,
+                applysols=o['apply_sols'][6],
+                use_dicomodel=True,
+                dicomodel_base='image_full_low_im',
+                reuse_psf=True,
+                dirty_from_resid=True,
+                normalization=o['normalize'][2],
+                uvrange=low_uvrange,
+                AllowNegativeInitHMP=True,
+                smooth=True,
+                catcher=catcher,
+                STEP=3,
+                mpiManager=MPI_Manager,
+                **ddf_kw,
+        )
+
         external_mask='external_mask_ext-deep.fits'
         if os.path.isfile(external_mask):
             warn('Deep external mask already exists, skipping creation')
@@ -1777,7 +3013,7 @@ def main(o=None):
         separator('Offset image downloads')
         report('Checking if optical catalogue download is required')
         from get_cat import get_cat, download_required
-        if download_required(o['method']):
+        if not o['dryrun'] and download_required(o['method']):
             download_thread = threading.Thread(target=get_cat, args=(o['method'],))
             download_thread.start()
         else:
@@ -1797,49 +3033,66 @@ def main(o=None):
                 die('If final minor axis is supplied, position angle must be supplied too')
             ddf_kw['beamsize_minor']=o['final_psf_minor_arcsec']
             ddf_kw['beamsize_pa']=o['final_psf_pa_deg']
-    ddf_image(ImageName,o['full_mslist'],
-              cleanmask=CurrentMaskName,
-              reuse_psf=False,
-              cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols=o['apply_sols'][6],majorcycles=1,robust=o['final_robust'],
-              colname=colname,use_dicomodel=True,
-              dicomodel_base=CurrentBaseDicoModelName,
-              AllowNegativeInitHMP=True,
-              peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
-              normalization=o['normalize'][1],uvrange=uvrange,smooth=True,phasecenter=o['phasecenter'],
-              apply_weights=o['apply_weights'][2],use_weightspectrum=o['use_weightspectrum'],catcher=catcher,RMSFactorInitHMP=1.,
-              PredictSettings=("Clean","DD_PREDICT"),
-              **ddf_kw)
+
+    ddf_image(ImageName, o['full_mslist'],
+            cleanmode=o['cleanmode'],
+            colname=colname,
+            PredictSettings=('Clean', 'DD_PREDICT'),
+            robust=o['final_robust'],
+            phasecenter=o['phasecenter'],
+            majorcycles=1,
+            peakfactor=0.001,
+            cleanmask=CurrentMaskName,
+            ddsols=CurrentDDkMSSolName,
+            applysols=o['apply_sols'][6],
+            use_dicomodel=True,
+            dicomodel_base=CurrentBaseDicoModelName,
+            normalization=o['normalize'][1],
+            uvrange=uvrange,
+            apply_weights=o['apply_weights'][2],
+            use_weightspectrum=o['use_weightspectrum'],
+            AllowNegativeInitHMP=True,
+            smooth=True,
+            catcher=catcher,
+            STEP=3,
+            wscms_allow_refreeze=True,
+            mpiManager=MPI_Manager,
+            **ddf_kw
+    )
+
 
     # check for the offset files
     if o['method'] is not None:
         separator('Offset correction')
         # have we got the catalogue?
-        if download_thread is not None and download_thread.is_alive():
-            warn('Waiting for background download thread to finish...')
-            download_thread.join()
-        # maybe the thread died, check the files are there
-        if download_required(o['method']):
-            warn('Retrying download for some or all of the catalogue')
-            try:
-                get_cat(o['method'])
-            except RuntimeError:
-                die('Failed to download catalogue with method '+o['method'])
+        if not o['dryrun']:
+            if download_thread is not None and download_thread.is_alive():
+                warn('Waiting for background download thread to finish...')
+                download_thread.join()
+            # maybe the thread died, check the files are there
+            if download_required(o['method']):
+                warn('Retrying download for some or all of the catalogue')
+                try:
+                    get_cat(o['method'])
+                except RuntimeError:
+                    die('Failed to download catalogue with method '+o['method'])
 
         # we should now have the catalogue, find the offsets
         facet_offset_file='facet-offset.txt'
         if o['restart'] and os.path.isfile(facet_offset_file):
             warn('Offset file already exists, not running offsets.py')
         else:
-            run('offsets.py '+' '.join(sys.argv[1:]),log=None)
+            run('offsets.py '+' '.join(sys.argv[1:]),log=None,dryrun=o['dryrun'])
 
         # apply the offsets
         ddf_shift(ImageName,facet_offset_file,options=o,catcher=catcher)
     else:
         facet_offset_file=None
-            
+
     spectral_mslist=None
     if o['spectral_restored']:
+        #TODO mpi
+        raise NotImplementedError('Spectral restored mode not implemented yet')
         import do_spectral_restored
         separator('Spectral restored images')
         spectral_mslist=do_spectral_restored.do_spectral_restored(colname,
@@ -1853,6 +3106,8 @@ def main(o=None):
                                                   catcher=catcher)
 
     if o['polcubes']:
+        # TODO mpi
+        raise NotImplementedError('Pol cubes not implemented yet')
         if o['clearcache_end']:
             full_clearcache(o)
         from do_polcubes import do_polcubes
@@ -1868,7 +3123,7 @@ def main(o=None):
         if o['restart'] and os.path.isfile(cubefiles[0]+'.fz') and os.path.isfile(cubefiles[1]+'.fz'):
             warn('Compressed low QU cube product exists, not making new images')
         else:
-            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',o['full_mslist'],ddf_kw,beamsize=o['low_psf_arcsec'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
+            pol_mslists=do_polcubes(colname,CurrentDDkMSSolName,low_uvrange,'image_full_low',o['full_mslist'],ddf_kw,beamsize=o['low_psf_arcsec'],beamsize_minor=o['low_psf_minor_arcsec'],beamsize_pa=o['low_psf_pa_deg'],imsize=low_imsize,cellsize=o['low_cell'],robust=o['low_robust'],options=o,catcher=catcher)
             if o['compress_polcubes']:
                 for cubefile in cubefiles:
                     if o['restart'] and os.path.isfile(cubefile+'.fz'):
@@ -1898,31 +3153,64 @@ def main(o=None):
                         thread.start()
                         cthreads.append(thread)
                         flist.append(cubefile)
-        
-    m=MSList(o['full_mslist'])
-    uobsid = set(m.obsids)
+
+    if LOCAL_RANK==0:
+        PKILL(exe="MemMonitor.py")
+        PKILL(exe="IOMonitor.py")
+
+    if USE_MPI:
+        # TODO mpi: Stokes V, dynamic spectra and the final tidy-up are not ported to MPI yet
+        print("Successfully ran ddf-pipeline (MPI mode: Stokes V / dynspec / tidy-up skipped)")
+        MPI.Finalize()
+        return
+
+    mslist_file = o['full_mslist'] or o['mslist']
+    if mslist_file is not None and os.path.isfile(mslist_file):
+        try:
+            m=MSList(mslist_file)
+            uobsid = set(m.obsids)
+        except RuntimeError:
+            if not o['dryrun']:
+                raise
+            m=None
+            uobsid = set()
+    else:
+        m=None
+        uobsid = set()
     stokesv_mslists=[]
     for obsid in uobsid:
-        umslist='mslist-%s.txt' % obsid
+        umslist = f'mslist-{obsid}.txt'
         stokesv_mslists.append(umslist)
-        print('Writing ms list for obsids',umslist)
-        with open(umslist,'w') as file:
-            for ms,ob in zip(m.mss,m.obsids):
-                if ob==obsid:
-                    file.write(ms+'\n')
+        if not o['dryrun']:
+            print('Writing ms list for obsids',umslist)
+            with open(umslist,'w') as file:
+                for ms,ob in zip(m.mss,m.obsids):
+                    if ob==obsid:
+                        file.write(ms+'\n')
     if o['stokesv']:
         for obsid in uobsid:
-            separator('Stokes V image for %s'%obsid)
-            ddf_image('image_full_high_stokesV_%s'%obsid,'mslist-%s.txt'%obsid,
-                  cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                  applysols=o['apply_sols'][6],stokes='IV',
-                  AllowNegativeInitHMP=True,
-                  majorcycles=0,robust=o['final_robust'],
-                  colname=colname,use_dicomodel=False,
-                  uvrange=uvrange,cellsize=o['cellsize'],
-                  peakfactor=0.001,phasecenter=o['phasecenter'],
-                  smooth=True,automask=True,automask_threshold=5,normalization=o['normalize'][2],
-                  catcher=catcher,**ddf_kw)
+            separator(f'Stokes V image for {obsid}')
+            ddf_image(f'image_full_high_stokesV_{obsid}', f'mslist-{obsid}.txt',
+                      cleanmode=o['cleanmode'],
+                      colname=colname,
+                      cellsize=o['cellsize'],
+                      robust=o['final_robust'],
+                      phasecenter=o['phasecenter'],
+                      stokes='IV',
+                      majorcycles=0,
+                      peakfactor=0.001,
+                      ddsols=CurrentDDkMSSolName,
+                      applysols=o['apply_sols'][6],
+                      use_dicomodel=False,
+                      normalization=o['normalize'][2],
+                      uvrange=uvrange,
+                      AllowNegativeInitHMP=True,
+                      smooth=True,
+                      catcher=catcher,
+                      STEP=3,
+                      mpiManager=MPI_Manager,
+                      **ddf_kw
+            )
 
     if o['polcubes'] and o['compress_polcubes']:
         # cthreads and flist exist
@@ -1933,10 +3221,11 @@ def main(o=None):
         if o['delete_compressed']:
             for f in flist:
                 if os.path.isfile(f+'.fz'):
-                    warn('Deleting compressed file %s' % f)
+                    warn(f'Deleting compressed file {f}')
                     os.remove(f)
                 else:
-                    die('compressed files do not exist, compression must have failed')
+                    if not o['dryrun']:
+                        die('compressed files do not exist, compression must have failed')
 
     if o['do_dynspec']:
         separator('Dynamic spectra')
@@ -1948,16 +3237,16 @@ def main(o=None):
         LastImage="image_full_ampphase_di_m.NS.int.restored.fits"
 
         for obsid in uobsid:
-            LastImageV="image_full_high_stokesV_%s.dirty.corr.fits"%obsid
-            warn('Running ms2dynspec for obsid %s' % obsid)
-            umslist='mslist-%s.txt' % obsid
-            g=glob.glob('DynSpec*'+obsid+'*')
+            LastImageV=f"image_full_high_stokesV_{obsid}.dirty.corr.fits"
+            warn(f'Running ms2dynspec for obsid {obsid}')
+            umslist=f'mslist-{obsid}.txt'
+            g=glob.glob(f'DynSpec*{obsid}*')
             if len(g)>0:
-                warn('DynSpecs results directory %s already exists, skipping DynSpecs' % g[0])
+                warn(f'DynSpecs results directory {g[0]} already exists, skipping DynSpecs')
             else:
-                DicoFacetName="%s.DicoFacet"%LastImage.split(".int.restored.fits")[0]
-                runcommand="ms2dynspec.py --ms %s --data %s --model DD_PREDICT --sols %s --rad 2. --imageI %s --imageV %s --LogBoring %i --SolsDir %s --BeamModel LOFAR --BeamNBand 1 --DicoFacet %s  --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${DDF_PIPELINE_CATALOGS}/dyn_spec_catalogue_addedexo_addvlotss.fits"%(umslist,colname,CurrentDDkMSSolName,LastImage,LastImageV,o['nobar'],o["SolsDir"],DicoFacetName)
-                
+                DicoFacetName=f"{LastImage.split('.int.restored.fits')[0]}.DicoFacet"
+                runcommand = f"ms2dynspec.py --ms {umslist} --data {colname} --model DD_PREDICT --sols {CurrentDDkMSSolName} --rad 2. --imageI {LastImage} --imageV {LastImageV} --LogBoring {int(o['nobar'])} --SolsDir {o['SolsDir']} --BeamModel {o['BeamModel']} --BeamNBand 1 --DicoFacet {DicoFacetName} --noff 100 --nMinOffPerFacet 5 --CutGainsMinMax 0.1,1.5 --SplitNonContiguous 1 --SavePDF 1 --FitsCatalog ${{DDF_PIPELINE_CATALOGS}}/dyn_spec_catalogue_addedexo_addvlotss.fits"
+
                 if o['bright_threshold'] is not None and os.path.isfile('brightlist.csv'):
                     runcommand+=' --srclist brightlist.csv'
                 run(runcommand,dryrun=o['dryrun'],log=logfilename('ms2dynspec.log'),quiet=o['quiet'])
@@ -1965,10 +3254,10 @@ def main(o=None):
                     ingest_dynspec(obsid)
 
 
-    if o['compress_ms']:
-        separator('Compressing MS for archive -- column '+colname)
-        os.system('archivems.sh . '+colname)
-                
+    if o['compress_ms'] and not o['dryrun']:
+        separator(f'Compressing MS for archive -- column {colname}')
+        os.system(f'archivems.sh . {colname}')
+
     separator('Write summary and tidy up')
     summary(o)
 
@@ -1981,23 +3270,49 @@ def main(o=None):
             extras+=pol_mslists
         if o['stokesv']:
             extras+=stokesv_mslists
-        full_clearcache(o,extras=extras)
-    
+        if MPI_Manager.UseMPI:
+            full_clearcache_mpi(MPI_Manager, o, extras=extras)
+        else:
+            full_clearcache(o,extras=extras)
+
     if use_database():
         update_status(None,'Complete',time='end_date',av=4)
-        
+
+    # Remove temporary msfiles made for dryrun mode
+    for f in _dryrun_tmpfiles:
+        if os.path.isfile(f):
+            os.remove(f)
+
     return
 
-if __name__=='__main__':
+def driver():
     # Main loop
+
     report('Welcome to ddf-pipeline, version '+__version__)
     if len(sys.argv)<2:
         warn('pipeline.py must be called with at least one parameter file or a command-line\noption list.\nE.g "pipeline.py example.cfg second_example.cfg --solutions-robust=0.1"\nSee below for a complete list of possible options with their default values.')
         print_options(option_list)
         sys.exit(1)
 
-    o=options(sys.argv[1:],option_list)
-    if MyPickle is not None:
-        MyPickle.Save(o, "ddf-pipeline.last")
+
+    print(RANK,getcpus())
+
+    global o
+
+    # Following is necessary when running from a non-network directory (non local) 
+    UseMPI=(MPI_SIZE>1)
+    global o
+    if not UseMPI:
+        o=options(sys.argv[1:],option_list)
+        print(f"{o}")
+    else:
+        o=None
+        if RANK==0:
+            o=options(sys.argv[1:],option_list)
+            if MyPickle is not None: MyPickle.Save(o, "ddf-pipeline.last")
+        o = MPI.COMM_WORLD.bcast(o, root=0)
 
     main(o)
+
+if __name__=='__main__':
+    driver()

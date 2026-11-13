@@ -11,7 +11,14 @@ from builtins import range
 from past.utils import old_div
 import os,sys
 import os.path
-from auxcodes import run,warn,die,MSList
+import copy
+import socket
+# When launched as a pipeline subprocess, run() prefixes DDF_FORCE_NOT_USE_MPI=1.
+# Scrub the inherited launcher env as well, or this process' MPI_Init would
+# rejoin the parent job instead of starting a clean singleton.
+if os.environ.get("DDF_FORCE_NOT_USE_MPI") == "1":
+    for _k in [k for k in os.environ if k.startswith(("OMPI_", "PMI_", "PMIX_", "HYDRA_", "I_MPI_", "PRTE_", "MV2_", "SLURM_"))]:
+        del os.environ[_k]
 try:
     import bdsf as bdsm
 except ImportError:
@@ -19,15 +26,34 @@ except ImportError:
 import pyrap.tables as pt
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
-from pipeline import ddf_image,make_external_mask
 import shutil
 from astropy.io import fits
+
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+if not LOCAL_DEV:
+    from auxcodes import run,warn,die,MSList
+    from pipeline import ddf_image,make_external_mask
+    import mpi_manager
+else:
+    from utils.auxcodes import run,warn,die,MSList
+    from scripts.pipeline import ddf_image,make_external_mask
+    from utils import mpi_manager
 
 def logfilename(s):
     if o['logging'] is not None:
         return o['logging']+'/'+s 
     else:
         return None
+
+def run_bootstrap_mpi(MPI_Manager,o):
+    ListJobs=[]
+    if o is not None:
+        for Node in MPI_Manager.DicoNode2mslist.keys():
+            oc=copy.deepcopy(o)
+            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            ListJobs.append((Node,run_bootstrap,(oc,),{}))
+        
+    mpi_manager.callParallel(ListJobs)
 
 def run_bootstrap(o):
 
@@ -54,6 +80,9 @@ def run_bootstrap(o):
         warn("You need to define the environment variable DDF_PIPELINE_CATALOGS where your catalogs are located")
         sys.exit(2)
 
+    if o["tgss"] is None:
+        die('TGSS catalogue path must be specified (tgss option)')
+
     o["tgss"]=o["tgss"].replace("$$",os.environ["DDF_PIPELINE_CATALOGS"])
     o["catalogues"]=[l.replace("$$",os.environ["DDF_PIPELINE_CATALOGS"]) for l in o["catalogues"]]
     lCat=o["catalogues"]+[o["tgss"]]
@@ -73,11 +102,14 @@ def run_bootstrap(o):
         len(o['names'])!=cl or len(o['groups'])!=cl):
         die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
 
+    # bootstrap images at low resolution: needs an explicit restoring beam
+    if o['low_psf_arcsec'] is None:
+        die('bootstrap needs low_psf_arcsec set (e.g. 50.) in the [image] section')
     low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
     if o['low_imsize'] is not None:
         low_imsize=o['low_imsize'] # allow over-ride
     else:
-        low_imsize=old_div(o['imsize']*o['cellsize'],o['low_cell'])
+        low_imsize=int(round(old_div(o['imsize']*o['cellsize'],o['low_cell'])))
 
     low_robust=o['low_robust']
 
@@ -86,7 +118,7 @@ def run_bootstrap(o):
 
     # We use the individual ms in mslist.
     m=MSList(o['mslist'])
-    Uobsid = set(m.obsids)
+    Uobsid = sorted(set(m.obsids))
     
     for obsid in Uobsid:
         
@@ -117,28 +149,30 @@ def run_bootstrap(o):
         # Clean in cube mode
         # As for the main pipeline, first make a dirty map
         ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',
-                  cleanmask=None,cleanmode='SSD',ddsols='DDS0',
+                  cleanmask=None,cleanmode=o['cleanmode'],ddsols='DDS0',
                   applysols=o['apply_sols'][6],majorcycles=0,robust=low_robust,
                   uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
                   imsize=low_imsize,cellsize=o['low_cell'],
                   options=o,colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
-                  conditional_clearcache=True)
+                  conditional_clearcache=True, STEP=0)
         external_mask='bootstrap_external_mask.fits'
         make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='low_cell',options=o)
         # Deep SSD clean with this external mask and automasking
         ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
                   cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
-                  cleanmode='SSD',ddsols='DDS0',applysols=o['apply_sols'][6],
+                  cleanmode=o['cleanmode'],ddsols='DDS0',applysols=o['apply_sols'][6],
                   majorcycles=5,robust=low_robust,uvrange=low_uvrange,
                   beamsize=o['low_psf_arcsec'],imsize=low_imsize,
                   cellsize=o['low_cell'],options=o,
                   colname=colname,automask=True,
                   automask_threshold=15,smooth=True,cubemode=True,
-                  conditional_clearcache=False)
+                  wscms_peakfactor=0.01,wscms_rescue_rms_factor=5.0,
+                  conditional_clearcache=False, STEP=0)
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
             os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl')):
+
             warn('Source list exists, skipping source extraction')
         else:
             warn('Running PyBDSM, please wait...')
@@ -147,15 +181,19 @@ def run_bootstrap(o):
             img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
             img.export_image(img_type='rms',img_format='fits')
 
-        from make_fitting_product import make_catalogue
-        import fitting_factors
-        import find_outliers
+        if not LOCAL_DEV:
+            from make_fitting_product import make_catalogue
+            import fitting_factors
+            import find_outliers
+        else:
+            from utils.make_fitting_product import make_catalogue
+            from utils import fitting_factors,find_outliers
 
         # generate the fitting product
         if os.path.isfile(obsid+'crossmatch-1.fits'):
             warn('Crossmatch table exists, skipping crossmatch')
         else:
-            t = pt.table(omslist[0]+ '/FIELD', readonly=True, ack=False)
+            t = pt.table(omslist[0]+ '::FIELD', readonly=True, ack=False)
             direction = t[0]['PHASE_DIR']
             ra, dec = direction[0]
 
@@ -165,6 +203,7 @@ def run_bootstrap(o):
             dec*=180.0/np.pi
 
             cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
+            #make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl',ra,dec,2.5,cats,outnameprefix=obsid)
             filenames=['image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl','image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl']
             for filename in filenames:
                 if os.path.isfile(filename):
@@ -173,6 +212,7 @@ def run_bootstrap(o):
                 die('Catalogue file does not exist!')
 
             make_catalogue(filename,ra,dec,2.5,cats,outnameprefix=obsid)
+
     
         freqlist=open(obsid+'frequencies.txt','w')
         for n,f in zip(o['names'],o['frequencies']):
@@ -229,7 +269,7 @@ def run_bootstrap(o):
                     warn('Table '+ms+' has already been corrected, skipping')
                 else:
                     # in this version we need to scale both the original data and the data in colname
-                    t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+                    t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
                     frq=t[0]['REF_FREQUENCY']
                     factor=spl(frq)
                     print(frq,factor)
@@ -274,8 +314,25 @@ def run_bootstrap(o):
         hdus[0][0].data/=len(Uobsid)
         hdus[0].writeto('image_bootstrap.app.mean.fits')
                 
-if __name__=='__main__':
-    from parset import option_list
-    from options import options
+def driver():
+    if not LOCAL_DEV:
+        from parset import option_list
+        from options import options
+    else:
+        from utils.parset import option_list
+        from utils.options import options
+    global o
     o=options(sys.argv[1:],option_list)
-    run_bootstrap(o)
+    SetMS=mpi_manager.MSSet(o['mslist'])
+    MainNode=None
+    if mpi_manager.RANK==0: MainNode=socket.gethostname()
+    if mpi_manager.USE_MPI:
+        MainNode=mpi_manager.MPI.COMM_WORLD.bcast(MainNode, root=0)
+    MPI_Manager=mpi_manager.mpi_manager(o, SetMS, None, MainNode)
+    if MPI_Manager.UseMPI:
+        run_bootstrap_mpi(MPI_Manager, o)
+    else:
+        run_bootstrap(o)
+
+if __name__=='__main__':
+    driver()

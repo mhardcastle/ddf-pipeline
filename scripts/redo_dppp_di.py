@@ -3,7 +3,12 @@ import numpy as np
 import pyrap.tables as pt
 import  os,sys
 import glob
-from auxcodes import getpos
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from auxcodes import getpos
+else:
+    from utils.auxcodes import getpos
 
 def redo_dppp_di(o):
         mslist_name = o['full_mslist']

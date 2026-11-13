@@ -69,7 +69,7 @@ def do_spectral_restored(colname,
                   MSListFileName,
                   cleanmask=CurrentMaskName,
                   reuse_psf=False,
-                  cleanmode='SSD',
+                  cleanmode=o['cleanmode'],
                   ddsols=CurrentDDkMSSolName,
                   applysols=o['apply_sols'][6],
                   majorcycles=0,robust=o['final_robust'],
@@ -79,7 +79,7 @@ def do_spectral_restored(colname,
                   peakfactor=0.001,automask=True,automask_threshold=o['thresholds'][2],
                   normalization=o['normalize'][1],uvrange=uvrange,smooth=True,
                   apply_weights=o['apply_weights'][2],catcher=catcher,RMSFactorInitHMP=1.,options=o,
-                  **ddf_kw)
+                  STEP=2, **ddf_kw)
 
         if o['method'] is not None:
             ddf_shift(ThisImageName,facet_offset_file,options=o,catcher=catcher,dicomodel=CurrentBaseDicoModelName+'.DicoModel')
