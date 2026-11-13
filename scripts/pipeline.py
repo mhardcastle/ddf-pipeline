@@ -1659,6 +1659,8 @@ def subtract_vis_serial(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_S
         t.close()
 
 def subtractOuterSquare(o, mpiManager=None):
+    if o['full_mslist'] is None:
+        die('do_wide needs full_mslist to predict/subtract outer sources')
     #wide_imsize=o['wide_imsize']
     #NPixSmall=o['imsize'] #int(NPixLarge/float(o['fact_reduce_field']))
     colname=o['colname']
@@ -1715,7 +1717,8 @@ def subtractOuterSquare(o, mpiManager=None):
 
     external_mask='wide_external_mask.fits'
     make_external_mask(external_mask,'image_full_wide.dirty.fits',use_tgss=True,clobber=False)
-    make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
+    wide_mask_name = make_mask('image_full_wide.app.restored.fits',o['wide_threshold'],external_mask=external_mask,catcher=catcher)
+    scatter_if_set(mpiManager, wide_mask_name)
     
     ddf_image('image_full_wide_im', o['mslist'],
             cleanmode=o['cleanmode'],
@@ -1746,9 +1749,12 @@ def subtractOuterSquare(o, mpiManager=None):
 
     # predict outside the central rectangle
     NpixMaskSquare = int(np.floor(0.95*o['imsize']*o['cellsize']/o['wide_cell']))
-    
+
     FileHasPredicted='image_full_wide_predict.HasPredicted'
-    if o['restart'] and os.path.isfile(FileHasPredicted):
+    do_predict = not (o['restart'] and os.path.isfile(FileHasPredicted))
+    if USE_MPI:
+        do_predict = MPI.COMM_WORLD.bcast(do_predict, root=0)
+    if not do_predict:
         warn(f'File {FileHasPredicted} already exists, skipping Predict step')
     else:
         ddf_image('image_full_wide_predict', o['full_mslist'],
@@ -1784,7 +1790,10 @@ def subtractOuterSquare(o, mpiManager=None):
 
     # subtract predicted visibilities
     FileHasSubtracted='image_full_wide_predict.HasSubtracted'
-    if o['restart'] and os.path.isfile(FileHasSubtracted):
+    do_subtract = not (o['restart'] and os.path.isfile(FileHasSubtracted))
+    if USE_MPI:
+        do_subtract = MPI.COMM_WORLD.bcast(do_subtract, root=0)
+    if not do_subtract:
         warn(f'File {FileHasSubtracted} already exists, skipping subtract vis step')
     elif not o['dryrun']:
         subtract_vis(mslist=o['full_mslist'],colname_a=colname,colname_b="DATA_SUB",out_colname="DATA_SUB",
@@ -1846,8 +1855,9 @@ def checkColName(o):
         print('Dataset %s does contain the column "%s"' %(mslist[0],colname))
 
 def scatter_if_set(MPI_Manager, fname):
-    # masks can now be None (use_external_mask option), so only scatter real files
-    if fname is not None:
+    # masks can now be None (use_external_mask option), so only scatter real files.
+    # The manager itself can be None for direct calls
+    if MPI_Manager is not None and fname is not None:
         MPI_Manager.scpScatter(fname)
 
 def main(o):
@@ -2104,7 +2114,6 @@ def main(o):
     # ##########################################################
     # subtract outer square
     if o['do_wide']:
-        raise NotImplementedError('Subtraction not implemented in this version yet')
         subtractOuterSquare(o, mpiManager=MPI_Manager)
         colname="DATA_SUB"
         #ReduceFactor=o['fact_reduce_field']
