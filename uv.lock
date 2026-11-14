@@ -749,7 +749,7 @@ provides-extras = ["mpi-support"]
 
 [[package]]
 name = "ddfacet"
-version = "0.9.1.0"
+version = "1.0.0.0"
 source = { directory = "../DDFacet" }
 dependencies = [
     { name = "astropy" },
@@ -782,6 +782,8 @@ dependencies = [
     { name = "six" },
     { name = "tables" },
     { name = "tqdm" },
+    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "zarr", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 
 [package.optional-dependencies]
@@ -841,6 +843,7 @@ requires-dist = [
     { name = "tables", specifier = ">=3.10.0,<=3.10.2" },
     { name = "tqdm", specifier = "<=4.64.0" },
     { name = "xarray", marker = "extra == 'alternate-data-backends'" },
+    { name = "zarr" },
 ]
 provides-extras = ["dft-support", "moresane-support", "fits-beam-support", "kms-support", "alternate-data-backends", "testing-requirements", "mpi-support"]
 

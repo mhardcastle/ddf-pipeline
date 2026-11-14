@@ -881,7 +881,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
 
             runcommand+=' --SolsDir=%s'%options["SolsDir"]
             if not options['do_decorr']:
-                runcommand+=' --Decorrelation=NO'
+                runcommand+=" --Decorrelation=''"
 
             if PreApplySols:
                 if isinstance(PreApplySols,str):
