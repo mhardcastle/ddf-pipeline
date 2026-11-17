@@ -2216,10 +2216,11 @@ def main(o):
                                              ApplyJonesCorr=CurrentDIkMSSolName,
                                              )
 
+        # as DDS3_full_slow: killms_data defaults for CovQ (0.1) and NIterKF (6)
         CurrentDDkMSSolName_Slow=killms_data('image_phase1',o['mslist'],'DDS1_Slow',colname=colname,
                                              dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
                                              clusterfile=ClusterFile,
-                                             niterkf=o['NIterKF'][2],uvrange=[o['uvmin_very_slow'],1000.],wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                             niterkf=6,uvrange=[o['uvmin_very_slow'],1000.],wtuv=o['wtuv'],robust=o['solutions_robust'],
                                              dt=o['dt_very_slow'],
                                              catcher=catcher,NChanSols=o['NChanSols'],
                                              # ####################
