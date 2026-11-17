@@ -2199,11 +2199,12 @@ def main(o):
 
         separator("DD calibration")
 
+        # Fast + Slow as pipeline.py's full-bandwidth DDS3_full + DDS3_full_slow: same CovQ and NIterKF as DDS3_full
         CurrentDDkMSSolName_Fast=killms_data('image_phase1',o['mslist'],'DDS1_Fast',colname=colname,
                                              dicomodel='%s.DicoModel'%CurrentBaseDicoModelName,
-                                             CovQ=0.02,
+                                             CovQ=0.1,
                                              clusterfile=ClusterFile,
-                                             niterkf=o['NIterKF'][2],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
+                                             niterkf=o['NIterKF'][6],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                                              dt=o['dt_fast'],
                                              catcher=catcher,NChanSols=o['NChanSols'],
                                              # ####################
