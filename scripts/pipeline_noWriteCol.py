@@ -356,6 +356,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     saveimages+='onNeds'
     if options is None:
         options=o # attempt to get global if it exists
+    if options.get('mask_from_mfs',False) and 'f' not in saveimages:
+        saveimages+='f'
+    if options is None:
+        options=o # attempt to get global if it exists
 
     import DDFacet.Parset
     parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
@@ -673,8 +677,8 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
         return
 
     Register.register("[clusterGA]","Cluster")
-    if not ".app.restored.fits" in imagename:
-        raise RuntimeError('Input image should be an apparent restored image')
+    if not (imagename.endswith(".app.restored.fits") or imagename.endswith(".app.restored_mfs.fits")):
+        raise RuntimeError('Input image should be an apparent restored image (.app.restored.fits or .app.restored_mfs.fits)')
 
     if options is None:
         options=o # attempt to get global if it exists
@@ -689,10 +693,11 @@ def clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",OutClusterCat=None
     run(runcommand,dryrun=options['dryrun'],log=logfilename('MakeCatalog-'+imagename+'.log',options=options),quiet=options['quiet'])
 
 
-    Name=imagename.split(".app.restored.fits")[0]
+    # MakeCatalog.py names its catalogues <RestoredIm without .fits>.pybdsm/pybdsf.srl.fits
+    CatBase=imagename[:-len(".fits")]
 
     #runcommand="ClusterCat.py --SourceCat %s.app.restored.pybdsm.srl.fits --AvoidPolygons MaskDiffuse.pickle --NGen 100 --FluxMin 0.1"%Name
-    filenames=[Name+'.app.restored.pybdsm.srl.fits',Name+'.app.restored.pybdsf.srl.fits']
+    filenames=[CatBase+'.pybdsm.srl.fits',CatBase+'.pybdsf.srl.fits']
     for filename in filenames:
         if os.path.isfile(filename):
             break
@@ -744,6 +749,29 @@ def make_mask(imagename,thresh,verbose=False,options=None,external_mask=None,cat
 
     return fname
 
+
+def restored_for_mask(imagename,options=None):
+    """Apparent restored image to build masks and clustering catalogues from.
+
+    With mask_from_mfs, use <imagename>.app.restored_mfs.fits (DDF [f]: residual + per-band apparent model
+    S(nu_b)*sqrt(JonesNorm_b), averaged over bands with the same weights as the residual). The default
+    .app.restored.fits restores Model(RefFreq)*sqrt(mean_b JonesNorm_b), which loses flux where the beam
+    differs strongly between bands (e.g. the edge of an SKA-LOW field imaged at 100 and 350 MHz).
+    Falls back to .app.restored.fits if the MFS image is missing (e.g. DDF step skipped on restart).
+    Decided on rank 0 and broadcast so that all MPI ranks use the same file names."""
+    if options is None:
+        options=o
+    fname=imagename+'.app.restored.fits'
+    if options.get('mask_from_mfs',False):
+        mfs=imagename+'.app.restored_mfs.fits'
+        use_mfs=options['dryrun'] or os.path.isfile(mfs)
+        if USE_MPI:
+            use_mfs=MPI.COMM_WORLD.bcast(use_mfs, root=0)
+        if use_mfs:
+            fname=mfs
+        else:
+            warn('%s not found, using %s for masking'%(mfs,fname))
+    return fname
 
 def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DATA',niterkf=6,dicomodel=None,
                 uvrange=None,wtuv=None,robust=None,catcher=None,dt=None,options=None,
@@ -913,6 +941,10 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
 
             if clusterfile is not None:
                 runcommand+=' --NodesFile '+clusterfile
+                # DD solve: do not solve directions whose apparent model flux (flux x beam power, for this MS)
+                # is below ThSolve x the brightest direction (J=1, masked in the solutions for MergeSols/SmoothSols)
+                if DISettings is None and options.get('ThSolve',0):
+                    runcommand+=' --ThSolve %f'%options['ThSolve']
             if dicomodel is not None:
                 runcommand+=' --DicoModel '+dicomodel
             if EvolutionSolFile is not None:
@@ -971,6 +1003,9 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
             runcommand="ClipCal.py --MSName %s --ColName %s "%(f,ClipCol)
             if DISettings is not None:
                 runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(outsols,SolsDir)
+            elif ApplyJonesCorr:
+                # DD solve on DI-corrected data: clip on the same DI-corrected visibilities, not on the raw column
+                runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(ApplyJonesCorr,SolsDir)
             runcommand+=" --WeightCol %s"%KMS_LUCKY_WEIGHTS_NAME
             runcommand += " --ChunkHours %f"%options['chunk_hours']
             
@@ -1910,7 +1945,7 @@ def main(o):
         
         # make a mask from the final image
         separator("Make mask for next iteration")
-        CurrentMaskName=make_mask('image_dirin_SSD.app.restored.fits',
+        CurrentMaskName=make_mask(restored_for_mask('image_dirin_SSD'),
                               o['thresholds'][0],
                               external_mask=external_mask,
                               catcher=catcher)
@@ -1946,11 +1981,11 @@ def main(o):
             separator("Cluster the sky model")
             ClusterFile='image_dirin_SSD_m.npy.ClusterCat.npy'
             if o['use_maskdiffuse']:
-                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                clusterGA(imagename=restored_for_mask("image_dirin_SSD_m"),
                       OutClusterCat=ClusterFile,
                       use_makemask_products=True)
             else:
-                clusterGA(imagename="image_dirin_SSD_m.app.restored.fits",
+                clusterGA(imagename=restored_for_mask("image_dirin_SSD_m"),
                       OutClusterCat=ClusterFile,
                       use_makemask_products=False)
         else:
@@ -2049,7 +2084,7 @@ def main(o):
                         )
 
             separator("Make mask for next iteration")
-            CurrentMaskName=make_mask('image_dirin_SSD_m_c_di.app.restored.fits',
+            CurrentMaskName=make_mask(restored_for_mask('image_dirin_SSD_m_c_di'),
                                     o['thresholds'][0],
                                     external_mask=external_mask,
                                     catcher=catcher)
@@ -2080,7 +2115,7 @@ def main(o):
 
             # make a mask from the full-res image
             separator("Make mask for next iteration")
-            CurrentMaskName=make_mask('image_dirin_SSD_m_c_di_m.app.restored.fits',
+            CurrentMaskName=make_mask(restored_for_mask('image_dirin_SSD_m_c_di_m'),
                                     o['thresholds'][1],
                                     external_mask=external_mask,
                                     catcher=catcher)
@@ -2153,7 +2188,7 @@ def main(o):
             stop(2)
 
         separator("Mask for deeper deconv")
-        CurrentMaskName=make_mask('image_phase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+        CurrentMaskName=make_mask(restored_for_mask('image_phase1'),o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         MPI_Manager.scpScatter(CurrentMaskName)
         CurrentBaseDicoModelName=mask_dicomodel('image_phase1.DicoModel',CurrentMaskName,'image_phase1_masked.DicoModel',catcher=catcher)
         MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
@@ -2221,10 +2256,12 @@ def main(o):
             warn('User specified exit after amp-phase deconvolution.')
             stop(2)
 
+        # Not yet adapted beyond this point (second DI calibration and full mslist): stop cleanly
         MPI.COMM_WORLD.Barrier()
-        stopppp
+        warn('Stopping after image_ampphase1: the steps after it are not adapted to this pipeline version yet.')
+        stop(2)
         separator("Make Mask")
-        CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+        CurrentMaskName=make_mask(restored_for_mask('image_ampphase1'),o['thresholds'][1],external_mask=external_mask,catcher=catcher)
         MPI_Manager.scpScatter(CurrentMaskName)
         CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
         MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
@@ -2336,7 +2373,7 @@ def main(o):
 
         if not o['skip_di']:
             separator("Make Mask")
-            CurrentMaskName=make_mask('image_ampphase1_di.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+            CurrentMaskName=make_mask(restored_for_mask('image_ampphase1_di'),o['thresholds'][1],external_mask=external_mask,catcher=catcher)
             MPI_Manager.scpScatter(CurrentMaskName)
             CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
             MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
@@ -2467,7 +2504,7 @@ def main(o):
         stop(2)
 
     separator("MakeMask")
-    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
+    CurrentMaskName=make_mask(restored_for_mask(ImageName),10,external_mask=external_mask,catcher=catcher)
     MPI_Manager.scpScatter(CurrentMaskName)
 
     separator("Finish Deconvolution AP (full mslist)")
@@ -2493,7 +2530,7 @@ def main(o):
                                        MaxMinorIterInitHMP=10000,smooth=True,**ddf_kw, mpiManager=MPI_Manager)
 
     separator("MakeMask")
-    CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][2],external_mask=external_mask,catcher=catcher)
+    CurrentMaskName=make_mask(restored_for_mask(ImageName),o['thresholds'][2],external_mask=external_mask,catcher=catcher)
     CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName,ImageName+'_masked.DicoModel',catcher=catcher)
     MPI_Manager.scpScatter("%s.DicoModel"%CurrentBaseDicoModelName)
     MPI_Manager.scpScatter(CurrentMaskName)
