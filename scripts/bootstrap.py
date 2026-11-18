@@ -102,16 +102,47 @@ def run_bootstrap(o):
         len(o['names'])!=cl or len(o['groups'])!=cl):
         die('Names, groups, radii and frequencies entries must be the same length as the catalogue list')
 
-    # bootstrap images at low resolution: needs an explicit restoring beam
-    if o['low_psf_arcsec'] is None:
-        die('bootstrap needs low_psf_arcsec set (e.g. 50.) in the [image] section')
-    low_uvrange=[o['image_uvmin'],2.5*206.0/o['low_psf_arcsec']]
-    if o['low_imsize'] is not None:
-        low_imsize=o['low_imsize'] # allow over-ride
-    else:
-        low_imsize=int(round(old_div(o['imsize']*o['cellsize'],o['low_cell'])))
 
-    low_robust=o['low_robust']
+    # If dedicated bootstrap keys are given, use those.
+    if o['bootstrap_psf_arcsec'] is not None:
+        boot_psf_arcsec  = o['bootstrap_psf_arcsec']
+        boot_uvrange     = [o['bootstrap_uvmin'], 2.5*206.0 / boot_psf_arcsec]
+        boot_robust      = o['bootstrap_robust']
+        boot_cell        = o['bootstrap_cell']
+        boot_inner_taper = o['bootstrap_inner_taper']
+        boot_outer_taper = o['bootstrap_outer_taper']
+
+        # temp bootstrap debug cleanmode option. Allows for different cleanmode than main process,
+        # since it is separate and doesn't share any DicoModel data with the rest.
+        if o['boot_cleanmode_override'] != 'None':
+            boot_cleanmode = o['boot_cleanmode_override']
+        else:
+            boot_cleanmode = o['cleanmode']
+        
+        if o['bootstrap_imsize'] is not None:
+            boot_imsize = o['bootstrap_imsize']
+        else:
+            # fallback to using same extent as main image, but differnt cellsize
+            boot_imsize = int(o['imsize'] * o['cellsize'] / boot_cell)
+
+    # If no bootstrap keys found, or not given, default to image_low parameters
+    else:
+        if o['low_psf_arcsec'] is None: die('bootstrap needs low_psf_arcsec set (e.g. 50.) in the [image] section')
+
+        boot_psf_arcsec  = o['low_psf_arcsec']
+        boot_uvrange     = [o['image_uvmin'], 2.5*206.0 / boot_psf_arcsec]
+        boot_robust      = o['low_robust']
+        boot_cell        = o['low_cell']
+        boot_inner_taper = o['low_inner_taper']
+        boot_outer_taper = o['low_outer_taper']
+
+        boot_cleanmode = o['cleanmode']
+        
+        if o['low_imsize'] is not None:
+            boot_imsize = o['low_imsize'] # allow over-ride
+        else:
+            boot_imsize = int(o['imsize'] * o['cellsize'] / boot_cell)
+    
 
     # Clear the shared memory
     run('CleanSHM.py',dryrun=o['dryrun'])
@@ -149,26 +180,56 @@ def run_bootstrap(o):
         # Clean in cube mode
         # As for the main pipeline, first make a dirty map
         ddf_image('image_bootstrap_'+obsid+'_init','temp_mslist.txt',
-                  cleanmask=None,cleanmode=o['cleanmode'],ddsols='DDS0',
-                  applysols=o['apply_sols'][6],majorcycles=0,robust=low_robust,
-                  uvrange=low_uvrange,beamsize=o['low_psf_arcsec'],
-                  imsize=low_imsize,cellsize=o['low_cell'],
-                  options=o,colname=colname,automask=True,
-                  automask_threshold=15,smooth=True,cubemode=True,
-                  conditional_clearcache=True, STEP=0)
+                  cleanmask=None,
+                  cleanmode=boot_cleanmode,
+                  ddsols='DDS0',
+                  applysols=o['apply_sols'][6],
+                  majorcycles=0,
+                  robust=boot_robust,
+                  uvrange=boot_uvrange,
+                  beamsize=boot_psf_arcsec,
+                  imsize=boot_imsize,
+                  cellsize=boot_cell,
+                  inner_taper=boot_inner_taper,
+                  outer_taper=boot_outer_taper,
+                  options=o,
+                  colname=colname,
+                  automask=True,
+                  automask_threshold=15,
+                  smooth=True,
+                  cubemode=True,
+                  conditional_clearcache=True,
+                  STEP=0)
+
         external_mask='bootstrap_external_mask.fits'
         make_external_mask(external_mask,'image_bootstrap_'+obsid+'_init.dirty.fits',use_tgss=True,clobber=False,cellsize='low_cell',options=o)
-        # Deep SSD clean with this external mask and automasking
+
+        # Deep clean with this external mask and automasking
         ddf_image('image_bootstrap_'+obsid,'temp_mslist.txt',
-                  cleanmask=external_mask,reuse_psf=True,reuse_dirty=True,
-                  cleanmode=o['cleanmode'],ddsols='DDS0',applysols=o['apply_sols'][6],
-                  majorcycles=5,robust=low_robust,uvrange=low_uvrange,
-                  beamsize=o['low_psf_arcsec'],imsize=low_imsize,
-                  cellsize=o['low_cell'],options=o,
-                  colname=colname,automask=True,
-                  automask_threshold=15,smooth=True,cubemode=True,
-                  wscms_peakfactor=0.01,wscms_rescue_rms_factor=5.0,
-                  conditional_clearcache=False, STEP=0)
+                  cleanmask=external_mask,
+                  reuse_psf=True,
+                  reuse_dirty=True,
+                  cleanmode=boot_cleanmode,
+                  ddsols='DDS0',
+                  applysols=o['apply_sols'][6],
+                  majorcycles=5,
+                  robust=boot_robust,
+                  uvrange=boot_uvrange,
+                  beamsize=boot_psf_arcsec,
+                  imsize=boot_imsize,
+                  cellsize=boot_cell,
+                  inner_taper=boot_inner_taper,
+                  outer_taper=boot_outer_taper,
+                  options=o,
+                  colname=colname,
+                  automask=True,
+                  automask_threshold=15,
+                  smooth=True,
+                  cubemode=True,
+                  wscms_peakfactor=0.01,
+                  wscms_rescue_rms_factor=5.0,
+                  conditional_clearcache=False,
+                  STEP=0)
 
         if (os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl') or
             os.path.isfile('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl')):
