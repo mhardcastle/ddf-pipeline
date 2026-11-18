@@ -398,7 +398,8 @@ def ddf_image(
     robust=0,
     apply_weights=True,
     use_weightspectrum=False,
-    use_tapered_short_spacings=None,
+    inner_taper=None,
+    outer_taper=None,
 
     # RIME
     do_decorr=None,
@@ -504,7 +505,8 @@ def ddf_image(
     if imsize             is None: imsize             = options['imsize']
     if cellsize           is None: cellsize           = options['cellsize']
     if facets_skip_th     is None: facets_skip_th     = options['facets_skip_th']
-    if use_tapered_short_spacings is None: use_tapered_short_spacings = options['use_tapered_short_spacings']
+    if inner_taper        is None: inner_taper        = options['inner_taper']
+    if outer_taper        is None: outer_taper        = options['outer_taper']
     if do_decorr          is None: do_decorr          = options['do_decorr']
     if cleanmode          is None: cleanmode          = options['cleanmode']
     if flux_threshold     is None: flux_threshold     = options['flux_threshold']
@@ -605,14 +607,17 @@ def ddf_image(
         runcommand += ' --Weight-BeamPower=1'
     weight_col = "IMAGING_WEIGHT" if apply_weights else ("WEIGHT_SPECTRUM" if use_weightspectrum else "None")
     runcommand += f' --Weight-ColName="{weight_col}"'
-    if use_tapered_short_spacings:
-        # include 0-uvmin at reduced weight instead of cutting it
-        uvrange = [0, uvrange[1]] if uvrange is not None else [0, options['uvmax']]
-        # lower weight between 0-0.1 km, full weight by 0.1 km
-        runcommand += ' --Weight-EnableSigmoidTaper=1 --Weight-SigmoidTaperInnerCutoff=25 --Weight-SigmoidTaperInnerRolloffStrength=0.35 --Weight-SigmoidTaperOuterCutoff=1000000 --Weight-SigmoidTaperOuterRolloffStrength=1'
-    if uvrange is not None:
-        # Selection flag, kept here: the taper above rewrites uvrange
-        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
+
+    # if inner_taper=[a,b], outer_taper=[c,d], uvrange should be atleast [a,d]
+    # if uvrange=[0,100] and outer_taper=[10,50], then its save to restrict uvrange to [0,50] without loss of information
+    if uvrange is None: uvrange = [options['uvmin'], options['uvmax']]
+    if inner_taper is not None:
+        uvrange = [inner_taper[0], uvrange[1]]
+        runcommand += f' --Weight-TaperInner=[{inner_taper[0]},{inner_taper[1]}]'
+    if outer_taper is not None:
+        uvrange = [uvrange[0], outer_taper[1]]
+        runcommand += f' --Weight-TaperOuter=[{outer_taper[0]},{outer_taper[1]}]'
+    if uvrange is not None: runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
 
     # RIME
     if do_decorr: runcommand +=  ' --RIME-DecorrMode=FT'
@@ -2905,6 +2910,8 @@ def main(o):
                 use_dicomodel=False,
                 normalization=o['normalize'][2],
                 uvrange=low_uvrange,
+                inner_taper=o['low_inner_taper'],
+                outer_taper=o['low_outer_taper'],
                 AllowNegativeInitHMP=True,
                 smooth=True,
                 catcher=catcher,
@@ -2934,6 +2941,8 @@ def main(o):
                   dirty_from_resid=True,
                   normalization=o['normalize'][2],
                   uvrange=low_uvrange,
+                  inner_taper=o['low_inner_taper'],
+                  outer_taper=o['low_outer_taper'],
                   AllowNegativeInitHMP=True,
                   smooth=True,
                   catcher=catcher,
@@ -2985,6 +2994,8 @@ def main(o):
                 dirty_from_resid=True,
                 normalization=o['normalize'][2],
                 uvrange=low_uvrange,
+                inner_taper=o['low_inner_taper'],
+                outer_taper=o['low_outer_taper'],
                 AllowNegativeInitHMP=True,
                 smooth=True,
                 catcher=catcher,
