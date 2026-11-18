@@ -430,6 +430,11 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     if 'Beam-At' in keywords:
         runcommand+=' --Beam-At=%s'%options['beam_at']
 
+    # several I/O workers load the data chunks ahead in parallel (beam, DI correction, BDA are computed there):
+    # with one, the main process waited 50-80% of the first pass of each image for the data
+    if 'Parallel-NIOWorkers' in keywords:
+        runcommand+=' --Parallel-NIOWorkers=4'
+
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
