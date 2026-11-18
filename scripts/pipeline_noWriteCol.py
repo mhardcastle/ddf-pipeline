@@ -444,9 +444,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     if light_io:
         # only these images (Output-Also gets the same list, it cannot be empty)
         runcommand+=' --Output-Images=%s'%saveimages
-        # PSF, dirty and last residual stay in /dev/shm for the next run on this MS list; the residual is
-        # not written to disk at the end of every major cycle either
-        runcommand+=' --Cache-Remnant=1 --Cache-LastResidual=OnlyVeryLast'
+        # PSF, dirty and last residual (and their keys) stay in /dev/shm for the next run on this MS list,
+        # nothing is written in the disk cache (DDFacet-0013)
+        runcommand+=' --Cache-Remnant=1'
         # no per-cycle diagnostic masks of SSD3
         if 'SSD3-CompactSplit' in keywords:
             runcommand+=' --SSD3-CompactSplit=Save=0'
@@ -554,14 +554,21 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
         p=cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/'+name
         if os.path.exists(p):
             return True
-        if not light_io or not os.path.exists(p+'.hash'):
+        if not light_io:
             return False
-        # --Cache-Remnant: only <name>.hash is in the cache dir, the images are in /dev/shm, and are lost if
-        # the job was restarted on other nodes (then DDF recomputes them instead of failing on a forced read)
+        # --Cache-Remnant: nothing on disk, the images and their key are in /dev/shm (lost if the job was
+        # restarted on other nodes: then DDF recomputes them instead of failing on a forced read). The dirty and
+        # the residual share one dict, <dict>.what says which one it holds (DDFacet CacheManager.remnantContent)
         import glob, getpass, re
         dico='AllImages_FMPSF' if name=='PSF' else 'AllImages_FM'
         base=re.sub(r"[^A-Za-z0-9_.-]", "_", os.path.basename(mslist.rstrip('/')))
-        return len(glob.glob('/dev/shm/Remnant_%s/%s*/%s'%(getpass.getuser(),base,dico)))>0
+        for d in glob.glob('/dev/shm/Remnant_%s/%s*/%s'%(getpass.getuser(),base,dico)):
+            try:
+                if os.path.isdir(d) and open(d+'.what').read().strip()==name:
+                    return True
+            except IOError:
+                pass
+        return False
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
         if cache_exists('LastResidual'):
