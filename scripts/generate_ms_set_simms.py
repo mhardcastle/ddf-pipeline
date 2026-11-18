@@ -866,6 +866,11 @@ def parse_args():
     p.add_argument("--ms-prefix", type=str, default="chunk")
     p.add_argument("--ms-list",   type=str, default="ms_list.txt")
 
+    p.add_argument("--keep-every", type=str, default=None, metavar="N[:K]",
+                   help="Only produce the MSs whose index i (in 0..nMS-1) satisfies i %% N == K (K defaults to 0), "
+                        "e.g. 8 -> chunk_0000, chunk_0008, chunk_0016, ...; 8:7 -> chunk_0007, chunk_0015, ... "
+                        "The frequency plan and the MS names/indices are those of the full --nMS set.")
+
     p.add_argument("--task-id",   type=int, default=None,
                    help="0-based task index. Defaults to $SLURM_PROCID.")
     p.add_argument("--num-tasks", type=int, default=None,
@@ -1043,9 +1048,22 @@ def main():
     chunks, df_adapted = plan_frequency_chunks(args.f0, args.f1, args.df, args.nMS)
     args.df = df_adapted   # use the (possibly adjusted) channel width throughout
 
+    # --- Subset of the MSs (--keep-every N[:K]): keep index i if i % N == K, global indices unchanged ---
+    indexed_chunks = list(enumerate(chunks))
+    if args.keep_every:
+        spl = str(args.keep_every).split(":")
+        keep_n = int(spl[0]); keep_k = int(spl[1]) if len(spl) > 1 else 0
+        if keep_n < 1 or not (0 <= keep_k < keep_n):
+            raise ValueError("--keep-every N[:K] needs N >= 1 and 0 <= K < N (got %s)" % args.keep_every)
+        indexed_chunks = [(i, c) for i, c in indexed_chunks if i % keep_n == keep_k]
+        print(f"--keep-every {args.keep_every}: producing {len(indexed_chunks)} of the {args.nMS} MSs "
+              f"(indices {', '.join('%04d' % i for i, _ in indexed_chunks[:4])}"
+              f"{', ...' if len(indexed_chunks) > 4 else ''})")
+
     # --- Task slice ---
     task_id, num_tasks = resolve_task_id_and_count(args)
-    my_chunks, offset  = my_share(chunks, task_id, num_tasks)
+    my_indexed_chunks, _ = my_share(indexed_chunks, task_id, num_tasks)
+    my_chunks = [c for _, c in my_indexed_chunks]
 
     direction = deg_to_direction(args.ra_deg, args.dec_deg)
     df_str    = hz_to_simms_str(args.df)
@@ -1053,7 +1071,7 @@ def main():
     n_ant = len(stations_enu) if stations_enu is not None else None
     ncorr = len(args.stokes.split())
 
-    print(f"Planned {args.nMS} MS(s) across {num_tasks} task(s); "
+    print(f"Planned {args.nMS} MS(s) ({len(indexed_chunks)} produced) across {num_tasks} task(s); "
           f"task {task_id} handles {len(my_chunks)} MS(s).")
     print(f"  Band : {args.f0/1e6:.6f} - {args.f1/1e6:.6f} MHz, "
           f"df = {args.df/1e3:.3f} kHz, {chunks[0][1]} channels/MS")
@@ -1090,8 +1108,7 @@ def main():
     template_path = None   # path of the first (template) MS, reused by later chunks
 
     try:
-        for local_i, (start_freq, num_channels) in enumerate(my_chunks):
-            i        = offset + local_i
+        for local_i, (i, (start_freq, num_channels)) in enumerate(my_indexed_chunks):
             ms_name  = f"{args.ms_prefix}_{i:04d}.MS"
             ms_path  = os.path.join(args.outdir, ms_name)
             ms_paths.append(os.path.abspath(ms_path))
