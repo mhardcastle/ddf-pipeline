@@ -353,9 +353,16 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     # saveimages lists _additional_ images to save
     if saveimages is None:
         saveimages=''
-    saveimages+='onNeds'
     if options is None:
         options=o # attempt to get global if it exists
+    # light_io: intermediate images (not image_full_*) only save what the pipeline reads afterwards
+    # (dirty, dirty.corr, app/int restored, + the images asked for by the caller), and their caches stay
+    # in /dev/shm (--Cache-Remnant) instead of being written to disk
+    light_io=options.get('light_io',False) and not imagename.startswith('image_full_')
+    if light_io:
+        saveimages='dDiI'+saveimages
+    else:
+        saveimages+='onNeds'
     if options.get('mask_from_mfs',False) and 'f' not in saveimages:
         saveimages+='f'
     if options is None:
@@ -434,6 +441,17 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     # with one, the main process waited 50-80% of the first pass of each image for the data
     if 'Parallel-NIOWorkers' in keywords:
         runcommand+=' --Parallel-NIOWorkers=4'
+    if light_io:
+        # only these images (Output-Also gets the same list, it cannot be empty)
+        runcommand+=' --Output-Images=%s'%saveimages
+        # PSF, dirty and last residual stay in /dev/shm for the next run on this MS list; the residual is
+        # not written to disk at the end of every major cycle either
+        runcommand+=' --Cache-Remnant=1 --Cache-LastResidual=OnlyVeryLast'
+        # no per-cycle diagnostic masks of SSD3
+        if 'SSD3-CompactSplit' in keywords:
+            runcommand+=' --SSD3-CompactSplit=Save=0'
+        if 'SSD3-NegSpectralMask' in keywords:
+            runcommand+=' --SSD3-NegSpectralMask=Save=0'
 
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
@@ -532,15 +550,27 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
     mpi_rank_str=""
     if mpiManager is not None and mpiManager.UseMPI:
         mpi_rank_str=".rank_0"
+    def cache_exists(name):
+        p=cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/'+name
+        if os.path.exists(p):
+            return True
+        if not light_io or not os.path.exists(p+'.hash'):
+            return False
+        # --Cache-Remnant: only <name>.hash is in the cache dir, the images are in /dev/shm, and are lost if
+        # the job was restarted on other nodes (then DDF recomputes them instead of failing on a forced read)
+        import glob, getpass, re
+        dico='AllImages_FMPSF' if name=='PSF' else 'AllImages_FM'
+        base=re.sub(r"[^A-Za-z0-9_.-]", "_", os.path.basename(mslist.rstrip('/')))
+        return len(glob.glob('/dev/shm/Remnant_%s/%s*/%s'%(getpass.getuser(),base,dico)))>0
     if dirty_from_resid:
         # possible that crashes could destroy the cache, so need to check
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/LastResidual'):
+        if cache_exists('LastResidual'):
             runcommand += ' --Cache-Dirty forceresidual'
     if reuse_dirty:
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/Dirty'):
+        if cache_exists('Dirty'):
             runcommand += ' --Cache-Dirty forcedirty'
     if reuse_psf:
-        if os.path.exists(cache_dir+'/'+mslist+mpi_rank_str+'.ddfcache/PSF'):
+        if cache_exists('PSF'):
             runcommand += ' --Cache-PSF force'
 
     if HMPsize is not None:
@@ -1926,6 +1956,7 @@ def main(o):
         # Deep SSD clean with this external mask and automasking
         separator("DI Deconv (externally defined sources)")
         CurrentBaseDicoModelName=ddf_image('image_dirin_SSD',o['mslist'],cleanmask=external_mask,cleanmode=DeconvMode,
+                                           saveimages='e', # residual01.fits, for the diffuse emission mask
                                            majorcycles=1,robust=o['image_robust'],reuse_psf=True,reuse_dirty=True,
                                            peakfactor=0.01,rms_factor=3,
                                            colname=colname,
