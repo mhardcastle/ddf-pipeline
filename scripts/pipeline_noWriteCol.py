@@ -925,7 +925,7 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 # DI solve: solver and polarisation mode from DISettings, as in pipeline.py
                 # (CohJones, o['di_cal_mode']); the KAFCA/Scalar defaults are for the DD solves
                 SolverType,PolMode=DISettings[0],DISettings[1]
-            runcommand = "env MAIN_PROCESS_RANKS=%s kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(MAIN_PROCESS_RANKS,f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
+            runcommand = ("env KMS_SERIAL_CHUNK_LOAD=1 " if options.get('kms_serial_chunk_load',False) else "")+"env MAIN_PROCESS_RANKS=%s kMS.py --MSName %s --SolverType %s --PolMode %s --BaseImageName %s --NIterKF %i --CovQ %f --LambdaKF=%f --NCPU %i --OutSolsName %s --InCol %s --wmax %f"%(MAIN_PROCESS_RANKS,f,SolverType,PolMode,imagename,niterkf, CovQ, options['LambdaKF'], options['NCPU_killms'], outsols,colname,options['wmax'])
 
             # check for option to stop pdb call and use it if present
 
