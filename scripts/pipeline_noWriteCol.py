@@ -561,8 +561,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',
         # the residual share one dict, <dict>.what says which one it holds (DDFacet CacheManager.remnantContent)
         import glob, getpass, re
         dico='AllImages_FMPSF' if name=='PSF' else 'AllImages_FM'
-        base=re.sub(r"[^A-Za-z0-9_.-]", "_", os.path.basename(mslist.rstrip('/')))
-        for d in glob.glob('/dev/shm/Remnant_%s/%s*/%s'%(getpass.getuser(),base,dico)):
+        # DDFacet: one remnant directory per MPI rank, <MS list>.rank_<i>_<tag> (<MS list>_<tag> without MPI); the
+        # pipeline checks rank 0's
+        base=re.sub(r"[^A-Za-z0-9_.-]", "_", os.path.basename(mslist.rstrip('/')))+mpi_rank_str
+        for d in glob.glob('/dev/shm/Remnant_%s/%s_*/%s'%(getpass.getuser(),base,dico)):
             try:
                 if os.path.isdir(d) and open(d+'.what').read().strip()==name:
                     return True
