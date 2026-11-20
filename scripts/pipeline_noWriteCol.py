@@ -66,6 +66,7 @@ global SetMS,Register
 Register=None
 
 KMS_LUCKY_WEIGHTS_NAME="IMAGING_WEIGHT.zarr"
+KMS_CLIP_TH=10.   # killMS --ClipTh: residual clipping of the weights, in sigma
 
 import time
 import copy # deepcopy
@@ -1038,26 +1039,10 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
             except:
                 pass
+            # residual clipping inside killMS (replaces the ClipCal step that followed each killMS run): zero weight
+            # for the visibilities whose residual, from killMS' free predict, is above KMS_CLIP_TH sigma
+            runcommand+=" --ClipTh %f"%KMS_CLIP_TH
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
-
-
-            # Clip anyway - on IMAGING_WEIGHT by default
-            # if DISettings is not None:
-            #     ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
-            # else:
-            #     ClipCol=colname
-            
-            ClipCol=colname
-            runcommand="ClipCal.py --MSName %s --ColName %s "%(f,ClipCol)
-            if DISettings is not None:
-                runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(outsols,SolsDir)
-            elif ApplyJonesCorr:
-                # DD solve on DI-corrected data: clip on the same DI-corrected visibilities, not on the raw column
-                runcommand+="  --ApplyJonesCorr %s --SolsDir %s"%(ApplyJonesCorr,SolsDir)
-            runcommand+=" --WeightCol %s"%KMS_LUCKY_WEIGHTS_NAME
-            runcommand += " --ChunkHours %f"%options['chunk_hours']
-            
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             try:
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Stop")

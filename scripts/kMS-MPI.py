@@ -93,7 +93,8 @@ def read_options():
 
     OP.add_argument('--ExtSols',type=str,help='External solution file. If set, will not solve.')
     OP.add_argument('--ApplyMode',type=str,help='Subtract selected sources. ')
-    OP.add_argument('--ClipMethod',type=str,help='Clip data in the IMAGING_WEIGHT column. Can be set to Resid, DDEResid or ResidAnt . ')
+    OP.add_argument('--LuckyWeights',help='Imaging weights from the per-antenna residual noise of the solver. ')
+    OP.add_argument('--ClipTh',help='Zero the weight of the visibilities whose residual is above ClipTh sigma (None: off). ')
     OP.add_argument('--OutSolsName',type=str,help='If specified will save the estimated solutions in this file. ')
     OP.add_argument('--ApplyToDir',type=int,help='Apply direction averaged gains to residual data in the mentioned direction. If ApplyCal=-1 takes the mean gain over directions. -2 if off. ')
     OP.add_argument('--MergeBeamToAppliedSol',type=int,help='Use the beam in applied solution. ')

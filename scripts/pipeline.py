@@ -63,6 +63,8 @@ Register=None
 import time
 import copy # deepcopy
 
+KMS_CLIP_TH=10.   # killMS --ClipTh: residual clipping of the weights, in sigma (replaces the ClipCal step)
+
 if not LOCAL_DEV:
     standard_library.install_aliases()
     from auxcodes import report,run,warn,die,Catcher,dotdict,separator,MSList,run_serial
@@ -856,16 +858,10 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Calibration")
             except:
                 pass
+            # residual clipping inside killMS (replaces the ClipCal step that followed each killMS run): zero weight
+            # for the visibilities whose residual, from killMS' free predict, is above KMS_CLIP_TH sigma
+            runcommand+=" --ClipTh %f"%KMS_CLIP_TH
             run(runcommand,dryrun=options['dryrun'],log=logfilename('KillMS-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
-
-
-            # Clip anyway - on IMAGING_WEIGHT by default
-            if DISettings is not None:
-                ClipCol="%s-%s"%(DISettings[-1],DISettings[-2])
-            else:
-                ClipCol=colname
-            runcommand="ClipCal.py --MSName %s --ColName %s"%(f,ClipCol)
-            run(runcommand,dryrun=options['dryrun'],log=logfilename('ClipCal-'+f_+'_'+rootfilename+'.log',options=options),quiet=options['quiet'])
 
             try:
                 Register.register("[killMS ms%i] %s"%(iFile,outsols),"Stop")
