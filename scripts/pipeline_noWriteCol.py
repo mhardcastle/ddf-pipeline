@@ -2259,6 +2259,7 @@ def main(o):
                                              options=o, # required to get the global variable o
                                              MergeSmooth=o['smoothing'], mpiManager=MPI_Manager, mslist_str='mslist',
                                              ApplyJonesCorr=CurrentDIkMSSolName,
+                                             SigmaFilterOutliers=o['sigma_clip'],
                                              )
 
         # as DDS3_full_slow: killms_data defaults for CovQ (0.1) and NIterKF (6)
@@ -2599,6 +2600,7 @@ def main(o):
                                     wtuv=o['wtuv'],
                                     robust=o['solutions_robust'],
                                     MergeSmooth=o['smoothing'],
+                                    SigmaFilterOutliers=o['sigma_clip'],
                                     dt=o['dt_fast'],catcher=catcher,
                                     mpiManager=MPI_Manager, mslist_str='full_mslist'
                                     )#,EvolutionSolFile=CurrentDDkMSSolName)
