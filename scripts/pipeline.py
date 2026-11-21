@@ -358,6 +358,9 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
         runcommand += " --HMP-OuterSpaceTh %f"%OuterSpaceTh
     if options['use_splitisland']:
        runcommand += " --SSDClean-MaxIslandSize %s"%options['splitisland_size']
+    # SSD3: GA only on islands within this size range (pixels across); the others keep their initial model
+    if options['ga_island_size'] not in (None,"","None") and 'SSD3-GAIslSize' in keywords:
+       runcommand += " --SSD3-GAIslSize=%s"%str(options['ga_island_size']).replace(" ","")
 
     if options['AutoFlagNyquist']:
        runcommand += " --Selection-AutoFlagNyquist 1"
