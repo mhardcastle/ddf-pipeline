@@ -29,6 +29,7 @@ rm pop.myPickle
 remove_columns.py big-mslist.txt
 CleanSHM.py
 #rm -rf /tmp/*
-rm $HOME/DDF_io_monitor*.csv
-rm $HOME/DDF_monitor.*.csv
-rm $HOME/DDF_register.*.csv
+MONDIR=${DDF_MONITOR_DIR:-$HOME}
+rm $MONDIR/DDF_io_monitor*.csv
+rm $MONDIR/DDF_monitor.*.csv
+rm $MONDIR/DDF_register.*.csv

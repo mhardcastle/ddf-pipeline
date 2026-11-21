@@ -1529,6 +1529,15 @@ def main(o):
         o['full_mslist']=MPI_Manager.DicoNode2fullmslist.get(socket.gethostname(),o['full_mslist'])
     
 
+    ################################
+    # directory of the monitoring CSV files (DDFacet.Other.MonitorDir): home by default, [control] monitor_dir if set
+    # ('.' = the running directory). Exported, so that the monitors, the register and the DDF/kMS processes use it
+    if o['monitor_dir'] not in (None,"","None"):
+        MonitorDir=os.path.abspath(os.path.expanduser(o['monitor_dir']))
+        os.makedirs(MonitorDir,exist_ok=True)
+        os.environ["DDF_MONITOR_DIR"]=MonitorDir
+    mpi_manager.Print("Monitoring CSV files in %s"%(os.environ.get("DDF_MONITOR_DIR") or os.path.expanduser("~")))
+
     separator('Run MemMonitor')
     mpi_manager.Print("kill MemMobitor")
     def PKILL(exe="MemMonitor.py"):
