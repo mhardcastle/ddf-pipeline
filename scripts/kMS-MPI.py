@@ -88,7 +88,6 @@ def read_options():
     OP.add_argument('--DoBar',help=' Draw progressbar. ',default="1")
     OP.add_argument('--NCPU',type=int,help='Number of cores to use.  ')
     OP.add_argument('--NThread',type=int,help='Number of OMP/BLAS/etc. threads to use.  ', default=1)
-    OP.add_argument('--UpdateWeights',help='Update imaging weights. ',default="1")
     OP.add_argument('--DebugPdb',type=int,help='Drop into Pdb on error. ')
 
     OP.add_argument('--ExtSols',type=str,help='External solution file. If set, will not solve.')

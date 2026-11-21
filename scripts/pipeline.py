@@ -797,8 +797,8 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 runcommand+=' --Weighting Natural'
             else:
                 runcommand+=' --Weighting Briggs --Robust=%f' % robust
-            if UpdateWeights is not None:
-                runcommand+=' --UpdateWeights=%f' %UpdateWeights
+            # (UpdateWeights: killMS option removed, the weights are written whenever LuckyWeights/ClipTh compute them;
+            #  the keyword is kept in the killms_data signatures and ignored)
             if uvrange is not None:
                 if wtuv is not None:
                     runcommand+=' --WTUV=%f --WeightUVMinMax=%f,%f' % (wtuv, uvrange[0], uvrange[1])
@@ -2048,7 +2048,6 @@ def main(o):
                         catcher=catcher,
                         dt=o['dt_di'],
                         DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),
-                        UpdateWeights=1,
                         mpiManager=MPI_Manager, mslist_str='mslist'
                         )
 
@@ -2208,7 +2207,7 @@ def main(o):
                     niterkf=o['NIterKF'][5],uvrange=killms_uvrange,wtuv=o['wtuv'],robust=o['solutions_robust'],
                     catcher=catcher,
                     dt=o['dt_di'],
-                    DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),UpdateWeights=1,
+                    DISettings=("CohJones",o['di_cal_mode'],"DD_PREDICT","DATA_DI_CORRECTED"),
                     mpiManager=MPI_Manager, mslist_str='full_mslist'
                     )
         colname="DATA_DI_CORRECTED"
