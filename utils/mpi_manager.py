@@ -119,15 +119,20 @@ class MSSet():
             L_node_ms=[]
             mslist=nodes2ms[None]
             ListNodes=sorted(list(set([node.split("@")[0] for node in self.ListNodesBeingUsed])))
-            DicoNodesToLSites={}
+            DicoNodesToAllSites={}
             for site in self.ListNodesBeingUsed:
                 node,local_rank=site.split("@")
-                L=DicoNodesToLSites.get(node,[])
+                L=DicoNodesToAllSites.get(node,[])
                 L.append(site)
-                DicoNodesToLSites[node]=L
+                DicoNodesToAllSites[node]=L
+            DicoNodesToLSites={node:list(L) for node,L in DicoNodesToAllSites.items()}
             iNode=0
             for ThisMS in mslist:
                 node=ListNodes[iNode]
+                # more MSs than MPI ranks: once every rank of the node has an MS, start again from its first rank
+                # (several MSs per rank) instead of failing with an IndexError
+                if len(DicoNodesToLSites[node])==0:
+                    DicoNodesToLSites[node]=list(DicoNodesToAllSites[node])
                 site=DicoNodesToLSites[node][0]
                 DicoNodesToLSites[node].remove(site)
                 L_node_ms.append((site,ThisMS))
