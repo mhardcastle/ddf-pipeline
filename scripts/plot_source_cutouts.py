@@ -21,15 +21,13 @@ DDFacet tessel region file (ds9 lines + labelled points) is drawn on the cutouts
 (instead of the circles; --circle to keep them) and on an overview PNG of the
 whole image (<out>_tessel.png, image --overview, default the last one).
 
-Large views of the final image (--large-image, default the last one):
-  * per source, <out>_large_<name>.png: one big panel (--large-size inches) with
-    RA/Dec axes, --large-zoom times the field of view of the cutouts (default 4),
-    the facets, every source of the region file in the field, and a square showing
-    the cutout of the grid. --large-zoom 0 disables them.
-  * --tiles N: the whole final image in N x N tiles, <out>_tile_<i>_<j>.png
-    (row i from the bottom, column j from the left), each at full resolution unless
-    a tile is larger than --large-pix pixels (then binned, max per block).
-  Both use the colour scale of the grid (global: dsm.py sigma of the sigma image).
+Large views (--large, default on): per source and per image,
+  <out>_large_<source>_<image>.png: the field of the cutout of the grid (pad x the
+  circle diameter) as one big panel (--large-size inches) with RA/Dec axes, the
+  facets and the beam, same colour scale as the grid. Larger than --large-pix
+  pixels per side, the view is binned (max per block, said in the title).
+  --tiles N: the whole of every image in N x N tiles <out>_tile_<image>_<i>_<j>.png
+  (row i from the bottom, column j from the left), same rules.
 
 Examples
 --------
@@ -53,8 +51,8 @@ plot_source_cutouts.py sources.reg --per-page 6 --each -o cutouts.png
 plot_source_cutouts.py sources.reg --suffix .app.restored_mfs.fits \\
     --tessel image_phase1.tessel.reg --overview 2 -o cutouts.png
 
-# Large views 8x the cutout field, and the whole final image in 3x3 tiles:
-plot_source_cutouts.py sources.reg --large-zoom 8 --tiles 3 -o cutouts.png
+# No large views, but every image in 3x3 tiles:
+plot_source_cutouts.py sources.reg --no-large --tiles 3 -o cutouts.png
 
 Region file
 -----------
@@ -80,7 +78,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Ellipse, Rectangle
+from matplotlib.patches import Circle, Ellipse
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
@@ -500,11 +498,9 @@ def large_lims(im, data, lims, args):
     return (-args.nsigma * rms, vmax)
 
 
-def plot_big_panel(im, data, wcs, f, origin, args, outname, lims, sources, title,
-                   box=None, fov_text=None):
-    """One big panel of `data` (pixels [origin, ...) of `im` binned by f, pixel frame `wcs`)
-    with RA/Dec axes, facets, every source of the region file, an optional box (x0,y0,w,h)
-    in panel pixels and the beam"""
+def plot_big_panel(im, data, wcs, f, args, outname, lims, title, fov_text=None):
+    """One big panel of `data` (`im` binned by f, pixel frame `wcs`) with RA/Dec axes,
+    the facets and the beam"""
     lims = large_lims(im, data, lims, args)
     fig = plt.figure(figsize=(args.large_size, args.large_size))
     ax = fig.add_subplot(111, projection=wcs)
@@ -513,18 +509,6 @@ def plot_big_panel(im, data, wcs, f, origin, args, outname, lims, sources, title
     ny, nx = data.shape
     if args.tessel_data is not None:
         draw_tessel(ax, wcs, args.tessel_data, args.tessel_color, args.fontsize, shape=data.shape)
-    for s in sources:
-        x, y = im.src_pix(s)
-        x, y = (x - origin[0] + 0.5) / f - 0.5, (y - origin[1] + 0.5) / f - 0.5
-        if not (np.isfinite(x) and np.isfinite(y)) or not (-0.5 <= x < nx - 0.5 and -0.5 <= y < ny - 0.5):
-            continue
-        ax.add_patch(Circle((x, y), im.rad_pix(s) / f, fill=False, ls="--", lw=0.8,
-                            ec=args.overlay, alpha=0.8))
-        ax.text(x + im.rad_pix(s) / f, y, " " + s["name"], color=args.overlay,
-                fontsize=args.fontsize, va="center", clip_on=True)
-    if box is not None:
-        ax.add_patch(Rectangle(box[:2], box[2], box[3], fill=False, lw=1.0,
-                               ec=args.overlay, alpha=0.9))
     if im.beam is not None:
         bmaj = (im.beam[0] / im.pixscale[1]).decompose().value / f
         bmin = (im.beam[1] / im.pixscale[1]).decompose().value / f
@@ -552,29 +536,21 @@ def plot_big_panel(im, data, wcs, f, origin, args, outname, lims, sources, title
     print("wrote", outname)
 
 
-def plot_large(im, src, args, outname, lims, sources):
-    """Large view of `im` around `src`: --large-zoom x the field of the cutouts"""
-    rad = im.rad_pix(src)
-    small = int(np.ceil(2 * rad * args.pad)) | 1
-    size = int(np.ceil(small * args.large_zoom)) | 1
-    c, _ = im.cutout(src, args.pad, size=size)
+def plot_large(im, src, args, outname, lims):
+    """Large view of `im`: the same field as the cutout of the grid"""
+    c, _ = im.cutout(src, args.pad)
     if c is None:
         print("WARNING: %s outside %s, no large view" % (src["name"], im.label))
         return
+    size = max(c.data.shape)
     f = max(1, int(np.ceil(size / float(args.large_pix))))
-    data = bin_max(c.data, f)
-    wcs = binned_wcs(c.wcs, f)
-    cx, cy = c.position_cutout
-    box = ((cx + 0.5 - small / 2.) / f - 0.5, (cy + 0.5 - small / 2.) / f - 0.5, small / f, small / f)
-    if src["radius"].unit == u.pix:
-        fov = "%i px" % size
-    else:
-        fov = fmt_angle(size * im.pixscale[1])
-    plot_big_panel(im, data, wcs, f, c.origin_original, args, outname, lims, sources,
-                   "%s - %s" % (im.label, src["name"]), box=box, fov_text=fov)
+    fov = 2 * src["radius"] * args.pad
+    fovs = ("%.0f px" % fov.value) if fov.unit == u.pix else fmt_angle(fov)
+    plot_big_panel(im, bin_max(c.data, f), binned_wcs(c.wcs, f), f, args, outname, lims,
+                   "%s - %s" % (im.label, src["name"]), fov_text=fovs)
 
 
-def plot_tiles(im, args, base, ext, lims, sources):
+def plot_tiles(im, args, base, ext, lims, safe_label):
     """Whole image in N x N tiles at full resolution (binned if > --large-pix)"""
     ny, nx = im.data.shape
     n = args.tiles
@@ -587,12 +563,10 @@ def plot_tiles(im, args, base, ext, lims, sources):
         for j in range(n):
             y0, y1, x0, x1 = ys[i], ys[i + 1], xs[j], xs[j + 1]
             f = max(1, int(np.ceil(max(y1 - y0, x1 - x0) / float(args.large_pix))))
-            data = bin_max(im.data[y0:y1, x0:x1], f)
             wcs = im.wcs.deepcopy()
             wcs.wcs.crpix = wcs.wcs.crpix - np.array([x0, y0])
-            wcs = binned_wcs(wcs, f)
-            plot_big_panel(im, data, wcs, f, (x0, y0), args,
-                           "%s_tile_%i_%i%s" % (base, i, j, ext), lims, sources,
+            plot_big_panel(im, bin_max(im.data[y0:y1, x0:x1], f), binned_wcs(wcs, f), f, args,
+                           "%s_tile_%s_%i_%i%s" % (base, safe_label, i, j, ext), lims,
                            "%s - tile (%i,%i) of %ix%i" % (im.label, i, j, n, n))
 
 
@@ -683,17 +657,14 @@ def main():
     p.add_argument("--overview-pix", type=int, default=2000,
                    help="max size of the binned overview image in pixels (default 2000)")
     p.add_argument("--overview-size", type=float, default=12., help="overview size in inches")
-    p.add_argument("--large-image", type=int, default=-1,
-                   help="index of the image of the large views and tiles (default: the last one)")
-    p.add_argument("--large-zoom", type=float, default=4.,
-                   help="large views <out>_large_<name>.png: field = this x the cutout field "
-                        "(default 4; 0 = no large views)")
+    p.add_argument("--no-large", dest="large", action="store_false",
+                   help="do not write the large views <out>_large_<source>_<image>.png")
     p.add_argument("--large-size", type=float, default=10., help="large views/tiles size in inches")
     p.add_argument("--large-pix", type=int, default=3000,
                    help="large views/tiles larger than this (pixels per side) are binned, "
                         "max per block (default 3000)")
     p.add_argument("--tiles", type=int, default=0,
-                   help="also write the whole large image in N x N tiles <out>_tile_<i>_<j>.png")
+                   help="also write every image in N x N tiles <out>_tile_<image>_<i>_<j>.png")
     args = p.parse_args()
     args.cmap = get_cmap(args.cmap)
     if args.stretch is None:
@@ -759,13 +730,14 @@ def main():
         for src in sources:
             safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", src["name"])
             plot_page([src], images, args, "%s_%s%s" % (base, safe, ext), global_lims)
-    big = images[args.large_image]
-    if args.large_zoom > 0:
-        for src in sources:
-            safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", src["name"])
-            plot_large(big, src, args, "%s_large_%s%s" % (base, safe, ext), global_lims, sources)
-    if args.tiles > 0:
-        plot_tiles(big, args, base, ext, global_lims, sources)
+    for im in images:
+        lab = re.sub(r"[^A-Za-z0-9_.-]+", "_", im.label).strip("_")
+        if args.large:
+            for src in sources:
+                safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", src["name"])
+                plot_large(im, src, args, "%s_large_%s_%s%s" % (base, safe, lab, ext), global_lims)
+        if args.tiles > 0:
+            plot_tiles(im, args, base, ext, global_lims, lab)
 
 
 if __name__ == "__main__":
