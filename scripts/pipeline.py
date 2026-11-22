@@ -317,7 +317,7 @@ def ddf_shift(imagename,shiftfile,catcher=None,options=None,dicomodel=None,verbo
     else:
          run(runcommand,dryrun=options['dryrun'],log=logfilename(f'DDF-{imagename}_shift.log',options=options),quiet=options['quiet'])
 
-def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, options):
+def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, options, density=None):
     # This function takes care of creating the scalebank required by WSCMS2.
     # The scale can be provided in parset, in a single list, 
     # or automatically generated based on a given beam, scale density, and max scale.
@@ -330,12 +330,12 @@ def wscms_make_scalebank(current_cellsize, scales, scale_cap, scale_neg_cap, opt
     final_cellsize = options["cellsize"]
     beam_start_px  = options["psf_arcsec"] / final_cellsize
     beam_final_px  = options["final_psf_arcsec"] / final_cellsize
-    geo_density    = options["wscms_scale_density"]
+    geo_density    = options["wscms_scale_density"] if density is None else density
     
     cell_ratio = final_cellsize / current_cellsize
     
-    if options["wscms_scale_density"] <=1:
-        die('wscms_scale_density must be > 1 to avoid infinite scales')
+    if geo_density <=1:
+        die('scale density must be > 1 to avoid infinite scales')
     
     # if no cap is provided in the parset, we can set it internally
     if scale_cap is None:
@@ -1710,6 +1710,7 @@ def subtractOuterSquare(o, mpiManager=None):
             use_dicomodel=False,
             normalization=o['normalize'][2],
             uvrange=wide_uvrange,
+            wscms_use_local_rms=False,
             apply_weights=False,
             use_weightspectrum=o['use_weightspectrum'],
             AllowNegativeInitHMP=True,
@@ -1743,6 +1744,7 @@ def subtractOuterSquare(o, mpiManager=None):
             dirty_from_resid=True,
             normalization=o['normalize'][2],
             uvrange=wide_uvrange,
+            wscms_use_local_rms=False,
             apply_weights=False,
             use_weightspectrum=o['use_weightspectrum'],
             AllowNegativeInitHMP=True,
@@ -1782,6 +1784,7 @@ def subtractOuterSquare(o, mpiManager=None):
                   dicomodel_base='image_full_wide_im',
                   #normalization=o['normalize'][0],
                   #uvrange=wide_uvrange,
+                  wscms_use_local_rms=False,
                   apply_weights=False,
                   use_weightspectrum=o['use_weightspectrum'],
                   catcher=catcher,
@@ -1823,6 +1826,7 @@ def subtractOuterSquare(o, mpiManager=None):
               reuse_psf=True,
               normalization=o['normalize'][2],
               uvrange=wide_uvrange,
+              wscms_use_local_rms=False,
               apply_weights=False,
               use_weightspectrum=o['use_weightspectrum'],
               AllowNegativeInitHMP=True,
