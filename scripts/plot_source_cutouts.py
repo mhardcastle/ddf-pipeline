@@ -21,6 +21,16 @@ DDFacet tessel region file (ds9 lines + labelled points) is drawn on the cutouts
 (instead of the circles; --circle to keep them) and on an overview PNG of the
 whole image (<out>_tessel.png, image --overview, default the last one).
 
+Large views of the final image (--large-image, default the last one):
+  * per source, <out>_large_<name>.png: one big panel (--large-size inches) with
+    RA/Dec axes, --large-zoom times the field of view of the cutouts (default 4),
+    the facets, every source of the region file in the field, and a square showing
+    the cutout of the grid. --large-zoom 0 disables them.
+  * --tiles N: the whole final image in N x N tiles, <out>_tile_<i>_<j>.png
+    (row i from the bottom, column j from the left), each at full resolution unless
+    a tile is larger than --large-pix pixels (then binned, max per block).
+  Both use the colour scale of the grid (global: dsm.py sigma of the sigma image).
+
 Examples
 --------
 # Default steps of the pipeline, looked up in the current directory:
@@ -30,18 +40,21 @@ plot_source_cutouts.py sources.reg -o cutouts.png
 plot_source_cutouts.py sources.reg --dir /path/to/run --suffix .app.restored_mfs.fits
 
 # Explicit images with labels (label=path):
-plot_source_cutouts.py sources.reg \
-    "DI=image_dirin_SSD_m_c.app.restored.fits" \
-    "DI-corr=image_dirin_SSD_m_c_di_m.app.restored.fits" \
-    "phase1=image_phase1.app.restored.fits" \
+plot_source_cutouts.py sources.reg \\
+    "DI=image_dirin_SSD_m_c.app.restored.fits" \\
+    "DI-corr=image_dirin_SSD_m_c_di_m.app.restored.fits" \\
+    "phase1=image_phase1.app.restored.fits" \\
     "ampphase1=image_ampphase1.app.restored.fits" -o cutouts.png
 
 # Several pages (6 sources per PNG) and one PNG per source as well:
 plot_source_cutouts.py sources.reg --per-page 6 --each -o cutouts.png
 
 # Facets from a given tessel file, overview of the phase1 image:
-plot_source_cutouts.py sources.reg --suffix .app.restored_mfs.fits \
+plot_source_cutouts.py sources.reg --suffix .app.restored_mfs.fits \\
     --tessel image_phase1.tessel.reg --overview 2 -o cutouts.png
+
+# Large views 8x the cutout field, and the whole final image in 3x3 tiles:
+plot_source_cutouts.py sources.reg --large-zoom 8 --tiles 3 -o cutouts.png
 
 Region file
 -----------
@@ -67,7 +80,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Ellipse
+from matplotlib.patches import Circle, Ellipse, Rectangle
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
@@ -197,6 +210,36 @@ def draw_tessel(ax, wcs, tessel, color, fontsize, shape=None):
 # --------------------------------------------------------------------------
 # Images
 # --------------------------------------------------------------------------
+def bin_max(a, f):
+    """2D array binned by an integer factor f, max per block (NaNs ignored)"""
+    if f <= 1:
+        return np.asarray(a, np.float32)
+    ny, nx = a.shape
+    by, bx = ny // f, nx // f
+    out = np.empty((by, bx), np.float32)
+    for i in range(by):
+        blk = np.asarray(a[i * f:(i + 1) * f, :bx * f], dtype=np.float32).reshape(f, bx, f)
+        with np.errstate(all="ignore"):
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                out[i] = np.nanmax(np.nanmax(blk, axis=2), axis=0)
+    return out
+
+
+def binned_wcs(wcs, f):
+    """WCS of an image binned by f: block (i,j) covers original pixels [i*f, (i+1)*f)"""
+    w = wcs.deepcopy()
+    if f <= 1:
+        return w
+    w.wcs.crpix = (w.wcs.crpix - 0.5) / f + 0.5
+    if w.wcs.has_cd():
+        w.wcs.cd = w.wcs.cd * f
+    else:
+        w.wcs.cdelt = w.wcs.cdelt * f
+    return w
+
+
 class Image:
     """Lazily-read 2D plane of a (possibly 4D) FITS image."""
 
@@ -216,16 +259,20 @@ class Image:
         if "BMAJ" in h and "BMIN" in h:
             self.beam = (h["BMAJ"] * u.deg, h["BMIN"] * u.deg, h.get("BPA", 0.0))
 
-    def cutout(self, src, pad):
+    def rad_pix(self, src):
         if "pix" in src:
-            pos = src["pix"]
-            rad_pix = src["radius"].value
-        else:
-            pos = src["coord"]
-            rad_pix = (src["radius"] / self.pixscale[1]).decompose().value
-        size = int(np.ceil(2 * rad_pix * pad)) | 1
+            return src["radius"].value
+        return (src["radius"] / self.pixscale[1]).decompose().value
+
+    def position(self, src):
+        return src["pix"] if "pix" in src else src["coord"]
+
+    def cutout(self, src, pad, size=None):
+        rad_pix = self.rad_pix(src)
+        if size is None:
+            size = int(np.ceil(2 * rad_pix * pad)) | 1
         try:
-            c = Cutout2D(self.data, pos, (size, size), wcs=self.wcs,
+            c = Cutout2D(self.data, self.position(src), (size, size), wcs=self.wcs,
                          mode="partial", fill_value=np.nan, copy=True)
         except Exception:            # source outside this image
             return None, rad_pix
@@ -236,14 +283,14 @@ class Image:
         so that sources stay visible); read in strips to bound memory"""
         ny, nx = self.data.shape
         f = max(1, int(np.ceil(max(nx, ny) / float(maxpix))))
-        by, bx = ny // f, nx // f
-        out = np.empty((by, bx), np.float32)
-        for i in range(by):
-            blk = np.asarray(self.data[i * f:(i + 1) * f, :bx * f], dtype=np.float32)
-            blk = blk.reshape(f, bx, f)
-            with np.errstate(all="ignore"):
-                out[i] = np.nanmax(np.nanmax(blk, axis=2), axis=0)
-        return out, f
+        return bin_max(self.data, f), f
+
+    def src_pix(self, src):
+        """(x, y) 0-based pixel position of a source in this image"""
+        if "pix" in src:
+            return src["pix"]
+        x, y = self.wcs.wcs_world2pix([src["coord"].ra.deg], [src["coord"].dec.deg], 0)
+        return float(x[0]), float(y[0])
 
     def dsm_sigma(self, n=10000, seed=0):
         """As dsm.py: std of n random pixels of the whole image (NaNs dropped)"""
@@ -283,6 +330,8 @@ def fmt_flux(v, unit="Jy"):
 
 def fmt_angle(q):
     q = q.to(u.arcsec)
+    if q.value >= 7200:
+        return "%.2f°" % q.to(u.deg).value
     if q.value >= 120:
         return "%.1f′" % q.to(u.arcmin).value
     return "%.0f″" % q.value
@@ -413,13 +462,7 @@ def plot_page(sources, images, args, outname, global_lims=None):
 
 def plot_overview(im, args, outname, lims, sources):
     data, f = im.binned(args.overview_pix)
-    w = im.wcs.deepcopy()
-    # pixel frame of the binned image: block (i,j) covers original pixels [i*f, (i+1)*f)
-    w.wcs.crpix = (w.wcs.crpix - 0.5) / f + 0.5
-    if w.wcs.has_cd():
-        w.wcs.cd = w.wcs.cd * f
-    else:
-        w.wcs.cdelt = w.wcs.cdelt * f
+    w = binned_wcs(im.wcs, f)
     if lims is None:
         sig = im.dsm_sigma()
         lims = (-args.vmin_sigma * sig, args.vmax_sigma * sig)
@@ -442,6 +485,115 @@ def plot_overview(im, args, outname, lims, sources):
     fig.savefig(outname, dpi=args.dpi, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print("wrote", outname)
+
+
+def large_lims(im, data, lims, args):
+    """Colour limits of a large view: the grid's global scale, else from this view"""
+    if lims is not None:
+        return lims
+    a = np.asarray(data, np.float64)
+    a = a[np.isfinite(a)]
+    if a.size == 0:
+        return (-1., 1.)
+    rms = 1.4826 * np.median(np.abs(a - np.median(a)))
+    vmax = np.max(a) * (args.vmax_frac or 1.)
+    return (-args.nsigma * rms, vmax)
+
+
+def plot_big_panel(im, data, wcs, f, origin, args, outname, lims, sources, title,
+                   box=None, fov_text=None):
+    """One big panel of `data` (pixels [origin, ...) of `im` binned by f, pixel frame `wcs`)
+    with RA/Dec axes, facets, every source of the region file, an optional box (x0,y0,w,h)
+    in panel pixels and the beam"""
+    lims = large_lims(im, data, lims, args)
+    fig = plt.figure(figsize=(args.large_size, args.large_size))
+    ax = fig.add_subplot(111, projection=wcs)
+    mp = ax.imshow(data, origin="lower", cmap=args.cmap, interpolation="nearest",
+                   norm=make_norm(lims[0], lims[1], args))
+    ny, nx = data.shape
+    if args.tessel_data is not None:
+        draw_tessel(ax, wcs, args.tessel_data, args.tessel_color, args.fontsize, shape=data.shape)
+    for s in sources:
+        x, y = im.src_pix(s)
+        x, y = (x - origin[0] + 0.5) / f - 0.5, (y - origin[1] + 0.5) / f - 0.5
+        if not (np.isfinite(x) and np.isfinite(y)) or not (-0.5 <= x < nx - 0.5 and -0.5 <= y < ny - 0.5):
+            continue
+        ax.add_patch(Circle((x, y), im.rad_pix(s) / f, fill=False, ls="--", lw=0.8,
+                            ec=args.overlay, alpha=0.8))
+        ax.text(x + im.rad_pix(s) / f, y, " " + s["name"], color=args.overlay,
+                fontsize=args.fontsize, va="center", clip_on=True)
+    if box is not None:
+        ax.add_patch(Rectangle(box[:2], box[2], box[3], fill=False, lw=1.0,
+                               ec=args.overlay, alpha=0.9))
+    if im.beam is not None:
+        bmaj = (im.beam[0] / im.pixscale[1]).decompose().value / f
+        bmin = (im.beam[1] / im.pixscale[1]).decompose().value / f
+        if bmaj > 3:   # only when the beam is visible at this scale
+            off = max(bmaj, 0.03 * nx) * 0.8
+            ax.add_patch(Ellipse((off, off), bmaj, bmin, angle=90 + im.beam[2],
+                                 fc="none", ec=args.overlay, lw=0.9))
+    ax.set_xlim(-0.5, nx - 0.5); ax.set_ylim(-0.5, ny - 0.5)
+    for c in ax.coords:
+        c.set_ticklabel(size=args.fontsize)
+    ax.coords[0].set_axislabel("RA", size=args.fontsize)
+    ax.coords[1].set_axislabel("Dec", size=args.fontsize)
+    ax.coords.grid(color="0.7", alpha=0.25, ls=":")
+    sub = []
+    if fov_text:
+        sub.append(fov_text)
+    if f > 1:
+        sub.append("binned x%i, max per block" % f)
+    ax.set_title(title + ("  (%s)" % ", ".join(sub) if sub else ""), fontsize=args.fontsize + 1)
+    cb = fig.colorbar(mp, ax=ax, fraction=0.035, pad=0.01)
+    cb.ax.tick_params(labelsize=args.fontsize - 1)
+    cb.set_label(im.bunit, fontsize=args.fontsize)
+    fig.savefig(outname, dpi=args.dpi, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    print("wrote", outname)
+
+
+def plot_large(im, src, args, outname, lims, sources):
+    """Large view of `im` around `src`: --large-zoom x the field of the cutouts"""
+    rad = im.rad_pix(src)
+    small = int(np.ceil(2 * rad * args.pad)) | 1
+    size = int(np.ceil(small * args.large_zoom)) | 1
+    c, _ = im.cutout(src, args.pad, size=size)
+    if c is None:
+        print("WARNING: %s outside %s, no large view" % (src["name"], im.label))
+        return
+    f = max(1, int(np.ceil(size / float(args.large_pix))))
+    data = bin_max(c.data, f)
+    wcs = binned_wcs(c.wcs, f)
+    cx, cy = c.position_cutout
+    box = ((cx + 0.5 - small / 2.) / f - 0.5, (cy + 0.5 - small / 2.) / f - 0.5, small / f, small / f)
+    if src["radius"].unit == u.pix:
+        fov = "%i px" % size
+    else:
+        fov = fmt_angle(size * im.pixscale[1])
+    plot_big_panel(im, data, wcs, f, c.origin_original, args, outname, lims, sources,
+                   "%s - %s" % (im.label, src["name"]), box=box, fov_text=fov)
+
+
+def plot_tiles(im, args, base, ext, lims, sources):
+    """Whole image in N x N tiles at full resolution (binned if > --large-pix)"""
+    ny, nx = im.data.shape
+    n = args.tiles
+    ys = np.linspace(0, ny, n + 1).astype(int)
+    xs = np.linspace(0, nx, n + 1).astype(int)
+    if lims is None:
+        sig = im.dsm_sigma()
+        lims = (-args.vmin_sigma * sig, args.vmax_sigma * sig)
+    for i in range(n):
+        for j in range(n):
+            y0, y1, x0, x1 = ys[i], ys[i + 1], xs[j], xs[j + 1]
+            f = max(1, int(np.ceil(max(y1 - y0, x1 - x0) / float(args.large_pix))))
+            data = bin_max(im.data[y0:y1, x0:x1], f)
+            wcs = im.wcs.deepcopy()
+            wcs.wcs.crpix = wcs.wcs.crpix - np.array([x0, y0])
+            wcs = binned_wcs(wcs, f)
+            plot_big_panel(im, data, wcs, f, (x0, y0), args,
+                           "%s_tile_%i_%i%s" % (base, i, j, ext), lims, sources,
+                           "%s - tile (%i,%i) of %ix%i" % (im.label, i, j, n, n))
 
 
 def build_images(args):
@@ -531,6 +683,17 @@ def main():
     p.add_argument("--overview-pix", type=int, default=2000,
                    help="max size of the binned overview image in pixels (default 2000)")
     p.add_argument("--overview-size", type=float, default=12., help="overview size in inches")
+    p.add_argument("--large-image", type=int, default=-1,
+                   help="index of the image of the large views and tiles (default: the last one)")
+    p.add_argument("--large-zoom", type=float, default=4.,
+                   help="large views <out>_large_<name>.png: field = this x the cutout field "
+                        "(default 4; 0 = no large views)")
+    p.add_argument("--large-size", type=float, default=10., help="large views/tiles size in inches")
+    p.add_argument("--large-pix", type=int, default=3000,
+                   help="large views/tiles larger than this (pixels per side) are binned, "
+                        "max per block (default 3000)")
+    p.add_argument("--tiles", type=int, default=0,
+                   help="also write the whole large image in N x N tiles <out>_tile_<i>_<j>.png")
     args = p.parse_args()
     args.cmap = get_cmap(args.cmap)
     if args.stretch is None:
@@ -596,6 +759,13 @@ def main():
         for src in sources:
             safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", src["name"])
             plot_page([src], images, args, "%s_%s%s" % (base, safe, ext), global_lims)
+    big = images[args.large_image]
+    if args.large_zoom > 0:
+        for src in sources:
+            safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", src["name"])
+            plot_large(big, src, args, "%s_large_%s%s" % (base, safe, ext), global_lims, sources)
+    if args.tiles > 0:
+        plot_tiles(big, args, base, ext, global_lims, sources)
 
 
 if __name__ == "__main__":
