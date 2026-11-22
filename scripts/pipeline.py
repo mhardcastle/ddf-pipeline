@@ -461,6 +461,24 @@ def ddf_image(
     wscms_allow_refreeze=False,
     wscms_refreeze_depth=None,
 
+    # DDMSC (fast-deconv) settings. Mirrors the [DDMSC] section the DDFacet
+    # DDMSC hook reads; ddmsc_device is a stub for a later GPU switch (0 = CPU).
+    ddmsc_num_freq_basis_funcs=None,
+    ddmsc_multiscale_bias=None,
+    ddmsc_scales=None,
+    ddmsc_max_scale=None,
+    ddmsc_nsubminoriter=250,
+    ddmsc_subminorpeakfact=0.85,
+    ddmsc_minorstallthreshold=None,
+    ddmsc_minordivergencefactor=None,
+    ddmsc_automask=None,
+    ddmsc_automask_threshold=None,
+    ddmsc_automask_rms_factor=None,
+    ddmsc_padding=None,
+    ddmsc_gain=None,
+    ddmsc_allow_negative=None,
+    ddmsc_device=0,
+
     # GAClean
     HMPsize=None,
     RMSFactorInitHMP=1.0,
@@ -493,7 +511,7 @@ def ddf_image(
     if options is None:
         options = o # attempt to get global if it exists
 
-    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'wscms_local_rms_sig', 'thresholds', 'use_external_mask'):
+    for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'wscms_local_rms_sig', 'ddmsc_max_scale', 'ddmsc_automask_rms_factor', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
 
@@ -527,6 +545,20 @@ def ddf_image(
     if wscms_local_rms_strength  is None: wscms_local_rms_strength  = options['wscms_local_rms_strength']
     if wscms_local_rms_sig       is None: wscms_local_rms_sig       = options['wscms_local_rms_sig'][STEP]
     if wscms_signed_log_basis    is None: wscms_signed_log_basis    = options['wscms_signed_log_basis']
+
+    # pull default DDMSC settings from options if not specified
+    if ddmsc_num_freq_basis_funcs  is None: ddmsc_num_freq_basis_funcs  = options['ddmsc_num_freq_basis_funcs']
+    if ddmsc_multiscale_bias       is None: ddmsc_multiscale_bias       = options['ddmsc_multiscale_bias']
+    if ddmsc_scales                is None: ddmsc_scales                = options['ddmsc_scales']
+    if ddmsc_max_scale             is None: ddmsc_max_scale             = options['ddmsc_max_scale'][STEP]
+    if ddmsc_minorstallthreshold   is None: ddmsc_minorstallthreshold   = options['ddmsc_minorstallthreshold']
+    if ddmsc_minordivergencefactor is None: ddmsc_minordivergencefactor = options['ddmsc_minordivergencefactor']
+    if ddmsc_automask              is None: ddmsc_automask              = options['ddmsc_automask']
+    if ddmsc_automask_threshold    is None: ddmsc_automask_threshold    = options['ddmsc_automask_threshold']
+    if ddmsc_automask_rms_factor   is None: ddmsc_automask_rms_factor   = options['ddmsc_automask_rms_factor'][STEP]
+    if ddmsc_padding               is None: ddmsc_padding               = options['ddmsc_padding']
+    if ddmsc_gain                  is None: ddmsc_gain                  = options['ddmsc_gain']
+    if ddmsc_allow_negative        is None: ddmsc_allow_negative        = options['ddmsc_allow_negative']
 
     import DDFacet.Parset
     parset_file="%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)
@@ -745,14 +777,35 @@ def ddf_image(
             runcommand += ' --WSCMS-AllowRefreeze=True'
         if wscms_refreeze_depth is not None: runcommand += f' --WSCMS-RefreezeDepth={wscms_refreeze_depth}'
 
-    ###############
-    #### DDMSC ####
-    ###############
-    # elif cleanmode in ('DDMSC'):
-    #     import DDSMC... and do the magic things that need to make it work
-    #
-    #     die("not supported yet")
-    #
+    ############################
+    #### DDMSC (fast-deconv) ###
+    ############################
+    elif cleanmode == 'DDMSC':
+        # Flags the DDFacet DDMSC hook reads from GD['DDMSC'] and GD['Deconv'].
+        # Base command already covers Deconv-{Mode,MaxMajorIter,MaxMinorIter,
+        # PeakFactor,FluxThreshold,RMSFactor,CycleFactor}; Gain/AllowNegative added here.
+        runcommand += f' --DDMSC-NumFreqBasisFuncs={int(ddmsc_num_freq_basis_funcs)}'
+        runcommand += f' --DDMSC-MultiScaleBias={ddmsc_multiscale_bias}'
+
+        # scalebank: same ladder logic as WSCMS; forces to 2 for now for testing
+        ddmsc_scales_px, ddmsc_max_scale_px, _ = wscms_make_scalebank(cellsize, ddmsc_scales, ddmsc_max_scale, None, options, density=2.0)
+        runcommand += f' --DDMSC-Scales={ddmsc_scales_px} --DDMSC-MaxScale={ddmsc_max_scale_px}'
+
+        runcommand += f' --DDMSC-NSubMinorIter={int(ddmsc_nsubminoriter)} --DDMSC-SubMinorPeakFact={ddmsc_subminorpeakfact}'
+        runcommand += f' --DDMSC-MinorStallThreshold={ddmsc_minorstallthreshold} --DDMSC-MinorDivergenceFactor={ddmsc_minordivergencefactor}'
+        runcommand += f' --DDMSC-AutoMask={ddmsc_automask}'
+        if ddmsc_automask:
+            if ddmsc_automask_threshold is not None: runcommand += f' --DDMSC-AutoMaskThreshold={ddmsc_automask_threshold}'
+            runcommand += f' --DDMSC-AutoMaskRMSFactor={ddmsc_automask_rms_factor}'
+        runcommand += f' --DDMSC-Padding={ddmsc_padding}'
+
+        # Deconv-section knobs the hook reads that the base command doesn't emit.
+        # Peak/RMS overrides use the WSCMS STEP lists (fast early-stop defaults).
+        runcommand += f' --Deconv-Gain={ddmsc_gain} --Deconv-AllowNegative={ddmsc_allow_negative}'
+        runcommand += f' --Deconv-PeakFactor {options["wscms_peakfactor"][STEP]}'
+        runcommand += f' --Deconv-RMSFactor={options["wscms_rms_factor"][STEP]}'
+        # ddmsc_device is a pipeline-side stub for now: 0 = CPU/host backend.
+        # GPU execution will be wired here (and in DDF) once supported.
 
     # Mask
     if cleanmask is not None: runcommand += f' --Mask-External={cleanmask}'
