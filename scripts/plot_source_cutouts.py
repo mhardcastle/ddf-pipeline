@@ -19,7 +19,7 @@ restoring beam when the header has BMAJ/BMIN/BPA.
 Facets (--tessel, default <stem of the last image>.tessel.reg when it exists): the
 DDFacet tessel region file (ds9 lines + labelled points) is drawn on the cutouts
 (instead of the circles; --circle to keep them) and on an overview PNG of the
-whole image (<out>_tessel.png, image --overview, default the last one).
+whole image, one per image (<out>_tessel_<image>.png; --overview I for image I only).
 
 Large views (--large, default on): per source and per image,
   <out>_large_<source>_<image>.png: the field of the cutout of the grid (pad x the
@@ -47,7 +47,7 @@ plot_source_cutouts.py sources.reg \\
 # Several pages (6 sources per PNG) and one PNG per source as well:
 plot_source_cutouts.py sources.reg --per-page 6 --each -o cutouts.png
 
-# Facets from a given tessel file, overview of the phase1 image:
+# Facets from a given tessel file, overview of the phase1 image only:
 plot_source_cutouts.py sources.reg --suffix .app.restored_mfs.fits \\
     --tessel image_phase1.tessel.reg --overview 2 -o cutouts.png
 
@@ -650,10 +650,10 @@ def main():
     p.add_argument("--tessel-color", default="lime", help="colour of the facets (default lime)")
     p.add_argument("--circle", dest="show_circle", action="store_true",
                    help="also draw the region circles when facets are drawn")
-    p.add_argument("--overview", type=int, default=-1,
-                   help="index of the image shown whole with the facets in <out>_tessel.png "
-                        "(default: the last one)")
-    p.add_argument("--no-overview", action="store_true", help="do not write <out>_tessel.png")
+    p.add_argument("--overview", type=int, default=None,
+                   help="index of the only image shown whole with the facets "
+                        "(default: every image, <out>_tessel_<image>.png)")
+    p.add_argument("--no-overview", action="store_true", help="do not write the overviews <out>_tessel_<image>.png")
     p.add_argument("--overview-pix", type=int, default=2000,
                    help="max size of the binned overview image in pixels (default 2000)")
     p.add_argument("--overview-size", type=float, default=12., help="overview size in inches")
@@ -720,7 +720,10 @@ def main():
     base, ext = os.path.splitext(args.out)
     ext = ext or ".png"
     if not args.no_overview:
-        plot_overview(images[args.overview], args, "%s_tessel%s" % (base, ext), global_lims, sources)
+        ovs = images if args.overview is None else [images[args.overview]]
+        for im in ovs:
+            lab = re.sub(r"[^A-Za-z0-9_.-]+", "_", im.label).strip("_")
+            plot_overview(im, args, "%s_tessel_%s%s" % (base, lab, ext), global_lims, sources)
     n = args.per_page if args.per_page > 0 else len(sources)
     pages = [sources[k:k + n] for k in range(0, len(sources), n)]
     for k, page in enumerate(pages):
