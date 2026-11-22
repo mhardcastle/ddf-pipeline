@@ -493,9 +493,6 @@ def ddf_image(
     if options is None:
         options = o # attempt to get global if it exists
 
-    import DDFacet.Parset
-    keywords = parse_parset(["%s/DefaultParset.cfg" % os.path.dirname(DDFacet.Parset.__file__)],use_headings=True)
-
     for key in ('wscms_rms_factor', 'wscms_peakfactor', 'wscms_automask_rms_factor', 'wscms_neg_model_mode', 'wscms_max_scale', 'wscms_flux_threshold', 'wscms_local_rms_sig', 'thresholds', 'use_external_mask'):
         if STEP > len(options[key]) - 1:
             raise ValueError(f"STEP={STEP} out of range for {key} (length {len(options[key])})")
@@ -610,14 +607,17 @@ def ddf_image(
 
     # if inner_taper=[a,b], outer_taper=[c,d], uvrange should be atleast [a,d]
     # if uvrange=[0,100] and outer_taper=[10,50], then its save to restrict uvrange to [0,50] without loss of information
-    if uvrange is None: uvrange = [options['uvmin'], options['uvmax']]
-    if inner_taper is not None:
-        uvrange = [inner_taper[0], uvrange[1]]
-        runcommand += f' --Weight-TaperInner=[{inner_taper[0]},{inner_taper[1]}]'
-    if outer_taper is not None:
-        uvrange = [uvrange[0], outer_taper[1]]
-        runcommand += f' --Weight-TaperOuter=[{outer_taper[0]},{outer_taper[1]}]'
-    if uvrange is not None: runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
+    if uvrange is not None:
+        if inner_taper is not None:
+            uvrange = [inner_taper[0], uvrange[1]]
+            runcommand += f' --Weight-TaperInner=[{inner_taper[0]},{inner_taper[1]}]'
+
+        if outer_taper is not None:
+            uvrange = [uvrange[0], outer_taper[1]]
+            runcommand += f' --Weight-TaperOuter=[{outer_taper[0]},{outer_taper[1]}]'
+
+        # only pass the flag if uvrange is given. The DDF fallback is to use the full UV range.
+        runcommand += f' --Selection-UVRangeKm=[{uvrange[0]},{uvrange[1]}]'
 
     # RIME
     if do_decorr: runcommand +=  ' --RIME-DecorrMode=FT'
