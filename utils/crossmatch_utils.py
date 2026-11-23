@@ -35,7 +35,7 @@ def select_isolated_sources(t,radius,progress=False):
         dist=3600.0*separation(r['RA'],r['DEC'],t['RA'],t['DEC'])
         # dist=np.sqrt((np.cos(c_dec*np.pi/180.0)*(t['RA']-r['RA']))**2.0+(t['DEC']-r['DEC'])**2.0)*3600.0
         dist.sort()
-        r['NN_dist']=dist[1]
+        r['NN_dist'] = dist[1] if len(dist) > 1 else np.inf
 
     t=t[t['NN_dist']>radius]
     return t

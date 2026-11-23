@@ -1190,7 +1190,8 @@ def killms_data_serial(imagename,mslist,outsols,clusterfile=None,colname='CORREC
                 if NChanSols is None:
                     NChanSols=1 # reproduce old behaviour
                 runcommand+=' --NChanSols %i' % NChanSols
-                runcommand+=' --BeamMode %s'%options['BeamModel']
+                if options['BeamModel'] not in (None, 'None'):
+                    runcommand+=' --BeamMode %s'%options['BeamModel']
                 print(f"keywords={keywords}")
                 if 'Beam-PhasedArrayMode' in keywords: # incompatible change
                     runcommand+=' --PhasedArrayMode=A'
@@ -2471,7 +2472,7 @@ def main(o):
             if not USE_MPI or RANK == 0:
                 report('Running bootstrap')
                 try:
-                    run('bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
+                    run('env DDF_LOCAL_DEV=1 bootstrap.py '+' '.join(sys.argv[1:]),log=None,dryrun=o["dryrun"])
                 except Exception as e:
                     bootstrap_status = '%s: %s' % (type(e).__name__, e)
             if USE_MPI:

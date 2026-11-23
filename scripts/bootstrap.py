@@ -242,68 +242,179 @@ def run_bootstrap(o):
             img.write_catalog(catalog_type='srl',format='ascii',incl_chan='true')
             img.export_image(img_type='rms',img_format='fits')
 
-        if not LOCAL_DEV:
-            from make_fitting_product import make_catalogue
-            import fitting_factors
-            import find_outliers
+        resfile = obsid+'crossmatch-results-2.npy'
+        if o['bootstrap_method']=='rfs':
+
+            # Radio-Flux-Solver bootstrap. 
+            # The cube above was made from the same data, though RFS fits it per slice.
+            # RFS can use arbitrary catalogs, and is generally more accurate than the classic method.
+            
+            import importlib.util
+            from astropy.wcs import WCS
+
+            if importlib.util.find_spec('flux_calibrator_cli') is None:
+                die('RFS bootstrap needs the Radio-Flux-Solver package importable in this environment')
+
+            if o['rfs_catalog_dir'] is not None and not os.path.isdir(o['rfs_catalog_dir']):
+                die(f"RFS catalogue directory {o['rfs_catalog_dir']} does not exist")
+
+            # freqs is the same sorted list the spline below will use
+            cubefile = 'image_bootstrap_'+obsid+'.cube.int.restored.fits'
+            cubeheader = fits.getheader(cubefile)
+            cubedata = fits.getdata(cubefile)
+
+            # ensure data is as expected
+            if cubeheader['NAXIS'] != 4:
+                die(f"RFS bootstrap expects a 4D cube (freq,stokes,dec,ra), got NAXIS={cubeheader['NAXIS']}")
+            if cubeheader['NAXIS4'] != len(freqs):
+                die(f"Cube has {cubeheader['NAXIS4']} planes but the mslist gives {len(freqs)} frequencies")
+
+            # a clean 2D sky header for the per-band planes
+            planeheader = WCS(cubeheader).celestial.to_header()
+            for keyword in ['BUNIT','BMAJ','BMIN','BPA','CLEANBMJ','CLEANBMN','CLEANBPA']:
+                if keyword in cubeheader:
+                    planeheader[keyword]=cubeheader[keyword]
+            chanwidth = abs(cubeheader['CDELT4'])
+
+            def loadcorrection(path):
+                # Read a band fit: [scale, error] as a valid (1,2) array, else None
+                try:
+                    result = np.load(path)
+                except Exception:
+                    return None
+                if result.shape == (1,2) and np.all(np.isfinite(result)) and result[0,0] > 0:
+                    return result
+                return None
+
+            corrections = []
+            refitted = []
+            for i,freq in enumerate(freqs):
+                band = f'{obsid}band{i+1}'
+                planefile = os.path.abspath(band+'.fits')
+                outdir = os.path.abspath(band)
+                npyfile = os.path.join(outdir,band+'.npy')
+
+                planefreq = cubeheader['CRVAL4'] + (i+1 - cubeheader['CRPIX4']) * cubeheader['CDELT4']
+                if abs(planefreq - freq) > chanwidth / 2.0:
+                    die(f'Cube plane {i+1} is at {planefreq:g} Hz but the mslist says {freq:g} Hz')
+
+                if not o['dryrun'] and not os.path.isfile(planefile):
+                    fits.PrimaryHDU(data=cubedata[i,0,:,:], header=planeheader.copy()).writeto(planefile)
+
+                # check if the files already exist
+                if os.path.isfile(npyfile):
+                    correction = loadcorrection(npyfile)
+                    if correction is not None:
+                        warn(f'{band} correction exists, skipping RFS fit')
+                        corrections.append(correction)
+                        continue
+                    warn(f'{band} exists but is not valid, refitting')
+
+                warn(f'Running RFS for {band} ({freq/1e6:.6g} MHz)')
+                cmd = (f'{sys.executable} -m flux_calibrator_cli {planefile} '
+                     f'--freq {float(freq)!r} --freq-unit Hz '
+                     f'--catalogs {o["rfs_preset"]} '
+                     f'--anchor-name {band} --output-dir {outdir} '
+                     f'--save-correction-factors --save-csv --output-name {band} '
+                     f'--seed 0 --minimum-position-error 1.5 '
+                     f'--minimum-frequency-spacing {2e6:.1f} '
+                     f'--unit-fallback --spatial-filter')
+
+                if o['rfs_catalog_dir'] is not None:
+                    cmd += f' --reference-catalog-dir {os.path.abspath(o["rfs_catalog_dir"])}'
+
+                if not o['dryrun']:
+                    os.makedirs(outdir, exist_ok=True)
+
+                run(cmd, dryrun=o['dryrun'], log=logfilename('RFS-'+band+'.log'))
+
+                if o['dryrun']:
+                    continue
+
+                correction = loadcorrection(npyfile)
+                if correction is None:
+                    die(f'RFS did not produce any results for {band}')
+
+                corrections.append(correction)
+                refitted.append(band)
+
+            resfile = obsid + 'crossmatch-results_rfs.npy'
+            if len(corrections) == len(freqs) and not o['dryrun']:
+                # rebuild unless nothing was refitted and the saved file is still good
+                reassemble = refitted or not os.path.isfile(resfile)
+                if not reassemble:
+                    saved = np.load(resfile)
+                    reassemble = (saved.shape != (len(freqs), 2)
+                                or not np.all(np.isfinite(saved))
+                                or not np.all(saved[:, 0] > 0))
+                if reassemble:
+                    np.save(resfile, np.vstack(corrections))
+                    warn(f'Assembled {resfile}')
+
         else:
-            from utils.make_fitting_product import make_catalogue
-            from utils import fitting_factors,find_outliers
 
-        # generate the fitting product
-        if os.path.isfile(obsid+'crossmatch-1.fits'):
-            warn('Crossmatch table exists, skipping crossmatch')
-        else:
-            t = pt.table(omslist[0]+ '::FIELD', readonly=True, ack=False)
-            direction = t[0]['PHASE_DIR']
-            ra, dec = direction[0]
-
-            if (ra<0):
-                ra+=2*np.pi
-            ra*=180.0/np.pi
-            dec*=180.0/np.pi
-
-            cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
-            #make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl',ra,dec,2.5,cats,outnameprefix=obsid)
-            filenames=['image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl','image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl']
-            for filename in filenames:
-                if os.path.isfile(filename):
-                    break
+            if not LOCAL_DEV:
+                from make_fitting_product import make_catalogue
+                import fitting_factors
+                import find_outliers
             else:
-                die('Catalogue file does not exist!')
+                from utils.make_fitting_product import make_catalogue
+                from utils import fitting_factors,find_outliers
 
-            make_catalogue(filename,ra,dec,2.5,cats,outnameprefix=obsid)
+            # generate the fitting product
+            if os.path.isfile(obsid+'crossmatch-1.fits'):
+                warn('Crossmatch table exists, skipping crossmatch')
+            else:
+                t = pt.table(omslist[0]+ '::FIELD', readonly=True, ack=False)
+                direction = t[0]['PHASE_DIR']
+                ra, dec = direction[0]
+
+                if (ra<0):
+                    ra+=2*np.pi
+                ra*=180.0/np.pi
+                dec*=180.0/np.pi
+
+                cats=list(zip(o['catalogues'],o['names'],o['groups'],o['radii']))
+                #make_catalogue('image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl',ra,dec,2.5,cats,outnameprefix=obsid)
+                filenames=['image_bootstrap_'+obsid+'.cube.int.restored.pybdsm.srl','image_bootstrap_'+obsid+'.cube.int.restored.pybdsf.srl']
+                for filename in filenames:
+                    if os.path.isfile(filename):
+                        break
+                else:
+                    die('Catalogue file does not exist!')
+
+                make_catalogue(filename,ra,dec,2.5,cats,outnameprefix=obsid)
 
     
-        freqlist=open(obsid+'frequencies.txt','w')
-        for n,f in zip(o['names'],o['frequencies']):
-            freqlist.write('%f %s_Total_flux %s_E_Total_flux False\n' % (f,n,n))
-        for i,f in enumerate(freqs):
-            freqlist.write('%f Total_flux_ch%i E_Total_flux_ch%i True\n' % (f,i+1,i+1))
-        freqlist.close()
+            freqlist=open(obsid+'frequencies.txt','w')
+            for n,f in zip(o['names'],o['frequencies']):
+                freqlist.write('%f %s_Total_flux %s_E_Total_flux False\n' % (f,n,n))
+            for i,f in enumerate(freqs):
+                freqlist.write('%f Total_flux_ch%i E_Total_flux_ch%i True\n' % (f,i+1,i+1))
+            freqlist.close()
 
-        # Now call the fitting code
+            # Now call the fitting code
 
-        if os.path.isfile(obsid+'crossmatch-results-1.npy'):
-            warn('Results 1 exists, skipping first fit')
-        else:
-            fitting_factors.run_all(1, name=obsid)
+            if os.path.isfile(obsid+'crossmatch-results-1.npy'):
+                warn('Results 1 exists, skipping first fit')
+            else:
+                fitting_factors.run_all(1, name=obsid)
 
-        nreject=-1 # avoid error if we fail somewhere
-        if os.path.isfile(obsid+'crossmatch-2.fits'):
-            warn('Second crossmatch exists, skipping outlier rejection')
-        else:
-            nreject=find_outliers.run_all(1, name=obsid)
+            nreject=-1 # avoid error if we fail somewhere
+            if os.path.isfile(obsid+'crossmatch-2.fits'):
+                warn('Second crossmatch exists, skipping outlier rejection')
+            else:
+                nreject=find_outliers.run_all(1, name=obsid)
     
-        if os.path.isfile(obsid+'crossmatch-results-2.npy'):
-            warn('Results 2 exists, skipping second fit')
-        else:
-          if nreject==0:
-              shutil.copyfile(obsid+'crossmatch-results-1.npy',obsid+'crossmatch-results-2.npy')
-        if os.path.isfile(obsid+'crossmatch-results-2.npy'):
-            warn('Results 2 exists, skipping first fit')
-        else:
-            fitting_factors.run_all(2, name=obsid)
+            if os.path.isfile(obsid+'crossmatch-results-2.npy'):
+                warn('Results 2 exists, skipping second fit')
+            else:
+              if nreject==0:
+                  shutil.copyfile(obsid+'crossmatch-results-1.npy',obsid+'crossmatch-results-2.npy')
+            if os.path.isfile(obsid+'crossmatch-results-2.npy'):
+                warn('Results 2 exists, skipping first fit')
+            else:
+                fitting_factors.run_all(2, name=obsid)
 
         # Now apply corrections
 
@@ -311,7 +422,7 @@ def run_bootstrap(o):
             die('Need big mslist to apply corrections')
         if not(o['dryrun']):
             warn('Applying corrections to MS list')
-            scale=np.load(obsid+'crossmatch-results-2.npy')[:,0]
+            scale=np.load(resfile)[:,0]
             # InterpolatedUS gives us linear interpolation between points
             # and extrapolation outside it
             spl = InterpolatedUnivariateSpline(freqs, scale, k=1)
