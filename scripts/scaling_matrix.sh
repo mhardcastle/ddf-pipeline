@@ -11,7 +11,7 @@
 #   NODES="3 6 12"                                 add 1 to redo the 1-node pair
 #   TIME="00:40:00"
 #   CFG=$REPO_DIR/examples/Simul-Hackaton.cfg
-#   LAUNCHER=$REPO_DIR/slurm/jean-zay-big.slurm
+#   LAUNCHER=$REPO_DIR/slurm/jean-zay.slurm      (simulated launch; --nodes overrides it)
 #   MONITOR=$HOME/ddf-monitor                      where mem*/iomonitor* are moved
 set -euo pipefail
 
@@ -21,7 +21,7 @@ SCALING_ROOT="${SCALING_ROOT:-${SCRATCH:-$HOME/scratch}/ddf-sim-dataset/scaling}
 NODES="${NODES:-3 6 12}"
 TIME="${TIME:-00:40:00}"
 CFG="${CFG:-$REPO_DIR/examples/Simul-Hackaton.cfg}"
-LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay-big.slurm}"
+LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay.slurm}"
 MONITOR="${MONITOR:-$HOME/ddf-monitor}"
 EXCLUDE="${EXCLUDE:-mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash}"
 CSV="$SCALING_ROOT/scaling.csv"
