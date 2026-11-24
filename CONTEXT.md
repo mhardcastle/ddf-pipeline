@@ -18,29 +18,32 @@ Outputs are FITS imaging products and modeled measurement sets.
 
 | Path | Purpose |
 | --- | --- |
-| `scripts/` | Orchestration (`pipeline.py`) and the pipeline stage scripts |
+| `scripts/` | Orchestration (`pipeline.py`), stage scripts, `compare_runs.py` |
 | `utils/` | Parameter parsing (`parset.py`), helpers (`auxcodes.py`), options, quality |
 | `examples/` | `.cfg` configuration files |
 | `slurm/` | Cluster launchers (`jean-zay.slurm`, `adastra.slurm`) and their shared `env.sh` |
+| `tests/` | pytest unit tests |
+| `.github/` | GitHub Actions CI (`.github/workflows/ci.yml`) |
 | `others/` | Default parset, survey DB |
 | `misc/` | `DDF.sh`, pointing lists |
-| `docs/` | Manual, developer notes, ADRs, agent config |
+| `docs/` | Manual, developer notes, datasets (`data.md`), ADRs, agent config |
 
 ## Build and run
 
 Install (on a machine with Python ≥3.10 and uv):
 
 ```bash
-./install_uv_jean_zay.sh   # installs uv, clones DDFacet + killMS, uv sync --extra mpi-support
-./install_data_jean_zay.sh # downloads catalogs + the simulated dataset + Simul-Hackaton.cfg
-source init_dev_venv.sh  # activates the venv, sets PYTHONPATH / LD_LIBRARY_PATH
+./install_uv_jean_zay.sh   # modules + pinned DDFacet/killMS + uv sync --extra mpi-support
+./install_data_jean_zay.sh # simulated "small" dataset + catalogs (SHA256-pinned)
+# ./install_data_big.sh    # LoTSS "big" dataset for a realistic run (not CI)
+source init_dev_venv.sh    # activates the venv, sets PYTHONPATH / LD_LIBRARY_PATH
 ```
 
-Run (Jean Zay, simulated dataset):
+Run (Jean Zay, simulated dataset; the full run needs ~40 min):
 
 ```bash
-sbatch slurm/jean-zay.slurm   # 1 MPI rank, 40 threads, 20 min → scripts/pipeline.py examples/Simul-Hackaton.cfg
-sbatch slurm/adastra.slurm    # same run on Adastra GENOA: 1 MPI rank, 192 threads
+sbatch --time=00:40:00 slurm/jean-zay.slurm   # 1 MPI rank, 40 threads → scripts/pipeline.py examples/Simul-Hackaton.cfg
+sbatch --time=00:40:00 slurm/adastra.slurm    # same on Adastra GENOA: 1 MPI rank, 192 threads
 ```
 
 Entry point: `scripts/pipeline.py <config.cfg>` (also registered as the `pipeline.py`
@@ -55,12 +58,14 @@ options dict.
 ## Environment
 
 - Requires Python ≥3.10, uv, and sibling checkouts of DDFacet and KillMS.
+- DDFacet is pinned to `675ce535`, KillMS to `c8f17884` (`install_uv_jean_zay.sh`).
 - Heavy dependencies: `python-casacore`, `everybeam`, `ddfacet`, `killms`.
 - MCP servers (`ddf`, `hpc`) are **lab-network-only**; treat them as optional, never required.
 
 ## Docs
 
 - `docs/manual.md` — user manual (legacy, being superseded by the mkdocs site).
+- `docs/data.md` — datasets, downloads and the first run.
 - `docs/developer_notes.md` — developer notes (legacy).
 - `GLOSSARY.md` — domain vocabulary.
 - `docs/adr/` — architectural decisions.

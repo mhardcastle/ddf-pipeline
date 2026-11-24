@@ -88,11 +88,14 @@ The following configuration has been tested on the Jean Zay supercomputer cpu pa
 ### 2. Installation
 
 ```bash
-git clone --branch HackathonRennes_no_futures https://github.com/mhardcastle/ddf-pipeline.git
+git clone --branch astra-hackathon https://github.com/mhardcastle/ddf-pipeline.git
 cd ddf-pipeline
-./install_uv_jean_zay.sh
-./install_data_jean_zay.sh
+./install_uv_jean_zay.sh     # modules + pinned DDFacet/killMS + uv sync
+./install_data_jean_zay.sh   # simulated "small" dataset + catalogs
 ```
+
+Datasets and downloads (LoTSS "big", SKA Low AAstar, catalogs): see `docs/data.md`.
+For a realistic run, `./install_data_big.sh` installs the LoTSS "big" lists/config/catalogs.
 
 ### 3. Usage
 

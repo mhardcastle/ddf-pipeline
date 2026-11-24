@@ -17,7 +17,7 @@ the best at any one discipline; it decides who does the work and checks the resu
 | Quality | `quality` | running the checks and acceptance criteria before anything is called done |
 | Security | `security` | secrets, credentials, licence and dependency risk |
 | Writer | `writer` | the documentation that ships (`AGENTS.md`, `CONTEXT.md`, `GLOSSARY.md`, mkdocs) |
-| HPC | `hpc` | SLURM scripts, singularity image, Jean Zay submission, data movement, the smoke job |
+| HPC | `hpc` | SLURM launchers, singularity image, Jean Zay submission, data install scripts and movement, the smoke job |
 | Explore | `explore` | finding files and answering "how does this work" questions |
 | General | `general` | multi-step research and execution |
 

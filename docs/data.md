@@ -48,7 +48,7 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 ## First run (simulated "small")
 
 1. **Install** the software on Jean Zay with `install_uv_jean_zay.sh` (loads the modules,
-   clones DDFacet + KillMS, `uv sync --extra mpi-support`).
+   clones DDFacet + KillMS at the pinned commits, `uv sync --extra mpi-support`).
 2. **Install the data** with `install_data_jean_zay.sh` — it downloads and SHA256-verifies
    `CATALOGS.zip`, `Sim.tgz` and `Simul-Hackaton.cfg`.
 3. **Prepare** — code and compressed data on `WORK`; decompress to `SCRATCH` per experiment.
@@ -70,6 +70,9 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 
 The **SKA Low AAstar** dataset has no install script; download `skalow_aastar_mini.cfg`
 manually and use the Measurement Sets already on Adastra.
+
+`scripts/compare_runs.py manifest DIR OUT` / `compare A B` hashes two run directories and
+reports what stayed identical, so a stable smoke oracle can be picked from real runs.
 
 ## Checksums (SHA256)
 
