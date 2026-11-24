@@ -71,8 +71,10 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 The **SKA Low AAstar** dataset has no install script; download `skalow_aastar_mini.cfg`
 manually and use the Measurement Sets already on Adastra.
 
-`scripts/compare_runs.py manifest DIR OUT` / `compare A B` hashes two run directories and
-reports what stayed identical, so a stable smoke oracle can be picked from real runs.
+`scripts/compare_runs.py manifest DIR OUT [--exclude PAT]` / `compare A B` hashes two run
+directories and reports what stayed identical, so a stable smoke oracle can be picked from
+real runs. Use `--exclude 'mem,iomonitor*'` to keep monitoring artefacts out of the
+science diff.
 
 ## Checksums (SHA256)
 
