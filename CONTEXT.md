@@ -31,8 +31,8 @@ Outputs are FITS imaging products and modeled measurement sets.
 Install (on a machine with Python ≥3.10 and uv):
 
 ```bash
-./install_uv.sh          # installs uv, clones DDFacet + killMS, uv sync --extra mpi-support
-./prepare_sim_exe.sh     # downloads catalogs + the simulated dataset + Simul-Hackaton.cfg
+./install_uv_jean_zay.sh   # installs uv, clones DDFacet + killMS, uv sync --extra mpi-support
+./install_data_jean_zay.sh # downloads catalogs + the simulated dataset + Simul-Hackaton.cfg
 source init_dev_venv.sh  # activates the venv, sets PYTHONPATH / LD_LIBRARY_PATH
 ```
 

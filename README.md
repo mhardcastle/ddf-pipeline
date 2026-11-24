@@ -90,8 +90,8 @@ The following configuration has been tested on the Jean Zay supercomputer cpu pa
 ```bash
 git clone --branch HackathonRennes_no_futures https://github.com/mhardcastle/ddf-pipeline.git
 cd ddf-pipeline
-./install_uv.sh
-./prepare_sim_exe.sh
+./install_uv_jean_zay.sh
+./install_data_jean_zay.sh
 ```
 
 ### 3. Usage

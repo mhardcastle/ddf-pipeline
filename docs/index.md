@@ -6,6 +6,7 @@ reduce LOFAR continuum (Stokes I) data to a science-ready state.
 
 ## Start here
 
+- [Data](data.md) — datasets, downloads and the first run.
 - [Manual](manual.md) — installation and usage.
 - [Developer notes](developer_notes.md) — how to extend the pipeline.
 - [Extraction](extract.md) — extraction workflow.
