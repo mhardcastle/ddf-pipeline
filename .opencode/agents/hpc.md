@@ -20,10 +20,11 @@ Answer in **English**.
 
 # WHAT YOU OWN
 
-- SLURM scripts (`sim_exe.slurm`, `pipeline_mpi.sh`) — job shape, `#SBATCH` options,
-  module loads.
+- SLURM launchers (`slurm/jean-zay.slurm`, `slurm/adastra.slurm`, `slurm/env.sh`) and
+  `scripts/pipeline_mpi.sh` — job shape, `#SBATCH` options, module loads.
 - The singularity image (`ddf-py3.singularity`) — building and running it.
-- Environment setup (`install_uv.sh`, `init_dev_venv.sh`, `prepare_sim_exe.sh`).
+- Environment and data setup (`install_uv_jean_zay.sh`, `init_dev_venv.sh`,
+  `install_data_jean_zay.sh`, `install_data_big.sh`).
 - Data movement (rsync / scp / parallel-sftp) for the simulated dataset and catalogs.
 - The CI smoke job (later): running `pipeline.py` on the simulated dataset.
 

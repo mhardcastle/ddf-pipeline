@@ -62,8 +62,8 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 
 ## Scripts
 
-- `install_uv_<platform>.sh` — platform environment (modules + `uv sync`); the MPI/compiler
-  modules differ per cluster.
+- `install_uv_jean_zay.sh` — Jean Zay environment (modules + `uv sync`). Adastra loads its
+  CrayPE modules in `slurm/adastra.slurm`; a matching `install_uv_adastra.sh` is still pending.
 - `install_data_jean_zay.sh` — the simulated "small" dataset + catalogs, SHA256-pinned.
 - `install_data_big.sh` — the LoTSS "big" dataset (lists, config, catalogs; SHA256-pinned)
   for a realistic run. Not used by CI: it needs the multi-GB Measurement Sets.

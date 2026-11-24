@@ -51,7 +51,7 @@ BIGMSLIST_SHA256="33d6b67cdab8ee17f50def90ac5ba936999ff9685d48a7341874912072044a
 LOTSS_CFG_URL="https://sdrive.cnrs.fr/public.php/dav/files/omnAgeZL5cPHAAn"
 LOTSS_CFG_SHA256="e0d0a16ad0cfd39183ab9d4c70d0cce8fae501e220cb0dd7f960f4bf3ee3ecfe"
 
-CATALOGS_URL="https://sdrive.cnrs.fr/public.php/dav/files/awWCRsaoeax8t4K"
+CATALOGS_URL="https://sdrive.cnrs.fr/public.php/dav/files/awWCRsaoeax8t4K/CATALOGS.zip"
 CATALOGS_SHA256="8a0edbebc67613266251f9871b09c588c1c8102368daf1161045ecc26d4d701d"
 
 require_pinned mslist.txt "$MSLIST_SHA256"

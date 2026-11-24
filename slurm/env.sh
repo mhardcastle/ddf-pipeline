@@ -3,8 +3,9 @@
 # slurm/adastra.slurm). Source it from a launcher; everything platform-specific
 # (SBATCH options, module loads) stays in the launcher.
 
-# Resolve the checkout from this file's own location, so the job does not depend
-# on the directory sbatch was called from.
+# Resolve the checkout from this file's own location (the launcher sources it with an
+# absolute path; the launchers resolve REPO_DIR from SLURM_SUBMIT_DIR because sbatch
+# copies the script to a spool directory).
 ENV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_DIR="$(realpath -- "$ENV_DIR/..")"   # the ddf-pipeline checkout
 SRC="$(realpath -- "$ENV_DIR/../..")"     # holds the DDFacet, killMS, ... siblings
