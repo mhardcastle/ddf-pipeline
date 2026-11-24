@@ -97,5 +97,6 @@ cd ddf-pipeline
 ### 3. Usage
 
 ```bash
-sbatch sim_exe.slurm
+sbatch slurm/jean-zay.slurm   # Jean Zay cpu_p1
+sbatch slurm/adastra.slurm    # Adastra GENOA
 ```

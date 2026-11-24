@@ -21,6 +21,7 @@ Outputs are FITS imaging products and modeled measurement sets.
 | `scripts/` | Orchestration (`pipeline.py`) and the pipeline stage scripts |
 | `utils/` | Parameter parsing (`parset.py`), helpers (`auxcodes.py`), options, quality |
 | `examples/` | `.cfg` configuration files |
+| `slurm/` | Cluster launchers (`jean-zay.slurm`, `adastra.slurm`) and their shared `env.sh` |
 | `others/` | Default parset, survey DB |
 | `misc/` | `DDF.sh`, pointing lists |
 | `docs/` | Manual, developer notes, ADRs, agent config |
@@ -38,7 +39,8 @@ source init_dev_venv.sh  # activates the venv, sets PYTHONPATH / LD_LIBRARY_PATH
 Run (Jean Zay, simulated dataset):
 
 ```bash
-sbatch sim_exe.slurm     # 40 cpus, 6 tasks, 20 min → scripts/pipeline.py examples/Simul-Hackaton.cfg
+sbatch slurm/jean-zay.slurm   # 1 MPI rank, 40 threads, 20 min → scripts/pipeline.py examples/Simul-Hackaton.cfg
+sbatch slurm/adastra.slurm    # same run on Adastra GENOA: 1 MPI rank, 192 threads
 ```
 
 Entry point: `scripts/pipeline.py <config.cfg>` (also registered as the `pipeline.py`
