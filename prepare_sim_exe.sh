@@ -12,15 +12,15 @@ cd "$SCRIPT_DIR"
 
 # Catalogs, extracted to ./CATALOGS ($DDF_PIPELINE_CATALOGS)
 CATALOGS_URL="https://sdrive.cnrs.fr/public.php/dav/files/awWCRsaoeax8t4K/CATALOGS.zip"
-CATALOGS_SHA256="TODO"
+CATALOGS_SHA256="8a0edbebc67613266251f9871b09c588c1c8102368daf1161045ecc26d4d701d"
 
 # Simulated dataset, extracted to $SCRATCH/ddf-sim-dataset
 SIM_URL="https://sdrive.cnrs.fr/public.php/dav/files/PNmRiW3zc7XmEwN"
-SIM_SHA256="TODO"
+SIM_SHA256="bd6fe6e9b93e0934714c7134743ebf2f0d2ff442572825e27a7568cd55397338"
 
 # Pipeline configuration working with the simulated dataset, installed to examples/
 CFG_URL="https://sdrive.cnrs.fr/public.php/dav/files/qgptXzGa6BCE56J"
-CFG_SHA256="TODO"
+CFG_SHA256="47aeef54b9572c0d345ff4b8dfd6adf1773717162d4d1d5ab47e522b739cb769"
 
 # To fill a pin, download once on a login node and hash the three files:
 #   wget -O CATALOGS.zip <CATALOGS_URL>   # and the two others, then
