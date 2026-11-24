@@ -6,9 +6,11 @@ from __future__ import print_function
 from __future__ import division
 from builtins import range
 from past.utils import old_div
+import os
 import pyrap.tables as pt
 import numpy as np
 from astropy.io import fits
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
 
 def sumdico(rootname):
 
@@ -36,7 +38,7 @@ def find_uvmin(listname,level,colname='CORRECTED_DATA',plot=False,tstep=30):
     avl=[]
     for ms in mss:
         print('Doing',ms)
-        t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=True, ack=False)
+        t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=True, ack=False)
         freq = t[0]['REF_FREQUENCY']
         channels = t[0]['NUM_CHAN']
         chlist=t[0]['CHAN_FREQ']

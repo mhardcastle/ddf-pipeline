@@ -106,7 +106,7 @@ def add_dummyms(msfiles):
 
     # Check for wrong REF_FREQUENCY which happens after a DP3 split in frequency
     for ms in msfiles:        
-        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(ms + '::SPECTRAL_WINDOW', readonly=True)
         freq = t.getcol('REF_FREQUENCY')[0]
         t.close()
         freqaxis.append(freq)
@@ -118,7 +118,7 @@ def add_dummyms(msfiles):
     
     freqaxis = [] 
     for ms in msfiles:        
-        t = pt.table(ms + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(ms + '::SPECTRAL_WINDOW', readonly=True)
         if keyname == 'CHAN_FREQ':
           freq = t.getcol(keyname)[0][0]
         else:
@@ -551,7 +551,7 @@ o = convert_summary_cfg(option_list)
 msfiles   = ascii.read(args['mslist'],data_start=0)
 msfiles   = list(msfiles[:][msfiles.colnames[0]]) # convert to normal list of strings
 
-t = pt.table(msfiles[0] + '/OBSERVATION')
+t = pt.table(msfiles[0] + '::OBSERVATION')
 fieldname = t.getcol('LOFAR_TARGET')['array'][0]
 t.close()
 
@@ -646,6 +646,7 @@ if dopredict:
       OutputMode="Dirty"
 
     if holesfixed:
+       
        print('Starting DDF for prediction') 
        if args['h5sols'] != None:
          if not args['useHMP']:
@@ -680,6 +681,7 @@ if dopredict:
           ddsolstr = "DDS3_full_smoothed" 
                       
        run("DDF.py --Output-Name=image_full_ampphase_di_m.NS_SUB --Data-MS=" + args['mslist'] + " --Deconv-PeakFactor 0.001000 --Data-ColName " + args['column'] + " --Parallel-NCPU="+str(ncpu) + " --Facets-CatNodes="+ clustercat + " --Beam-CenterNorm=1 --Deconv-Mode SSD --Beam-Model=LOFAR "+beamoption+" --Weight-Robust " + str(robust) +" --Image-NPix=" + str(imagenpix) + " --CF-wmax 50000 --CF-Nw 100 --Output-Also onNeds --Image-Cell "+ str(imagecell) + " --Facets-NFacets=11 --SSDClean-NEnlargeData 0 --Freq-NDegridBand 1 --Beam-NBand 1 --Facets-DiamMax 1.5 --Facets-DiamMin 0.1 --Deconv-RMSFactor=3.000000 --SSDClean-ConvFFTSwitch 10000 --Data-Sort 1 --Cache-Dir=. --Log-Memory 1 --Cache-Weight=reset --Output-Mode="+OutputMode+" --Output-RestoringBeam 6.000000 --Freq-NBand=2 --RIME-DecorrMode=FT --SSDClean-SSDSolvePars [S,Alpha] --SSDClean-BICFactor 0 --Mask-Auto=1 --Mask-SigTh=5.00 --Mask-External=" + outmask + " --DDESolutions-GlobalNorm=None --DDESolutions-DDModeGrid=" + o['apply_sols'][6] +" --DDESolutions-DDModeDeGrid=" + o['apply_sols'][6] +" --DDESolutions-DDSols=" + ddsolstr + " --DDESolutions-SolsDir=SOLSDIR --Predict-InitDicoModel=" + outdico + " --Selection-UVRangeKm=" + uvsel + " --GAClean-MinSizeInit=10 --Cache-Reset 1 --Beam-Smooth=1 --Cache-DirWisdomFFTW=. --Predict-ColName='PREDICT_SUB'"+StrBeamAt+" --Misc-ConserveMemory 1")
+
 
 
 # clear up ddfcache files to save disk space
@@ -909,7 +911,7 @@ for observation in range(number_of_unique_obsids(msfiles)):
     if split:
 
         nchanperblock = int(20/freqstepavg)
-        t = pt.table(currentmsoutconcat + '/SPECTRAL_WINDOW', readonly=True)
+        t = pt.table(currentmsoutconcat + '::SPECTRAL_WINDOW', readonly=True)
         nchan = t.getcol('NUM_CHAN')[0]
         t.close()
  

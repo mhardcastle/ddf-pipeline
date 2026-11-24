@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 from builtins import str
 from builtins import range
 from past.utils import old_div
@@ -9,15 +6,45 @@ import numpy as np
 from scipy.optimize import leastsq
 import scipy
 import os,sys
-from pipeline_logging import run_log
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+import socket
+HOSTNAME=socket.gethostname()
+
+if not LOCAL_DEV:
+    from pipeline_logging import run_log
+    from facet_offsets import RegPoly
+    from surveys_db import use_database,update_status
+    from termsize import get_terminal_size_linux
+    import mpi_manager
+
+else:
+    from utils.pipeline_logging import run_log
+    from utils.facet_offsets import RegPoly
+    from others.surveys_db import use_database,update_status
+    from utils.termsize import get_terminal_size_linux
+    from utils import mpi_manager
+
+try:
+    from mpi4py import MPI
+    import DDFacet.Other.MPIManager
+    MPI_SIZE = DDFacet.Other.MPIManager.SIZE
+    RANK=DDFacet.Other.MPIManager.RANK
+    LOCAL_RANK = DDFacet.Other.MPIManager.LOCAL_RANK
+    NODE_ID = DDFacet.Other.MPIManager.NODE_ID
+except:
+    MPI_SIZE = 0
+    RANK=0
+    LOCAL_RANK=0
+    NODE_ID=0
+
 from subprocess import call
 from astropy.io import fits
 from astropy.wcs import WCS
+
 import signal
-from facet_offsets import RegPoly
 import pyregion
-from surveys_db import use_database,update_status
-from termsize import get_terminal_size_linux
 import multiprocessing as mp
 
 # these are small routines used by more than one part of the pipeline
@@ -44,6 +71,7 @@ def separator(s):
     print("%s%s %s %s%s"%(bcolors.FAIL,sep,s,sep,bcolors.ENDC))
     print()
 
+
     
 def die(s,database=True):
     print(bcolors.FAIL+s+bcolors.ENDC)
@@ -52,15 +80,36 @@ def die(s,database=True):
     raise RuntimeError(s)
 
 def report(s):
-    print(bcolors.OKGREEN+s+bcolors.ENDC)
+    print(bcolors.OKGREEN+f"[{HOSTNAME}#{RANK}@{NODE_ID}] "+s+bcolors.ENDC)
 
 def warn(s):
-    print(bcolors.OKBLUE+s+bcolors.ENDC)
+    print(bcolors.OKBLUE+f"[{HOSTNAME}#{RANK}@{NODE_ID}] "+s+bcolors.ENDC)
+    
 
-def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True):
-    report('Running: '+s)
+def run(s,proceed=False,dryrun=False,log=None,quiet=False,database=True, mpiManager=None, mpi_disabled_in_serial_call=True,local_rank=None):
+    if mpiManager is not None and mpiManager.UseMPI and mpi_manager.MPI_SIZE>1:
+        jobs=[]
+        for h in mpiManager.ListNodesBeingUsed:
+            jobs.append([h, run_serial, (s, proceed, dryrun, log, quiet, database,local_rank), {}])
+        print(f"[{HOSTNAME}#{mpi_manager.RANK}@{mpi_manager.NODE_ID}] run: {jobs}")
+        res=mpi_manager.callParallel(jobs)
+        print(res)
+    else:
+        ss=s
+        if mpi_disabled_in_serial_call:
+            ss="env DDF_FORCE_NOT_USE_MPI=1 "+s
+        run_serial(ss, proceed, dryrun, log, quiet, database)
+
+    
+def run_serial(s,proceed=False,dryrun=False,log=None,quiet=False,database=True,local_rank=None):
+    if local_rank is not None:
+        report(f"run_serial: skipping due to non-local rank match")
+        if LOCAL_RANK!=local_rank: return 0
+        
+    report(f"run_serial: {s}")
     if not dryrun:
         if log is None:
+            print("   Call %s"%s)
             retval=call(s,shell=True)
         else:
             retval=run_log(s,log,quiet)
@@ -324,10 +373,10 @@ def sepn(r1,d1,r2,d2):
 
 def getpos(ms):
     import pyrap.tables as pt
-    t = pt.table(ms+ '/OBSERVATION', readonly=True, ack=False)
+    t = pt.table(ms+ '::OBSERVATION', readonly=True, ack=False)
     name=t[0]['LOFAR_TARGET']
 
-    t = pt.table(ms+'/FIELD', readonly=True, ack=False)
+    t = pt.table(ms+'::FIELD', readonly=True, ack=False)
 
     direction = t[0]['PHASE_DIR']
     ra, dec = direction[0]
@@ -390,7 +439,8 @@ class MSList(object):
             self.hascorrected.append(not(dummy is None))
             self.dysco.append('Dysco' in t.showstructure())
             t.close()
-            t = pt.table(ms+'/SPECTRAL_WINDOW', readonly=False, ack=False)
+            t = pt.table(ms+'::SPECTRAL_WINDOW', readonly=False, ack=False)
+
             # Check freqs due to https://github.com/lofar-astron/DP3/issues/217
             freqest1 = np.mean(t.getcol('CHAN_FREQ')[0])
             freqest2 = t[0]['REF_FREQUENCY']

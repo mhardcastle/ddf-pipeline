@@ -3,7 +3,13 @@ from __future__ import absolute_import
 from builtins import zip
 from astropy.io import fits
 from astropy.wcs import WCS
-from auxcodes import get_rms,get_rms_map3,flatten
+import os
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from auxcodes import get_rms,get_rms_map3,flatten
+else:
+    from utils.auxcodes import get_rms,get_rms_map3,flatten
 import scipy.ndimage as nd
 import numpy as np
 import pyregion
@@ -21,6 +27,11 @@ def add_manual_mask(infile,ds9region,outfile):
     hdu.writeto(outfile,overwrite=True)
 
 def merge_mask(in1,in2,outfile):
+
+    if in1 is None or in2 is None:
+        return
+        
+        
     hdu1=fits.open(in1)
     hdu2=fits.open(in2)
 
@@ -32,6 +43,14 @@ def merge_mask(in1,in2,outfile):
 
 def make_extended_mask(infile,fullresfile,rmsthresh=3.0,sizethresh=2500,maxsize=25000,rootname=None,verbose=False,rmsfacet=False,ds9region='image_dirin_SSD_m_c.tessel.reg'):
     ''' infile is the input low-res image, fullresfile is the full-resolution template image, sizethresh the minimum island size in pixels '''
+
+    try:
+        from mpi4py import MPI
+        _comm = MPI.COMM_WORLD
+        if _comm.Get_size() > 1 and _comm.Get_rank() != 0:
+            return
+    except ImportError:
+        pass
 
     if rootname is None:
         prefix=''

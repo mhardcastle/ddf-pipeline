@@ -42,8 +42,6 @@ try:
 except:
     pass
 
-print('Inputs to extraction. Size %s, RA %s, Dec %s, Name %s, subtract options %s'%(size,ra,dec,target,subtractoptions))
-
 if ra is None:
     if 'ILTJ' in target:
         s=target[4:]
@@ -84,21 +82,7 @@ fields=t[t['sep']<2.2*u.deg]
 if len(fields)==0:
     die('No fields within 2.2 degrees of pointing position',database=False)
 
-separator('Fields found')
-print(fields)
-
-only_LoTSS = []
-for f in fields["Field"]:
-    if f.startswith('P') and f[1].isdigit():
-        only_LoTSS.append(True)
-    else:
-        print()
-        print(f'{f} is not a LoTSS pointing, we will not use it for the extraction')
-        only_LoTSS.append(False)
-
-fields = fields[only_LoTSS]
-
-separator('We will use the following LoTSS fields')
+print('We will use the following fields')
 print(fields)
 
 separator('Making working directory')

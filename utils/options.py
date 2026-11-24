@@ -12,7 +12,12 @@ except ImportError:
 import os
 import re
 import sys
-from termsize import get_terminal_size_linux
+LOCAL_DEV = os.environ.get("DDF_LOCAL_DEV", "0") == "1"
+
+if not LOCAL_DEV:
+    from termsize import get_terminal_size_linux
+else:
+    from utils.termsize import get_terminal_size_linux
 
 def options(optlist,option_list):
 
@@ -20,7 +25,9 @@ def options(optlist,option_list):
     # section names are used in the output dict only if names are not unique
 
     odict = {}
+    #config=configparser.RawConfigParser()
     config=configparser.ConfigParser()
+    
     filenames=[]
     cmdlineset=[]
     if isinstance(optlist,str):
@@ -29,7 +36,7 @@ def options(optlist,option_list):
     for o in optlist:
         if o[:2]=='--':
             optstring=o[2:]
-            result=re.match('(\w*)-(\w*)\s*=\s*(.*)',optstring)
+            result=re.match(r'(\w*)-(\w*)\s*=\s*(.*)',optstring)
             if result is None:
                 print('Cannot parse option',optstring)
             else:
@@ -87,7 +94,10 @@ def typename(s):
 
 def print_options(option_list):
     import textwrap
-    from auxcodes import bcolors
+    if not LOCAL_DEV:
+        from auxcodes import bcolors
+    else:
+        from utils.auxcodes import bcolors
     # expected to be called if a config file is not specified. Print a
     # list of options
     option_list=sorted(option_list,key=lambda x:x[1])

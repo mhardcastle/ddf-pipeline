@@ -5,7 +5,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 from builtins import range
 from surveys_db import SurveysDB
-from db_utils import update_reprocessing_extract, get_next_extraction
+
+
 import sys
 import os
 import glob
@@ -249,6 +250,7 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operati
 def do_sdr_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     s=SDR(target=f)
     # next line will raise a RuntimeError if directory is not present
+
     try:
         status=s.get_status(cname)
     except:
@@ -353,7 +355,7 @@ def prepare_field(field,processingdir,verbose=False,Mode="Imaging+Misc",operatio
         if verbose:
             print('Calling sdr/rclone code to download/untar')
         do_sdr_and_rclone_download(field,processingdir,verbose=verbose,Mode=Mode,operations=operations)
-
+        
     if 'fixsymlinks' in operations:
         if verbose: print('Fixing symlinks')
         striparchivename(workdir=processingdir)
