@@ -1,0 +1,21 @@
+{
+  "artifacts": [
+    "image_full_ampphase_di_m.NS.app.restored.fits",
+    "image_full_ampphase_di_m.NS.int.restored.fits"
+  ],
+  "image": "image_full_ampphase_di_m.NS.app.restored.fits",
+  "tolerance": {
+    "mean": 0.05,
+    "std": 0.05,
+    "p1": 0.2,
+    "p99": 0.2,
+    "max": 0.1
+  },
+  "stats": {
+    "mean": 0.001556,
+    "std": 0.1182,
+    "p1": -0.1864,
+    "p99": 0.1885,
+    "max": 12.4
+  }
+}
