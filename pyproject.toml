@@ -96,3 +96,10 @@ dev-mode-dirs = [".", "./utils", "./others", "./scripts"]
 #killms = { git = "https://github.com/cyriltasse/killMS", rev = "b7aa9d4b1d0c929286863cfc0eac32edbcd2cb48" }
 ddfacet = { path = "../DDFacet" }
 killms = { path = "../killMS" }
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
