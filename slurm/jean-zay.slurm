@@ -23,8 +23,16 @@ module load gsl/2.7.1
 
 module list
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-source "$SCRIPT_DIR/env.sh"
+# SLURM copies the job script to a spool directory, so $BASH_SOURCE does not
+# point at the checkout. Resolve from the submit directory instead; submit from
+# the repo root:  cd ddf-pipeline && sbatch slurm/jean-zay.slurm
+REPO_DIR="${SLURM_SUBMIT_DIR:-$PWD}"
+[ -f "$REPO_DIR/env.sh" ] && REPO_DIR="$(realpath -- "$REPO_DIR/..")"
+if [ ! -f "$REPO_DIR/slurm/env.sh" ]; then
+    echo "error: cannot find slurm/env.sh under $REPO_DIR; submit from the repo root" >&2
+    exit 1
+fi
+source "$REPO_DIR/slurm/env.sh"
 
 cd "$DATA_DIR"
 srun --verbose "$REPO_DIR/scripts/pipeline.py" "$CFG"
