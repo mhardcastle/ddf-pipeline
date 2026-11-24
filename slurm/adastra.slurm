@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=192
 #SBATCH --threads-per-core=1
 #SBATCH --exclusive
-#SBATCH --time=00:20:00
+#SBATCH --time=00:40:00
 #
 # Adastra GENOA scalar node: 2 x EPYC 9654 (96 cores each) = 192 cores.
 # Layout: one MPI rank on the node, 192 threads inside it (NCPU_DDF =

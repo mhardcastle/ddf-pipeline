@@ -8,7 +8,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=40
 #SBATCH --exclusive
-#SBATCH --time=00:20:00
+#SBATCH --time=00:40:00
 #SBATCH --hint=nomultithread
 #
 # Jean Zay cpu_p1 node: 2 x Xeon Gold 6248 (20 cores each) = 40 cores, no SMT.
