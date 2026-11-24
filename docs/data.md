@@ -11,7 +11,8 @@ decompress into `SCRATCH` for each experiment.
 ## Catalogue
 
 ### LoTSS L234026 "big" — realistic, several GB
-- Measurement Sets: <https://sdrive.cnrs.fr/s/azWk38oXb6BwrRS>
+- Measurement Sets (zip export of the folder): <https://sdrive.cnrs.fr/s/azWk38oXb6BwrRS>
+  (downloaded by `install_data_big.sh` as `lotss-big.zip`, SHA256-pinned)
 - List `mslist.txt`: <https://sdrive.cnrs.fr/s/YjPXwZJ62FwX6Jo>
 - List `big-mslist.txt`: <https://sdrive.cnrs.fr/s/NRHNdrLGZs6o7a4>
 - Configuration `lotss_mpi.cfg`: <https://sdrive.cnrs.fr/s/omnAgeZL5cPHAAn>

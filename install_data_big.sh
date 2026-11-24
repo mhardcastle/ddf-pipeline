@@ -54,10 +54,18 @@ LOTSS_CFG_SHA256="e0d0a16ad0cfd39183ab9d4c70d0cce8fae501e220cb0dd7f960f4bf3ee3ec
 CATALOGS_URL="https://sdrive.cnrs.fr/public.php/dav/files/awWCRsaoeax8t4K/CATALOGS.zip"
 CATALOGS_SHA256="8a0edbebc67613266251f9871b09c588c1c8102368daf1161045ecc26d4d701d"
 
+# LoTSS "big" Measurement Sets: one zip export of the public folder (multi-GB).
+# Caveat: if the server regenerates the zip, this SHA can change -- verify with a
+# second download; otherwise fall back to a per-file manifest.
+BIG_URL="https://sdrive.cnrs.fr/public.php/dav/files/azWk38oXb6BwrRS/?accept=zip"
+BIG_SHA256="77bea7169d9f107917323ea27dc69ba10d76dc5214f6eaa3aaa5040ad5449fe1"
+BIG_DATA_DIR="${BIG_DATA_DIR:-${WORK:-$HOME/work}/lotss-big}"
+
 require_pinned mslist.txt "$MSLIST_SHA256"
 require_pinned big-mslist.txt "$BIGMSLIST_SHA256"
 require_pinned lotss_mpi.cfg "$LOTSS_CFG_SHA256"
 require_pinned CATALOGS.zip "$CATALOGS_SHA256"
+require_pinned lotss-big.zip "$BIG_SHA256"
 
 fetch_pinned "$MSLIST_URL" mslist.txt "$MSLIST_SHA256"
 fetch_pinned "$BIGMSLIST_URL" big-mslist.txt "$BIGMSLIST_SHA256"
@@ -65,9 +73,19 @@ fetch_pinned "$LOTSS_CFG_URL" examples/lotss_mpi.cfg "$LOTSS_CFG_SHA256"
 fetch_pinned "$CATALOGS_URL" CATALOGS.zip "$CATALOGS_SHA256"
 unzip -o -q CATALOGS.zip
 
-cat <<'NOTE'
-LoTSS "big": mslist.txt, big-mslist.txt, examples/lotss_mpi.cfg and CATALOGS/ installed.
-The Measurement Sets are a multi-GB folder share: download them from
-  https://sdrive.cnrs.fr/s/azWk38oXb6BwrRS
-on WORK, then point the mslist at them. This dataset is for a realistic run, not CI.
+# LoTSS "big" Measurement Sets: one zip export of the public folder.
+mkdir -p "$BIG_DATA_DIR"
+fetch_pinned "$BIG_URL" "$BIG_DATA_DIR.zip" "$BIG_SHA256"
+unzip -o -q "$BIG_DATA_DIR.zip" -d "$BIG_DATA_DIR"
+msdir=$(find "$BIG_DATA_DIR" -maxdepth 2 -type d -name '*.MS' -printf '%h\n' 2>/dev/null | sort -u | head -1)
+msdir="${msdir:-$BIG_DATA_DIR}"
+cp mslist.txt big-mslist.txt "$msdir/"
+
+cat <<NOTE
+LoTSS "big" installed: mslist.txt, big-mslist.txt, examples/lotss_mpi.cfg, CATALOGS/
+and the Measurement Sets under $msdir.
+Run it with:
+  DDF_SIM_DIR="$msdir" DDF_PIPELINE_CFG="$PWD/examples/lotss_mpi-no_low.cfg" \\
+    sbatch slurm/jean-zay-big.slurm
+This dataset is for a realistic run, not CI.
 NOTE
