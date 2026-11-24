@@ -1,5 +1,7 @@
 # ddf-pipeline manual
 
+> **Legacy.** This manual is being superseded by the canonical documentation site; some parts may be out of date.
+
 This is the users' manual for ddf-pipeline, a pipeline for the
 direction-dependent self-calibration and imaging of LOFAR data.
 

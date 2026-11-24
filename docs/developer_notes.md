@@ -1,5 +1,7 @@
 # ddf-pipeline developer notes
 
+> **Legacy.** These developer notes are being superseded by the canonical documentation site; some parts may be out of date.
+
 ## general
 
 We are happy to accept pull requests that stick to the general coding
