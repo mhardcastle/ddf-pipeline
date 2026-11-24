@@ -39,7 +39,7 @@ def do_rsync_download(cname,basedir,f):
     #    target=''
 
     while True:
-	excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" --exclude="*.pickle" --exclude="*.DicoModel" --exclude="*.txt" --exclude="*.png" '
+        excludeinclude = ' --include="image_full_ampphase_di_m.NS.mask01.fits" --include="image_full_ampphase_di_m.NS.app.restored.fits" --exclude="*QU_*" --exclude="*fits*" --exclude="*.tgz*" --exclude="*QU_*" --exclude="*DDS0*" --exclude="*DDS1*" --exclude="*DDS2*" --exclude="*.corrupted" --exclude="*.pickle" --exclude="*.DicoModel" --exclude="*.txt" --exclude="*.png" '
         s= 'rsync -azvh --timeout=20 --progress --perms --chmod=a+rwx'+ excludeinclude + target+workdir + ' ' + f
         print('Running command:',s)
         retval=call(s,shell=True)
