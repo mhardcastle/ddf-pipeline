@@ -65,5 +65,20 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 - `install_uv_<platform>.sh` — platform environment (modules + `uv sync`); the MPI/compiler
   modules differ per cluster.
 - `install_data_jean_zay.sh` — the simulated "small" dataset + catalogs, SHA256-pinned.
-- `install_data.sh <big|skalow|catalogs>` — the other datasets and the shared catalogs,
-  SHA256-pinned. Fill the `*_SHA256` pins from a login node before first use.
+- `install_data_big.sh` — the LoTSS "big" dataset (lists, config, catalogs; SHA256-pinned)
+  for a realistic run. Not used by CI: it needs the multi-GB Measurement Sets.
+
+The **SKA Low AAstar** dataset has no install script; download `skalow_aastar_mini.cfg`
+manually and use the Measurement Sets already on Adastra.
+
+## Checksums (SHA256)
+
+| File | SHA256 |
+| --- | --- |
+| `CATALOGS.zip` | `8a0edbebc67613266251f9871b09c588c1c8102368daf1161045ecc26d4d701d` |
+| `Sim.tgz` | `bd6fe6e9b93e0934714c7134743ebf2f0d2ff442572825e27a7568cd55397338` |
+| `Simul-Hackaton.cfg` | `47aeef54b9572c0d345ff4b8dfd6adf1773717162d4d1d5ab47e522b739cb769` |
+| `mslist.txt` | `8fdadfc4a9e1cf9e85cd621f2a3883cc57560beb0934e2b19ad155c29ce06397` |
+| `big-mslist.txt` | `33d6b67cdab8ee17f50def90ac5ba936999ff9685d48a7341874912072044a5c` |
+| `lotss_mpi.cfg` | `e0d0a16ad0cfd39183ab9d4c70d0cce8fae501e220cb0dd7f960f4bf3ee3ecfe` |
+| `skalow_aastar_mini.cfg` | `ff20c95ba36a891e732c8bdad4eaa157d16cd35507e9c8e06e4074d815efd9aa` |
