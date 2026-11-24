@@ -11,6 +11,7 @@ nav:
   - Exa-ATOW: exa-atow.md
   - Decisions:
       - "ADR-0001: CI on GitHub Actions": adr/0001-ci-on-github-actions.md
+      - "ADR-0002: What runs where": adr/0002-what-runs-where.md
 
 exclude_docs: |
   agents/*.md

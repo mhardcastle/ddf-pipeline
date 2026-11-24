@@ -51,3 +51,8 @@ _Avoid_: parset file (parset is the parser module, not the file)
 **mslist**: A list of measurement sets to process (`mslist.txt`, `big-mslist.txt`).
 
 **FITS**: Flexible Image Transport System; the imaging products.
+
+### Testing
+
+**Smoke test**: A run that proves the plumbing works end to end — `pipeline.py` completes on the simulated dataset and produces its artefacts. It is not a scientific validation: it says nothing about flux scale, astrometry, dynamic range or convergence.
+_Avoid_: integration test (until the inputs are pinned and a truth-based assertion exists)
