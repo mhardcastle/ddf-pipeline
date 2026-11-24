@@ -3,3 +3,12 @@
 *.o
 *.so
 site/
+__pycache__/
+# downloaded smoke inputs and run outputs
+CATALOGS.zip
+CATALOGS/
+Sim.tgz
+Simul-Hackaton.cfg
+DDF_MPI_*.out
+DDF_MPI_*.err
+summary.txt
