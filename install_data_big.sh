@@ -77,7 +77,7 @@ unzip -o -q CATALOGS.zip
 mkdir -p "$BIG_DATA_DIR"
 fetch_pinned "$BIG_URL" "$BIG_DATA_DIR.zip" "$BIG_SHA256"
 unzip -o -q "$BIG_DATA_DIR.zip" -d "$BIG_DATA_DIR"
-msdir=$(find "$BIG_DATA_DIR" -maxdepth 2 -type d -name '*.MS' -printf '%h\n' 2>/dev/null | sort -u | head -1)
+msdir=$(find "$BIG_DATA_DIR" -maxdepth 2 -type d -iname '*.ms' -printf '%h\n' 2>/dev/null | sort -u | head -1)
 msdir="${msdir:-$BIG_DATA_DIR}"
 cp mslist.txt big-mslist.txt "$msdir/"
 
