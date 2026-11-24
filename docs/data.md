@@ -60,6 +60,18 @@ link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
 > The big dataset is several GB and realistic; expect it to take much longer than the
 > simulated one.
 
+## Smoke check
+
+Run the simulated dataset with the smoke check enabled; the job then calls
+`scripts/smoke_check.py`, which asserts the final artefacts exist, scans the logs for a
+`Traceback`, and checks the restored image's global statistics against
+`tests/data/smoke_reference.json` within tolerance. The pipeline is not pixel-reproducible,
+but these statistics are stable run-to-run.
+
+```bash
+DDF_SMOKE_CHECK=1 DDF_SIM_DIR=... sbatch --time=00:40:00 slurm/jean-zay.slurm
+```
+
 ## Scripts
 
 - `install_uv_jean_zay.sh` — Jean Zay environment (modules + `uv sync`). Adastra loads its

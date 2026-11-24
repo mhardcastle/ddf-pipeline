@@ -34,6 +34,21 @@ def image_stats(path):
     }
 
 
+def scan_tracebacks(run_dir):
+    hits = []
+    logs = os.path.join(run_dir, "logs")
+    for root, _dirs, files in os.walk(logs):
+        for name in files:
+            path = os.path.join(root, name)
+            try:
+                with open(path, errors="ignore") as fh:
+                    if "Traceback" in fh.read():
+                        hits.append(os.path.relpath(path, run_dir))
+            except OSError:
+                pass
+    return hits
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -49,6 +64,14 @@ def main(argv):
         exists = os.path.isfile(os.path.join(args.run_dir, name))
         print(f"[{'ok' if exists else 'MISSING'}] artefact {name}")
         ok = ok and exists
+
+    tracebacks = scan_tracebacks(args.run_dir)
+    if tracebacks:
+        for hit in tracebacks:
+            print(f"[FAIL] Traceback in {hit}")
+        ok = False
+    else:
+        print("[ok] no Traceback in logs")
 
     image = os.path.join(args.run_dir, ref["image"])
     if not os.path.isfile(image):

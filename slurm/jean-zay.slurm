@@ -36,3 +36,11 @@ source "$REPO_DIR/slurm/env.sh"
 
 cd "$DATA_DIR"
 srun --verbose "$REPO_DIR/scripts/pipeline.py" "$CFG"
+rc=$?
+if [ "$rc" -ne 0 ]; then
+    echo "pipeline exited $rc; skipping smoke check" >&2
+    exit "$rc"
+fi
+if [ "${DDF_SMOKE_CHECK:-0}" = "1" ]; then
+    python "$REPO_DIR/scripts/smoke_check.py" "$DATA_DIR"
+fi
