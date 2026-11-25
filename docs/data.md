@@ -86,8 +86,8 @@ manually and use the Measurement Sets already on Adastra.
 
 `scripts/compare_runs.py manifest DIR OUT [--exclude PAT]` / `compare A B` hashes two run
 directories and reports what stayed identical, so a stable smoke oracle can be picked from
-real runs. Use `--exclude 'mem,iomonitor*'` to keep monitoring artefacts out of the
-science diff.
+real runs. Use `--exclude 'DDF_monitor*,DDF_register*,DDF_io_monitor*'` to keep monitoring
+artefacts out of the science diff.
 
 ## Checksums (SHA256)
 
