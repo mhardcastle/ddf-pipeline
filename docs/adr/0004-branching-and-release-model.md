@@ -5,7 +5,8 @@ The code is split across three **canonical** GitHub repositories — `mhardcastl
 are the reference everyone clones. Work happens on `astra-hackathon` branches, merges into
 `HackathonRennes_no_futures` (fast-forward), then into `HackathonRennes` (a reviewed merge).
 `master` is a parallel lineage that does not contain the Hackathon work and is **not** the
-integration point.
+integration point. **`master` is production and is never pushed by this work**; all
+development and CI happen on the exploratory `HackathonRennes` lineage.
 
 CI is branch-agnostic: every push and pull request runs the fast checks (unit tests,
 compile, docs). The heavy smoke test runs only on a validated tag. Branch protection is

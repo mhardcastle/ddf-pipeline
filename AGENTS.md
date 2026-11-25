@@ -36,7 +36,8 @@ Routing rules:
 Code is split across three canonical repositories: `mhardcastle/ddf-pipeline`,
 `cyriltasse/DDFacet`, `cyriltasse/killMS`. Work flows `astra-hackathon` →
 `HackathonRennes_no_futures` → `HackathonRennes` (a reviewed merge); `master` is not the
-integration point. CI is per-branch; the smoke test runs on a validated tag. Record
+integration point. **Never push to `master` — it is production.** CI and development stay
+on the exploratory `HackathonRennes` lineage. Record
 validated commits in `VERSIONS.md`. See `docs/adr/0004-branching-and-release-model.md`.
 
 ## Branch-scope convention

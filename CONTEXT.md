@@ -53,9 +53,9 @@ console script).
 
 Code lives in three canonical repositories (`mhardcastle/ddf-pipeline`, `cyriltasse/DDFacet`,
 `cyriltasse/killMS`). Work flows `astra-hackathon` → `HackathonRennes_no_futures` →
-`HackathonRennes`; `master` is not the integration point. CI is per-branch; the smoke test
-runs on a validated tag. See `docs/adr/0004-branching-and-release-model.md` and
-`VERSIONS.md`.
+`HackathonRennes`; `master` is not the integration point. **`master` is production and is
+never pushed**; CI is on the exploratory `HackathonRennes` lineage. The smoke test runs on a
+validated tag. See `docs/adr/0004-branching-and-release-model.md` and `VERSIONS.md`.
 
 ## Configuration
 
