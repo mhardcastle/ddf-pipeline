@@ -11,7 +11,8 @@ validated set changes. `install_uv_jean_zay.sh` pins these.
 
 Status:
 
-- **1 node**: validated — 32 min, smoke `PASS`.
-- **3 / 6 nodes**: still failing (exit 143, to re-measure with the DDFacet fix).
-- **12 nodes**: `KeyError` fixed; `ToFits` TOCTOU race fixed in DDFacet; the run currently
-  exceeds the 40-minute wall-time, so it needs a larger `--time`.
+- **1 node**: validated — `00:32:13`, smoke `PASS`.
+- **3 nodes**: validated — `00:46:38`, smoke `PASS`, MaxRSS ≈ 23 GB. **Negative scaling**: 3
+  nodes are *slower* than 1, because the global DI/Predict steps are not distributed.
+- **6 / 12 nodes**: not worth running on the simulation (overhead-bound). The multi-node
+  path is proven at 3 nodes; the real-dataset run is the meaningful test.
