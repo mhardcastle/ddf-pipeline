@@ -23,7 +23,7 @@ TIME="${TIME:-00:40:00}"
 CFG="${CFG:-$REPO_DIR/examples/Simul-Hackaton.cfg}"
 LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay.slurm}"
 MONITOR="${MONITOR:-$HOME/ddf-monitor}"
-EXCLUDE="${EXCLUDE:-mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash}"
+EXCLUDE="${EXCLUDE:-DDF_monitor*,DDF_register*,DDF_io_monitor*,mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash}"
 CSV="$SCALING_ROOT/scaling.csv"
 
 [ -d "$SIM_PRISTINE" ] || { echo "error: pristine sim data not found: $SIM_PRISTINE" >&2; exit 1; }
@@ -48,7 +48,7 @@ for n in $NODES; do
         jobid=$(printf '%s\n' "$submit" | grep -oE '[0-9]+' | tail -1)
         elapsed=$(sacct -j "$jobid" --format=Elapsed -Pn 2>/dev/null | head -1 | tr -d ' ')
 
-        mv "$HOME"/mem* "$HOME"/iomonitor* "$mon/" 2>/dev/null || true
+        mv "$HOME"/mem* "$HOME"/iomonitor* "$HOME"/DDF_* "$mon/" 2>/dev/null || true
         echo "   job ${jobid:-?} elapsed=${elapsed:-?} rc=$rc"
         echo "$n,$pair,${jobid:-?},${elapsed:-?},$rc" >> "$CSV"
     done
