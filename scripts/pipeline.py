@@ -1050,7 +1050,7 @@ def full_clearcache_mpi(MPI_Manager,o,extras=None):
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
             oc=copy.deepcopy(o)
             print("MPI_Manager.DicoNode2mslist.keys",MPI_Manager.DicoNode2mslist.keys())
-            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["mslist"]=MPI_Manager.DicoNode2mslist.get(Node,o["mslist"])
             oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             ListJobs.append((Node,full_clearcache,(oc,extras),{}))
 
@@ -1070,7 +1070,7 @@ def redo_dppp_di_mpi(MPI_Manager,o):
     if o is not None:
         for Node in MPI_Manager.DicoNode2fullmslist.keys():
             oc=copy.deepcopy(o)
-            oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
+            oc["mslist"]=MPI_Manager.DicoNode2mslist.get(Node,o["mslist"])
             oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
             ListJobs.append((Node,redo_dppp_di,(oc,),{}))
 
