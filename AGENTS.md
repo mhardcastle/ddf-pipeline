@@ -31,6 +31,14 @@ Routing rules:
 - SLURM, singularity, cluster execution → `hpc`.
 - Two agents disagree → report both positions with a recommendation; never silently pick one.
 
+## Branches and releases
+
+Code is split across three canonical repositories: `mhardcastle/ddf-pipeline`,
+`cyriltasse/DDFacet`, `cyriltasse/killMS`. Work flows `astra-hackathon` →
+`HackathonRennes_no_futures` → `HackathonRennes` (a reviewed merge); `master` is not the
+integration point. CI is per-branch; the smoke test runs on a validated tag. Record
+validated commits in `VERSIONS.md`. See `docs/adr/0004-branching-and-release-model.md`.
+
 ## Branch-scope convention
 
 Work on this branch (`astra-hackathon`) is **branch-only**. Every ticket is labelled
