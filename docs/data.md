@@ -10,7 +10,8 @@ decompress into `SCRATCH` for each experiment.
 >
 > **Stale locks.** The archived Measurement Sets contain `table.lock` files; remove them from
 > each copy before a run (`find <dir> -name table.lock -delete`) or casacore can deadlock on
-> Lustre when two steps touch the same table.
+> Lustre when two steps touch the same table. Only `table.lock` is a lock — the
+> `table.f0/f1/f0i/f1i` files are the StandardStMan/TiledStMan *data* and must be kept.
 
 ## Catalogue
 
@@ -49,6 +50,21 @@ wget -O CATALOGS.zip           https://sdrive.cnrs.fr/public.php/dav/files/awWCR
 
 The **big** Measurement Sets are a folder share (several GB); download them from the web
 link on `WORK`. The **SKA Low** Measurement Sets are already on Adastra.
+
+## Repackaging (remove the stale locks)
+
+The archived `Sim.tgz` carries 384 stale `table.lock` files (one per table and sub-table),
+and the LoTSS "big" share carries the same. Re-archive a clean copy with
+`scripts/repackage_dataset.sh`:
+
+```bash
+wget -O Sim.tgz https://sdrive.cnrs.fr/public.php/dav/files/PNmRiW3zc7XmEwN
+scripts/repackage_dataset.sh Sim.tgz Sim_clean.tgz   # removes 384 table.lock, prints SHA256
+```
+
+Then update the `SIM_SHA256` pin in `install_data_jean_zay.sh` to the printed value once the
+clean archive is published. The same `find <dir> -name table.lock -delete` applies to an
+already-extracted dataset on `SCRATCH`.
 
 ## First run (simulated "small")
 
