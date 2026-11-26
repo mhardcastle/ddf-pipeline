@@ -23,7 +23,7 @@ Tiers: **A** = `harness/fundamentals/` (pure numpy, CI), **B** = `harness/synthe
 | Paper | Pins | Layer | Harness value |
 | --- | --- | --- | --- |
 | **Certenais, Bodin & Morin 2025** (arXiv:2509.03075) | the DDF Pipeline itself: architecture, stages, validation | all | **very high** — the harness should mirror the stages this paper describes |
-| **"Enabling Radio Astronomy to Use French Supercomputers"**, SC-W 2026 (IEEE/ACM, art. 122100a478) | the parallel DDF Pipeline on French supercomputers (Exa-AToW): multi-node deployment, service account | e2e / HPC | **high** — the reference for the multi-node and Adastra validation |
+| **Certenais, Bodin & De Zordo 2026**, "Enabling Radio Astronomy to Use French Supercomputers", SC-W 2026 (IEEE/ACM, art. 122100a478) | DDF Pipeline as a service on Jean Zay: **1→24 nodes, 68.8 h → 8.7 h (~7.9×)**; Jean Zay ↔ Adastra cross-center validated; EB/AM + named service account under ZRR | e2e / HPC | **high** — the scaling and deployment reference |
 | **"HPC Software as a Service: A Data Logistics Approach with the DDF Pipeline as a Practical Case Study Deployment"**, HAL hal-05424635 | data logistics and DDF Pipeline deployment as a service | e2e / data movement | medium |
 | **Shimwell, Hardcastle, Tasse et al. 2026** (LoTSS VII, DR3; arXiv:2602.15949) | latest LoTSS; DD calibration in ~45 facets; survey QC | C | high — the current survey reference |
 | **van Weeren et al. 2016** (arXiv:1601.05422, LOFAR facet calibration) | the facet-calibration method that DDFacet builds on | A (facets) + C | medium-high |
@@ -42,5 +42,7 @@ Tiers: **A** = `harness/fundamentals/` (pure numpy, CI), **B** = `harness/synthe
   de Jong 2024, Morabito 2025.
 - **Context only**: Thekkeppattu 2024 (station holography), Hardcastle 2025 (survey science).
 - **The spec**: Certenais et al. 2025 describes the pipeline the harness validates.
-- **The deployment**: the SC-W 2026 paper (and the HAL data-logistics paper) describe the
-  multi-node / Exa-AToW operation that the e2e validation (Jean Zay, Adastra) exercises.
+- **The deployment**: Certenais et al. 2026 reports 1→24-node scaling (68.8 h → 8.7 h, ~7.9×)
+  and Jean Zay ↔ Adastra cross-center runs. The 12-node simulation work is therefore a
+  **correctness/robustness** complement, not a scaling milestone; the real-data scaling is
+  already in that paper.
