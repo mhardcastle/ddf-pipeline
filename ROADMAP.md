@@ -19,8 +19,7 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 
 ## Fundamentals harness (ADR-0006)
 
-- [x] Layer A (`harness/fundamentals/`): Fourier (2), visibility/VZ (4), imaging/PSF/weighting (5), Jones/RIME/closure (7), calibration (8) — 14 tests, CI.
-- [ ] Layer A: deconvolution (6) — a Hogbom CLEAN on a synthetic dirty image.
+- [x] Layer A (`harness/fundamentals/`): Fourier (2), visibility/VZ (4), imaging/PSF/weighting (5), deconvolution (6), Jones/RIME/closure (7), calibration (8) — 15 tests, CI.
 - [ ] Layer B (`harness/synthetic/`): tiny synthetic MS (python-casacore) + known gains; run KillMS/DDFacet; known-answer oracle on Jean Zay.
 - [ ] Layer C (deferred): QC oracle injecting known sources/gains into the sim.
 
