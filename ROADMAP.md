@@ -16,6 +16,18 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 - [ ] `ms_quality` casacore test: a synthetic MS written in `tmp_path`, in a separate CI job with `python-casacore`.
 - [ ] Audit the other `DicoNode2mslist[Node]` sites in `pipeline.py` (~195, 688, 921, 1240, 1385) for the same KeyError; route them through `utils/pernode.py`.
 - [ ] Audit killMS/DDFacet for other shared `SaveFile` / read-after-write races (the `ClipCal.last` and `NodesCat` classes).
+
+## Shared-file audit (concurrent multi-node paths)
+
+Fixed: `NodesCatAll/Imaged.npy`, `DicoFacet`, `facetCoord.txt` (DDFacet, atomic save); `ClipCal.last` (killMS, no re-read).
+
+Still to audit / decide:
+- [ ] Monitors: `last_IOMonitor.obj` / `last_MemMonitor.obj` (per-node, fixed `SaveFile` write+read).
+- [ ] `last_DDFacet.finalised.obj` in `ddf_image`'s MPI branch (written/read by each rank if `ddf_image` runs on all ranks).
+- [ ] `DicoModel` (`ClassModelMachine.ToFile`): verify it is written once (rank 0) or make it atomic.
+- [ ] killMS `SmoothSols` / `InterpSols` / `MergeSols` / `AQWeight` fixed `SaveFile`s, if run per node.
+
+Benign in the concurrent path (written, not read): `last_killMS.obj`, `last_DDFacet.obj`, `ddf-pipeline.last`.
 - [ ] `mpi_manager` unit tests: node scatter, `DicoNode2mslist`, `filterHost` with mocked ranks/hosts.
 
 ## Next — acceptance / cluster
