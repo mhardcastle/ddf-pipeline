@@ -8,6 +8,7 @@ nav:
   - Manual: manual.md
   - Developer notes: developer_notes.md
   - Quality control: quality-control.md
+  - References: references.md
   - Testing: testing.md
   - Extraction: extract.md
   - Singularity: singularity.md
