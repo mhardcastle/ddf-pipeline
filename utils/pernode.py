@@ -25,3 +25,18 @@ def per_node_config(base_options, dico_mslist, dico_fullmslist):
         options["full_mslist"] = dico_fullmslist[node]
         configs.append((node, options))
     return configs
+
+
+def node_mslist_dict(dico_mslist, dico_fullmslist, mslist_str):
+    """Return the per-node dict that matches ``mslist_str``.
+
+    ``mslist`` and ``full_mslist`` can have **different node sets** (the sim has
+    6 MSs in mslist.txt and 12 in big-mslist.txt, so at 12 nodes the two dicts
+    cover different nodes). A ``full_mslist`` step must iterate the full dict, or
+    it silently skips the nodes that only have a full-list entry.
+    """
+    if mslist_str == "mslist":
+        return dico_mslist
+    if mslist_str == "full_mslist":
+        return dico_fullmslist
+    raise ValueError("unknown mslist string (%r)" % (mslist_str,))

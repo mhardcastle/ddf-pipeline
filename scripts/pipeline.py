@@ -69,7 +69,7 @@ if not LOCAL_DEV:
     import datetime
     import threading
     import mpi_manager
-    from pernode import per_node_config
+    from pernode import per_node_config, node_mslist_dict
 
 
 else:
@@ -89,7 +89,7 @@ else:
     from utils.pipeline_version import version
     from others.surveys_db import use_database,update_status,SurveysDB
     from utils import mpi_manager
-    from utils.pernode import per_node_config
+    from utils.pernode import per_node_config, node_mslist_dict
 
     __version__=version()
     import datetime
@@ -191,15 +191,9 @@ def find_cache_dir(options):
 def check_imaging_weight_mpi(MPI_Manager,o,mslist_str="mslist"):
     ListJobs=[]
     if o is not None:
-        for Node in MPI_Manager.DicoNode2mslist.keys():
-            oc=copy.deepcopy(o)
-            if mslist_str=='mslist':
-                oc["mslist"]=MPI_Manager.DicoNode2mslist[Node]
-            elif mslist_str=='full_mslist':
-                oc["mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
-            else:
-                raise RuntimeError(f'mslist string not recognised ({mslist_str})')
-            ListJobs.append((Node,check_imaging_weight,(oc["mslist"],),{}))
+        dico = node_mslist_dict(MPI_Manager.DicoNode2mslist, MPI_Manager.DicoNode2fullmslist, mslist_str)
+        for Node, mslist_ in dico.items():
+            ListJobs.append((Node,check_imaging_weight,(mslist_,),{}))
 
     mpi_manager.callParallel(ListJobs)
 
@@ -684,14 +678,8 @@ def killms_data_mpi(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED
                 SkipSmooth=False,PreApplySols=None,SigmaFilterOutliers=None,UpdateWeights=None, mpiManager=None, mslist_str=""):
     ListJobs=[]
     if mslist_str != "":
-        for Node in mpiManager.DicoNode2mslist.keys():
-            mslist_ = None
-            if mslist_str == "mslist":
-                mslist_=mpiManager.DicoNode2mslist[Node]
-            elif mslist_str == "full_mslist":
-                mslist_=mpiManager.DicoNode2fullmslist[Node]
-            else:
-                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+        dico = node_mslist_dict(mpiManager.DicoNode2mslist, mpiManager.DicoNode2fullmslist, mslist_str)
+        for Node, mslist_ in dico.items():
             ListJobs.append((Node,killms_data_serial,(imagename,mslist_,outsols,clusterfile,colname,niterkf,dicomodel,
                 uvrange,wtuv,robust,catcher,dt,options,
                 SolverType,PolMode,False,NChanSols,
@@ -917,14 +905,8 @@ def mvglob(path,dest):
 
 def clearcache_mpi(MPI_Manager,mslist_str, o):
     ListJobs=[]
-    for Node in MPI_Manager.DicoNode2mslist.keys():
-        mslist_ = None
-        if mslist_str == "mslist":
-            mslist_=MPI_Manager.DicoNode2mslist[Node]
-        elif mslist_str == "full_mslist":
-            mslist_=MPI_Manager.DicoNode2fullmslist[Node]
-        else:
-            raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+    dico = node_mslist_dict(MPI_Manager.DicoNode2mslist, MPI_Manager.DicoNode2fullmslist, mslist_str)
+    for Node, mslist_ in dico.items():
         oc=copy.deepcopy(o)
         ListJobs.append((Node,clearcache,(mslist_,oc),{}))
 
@@ -1229,14 +1211,8 @@ def subtract_vis(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out
 def subtract_vis_mpi(mslist=None,colname_a="CORRECTED_DATA",colname_b="DATA_SUB",out_colname="DATA_SUB", mpiManager=None, mslist_str=""):
     ListJobs=[]
     if mslist_str != "":
-        for Node in mpiManager.DicoNode2mslist.keys():
-            mslist_ = None
-            if mslist_str == "mslist":
-                mslist_=mpiManager.DicoNode2mslist[Node]
-            elif mslist_str == "full_mslist":
-                mslist_=mpiManager.DicoNode2fullmslist[Node]
-            else:
-                raise RuntimeError(f'Unknown mslist string ({mslist_str})')
+        dico = node_mslist_dict(mpiManager.DicoNode2mslist, mpiManager.DicoNode2fullmslist, mslist_str)
+        for Node, mslist_ in dico.items():
             ListJobs.append((Node,subtract_vis_serial,(mslist_,colname_a,colname_b,out_colname), {}))
 
     res=mpi_manager.callParallel(ListJobs)
