@@ -19,7 +19,7 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 
 ## Shared-file audit (concurrent multi-node paths)
 
-Fixed: `NodesCatAll/Imaged.npy`, `DicoFacet`, `facetCoord.txt` (DDFacet, atomic save); `ClipCal.last` (killMS, no re-read).
+Fixed: `NodesCatAll/Imaged.npy`, `DicoFacet`, `facetCoord.txt` (DDFacet, atomic save); `ClipCal.last` (killMS, no re-read); FITS image output (`ToFits`, atomic write).
 
 Still to audit / decide:
 - [ ] Monitors: `last_IOMonitor.obj` / `last_MemMonitor.obj` (per-node, fixed `SaveFile` write+read).

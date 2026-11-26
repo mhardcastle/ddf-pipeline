@@ -6,7 +6,7 @@ validated set changes. `install_uv_jean_zay.sh` pins these.
 | Repository | Reference | Notes |
 | --- | --- | --- |
 | `mhardcastle/ddf-pipeline` | `astra-hackathon` (`de84e2b`, per-node distribution extracted) | pipeline |
-| `cyriltasse/DDFacet` | `675ce535` + `astra-hackathon` (`f495fd9`: NodesCat atomic; `3ce3799`: DicoFacet/facetCoord atomic) | imaging |
+| `cyriltasse/DDFacet` | `675ce535` + `astra-hackathon` (`f495fd9`: NodesCat atomic; `3ce3799`: DicoFacet/facetCoord atomic; `acdc8b0`: FITS atomic) | imaging |
 | `cyriltasse/killMS` | `c8f17884` + `astra-hackathon` (`554b0d9`: ClipCal shared `SaveFile` race) | calibration |
 
 Status:
