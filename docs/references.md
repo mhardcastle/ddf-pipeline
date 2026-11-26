@@ -36,8 +36,10 @@ Tiers: **A** = `harness/fundamentals/` (pure numpy, CI), **B** = `harness/synthe
 
 ## What is directly testable
 
-- **Now (layer A)**: Smirnov & Tasse 2015 (StEFCal + degeneracy), Tasse 2017 and
-  van Weeren 2016 (facets), Xie 2024 (weighting/sensitivity).
+- **Done (layer A)**: Smirnov & Tasse 2015 (StEFCal update + global-phase degeneracy,
+  `test_stefcal.py`), Tasse 2017 / van Weeren 2016 (direction cosines, facet coverage,
+  `test_facets.py`), Xie 2024 (weighting/sensitivity, `test_sensitivity.py`).
+- **Optional (layer A)**: Tasse 2014 / arXiv:1403.6308 (Kalman / Wirtinger) — numerical, harder.
 - **Layer C (deferred)**: Wu 2025 (IQA), Tasse 2021, Shimwell 2019/2022/2026,
   de Jong 2024, Morabito 2025.
 - **Context only**: Thekkeppattu 2024 (station holography), Hardcastle 2025 (survey science).

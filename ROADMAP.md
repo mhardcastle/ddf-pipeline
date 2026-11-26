@@ -20,6 +20,8 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 ## Fundamentals harness (ADR-0006)
 
 - [x] Layer A (`harness/fundamentals/`): Fourier (2), visibility/VZ (4), imaging/PSF/weighting (5), deconvolution (6), Jones/RIME/closure (7), calibration (8) — 15 tests, CI.
+- [x] Paper-derived layer A: StEFCal (Smirnov & Tasse 2015), facets/direction cosines (Tasse 2017, van Weeren 2016), weighting/sensitivity (Xie 2024) — 10 tests.
+- [ ] Optional layer A: Kalman / Wirtinger (Tasse 2014, arXiv:1403.6308).
 - [ ] Layer B (`harness/synthetic/`): tiny synthetic MS (python-casacore) + known gains; run KillMS/DDFacet; known-answer oracle on Jean Zay.
 - [ ] Layer C (deferred): QC oracle injecting known sources/gains into the sim.
 
