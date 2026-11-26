@@ -41,7 +41,9 @@ Benign in the concurrent path (written, not read): `last_killMS.obj`, `last_DDFa
 
 - [ ] `scripts/run_tests_jean_zay.sh` (1 node smoke, 2–3 nodes MPI).
 - [x] 3-node e2e on the cleaned dataset — job `803303`, smoke `PASS` (locks + atomic save).
-- [ ] Real 12-node run once multi-node is stable.
+- [x] 6-node e2e — smoke `PASS` after the ClipCal / DicoFacet / FITS atomic fixes.
+- [ ] 12-node e2e.
+- [ ] Real 12-node run on `lotss-big` once multi-node is stable.
 
 ## Known risks that are not unit-testable
 

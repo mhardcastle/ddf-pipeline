@@ -18,8 +18,7 @@ Status:
   (`00:46:38`, MaxRSS ≈ 23 GB), but the same configuration failed intermittently on stale
   table locks and the non-atomic `NodesCat` write; both are fixed. 3 nodes ≈ 1 node
   (`00:32:13`): no scaling gain, as expected for the overhead-bound simulation.
-- **6 / 12 nodes**: first 6-node attempt (job `809116`) failed in `ClipCal` on a lock-clean
-  dataset. Root cause: `ClipCal.py` re-read the shared `ClipCal.last` `SaveFile`, which every
-  concurrent process overwrites, so a process could clip another node's MS. Fixed in killMS
-  `astra-hackathon` (`554b0d9`); 6/12-node re-run pending. The simulation is overhead-bound,
-  so only correctness (not speed) is being checked.
+- **6 nodes**: validated — smoke `PASS` after the `ClipCal`/`DicoFacet`/FITS fixes (image stats
+  ≤3.5 % of the reference). A first 6-node attempt (job `809116`) had failed on the `ClipCal`
+  shared `SaveFile` race, fixed in killMS `554b0d9`.
+- **12 nodes**: pending.
