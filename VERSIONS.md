@@ -12,10 +12,11 @@ validated set changes. `install_uv_jean_zay.sh` pins these.
 Status:
 
 - **1 node**: validated — `00:32:13`, smoke `PASS`.
-- **3 nodes**: validated — smoke `PASS`, job `803303` on the cleaned dataset (no `table.lock`;
-  atomic `NodesCat` save). Stats: mean 1.4 %, std 1.6 %, p1 5.9 %, p99 5.7 %, max 5.7 %.
-  An earlier 3-node run (`750593`) also passed (`00:46:38`, MaxRSS ≈ 23 GB), but the same
-  configuration failed intermittently on stale table locks and the non-atomic `NodesCat`
-  write; both are fixed.
+- **3 nodes**: validated — job `803303`, `00:34:37`, MaxRSS ≈ 28.5 GB, smoke `PASS` on the
+  cleaned dataset (no `table.lock`; atomic `NodesCat` save). Stats: mean 1.4 %, std 1.6 %,
+  p1 5.9 %, p99 5.7 %, max 5.7 %. An earlier 3-node run (`750593`) also passed
+  (`00:46:38`, MaxRSS ≈ 23 GB), but the same configuration failed intermittently on stale
+  table locks and the non-atomic `NodesCat` write; both are fixed. 3 nodes ≈ 1 node
+  (`00:32:13`): no scaling gain, as expected for the overhead-bound simulation.
 - **6 / 12 nodes**: not worth running on the simulation (overhead-bound). The real-dataset run
   is the meaningful multi-node test.
