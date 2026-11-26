@@ -7,6 +7,8 @@ nav:
   - Data: data.md
   - Manual: manual.md
   - Developer notes: developer_notes.md
+  - Quality control: quality-control.md
+  - Testing: testing.md
   - Extraction: extract.md
   - Singularity: singularity.md
   - Exa-ATOW: exa-atow.md
@@ -15,6 +17,7 @@ nav:
       - "ADR-0002: What runs where": adr/0002-what-runs-where.md
       - "ADR-0003: Smoke oracle is statistical": adr/0003-smoke-oracle-is-statistical.md
       - "ADR-0004: Branching and release model": adr/0004-branching-and-release-model.md
+      - "ADR-0005: Test strategy across repositories": adr/0005-test-strategy-across-repositories.md
 
 exclude_docs: |
   agents/*.md

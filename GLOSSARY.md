@@ -54,5 +54,52 @@ _Avoid_: parset file (parset is the parser module, not the file)
 
 ### Testing
 
-**Smoke test**: A run that proves the plumbing works end to end — `pipeline.py` completes on the simulated dataset and produces its artefacts. It is not a scientific validation: it says nothing about flux scale, astrometry, dynamic range or convergence.
+**Smoke test**: A run that proves the plumbing works end to end — `pipeline.py` completes on
+the simulated dataset and produces its artefacts. It is not a scientific validation: it says
+nothing about flux scale, astrometry, dynamic range or convergence.
 _Avoid_: integration test (until the inputs are pinned and a truth-based assertion exists)
+
+**Unit test**: An algorithm-level test with no data, exact assertions, sub-second.
+
+**Acceptance test**: An intermediate-step test (imaging, weighting, ClipCal, solutions)
+compared against a stored reference, with a pixel-exact oracle because it runs one process at
+a fixed thread count.
+
+**End-to-end test**: A test of the whole workflow including multi-node MPI; its oracle is
+statistical, because an iterative, threaded, MPI run is not pixel-reproducible.
+
+**Golden master**: A stored reference output (an image, a solution set) that a run is
+compared against.
+
+**Oracle**: The criterion that decides pass from fail: *pixel-exact* (acceptance) or
+*statistical* (end-to-end, ADR-0003).
+
+### Quality control
+
+**Calibration residual**: The difference between the corrected visibilities and the sky
+model (`colname − DD_PREDICT`). Its RMS, normalised by the visibility weights, is the
+primary measure of calibration quality.
+
+**Closure phase**: The sum of visibility phases around an antenna triangle; independent of
+all antenna-based gains, so it reveals only baseline-dependent (non-closing) errors.
+
+**Closure amplitude**: The ratio of visibility amplitudes around a four-antenna loop; for a
+point source it is unity, so its departure from unity reveals baseline amplitude errors.
+
+**Dynamic range**: The ratio of a source's peak flux to the noise or artefact level in its
+vicinity; the image-side signature of residual calibration errors.
+
+**Flux scale**: The absolute scaling between recovered and true flux; an absolute check that
+self-calibration cannot verify on its own (the ambiguity is absorbed into the gains).
+
+**Astrometric offset**: The angular offset between a recovered source position and its true
+or reference position.
+
+**Completeness**: The fraction of true sources recovered above a flux threshold.
+**Purity**: The fraction of detected sources that are real rather than artefacts.
+
+**Source counts**: The differential number of sources per unit area per unit flux; compared
+to the Euclidean-normalised reference to flag flux-scale or completeness errors.
+
+**Thermal noise**: The radiometer noise floor; the level a correct calibration and model
+should leave in the residual.
