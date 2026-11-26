@@ -7,6 +7,10 @@ decompress into `SCRATCH` for each experiment.
 > **Restart caveat.** The pipeline's restart mechanism is unreliable. If a run is
 > interrupted, clear the execution directory and decompress a fresh dataset before
 > re-running.
+>
+> **Stale locks.** The archived Measurement Sets contain `table.lock` files; remove them from
+> each copy before a run (`find <dir> -name table.lock -delete`) or casacore can deadlock on
+> Lustre when two steps touch the same table.
 
 ## Catalogue
 

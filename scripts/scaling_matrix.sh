@@ -39,6 +39,7 @@ for n in $NODES; do
         rm -rf "$run"
         mkdir -p "$run" "$mon"
         cp -r "$SIM_PRISTINE"/. "$run"/
+        find "$run" -name table.lock -delete   # stale locks from the archive deadlock casacore on Lustre
 
         set +e
         submit=$(DDF_SIM_DIR="$run" DDF_PIPELINE_CFG="$CFG" DDF_SMOKE_CHECK=1 \
