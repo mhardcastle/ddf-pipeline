@@ -15,6 +15,7 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 
 - [ ] `ms_quality` casacore test: a synthetic MS written in `tmp_path`, in a separate CI job with `python-casacore`.
 - [ ] Audit the other `DicoNode2mslist[Node]` sites in `pipeline.py` (~195, 688, 921, 1240, 1385) for the same KeyError; route them through `utils/pernode.py`.
+- [ ] Audit killMS/DDFacet for other shared `SaveFile` / read-after-write races (the `ClipCal.last` and `NodesCat` classes).
 - [ ] `mpi_manager` unit tests: node scatter, `DicoNode2mslist`, `filterHost` with mocked ranks/hosts.
 
 ## Next — acceptance / cluster
