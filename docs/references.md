@@ -23,6 +23,8 @@ Tiers: **A** = `harness/fundamentals/` (pure numpy, CI), **B** = `harness/synthe
 | Paper | Pins | Layer | Harness value |
 | --- | --- | --- | --- |
 | **Certenais, Bodin & Morin 2025** (arXiv:2509.03075) | the DDF Pipeline itself: architecture, stages, validation | all | **very high** — the harness should mirror the stages this paper describes |
+| **"Enabling Radio Astronomy to Use French Supercomputers"**, SC-W 2026 (IEEE/ACM, art. 122100a478) | the parallel DDF Pipeline on French supercomputers (Exa-AToW): multi-node deployment, service account | e2e / HPC | **high** — the reference for the multi-node and Adastra validation |
+| **"HPC Software as a Service: A Data Logistics Approach with the DDF Pipeline as a Practical Case Study Deployment"**, HAL hal-05424635 | data logistics and DDF Pipeline deployment as a service | e2e / data movement | medium |
 | **Shimwell, Hardcastle, Tasse et al. 2026** (LoTSS VII, DR3; arXiv:2602.15949) | latest LoTSS; DD calibration in ~45 facets; survey QC | C | high — the current survey reference |
 | **van Weeren et al. 2016** (arXiv:1601.05422, LOFAR facet calibration) | the facet-calibration method that DDFacet builds on | A (facets) + C | medium-high |
 | **Morabito et al. 2025**, Ap&SS 370, 19 (doi:10.1007/s10509-025-04406-x) | ILT sub-arcsecond DD calibration in practice; ionosphere, smearing, astrometry | C | medium |
@@ -40,3 +42,5 @@ Tiers: **A** = `harness/fundamentals/` (pure numpy, CI), **B** = `harness/synthe
   de Jong 2024, Morabito 2025.
 - **Context only**: Thekkeppattu 2024 (station holography), Hardcastle 2025 (survey science).
 - **The spec**: Certenais et al. 2025 describes the pipeline the harness validates.
+- **The deployment**: the SC-W 2026 paper (and the HAL data-logistics paper) describe the
+  multi-node / Exa-AToW operation that the e2e validation (Jean Zay, Adastra) exercises.
