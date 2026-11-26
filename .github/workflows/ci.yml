@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install lightweight test deps
-        run: pip install pytest psutil future
+        run: pip install pytest psutil future numpy
       - name: Run unit tests
         run: python -m pytest -q
 
