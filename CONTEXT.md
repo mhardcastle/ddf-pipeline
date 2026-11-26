@@ -57,11 +57,25 @@ Code lives in three canonical repositories (`mhardcastle/ddf-pipeline`, `cyrilta
 never pushed**; CI is on the exploratory `HackathonRennes` lineage. The smoke test runs on a
 validated tag. See `docs/adr/0004-branching-and-release-model.md` and `VERSIONS.md`.
 
-## Configuration
+## Configuration / application parameters
 
-Parameters live in `utils/parset.py` (`option_list`), grouped by category (`machine`,
-`data`, `solutions`, `image`, …). A `.cfg` file sets them; they surface in the `o`
-options dict.
+ddf-pipeline's own options are declared in `utils/parset.py` (`option_list`: section, name,
+type, default, description), grouped by category (`machine`, `data`, `solutions`, `image`,
+…). A `.cfg` file sets them; they surface in the `o` options dict. The default configuration
+is `others/DefaultParset.cfg`. The sibling tools carry their own parsers, read via
+`parse_parset`: `DDFacet/Parset/DefaultParset.cfg` and `killMS/Parset/DefaultParset.cfg`. The
+quality pipeline's options are in `utils/quality_parset.py`.
+
+For any applicative parameter (its default value and description), look in `parset.py`
+first, then the DDFacet/KillMS `DefaultParset.cfg`.
+
+## Outputs and quality control
+
+The **primary output is the calibrated Measurement Set(s)**; the FITS images are a
+by-product. Quality control should therefore focus on the calibrated visibilities
+(residuals, solutions, flags, weights), not only on the image. `scripts/quality_pipeline.py`
+(source finding, flux and astrometry against catalogues, dynamic-range checks) covers the
+images; an MS-level check is the next step.
 
 ## Environment
 
