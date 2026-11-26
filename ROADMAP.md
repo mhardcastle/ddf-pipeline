@@ -17,6 +17,13 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 - [ ] Audit the other `DicoNode2mslist[Node]` sites in `pipeline.py` (~195, 688, 921, 1240, 1385) for the same KeyError; route them through `utils/pernode.py`.
 - [ ] Audit killMS/DDFacet for other shared `SaveFile` / read-after-write races (the `ClipCal.last` and `NodesCat` classes).
 
+## Fundamentals harness (ADR-0006)
+
+- [x] Layer A (`harness/fundamentals/`): Fourier (2), visibility/VZ (4), imaging/PSF/weighting (5), Jones/RIME/closure (7), calibration (8) — 14 tests, CI.
+- [ ] Layer A: deconvolution (6) — a Hogbom CLEAN on a synthetic dirty image.
+- [ ] Layer B (`harness/synthetic/`): tiny synthetic MS (python-casacore) + known gains; run KillMS/DDFacet; known-answer oracle on Jean Zay.
+- [ ] Layer C (deferred): QC oracle injecting known sources/gains into the sim.
+
 ## Shared-file audit (concurrent multi-node paths)
 
 Fixed: `NodesCatAll/Imaged.npy`, `DicoFacet`, `facetCoord.txt` (DDFacet, atomic save); `ClipCal.last` (killMS, no re-read); FITS image output (`ToFits`, atomic write).

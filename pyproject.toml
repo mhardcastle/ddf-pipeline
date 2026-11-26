@@ -101,5 +101,5 @@ killms = { path = "../killMS" }
 dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "harness/fundamentals"]
 pythonpath = ["."]

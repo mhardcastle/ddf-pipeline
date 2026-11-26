@@ -39,6 +39,20 @@ _Avoid_: DD (unless the abbreviation is defined nearby)
 
 **Continuum**: Broadband emission, as opposed to spectral line.
 
+**RIME**: The Radio Interferometric Measurement Equation — the product of Jones matrices that maps a sky model to visibilities.
+
+**Jones matrix**: The 2×2 complex matrix describing a direction-dependent effect on the two polarizations.
+
+**1GC**: First-generation calibration — direction-independent antenna gains, solved from the data and a sky model.
+
+**2GC**: Second-generation calibration — direction-dependent gains, one solution per direction.
+
+**3GC**: Third-generation calibration — direction-dependent gains that also absorb residual source structure.
+
+**Van Cittert-Zernike theorem**: The visibility is the Fourier transform of the sky brightness.
+
+**IQA**: Image Quality Assessment — the residual, dynamic-range and artefact metrics that judge a restored image.
+
 ### Data and files
 
 **Measurement Set (.ms)**: The CASA format holding visibilities.
