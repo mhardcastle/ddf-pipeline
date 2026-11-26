@@ -52,7 +52,10 @@ pinned stack; regenerate the reference deliberately and re-pin its SHA256.
 
 ```bash
 # unit (anywhere)
-pytest tests/unit -q
+pytest tests -q
+# pytest lives in the `dev` dependency group, not an extra:
+#   uv pip install pytest                      # into the active .venv (keeps mpi-support)
+#   # or: uv sync --extra mpi-support --group dev
 
 # acceptance (CI or a SLURM job)
 DDFACET_TEST_DATA_DIR=/path/ref DDFACET_TEST_NCPU=8 pytest DDFacet/Tests/acceptance -q
