@@ -69,6 +69,7 @@ if not LOCAL_DEV:
     import datetime
     import threading
     import mpi_manager
+    from pernode import per_node_config
 
 
 else:
@@ -88,6 +89,7 @@ else:
     from utils.pipeline_version import version
     from others.surveys_db import use_database,update_status,SurveysDB
     from utils import mpi_manager
+    from utils.pernode import per_node_config
 
     __version__=version()
     import datetime
@@ -1047,11 +1049,7 @@ def smooth_solutions(mslist,ddsols,catcher=None,dryrun=False,InterpToMSListFreqs
 def full_clearcache_mpi(MPI_Manager,o,extras=None):
     ListJobs=[]
     if o is not None:
-        for Node in MPI_Manager.DicoNode2fullmslist.keys():
-            oc=copy.deepcopy(o)
-            print("MPI_Manager.DicoNode2mslist.keys",MPI_Manager.DicoNode2mslist.keys())
-            oc["mslist"]=MPI_Manager.DicoNode2mslist.get(Node,o["mslist"])
-            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+        for Node, oc in per_node_config(o, MPI_Manager.DicoNode2mslist, MPI_Manager.DicoNode2fullmslist):
             ListJobs.append((Node,full_clearcache,(oc,extras),{}))
 
     mpi_manager.callParallel(ListJobs)
@@ -1068,10 +1066,7 @@ def full_clearcache(o,extras=None):
 def redo_dppp_di_mpi(MPI_Manager,o):
     ListJobs=[]
     if o is not None:
-        for Node in MPI_Manager.DicoNode2fullmslist.keys():
-            oc=copy.deepcopy(o)
-            oc["mslist"]=MPI_Manager.DicoNode2mslist.get(Node,o["mslist"])
-            oc["full_mslist"]=MPI_Manager.DicoNode2fullmslist[Node]
+        for Node, oc in per_node_config(o, MPI_Manager.DicoNode2mslist, MPI_Manager.DicoNode2fullmslist):
             ListJobs.append((Node,redo_dppp_di,(oc,),{}))
 
     mpi_manager.callParallel(ListJobs)
