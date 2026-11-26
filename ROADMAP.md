@@ -27,7 +27,7 @@ Test backlog after the `astra-hackathon` debrief. Tiers and oracles are in
 ## Next — end-to-end / multi-node
 
 - [ ] `scripts/run_tests_jean_zay.sh` (1 node smoke, 2–3 nodes MPI).
-- [ ] 3-node e2e on the cleaned dataset as the race oracle (locks + atomic save so far).
+- [x] 3-node e2e on the cleaned dataset — job `803303`, smoke `PASS` (locks + atomic save).
 - [ ] Real 12-node run once multi-node is stable.
 
 ## Known risks that are not unit-testable
