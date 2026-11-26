@@ -47,6 +47,8 @@ Benign in the concurrent path (written, not read): `last_killMS.obj`, `last_DDFa
 
 ## Next — end-to-end / multi-node
 
+- [ ] Multi-node distribution: `ddf_image` runs the **collective** imaging (`COMM_WORLD.allreduce`) on the `DicoNode2mslist` nodes; if `mslist` < node count, the idle ranks miss the allreduce and the job deadlocks. Workaround: make `mslist = full_mslist`. Proper fix: give every node a (possibly empty) per-node list, once DDFacet tolerates an empty MS list.
+
 - [ ] `scripts/run_tests_jean_zay.sh` (1 node smoke, 2–3 nodes MPI).
 - [x] 3-node e2e on the cleaned dataset — job `803303`, smoke `PASS` (locks + atomic save).
 - [x] 6-node e2e — smoke `PASS` after the ClipCal / DicoFacet / FITS atomic fixes.
