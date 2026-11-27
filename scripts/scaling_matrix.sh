@@ -44,13 +44,18 @@ for n in $NODES; do
         mkdir -p "$run" "$mon"
         cp -r "$SIM_PRISTINE"/. "$run"/
         find "$run" -name table.lock -delete   # stale locks from the archive deadlock casacore on Lustre
-        # A partial copy (quota, I/O) surfaces much later as "MS does not exist".
-        n_src=$(find "$SIM_PRISTINE" -maxdepth 1 -type d -name '*.MS' | wc -l)
-        n_dst=$(find "$run" -maxdepth 1 -type d -name '*.MS' | wc -l)
-        if [ "$n_dst" -ne "$n_src" ]; then
-            echo "error: copy incomplete: $n_dst/$n_src MS in $run (check quota/I/O)" >&2
-            exit 1
-        fi
+        # Every MS named in the run's lists must exist (a partial copy or an
+        # extraction still in progress surfaces later as "MS does not exist").
+        for msf in "$run/mslist.txt" "$run/big-mslist.txt"; do
+            [ -f "$msf" ] || continue
+            while read -r ms; do
+                [ -z "$ms" ] && continue
+                if [ ! -d "$run/$ms" ]; then
+                    echo "error: $run/$ms missing (partial copy or extraction in progress)" >&2
+                    exit 1
+                fi
+            done < "$msf"
+        done
 
         set +e
         submit=$(DDF_SIM_DIR="$run" DDF_PIPELINE_CFG="$CFG" DDF_SMOKE_CHECK=1 \
