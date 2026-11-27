@@ -23,7 +23,7 @@ TIME="${TIME:-00:40:00}"
 CFG="${CFG:-$REPO_DIR/examples/Simul-Hackaton.cfg}"
 LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay.slurm}"
 MONITOR="${MONITOR:-$HOME/ddf-monitor}"
-EXCLUDE="${EXCLUDE:-DDF_monitor*,DDF_register*,DDF_io_monitor*,mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash}"
+EXCLUDE="${EXCLUDE:-DDF_monitor*,DDF_register*,DDF_io_monitor*,mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash,local_*mslist.txt,ClipCal.last,last_killMS.obj,pop.myPickle,BatchCurrentParset.parset,solslist_*.txt}"
 CSV="$SCALING_ROOT/scaling.csv"
 
 [ -d "$SIM_PRISTINE" ] || { echo "error: pristine sim data not found: $SIM_PRISTINE" >&2; exit 1; }
