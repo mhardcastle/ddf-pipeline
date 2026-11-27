@@ -81,8 +81,18 @@ for n in $NODES; do
             "$PY" "$REPO_DIR/scripts/compare_products.py" "$SCALING_ROOT/${n}a/$f" "$SCALING_ROOT/${n}b/$f" | sed 's/^/     /'
         fi
     done
+    sa="$SCALING_ROOT/${n}a/SOLSDIR/0000.p00.MS/killMS.DDS3_full.sols.npz"
+    sb="$SCALING_ROOT/${n}b/SOLSDIR/0000.p00.MS/killMS.DDS3_full.sols.npz"
+    if [ -f "$sa" ] && [ -f "$sb" ]; then
+        echo "   solutions ${n}a vs ${n}b (phase-invariant):"
+        "$PY" "$REPO_DIR/scripts/compare_sols.py" "$sa" "$sb" | sed 's/^/     /'
+    fi
 done
 
 echo
 echo "== $CSV =="
 cat "$CSV"
+
+echo
+echo "== performance (sacct, pipeline step) =="
+"$PY" "$REPO_DIR/scripts/perf_report.py" --from-csv "$CSV"
