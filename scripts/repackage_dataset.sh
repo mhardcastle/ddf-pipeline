@@ -38,9 +38,9 @@ after=$(find "$work" -name table.lock | wc -l)
 # One entry is expected at the archive root (e.g. Sim/, or a bare MS dir).
 top="$(find "$work" -mindepth 1 -maxdepth 1 -print -quit)"
 echo "re-tar $DST (from $(basename "$top"))"
-tar -czf "$DST" \
+tar --format=posix --pax-option=delete=atime,delete=ctime \
     --sort=name --numeric-owner --owner=0 --group=0 \
-    -C "$work" "$(basename "$top")"
+    -cf - -C "$work" "$(basename "$top")" | gzip -n > "$DST"
 
 echo "removed=$before remaining=$after"
 echo "sha256 $(sha256sum "$DST")"
