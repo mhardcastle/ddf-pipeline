@@ -53,16 +53,18 @@ def sacct_rows(jobids):
     return [line.split("|") for line in out.splitlines() if line.strip()]
 
 
-def metrics(row):
+def metrics(row, cpus_per_node=40):
     (jid, state, elapsed, totalcpu, avecpu, cpus, nodes,
      maxrss, avgrss, maxvm, avgvm, energy) = row
     elapsed_s = hms_to_s(elapsed)
     cpu_s = hms_to_s(totalcpu)
     alloc = int(cpus) if cpus.strip().isdigit() else 0
     nnodes = int(nodes) if nodes.strip().isdigit() else 0
-    eff = cpu_s / (elapsed_s * alloc) if elapsed_s and alloc else 0.0
+    # Jean Zay's sacct reports 80 CPU/node but the node has 40; use the physical count.
+    used = nnodes * cpus_per_node if cpus_per_node else alloc
+    eff = cpu_s / (elapsed_s * used) if elapsed_s and used else 0.0
     return {
-        "job": jid, "state": state, "nodes": nnodes,
+        "job": jid, "state": state, "nodes": nnodes, "used_cpus": used,
         "elapsed_s": elapsed_s, "cpu_s": cpu_s, "ave_cpu_s": hms_to_s(avecpu),
         "cpu_eff": eff,
         "maxrss_GiB": size_to_bytes(maxrss) / 1024 ** 3,
@@ -89,6 +91,8 @@ def main(argv=None):
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("-j", "--jobs", default=None, help="comma-separated job IDs")
     p.add_argument("--from-csv", default=None, help="read job IDs (column 3) from a scaling.csv")
+    p.add_argument("--cpus-per-node", type=int, default=40,
+                   help="physical CPUs per node (Jean Zay cpu_p1: 40; sacct prints 80)")
     args = p.parse_args(argv)
 
     ids = args.jobs
@@ -98,15 +102,15 @@ def main(argv=None):
         p.error("give -j or --from-csv")
 
     rows = sacct_rows(ids)
-    print("%-12s %-10s %5s %9s %9s %9s %7s %9s %9s %10s %10s %10s"
-          % ("job", "state", "nodes", "elapsed_s", "cpu_s", "ave_cpu_s", "cpu_eff",
+    print("%-12s %-10s %5s %6s %9s %9s %9s %7s %9s %9s %10s %10s %10s"
+          % ("job", "state", "nodes", "cpus", "elapsed_s", "cpu_s", "ave_cpu_s", "cpu_eff",
              "maxRSS", "avgRSS", "maxVMSize", "avgVMSize", "energy_J"))
     for row in rows:
         if not row[0].endswith(".0"):
             continue  # the pipeline step, not .batch/.extern
-        m = metrics(row)
-        print("%-12s %-10s %5d %9.0f %9.0f %9.0f %6.1f%% %8.2fG %8.2fG %9.2fG %9.2fG %10d"
-              % (m["job"], m["state"], m["nodes"], m["elapsed_s"], m["cpu_s"],
+        m = metrics(row, args.cpus_per_node)
+        print("%-12s %-10s %5d %6d %9.0f %9.0f %9.0f %6.1f%% %8.2fG %8.2fG %9.2fG %9.2fG %10d"
+              % (m["job"], m["state"], m["nodes"], m["used_cpus"], m["elapsed_s"], m["cpu_s"],
                  m["ave_cpu_s"], 100 * m["cpu_eff"], m["maxrss_GiB"], m["avgrss_GiB"],
                  m["maxvmsize_GiB"], m["avgvmsize_GiB"], m["energy_J"]))
     return 0
