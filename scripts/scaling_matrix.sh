@@ -29,6 +29,10 @@ CSV="$SCALING_ROOT/scaling.csv"
 [ -d "$SIM_PRISTINE" ] || { echo "error: pristine sim data not found: $SIM_PRISTINE" >&2; exit 1; }
 [ -f "$CFG" ] || { echo "error: cfg not found: $CFG" >&2; exit 1; }
 mkdir -p "$SCALING_ROOT" "$MONITOR"
+# Snapshot the config: a re-install or edit during the matrix must not change a run pair.
+CFG_SNAPSHOT="$SCALING_ROOT/$(basename "$CFG")"
+cp "$CFG" "$CFG_SNAPSHOT"
+CFG="$CFG_SNAPSHOT"
 [ -f "$CSV" ] || echo "nodes,pair,jobid,elapsed,exit" > "$CSV"
 
 for n in $NODES; do
@@ -40,6 +44,13 @@ for n in $NODES; do
         mkdir -p "$run" "$mon"
         cp -r "$SIM_PRISTINE"/. "$run"/
         find "$run" -name table.lock -delete   # stale locks from the archive deadlock casacore on Lustre
+        # A partial copy (quota, I/O) surfaces much later as "MS does not exist".
+        n_src=$(find "$SIM_PRISTINE" -maxdepth 1 -type d -name '*.MS' | wc -l)
+        n_dst=$(find "$run" -maxdepth 1 -type d -name '*.MS' | wc -l)
+        if [ "$n_dst" -ne "$n_src" ]; then
+            echo "error: copy incomplete: $n_dst/$n_src MS in $run (check quota/I/O)" >&2
+            exit 1
+        fi
 
         set +e
         submit=$(DDF_SIM_DIR="$run" DDF_PIPELINE_CFG="$CFG" DDF_SMOKE_CHECK=1 \
