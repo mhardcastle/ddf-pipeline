@@ -23,4 +23,6 @@ Status:
   shared `SaveFile` race, fixed in killMS `554b0d9`.
 - **12 nodes**: validated — 12a and 12b both smoke `PASS` (mean 4.6 % / 1.9 % of the reference;
   all statistics within tolerance). The run exercises the collective imaging across all 12 ranks
-  and exits cleanly (the `pkill` no-match is no longer fatal).
+  and exits cleanly (the `pkill` no-match is no longer fatal). Reproducibility is **statistical**:
+  the facet partition differs between runs (up to ~3.6°), so the calibrated MS / solutions are not
+  run-to-run comparable, while the restored image is stable (ADR-0003).
