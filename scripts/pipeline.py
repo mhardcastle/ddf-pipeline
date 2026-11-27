@@ -1439,8 +1439,8 @@ def main(o):
     
     separator('Run MemMonitor')
     try:
-        run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
-        run("""pkill -f "IOMonitor.py" """, mpiManager=MPI_Manager)
+        run("""pkill -f "MemMonitor.py" """, proceed=True, mpiManager=MPI_Manager)
+        run("""pkill -f "IOMonitor.py" """, proceed=True, mpiManager=MPI_Manager)
     except:
         pass
     DoResetCounter=0
@@ -2401,7 +2401,7 @@ def main(o):
                         flist.append(cubefile)
 
     try:
-        run("""pkill -f "MemMonitor.py" """, mpiManager=MPI_Manager)
+        run("""pkill -f "MemMonitor.py" """, proceed=True, mpiManager=MPI_Manager)
     except:
         pass
     exit(0)
