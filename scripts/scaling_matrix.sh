@@ -13,6 +13,7 @@
 #   CFG=$REPO_DIR/examples/Simul-Hackaton.cfg
 #   LAUNCHER=$REPO_DIR/slurm/jean-zay.slurm      (simulated launch; --nodes overrides it)
 #   MONITOR=$HOME/ddf-monitor                      where mem*/iomonitor* are moved
+#   CLUSTERFILE=<fixed ClusterCat.npy>             fixed facet partition (comparable pair)
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -21,6 +22,7 @@ SCALING_ROOT="${SCALING_ROOT:-${SCRATCH:-$HOME/scratch}/ddf-sim-dataset/scaling}
 NODES="${NODES:-3 6 12}"
 TIME="${TIME:-00:40:00}"
 CFG="${CFG:-$REPO_DIR/examples/Simul-Hackaton.cfg}"
+CLUSTERFILE="${CLUSTERFILE:-}"
 LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay.slurm}"
 MONITOR="${MONITOR:-$HOME/ddf-monitor}"
 EXCLUDE="${EXCLUDE:-DDF_monitor*,DDF_register*,DDF_io_monitor*,mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash,local_*mslist.txt,ClipCal.last,last_killMS.obj,pop.myPickle,BatchCurrentParset.parset,solslist_*.txt}"
@@ -33,6 +35,12 @@ mkdir -p "$SCALING_ROOT" "$MONITOR"
 # Snapshot the config: a re-install or edit during the matrix must not change a run pair.
 CFG_SNAPSHOT="$SCALING_ROOT/$(basename "$CFG")"
 cp "$CFG" "$CFG_SNAPSHOT"
+if [ -n "$CLUSTERFILE" ]; then
+    [ -f "$CLUSTERFILE" ] || { echo "error: CLUSTERFILE not found: $CLUSTERFILE" >&2; exit 1; }
+    CLUSTERFILE="$(realpath -- "$CLUSTERFILE")"
+    echo "clusterfile=$CLUSTERFILE" >> "$CFG_SNAPSHOT"
+    echo "== fixed facet partition: $CLUSTERFILE"
+fi
 CFG="$CFG_SNAPSHOT"
 [ -f "$CSV" ] || echo "nodes,pair,jobid,elapsed,exit" > "$CSV"
 
