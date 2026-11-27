@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""SLURM performance report: time, CPU efficiency, memory and energy per job.
+"""SLURM performance report: time, CPU efficiency, memory (max and average), energy.
 
 Reads the pipeline step (``<jobid>.0``) from ``sacct`` and prints one line per job:
 
-    job  nodes  elapsed_s  cpu_s  cpu_eff  maxrss_GiB  maxvmsize_GiB  energy_J
+    job  nodes  elapsed_s  cpu_s  cpu_eff  maxRSS  avgRSS  maxVMSize  avgVMSize  energy_J
 
 Usage:
   perf_report.py -j 839738,841042
-  NODES="12" ... perf_report.py --from-csv "$SCRATCH/ddf-sim-dataset/scaling/scaling.csv"
+  perf_report.py --from-csv "$SCRATCH/ddf-sim-dataset/scaling/scaling.csv"
 """
 import argparse
 import subprocess
 import sys
 
-FIELDS = ["JobID", "State", "Elapsed", "TotalCPU", "AllocCPUS", "NNodes",
-          "MaxRSS", "MaxVMSize", "ConsumedEnergyRaw"]
+FIELDS = ["JobID", "State", "Elapsed", "TotalCPU", "AveCPU", "AllocCPUS", "NNodes",
+          "MaxRSS", "AveRSS", "MaxVMSize", "AveVMSize", "ConsumedEnergyRaw"]
 
 
 def hms_to_s(value):
@@ -54,7 +54,8 @@ def sacct_rows(jobids):
 
 
 def metrics(row):
-    jid, state, elapsed, totalcpu, cpus, nodes, maxrss, maxvmsize, energy = row
+    (jid, state, elapsed, totalcpu, avecpu, cpus, nodes,
+     maxrss, avgrss, maxvm, avgvm, energy) = row
     elapsed_s = hms_to_s(elapsed)
     cpu_s = hms_to_s(totalcpu)
     alloc = int(cpus) if cpus.strip().isdigit() else 0
@@ -62,9 +63,12 @@ def metrics(row):
     eff = cpu_s / (elapsed_s * alloc) if elapsed_s and alloc else 0.0
     return {
         "job": jid, "state": state, "nodes": nnodes,
-        "elapsed_s": elapsed_s, "cpu_s": cpu_s, "cpu_eff": eff,
+        "elapsed_s": elapsed_s, "cpu_s": cpu_s, "ave_cpu_s": hms_to_s(avecpu),
+        "cpu_eff": eff,
         "maxrss_GiB": size_to_bytes(maxrss) / 1024 ** 3,
-        "maxvmsize_GiB": size_to_bytes(maxvmsize) / 1024 ** 3,
+        "avgrss_GiB": size_to_bytes(avgrss) / 1024 ** 3,
+        "maxvmsize_GiB": size_to_bytes(maxvm) / 1024 ** 3,
+        "avgvmsize_GiB": size_to_bytes(avgvm) / 1024 ** 3,
         "energy_J": int(energy) if energy.strip().isdigit() else 0,
     }
 
@@ -94,16 +98,17 @@ def main(argv=None):
         p.error("give -j or --from-csv")
 
     rows = sacct_rows(ids)
-    print("%-12s %-10s %5s %9s %9s %7s %11s %13s %10s"
-          % ("job", "state", "nodes", "elapsed_s", "cpu_s", "cpu_eff",
-             "maxrss_GiB", "maxvmsize_GiB", "energy_J"))
+    print("%-12s %-10s %5s %9s %9s %9s %7s %9s %9s %10s %10s %10s"
+          % ("job", "state", "nodes", "elapsed_s", "cpu_s", "ave_cpu_s", "cpu_eff",
+             "maxRSS", "avgRSS", "maxVMSize", "avgVMSize", "energy_J"))
     for row in rows:
         if not row[0].endswith(".0"):
             continue  # the pipeline step, not .batch/.extern
         m = metrics(row)
-        print("%-12s %-10s %5d %9.0f %9.0f %6.1f%% %11.2f %13.2f %10d"
+        print("%-12s %-10s %5d %9.0f %9.0f %9.0f %6.1f%% %8.2fG %8.2fG %9.2fG %9.2fG %10d"
               % (m["job"], m["state"], m["nodes"], m["elapsed_s"], m["cpu_s"],
-                 100 * m["cpu_eff"], m["maxrss_GiB"], m["maxvmsize_GiB"], m["energy_J"]))
+                 m["ave_cpu_s"], 100 * m["cpu_eff"], m["maxrss_GiB"], m["avgrss_GiB"],
+                 m["maxvmsize_GiB"], m["avgvmsize_GiB"], m["energy_J"]))
     return 0
 
 
