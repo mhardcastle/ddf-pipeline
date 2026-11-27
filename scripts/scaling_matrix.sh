@@ -25,6 +25,7 @@ LAUNCHER="${LAUNCHER:-$REPO_DIR/slurm/jean-zay.slurm}"
 MONITOR="${MONITOR:-$HOME/ddf-monitor}"
 EXCLUDE="${EXCLUDE:-DDF_monitor*,DDF_register*,DDF_io_monitor*,mem,iomonitor*,logs/*,*.log,*.ddfcache/*,table.*,*.hash,local_*mslist.txt,ClipCal.last,last_killMS.obj,pop.myPickle,BatchCurrentParset.parset,solslist_*.txt}"
 CSV="$SCALING_ROOT/scaling.csv"
+PY="$REPO_DIR/.venv/bin/python"; [ -x "$PY" ] || PY=python3
 
 [ -d "$SIM_PRISTINE" ] || { echo "error: pristine sim data not found: $SIM_PRISTINE" >&2; exit 1; }
 [ -f "$CFG" ] || { echo "error: cfg not found: $CFG" >&2; exit 1; }
@@ -74,6 +75,12 @@ for n in $NODES; do
     python3 "$REPO_DIR/scripts/compare_runs.py" manifest "$SCALING_ROOT/${n}a" "$SCALING_ROOT/${n}a.manifest" --exclude "$EXCLUDE" >/dev/null
     python3 "$REPO_DIR/scripts/compare_runs.py" manifest "$SCALING_ROOT/${n}b" "$SCALING_ROOT/${n}b.manifest" --exclude "$EXCLUDE" >/dev/null
     python3 "$REPO_DIR/scripts/compare_runs.py" compare "$SCALING_ROOT/${n}a.manifest" "$SCALING_ROOT/${n}b.manifest" | sed 's/^/     /'
+    echo "   statistical ${n}a vs ${n}b (key products):"
+    for f in image_full_ampphase_di_m.NS.app.restored.fits image_full_ampphase_di_m.NS.int.residual.fits; do
+        if [ -f "$SCALING_ROOT/${n}a/$f" ] && [ -f "$SCALING_ROOT/${n}b/$f" ]; then
+            "$PY" "$REPO_DIR/scripts/compare_products.py" "$SCALING_ROOT/${n}a/$f" "$SCALING_ROOT/${n}b/$f" | sed 's/^/     /'
+        fi
+    done
 done
 
 echo
