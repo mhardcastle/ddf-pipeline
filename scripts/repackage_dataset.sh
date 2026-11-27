@@ -39,7 +39,7 @@ after=$(find "$work" -name table.lock | wc -l)
 top="$(find "$work" -mindepth 1 -maxdepth 1 -print -quit)"
 echo "re-tar $DST (from $(basename "$top"))"
 tar --format=posix --pax-option=delete=atime,delete=ctime \
-    --sort=name --numeric-owner --owner=0 --group=0 \
+    --sort=name --numeric-owner --owner=0 --group=0 --mtime='@0' \
     -cf - -C "$work" "$(basename "$top")" | gzip -n > "$DST"
 
 echo "removed=$before remaining=$after"
