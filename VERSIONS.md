@@ -5,7 +5,7 @@ validated set changes. `install_uv_jean_zay.sh` pins these.
 
 | Repository | Reference | Notes |
 | --- | --- | --- |
-| `mhardcastle/ddf-pipeline` | `astra-hackathon` (`de84e2b`, per-node distribution extracted) | pipeline |
+| `mhardcastle/ddf-pipeline` | `astra-hackathon` (`de53885`: per-node dict; `3671241`: pkill non-fatal; matrix copy/config hardening) | pipeline |
 | `cyriltasse/DDFacet` | `675ce535` + `astra-hackathon` (`f495fd9`: NodesCat atomic; `3ce3799`: DicoFacet/facetCoord atomic; `acdc8b0`: FITS atomic) | imaging |
 | `cyriltasse/killMS` | `c8f17884` + `astra-hackathon` (`554b0d9`: ClipCal shared `SaveFile` race) | calibration |
 
@@ -21,4 +21,6 @@ Status:
 - **6 nodes**: validated — smoke `PASS` after the `ClipCal`/`DicoFacet`/FITS fixes (image stats
   ≤3.5 % of the reference). A first 6-node attempt (job `809116`) had failed on the `ClipCal`
   shared `SaveFile` race, fixed in killMS `554b0d9`.
-- **12 nodes**: pending.
+- **12 nodes**: validated — 12a and 12b both smoke `PASS` (mean 4.6 % / 1.9 % of the reference;
+  all statistics within tolerance). The run exercises the collective imaging across all 12 ranks
+  and exits cleanly (the `pkill` no-match is no longer fatal).
