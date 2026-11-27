@@ -24,7 +24,7 @@ import re
 import uuid
 from html.parser import HTMLParser
 from time import monotonic, sleep
-from urllib.parse import quote, unquote, urljoin, urlsplit
+from urllib.parse import quote, unquote, urlencode, urljoin, urlsplit
 
 import requests
 from download_file import download_file
@@ -187,12 +187,7 @@ class SDR(object):
         finally:
             response.close()
 
-    def _get_record(self, field):
-        if field in self._records:
-            return self._records[field]
-        names = [field]
-        if re.fullmatch(r'P\d+-\d+', field):
-            names.append(field.replace('-', '+', 1))
+    def _tap_record_id(self, field, names):
         values = ','.join("'%s'" % name.replace("'", "''") for name in names)
         query = ('SELECT pointing_id, record_id FROM lotss_dr3.pointings '
                  'WHERE pointing_id IN (%s)' % values)
@@ -212,7 +207,39 @@ class SDR(object):
             rows = exact
         if len(rows) != 1 or not rows[0]['record_id'].strip():
             raise RuntimeError('DR3 pointing not found or ambiguous: %s' % field)
-        record = self._json(self.url + quote(rows[0]['record_id'].strip(), safe=''))
+        return rows[0]['record_id'].strip()
+
+    def _surf_record_id(self, names):
+        schema = 'https://repository.surf.nl/schema/lotss-dr3'
+        for name in names:
+            query = urlencode({'q': '"' + name + '"', 'size': 100})
+            search = self._json(self.url.rstrip('/') + '?' + query)['hits']
+            if search['total'] > len(search['hits']):
+                raise RuntimeError('Cannot check all SURF search results for %s' % name)
+            matches = []
+            for record in search['hits']:
+                metadata = record.get('custom_fields', {}).get('collection:metadata', {})
+                if metadata.get('$schema') == schema and metadata.get('id') == name:
+                    matches.append(record['id'])
+            if len(matches) > 1:
+                raise RuntimeError('Ambiguous SURF DR3 pointing: %s' % name)
+            if matches:
+                return matches[0]
+        raise RuntimeError('DR3 pointing not found in SURF: %s' % names[0])
+
+    def _get_record(self, field):
+        if field in self._records:
+            return self._records[field]
+        names = [field]
+        if re.fullmatch(r'P\d+-\d+', field):
+            names.append(field.replace('-', '+', 1))
+        try:
+            record_id = self._tap_record_id(field, names)
+        except requests.exceptions.HTTPError as error:
+            if error.response is None or not 500 <= error.response.status_code < 600:
+                raise
+            record_id = self._surf_record_id(names)
+        record = self._json(self.url + quote(record_id, safe=''))
         self._records[field] = record  # Identity only, not availability.
         return record
 
