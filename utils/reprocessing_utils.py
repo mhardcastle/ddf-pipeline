@@ -9,6 +9,7 @@ from db_utils import update_reprocessing_extract, get_next_extraction
 import sys
 import os
 import glob
+import re
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import time
@@ -124,27 +125,46 @@ def untar(f,tarfiles,verbose=False):
         if d!=0:
             raise RuntimeError('untar %s failed!' % t)
 
+def _sdr_archives(files, mode):
+    """Select the archives required for this mode from a SURF record."""
+    if mode == 'Misc':
+        archives = ['misc.tar']
+    elif mode == 'ImageOnly':
+        archives = ['images.tar']
+    elif mode in ('Imaging', 'Imaging+Misc', 'Imaging+Misc+Stokes'):
+        if 'uv.tar' in files:
+            uv_archives = ['uv.tar']
+        else:
+            # DR3 separates the MeasurementSets by observation and the auxiliary products.
+            uv_archives = sorted(name for name in files if re.fullmatch(r'uv_L[0-9]+\.tar', name))
+            if not uv_archives:
+                raise RuntimeError('No UV archive found (expected uv.tar or uv_L<obsid>.tar)')
+            uv_archives.append('uv_misc.tar')
+        archives = ['images.tar'] + uv_archives
+        if mode != 'Imaging':
+            archives.append('misc.tar')
+        if mode == 'Imaging+Misc+Stokes':
+            archives.append('stokes_small.tar')
+    else:
+        raise NotImplementedError('Unknown mode ' + mode + ' requested')
+
+    missing = [name for name in archives if name not in files]
+    if missing:
+        raise RuntimeError('Required SDR archives missing: ' + ', '.join(missing))
+    return archives
+
+
 def stage_field_SDR(cname,f,verbose=False,Mode='Imaging+Misc',timeout=None,sleeptime=30):
     timer=0
     s=SDR(target=f)
     # Next line raises RuntimeError if files don't exist
     files=s.get_status(cname)
+    tarfiles = _sdr_archives(files, Mode)
     if verbose: print('Initiating SDR stage for field',cname)
-    if Mode=="Imaging":
-        tarfiles=['images.tar','uv.tar']
-    elif Mode=="Misc":
-        tarfiles=['misc.tar']
-    elif Mode=="Imaging+Misc":
-        tarfiles=['images.tar','uv.tar','misc.tar']
-    elif Mode=="Imaging+Misc+Stokes":
-        tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
 
     for f in tarfiles:
-        if f not in files:
-            raise RuntimeError(f'File {f} not found!')
-        else:
-            if files[f]=='OFL':
-                s.stage(cname,f)
+        if files[f]=='OFL':
+            s.stage(cname,f)
 
     if verbose:
         print('Waiting for files to be online:')
@@ -248,23 +268,11 @@ def do_sdr_and_rclone_download(cname,f,verbose=False,Mode="Imaging+Misc",operati
 
 def do_sdr_download(cname,f,verbose=False,Mode="Imaging+Misc",operations=['download','untar']):
     s=SDR(target=f)
-    # next line will raise a RuntimeError if directory is not present
     try:
-        status=s.get_status(cname)
-    except:
-        raise RuntimeError('Failed to find SDR data')
-    if Mode=="Imaging":
-        tarfiles=['images.tar','uv.tar']
-    elif Mode=="Misc":
-        tarfiles=['misc.tar']
-    elif Mode=="Imaging+Misc":
-        tarfiles=['images.tar','uv.tar','misc.tar']
-    elif Mode=="Imaging+Misc+Stokes":
-        tarfiles=['images.tar','uv.tar','misc.tar',"stokes_small.tar"]
-    elif Mode=="ImageOnly":
-        tarfiles=['images.tar']
-    else:
-        raise NotImplementedError('Unknown mode '+Mode+' requested')
+        files = s.get_files(cname)
+    except Exception as error:
+        raise RuntimeError(f'Failed to find SDR data for {cname}: {error}') from error
+    tarfiles = _sdr_archives(files, Mode)
 
     if 'download' in operations:
         if verbose: print('Initiating SDR download for field',cname)
